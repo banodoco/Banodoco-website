@@ -60,7 +60,8 @@
 // composer (UnrealBloom -> TAA -> OutputPass/ACES), via index.js's EXPOSURE_*.
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
-import { isBaked, geometry, payload } from '../../lib/baked.js';
+import { readBakedSubstrate } from './substrate-baked.js';
+import { createStrandOwnership } from './substrate-ownership.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
@@ -173,59 +174,17 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     CROWN, restFrame,
   } = leg;
 
-  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // ---- baked-read wiring (2026-08-17; moved to substrate-baked.js by H01,
+  //      2026-08-21) -------------------------------------------------------
   // The shipped path skips the geometry math below and rebuilds every
   // BufferGeometry from static/geom bytes (baked once at commit time in the
   // goldens' own headless Chrome; see journey/lib/baked.js). Materials,
   // uniforms, closures and the live `rndA` ambient stream stay computed on
   // both paths — only geometry is skipped. ONE try/catch wraps the WHOLE
   // read: any missing key or shape mismatch throws and the chapter falls
-  // back to the live builders in full, never a half-baked mix.
-  const baked = (() => {
-    // Portrait builds rebuild live (leg.portraitField — see portraits.js's
-    // REST_SITES_PORTRAIT): the substrate's own geometry is aspect-blind and
-    // would re-derive bit-identically, but the web's baked aOwner encodes the
-    // LANDSCAPE faces' positions, and assignOwners() can only re-walk it on
-    // the live path where the graph arrays exist. Half-baked mixes are the
-    // one thing this wiring promises never to ship.
-    if (leg.portraitField) return null;
-    if (!isBaked('owned')) return null;
-    try {
-      const line = [['position', 3], ['aAlong', 1], ['aStrand', 1]];
-      const point = [['position', 3], ['aSize', 1], ['aSeed', 1]];
-      const pos = [['position', 3]];
-      return {
-        g: {
-          fan: geometry('owned/fan', line),
-          hair: geometry('owned/hair', line),
-          web: geometry('owned/web', [['position', 3], ['aAlong', 1], ['aStrand', 1], ['aOwner', 1]]),
-          glints: geometry('owned/glints', point),
-          crown: geometry('owned/crown', line),
-          hubs: geometry('owned/hubs', line),
-          hubCores: geometry('owned/hubCores', point),
-          hubHalos: geometry('owned/hubHalos', point),
-          ceiling: geometry('owned/ceiling', pos),
-          lid: geometry('owned/lid', line),
-          felt: geometry('owned/felt', line),
-          grain: geometry('owned/grain', pos),
-          fill: geometry('owned/fill', line),
-          aggregateFar: geometry('owned/aggregateFar', pos),
-          aggregateNear: geometry('owned/aggregateNear', pos),
-        },
-        counts: (() => {
-          const s = payload('owned')?.substrate;
-          if (!s || typeof s.primaries !== 'number' || typeof s.netNodes !== 'number'
-              || typeof s.netLinks !== 'number' || typeof s.hubs !== 'number'
-              || typeof s.voids !== 'number') {
-            throw new Error('owned substrate payload mismatch');
-          }
-          return s;
-        })(),
-      };
-    } catch (e) {
-      return null;
-    }
-  })();
+  // back to the live builders in full, never a half-baked mix. `null` means
+  // "build live, in full" and is what every `if (baked)` below branches on.
+  const baked = readBakedSubstrate(leg);
 
   // World envelope. The root world hangs from the crown near the origin and
   // trails -X along the glide, so the box is asymmetric: plenty of room in
@@ -254,8 +213,22 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
      Breathing room: the reference has clear dark gaps between the lit
      clusters. Voids are placed on the flanks and under the floor of the
      rest frame, never on the crown axis, and push-cleared off the polyline. */
+  /* COMPUTED ON BOTH PATHS since 2026-08-25, and it was a real gap that it
+     was not. The voids are not geometry — they are a PREDICATE (`inVoid`
+     below) that placement consults, five authored spots of pure leg-derived
+     arithmetic with no random draw and no buffer. Under `if (!baked)` the
+     predicate answered "no" everywhere on a baked page, which was inert only
+     because every one of its callers was itself skipped there. It stopped
+     being inert the moment portraits.js gained recompose(): a page that boots
+     landscape serves this substrate from bytes and then re-places its field,
+     and the sixteen sites were being nudged out of voids that the baked page
+     claimed did not exist — measured as one node 0.333 world units (21 px)
+     away from where the same size composes on a fresh load.
+     Nothing at build changes on either path: on the live path this block ran
+     already, and on the baked path every geometry builder that reads inVoid
+     is skipped. It costs ~4300 distance tests, once. */
   const VOIDS = [];
-  if (!baked) {
+  {
     // Sized and placed to miss the authored portrait arc (portraits.js
     // REST_SITES): the arc's sites sit 5.5-12.5 units down the rest gaze and
     // within ~7 units of it laterally, so the voids live further out and
@@ -424,7 +397,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   // Both generations draw in ONE batch. aAlong runs 0 at the crown end, so a
   // travelling pulse reads as light leaving the base and running out along the
   // roots — the same direction the fan grew.
-  let fanVerts = 0;
   const fanMat = makeFadePulseMat(P.gold, {
     baseOpacity: 0.36 * exposure, twinkle: 0.34, pulseWidth: 0.10,
     pulseColor: P.goldBright, fogDensity: 0.042, nearFade: [0.55, 1.35],
@@ -487,13 +459,12 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   fanLines.renderOrder = -4;
   group.add(fanLines);
   timeMats.push(fanMat);
-  fanVerts = fanGeo.attributes.position.count;
+  const fanVerts = fanGeo.attributes.position.count;
 
   /* ---------------- hairs: the fine thread density ---------------- */
   // Short filaments hanging off the secondaries. They carry most of the
   // picture's "fine amber threads" read and none of its structure, so they
   // are dimmer, thinner in depth and fogged harder.
-  let hairVerts = 0;
   const hairMat = makeFadePulseMat(0xc19240, {
     baseOpacity: 0.30 * exposure, twinkle: 0.60, pulseWidth: 0.10,
     pulseColor: P.ember, fogDensity: 0.042, nearFade: [0.7, 1.8],
@@ -526,7 +497,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   hairLines.renderOrder = -5;
   group.add(hairLines);
   timeMats.push(hairMat);
-  hairVerts = hairGeo.attributes.position.count;
+  const hairVerts = hairGeo.attributes.position.count;
 
   /* ================================================================
      THE WEB — cross-links between different roots
@@ -547,7 +518,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   // and out through the mesh.
   const netNodes = [];        // V3 — the network's own vertices
   const linkNodes = [];       // V3 — everything that gets a glint
-  let webVerts = 0;
   let netLinks = 0;
   const webMat = makeFadePulseMat(P.gold, {
     baseOpacity: 0.34 * exposure, twinkle: 0.46, pulseWidth: 0.12,
@@ -562,10 +532,10 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   // distance except to seed the walk.
   const webAdj = [];          // netNode index -> [netNode index]
   const webLinkMeta = [];     // { v0, vN, a, b, root }  (a/b: netNode idx, -1)
-  let webOwner = null;        // Float32Array, one entry per web vertex
-  let webGeo = null;
-  let ownedLinkCount = [];    // per face: how many web links it owns
-  let ownedExtent = [];       // per face: world radius of the lit set
+  let webOwner = null;        // Float32Array, one entry per web vertex — the
+                              // `= null` is LIVE: on the baked path aOwner
+                              // arrived assigned and nothing writes this.
+  let webGeo;                 // assigned unconditionally by BOTH branches below
   const rootPool = [];        // { p, key } sample points eligible for linking
   if (baked) {
     webGeo = baked.g.web;
@@ -704,7 +674,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   webLines.renderOrder = -4;
   group.add(webLines);
   timeMats.push(webMat);
-  webVerts = webGeo.attributes.position.count;
+  const webVerts = webGeo.attributes.position.count;
 
   /* ---------------- junction glints ---------------- */
   // "Many small bright nodes where threads cross." One Points draw, per-point
@@ -779,7 +749,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     baseOpacity: 0.62 * exposure, twinkle: 0.18, pulseWidth: 0.09,
     pulseColor: 0xfff0d0, fogDensity: 0.010, nearFade: [0.35, 0.95],
   });
-  let crownVerts = 0;
   let crownGeo;
   if (baked) {
     crownGeo = baked.g.crown;
@@ -843,7 +812,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   crownLines.renderOrder = -2;
   group.add(crownLines);
   timeMats.push(crownMat);
-  crownVerts = crownGeo.attributes.position.count;
+  const crownVerts = crownGeo.attributes.position.count;
 
   /* ================================================================
      STARBURST HUBS — the reference's brighter convergence points
@@ -885,7 +854,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     baseOpacity: 0.46 * exposure, twinkle: 0.22, pulseWidth: 0.10,
     pulseColor: 0xffe0ae, fogDensity: 0.022, nearFade: [0.7, 1.8],
   });
-  let hubVerts = 0;
   let hubsGeo;
   if (baked) {
     hubsGeo = baked.g.hubs;
@@ -949,7 +917,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   hubsLines.renderOrder = -2;
   group.add(hubsLines);
   timeMats.push(hubMat);
-  hubVerts = hubsGeo.attributes.position.count;
+  const hubVerts = hubsGeo.attributes.position.count;
   /* ---------------- cores + halos: crown and hubs, 2 Points draws ------- */
   function coreLayer(map, color, mul, baseA, order, bakedGeo) {
     let geo = bakedGeo || null;
@@ -1173,7 +1141,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
      crossings (T3 down, the rise up) pass THROUGH it, which is what keeps the
      seams reading as thresholds — and at the rest it is the band the crown
      pierces. */
-  let lidVerts = 0;
   const lidMat = makeFadePulseMat(P.deepGold, {
     baseOpacity: 0.20 * exposure, twinkle: 0.30, pulseWidth: 0.10,
     pulseColor: P.ember, fogDensity: 0.026,
@@ -1210,7 +1177,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   lidLines.renderOrder = -6;
   group.add(lidLines);
   timeMats.push(lidMat);
-  lidVerts = lidGeo.attributes.position.count;
+  const lidVerts = lidGeo.attributes.position.count;
 
   /* ================================================================
      THE SOIL HORIZON — the metre of earth the lens passes THROUGH
@@ -1270,7 +1237,6 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     if (d > HORIZON_R) return false;
     return rand() < 1 - (d / HORIZON_R) ** 2 * 0.88;
   }
-  let feltVerts = 0, grainPoints = 0;
   const horizonMats = [];        // shader mats driven by `passage`
   const horizonObjs = [];        // ...and the objects they belong to
   const horizonSprites = [];     // {mat, base} plain materials driven by it
@@ -1350,7 +1316,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   group.add(feltLines);
   horizonMats.push(feltMat);
   horizonObjs.push(feltLines);
-  feltVerts = feltGeo.attributes.position.count;
+  const feltVerts = feltGeo.attributes.position.count;
   let grainGeo;
   if (baked) {
     grainGeo = baked.g.grain;
@@ -1422,12 +1388,11 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   group.add(pts);
   horizonMats.push(mat);          // uFade + uTime, same drive as the felt
   horizonObjs.push(pts);
-  grainPoints = grainGeo.attributes.position.count;
+  const grainPoints = grainGeo.attributes.position.count;
 
   /* ---------------- far filler: the volume behind the network ---------- */
   // Very dim, very fogged short strands scattered through the slab so the
   // deep field is warm-textured rather than flat black behind the web.
-  let fillVerts = 0;
   const fillMat = makeFadePulseMat(P.deepGold, {
     baseOpacity: 0.15 * exposure, twinkle: 0.66, pulseWidth: 0.10,
     pulseColor: P.ember, fogDensity: 0.038, nearFade: [1.4, 3.4],
@@ -1459,7 +1424,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   lines.renderOrder = -7;
   group.add(lines);
   timeMats.push(fillMat);
-  fillVerts = fillGeo.attributes.position.count;
+  const fillVerts = fillGeo.attributes.position.count;
 
   /* ---------------- root lookup for portrait strand roots -------------- */
   function nearestCordPoint(p, rand) {
@@ -1568,144 +1533,17 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   let ambP = -0.3;
   function surge() { surgeT = 0; }
 
-  /* ================================================================
-     STRAND OWNERSHIP — which filaments belong to which person
-     (Hannah, 2026-08-06, report C)
-     ================================================================
-     The root response used to have exactly one setting: ALL. Hovering the
-     chapter's prose line fired surge(), which runs a wave through crown ->
-     fan -> hubs -> web -> hairs, i.e. the entire root system, and hovering a
-     FACE did nothing to the roots at all. Hannah's model is the other way
-     round and has two settings: the crown lights everything (it is the point
-     every root leaves from, so a wave from there is the only honest
-     whole-system gesture), and a face lights the filaments that are actually
-     ITS OWN.
-
-     "Actually its own" is answerable here because the build already knows
-     what joins what. Three facts, in order:
-
-       1. portraits.js grows each face's local strands from real points on
-          the fan — `nearestCordPoint` returns a sample from `rootPool`, so
-          the strand starts ON a root rather than near one. Those points are
-          recorded as the face's ANCHORS.
-       2. The web's root->mesh links are built from those same rootPool
-          samples: `link(rootSample, netNodes[j])`. So an anchor identifies a
-          mesh vertex the face is genuinely wired to.
-       3. netNode -> netNode links give `webAdj`, a graph.
-
-     So: seed a walk at the mesh vertices the face's own strands reach, spread
-     it MAX_HOPS along the graph, and let the faces compete — the first to
-     reach a vertex, at the lowest hop count, owns it. That is a Voronoi in
-     GRAPH distance over a graph the chapter built, not a radius search. The
-     only distances involved are the anchor->link-end match (which is an
-     identity test with slack for the jitter nearestCordPoint adds) and a
-     hard MAX_R cap so a single long link cannot drag one face's response
-     across the frame. */
-  const OWN_MAX_HOPS = 3;
-  const OWN_MAX_R = 4.5;         // world units from the face
-  const ANCHOR_R2 = 0.9 * 0.9;   // nearestCordPoint jitters by up to ~0.45
-  // A ceiling on how much of the mesh one person may light. The walk alone
-  // gave a 4-to-160 spread across the sixteen — a face standing in a dense
-  // patch of web lit 11% of the whole network, which stops reading as "these
-  // are mine" and starts reading as the global flash this change exists to
-  // retire. Past the cap a face keeps its NEAREST links, so what is dropped
-  // is always the outermost.
-  const OWN_MAX_LINKS = 55;
-
-  function assignOwners(faces) {
-    // Baked read path: the web's aOwner was captured AFTER assignOwners ran at
-    // commit time, so re-running the walk here would only wipe it (the graph
-    // arrays are empty on this path). The baked attribute IS the result.
-    if (baked) return;
-    if (!webGeo || !faces.length) return;
-    const N = netNodes.length;
-    const owner = new Int32Array(N).fill(-1);
-    const facePos = faces.map(f => f.pos);
-    // 1. seeds, from real connectivity
-    let frontier = [];
-    faces.forEach((f, fi) => {
-      const seeds = new Set();
-      for (let li = 0; li < webLinkMeta.length; li++) {
-        const lm = webLinkMeta[li];
-        if (!lm.root || lm.b < 0) continue;
-        for (let ai = 0; ai < f.anchors.length; ai++) {
-          if (lm.root.distanceToSquared(f.anchors[ai]) < ANCHOR_R2) { seeds.add(lm.b); break; }
-        }
-      }
-      // A face whose strands all rolled a free-space start has no anchor on
-      // the fan. It is still embedded in the mesh — take the single nearest
-      // vertex as its one seed and let the same walk do the rest.
-      if (!seeds.size) {
-        let best = -1, bd = OWN_MAX_R * OWN_MAX_R;
-        for (let j = 0; j < N; j++) {
-          const d2 = netNodes[j].distanceToSquared(f.pos);
-          if (d2 < bd) { bd = d2; best = j; }
-        }
-        if (best >= 0) seeds.add(best);
-      }
-      for (const s of seeds) frontier.push([s, fi]);
-    });
-    // 2. multi-source walk, level by level: lowest hop wins, ties to the
-    //    lower face index (deterministic — the frontier is built in order)
-    for (let h = 0; h <= OWN_MAX_HOPS && frontier.length; h++) {
-      const next = [];
-      for (const [j, fi] of frontier) {
-        if (owner[j] !== -1) continue;
-        if (netNodes[j].distanceToSquared(facePos[fi]) > OWN_MAX_R * OWN_MAX_R) continue;
-        owner[j] = fi;
-        if (h < OWN_MAX_HOPS) for (const k of webAdj[j]) if (owner[k] === -1) next.push([k, fi]);
-      }
-      frontier = next;
-    }
-    // 3. links: a mesh link belongs to a face when BOTH its ends do; a
-    //    root->mesh link belongs to whoever owns the mesh end, because that
-    //    link IS the fan reaching that vertex.
-    const claims = faces.map(() => []);
-    for (const lm of webLinkMeta) {
-      let o = -1;
-      if (lm.a >= 0 && lm.b >= 0) {
-        if (owner[lm.a] >= 0 && owner[lm.a] === owner[lm.b]) o = owner[lm.a];
-      } else if (lm.b >= 0) {
-        o = owner[lm.b];
-      }
-      if (o < 0) continue;
-      const d = lm.mid.distanceTo(facePos[o]);
-      if (d > OWN_MAX_R) continue;
-      claims[o].push({ lm, d });
-    }
-    ownedLinkCount = new Array(faces.length).fill(0);
-    const ext = new Array(faces.length).fill(0);
-    webOwner.fill(-1);
-    claims.forEach((list, o) => {
-      list.sort((a, b) => a.d - b.d);
-      const keep = list.slice(0, OWN_MAX_LINKS);
-      for (const { lm, d } of keep) {
-        for (let v = lm.v0; v < lm.vN; v++) webOwner[v] = o;
-        ext[o] = Math.max(ext[o], d);
-      }
-      ownedLinkCount[o] = keep.length;
-    });
-    ownedExtent = ext;
-    webGeo.attributes.aOwner.needsUpdate = true;
-  }
-
-  /** Which face the mesh is currently answering, and how strongly. -1 / 0 is
-   *  the resting network: no link is lit above ambient. */
-  function setActiveNode(idx, amt) {
-    if (!webMat.uniforms.uOwner) return;
-    webMat.uniforms.uOwner.value = idx == null ? -1 : idx;
-    webMat.uniforms.uOwnerAmt.value = amt || 0;
-  }
-
-  /** QA (report C gate): links owned per face, and the world extent of each
-   *  face's lit set, against the mesh total. */
-  function ownershipStats() {
-    return {
-      totalLinks: webLinkMeta.length,
-      perFace: ownedLinkCount.map((c, i) => ({ face: i, links: c, extent: +ownedExtent[i].toFixed(2) })),
-      owned: ownedLinkCount.reduce((a, b) => a + b, 0),
-    };
-  }
+  /* ---------------- strand ownership (substrate-ownership.js) ----------
+     Which filaments belong to which person: the graph Voronoi over the web
+     the block above just built, moved out by H01 (2026-08-21) because it is
+     a POST-PASS rather than a build step — owned/index.js calls assignOwners
+     after this builder has returned and only then registers the geometry.
+     Constructed HERE, at the point the region occupied, because webGeo and
+     webOwner are assigned by the web block above and the sibling holds them
+     by reference. */
+  const { assignOwners, setActiveNode, ownershipStats } = createStrandOwnership({
+    baked, webGeo, webOwner, netNodes, webAdj, webLinkMeta, webMat,
+  });
 
   /* ---------------- frame update ---------------- */
   let fade = 0, passage = 0;

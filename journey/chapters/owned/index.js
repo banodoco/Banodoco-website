@@ -32,6 +32,7 @@ import { buildLeg } from './leg.js';
 import { buildSubstrate, makeFadePulseMat } from './substrate.js';
 import { buildPortraitField } from './portraits.js';
 import { PHOTOS } from '../../../flags.js';
+import { railDock } from '../../layout/rail-geometry.js';
 import * as H from '../../lib/helpers.js';
 import { isBaked, geometry, registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 
@@ -144,7 +145,11 @@ export function createOwned(sceneApi, content) {
   if (isBaked('owned')) {
     try {
       frontGeo = geometry('owned/front', [['position', 3], ['aAlong', 1], ['aStrand', 1]]);
-    } catch (e) {
+    } catch {
+      /* The catch stays deliberately silent: falling through to the live
+         `strandLines` rebuild below is the documented fallback contract, not
+         an error path. Why the error binding was dropped rather than logged:
+         e01/relocated/journey-chapters-owned-index.md */
       frontGeo = null;
     }
   }
@@ -469,6 +474,40 @@ export function createOwned(sceneApi, content) {
   // after a blend the ease below brings it home.
   let keepGate = 1;
 
+  /* THE CHAPTER IS A CONSUMER OF THE VIEWPORT, AND SAYS SO (2026-08-25).
+
+     The rail dock (journey/layout/rail-geometry.js) is the page's viewport
+     snapshot owner, and its contract already spells out what to do here: a
+     consumer that finds the snapshot's `viewport` stale "must not patch the
+     rectangle — it must ask again", and `revision` "only increases, and ...
+     ONLY when that slot is republished", so "keying a downstream solve off it
+     is therefore exactly 're-solve when, and only when, the geometry moved'".
+
+     Every consumer the contract NAMES obeyed it. This chapter's authored
+     composition — the sixteen portrait sites and the five batched geometries
+     placed from them — was never registered as a consumer at all, so nothing
+     in the pipeline was wrong and the composition was still stale. That was
+     the whole defect. It is registered now: the dock is READ, never measured,
+     and the placement is RE-ASKED, never patched.
+
+     WHY A SETTLE, AND WHY IT IS FRAME-DRIVEN. The dock republishes on every
+     pixel of a window drag, and inside the portrait band the arc itself is
+     composed at the live aspect — so without a settle a drag would re-place
+     the field on every frame it moved. 0.15 s collapses a whole drag, however
+     far it travels, into ONE re-place. It rides the animator's own `dt`
+     rather than a timer, so it cannot fire on a hidden page, needs no
+     teardown, and lands on a frame the renderer is already drawing.
+
+     THE OWNERSHIP POST-PASS RIDES WITH IT. assignOwners() is the same call
+     the build makes, with the same argument shape, re-run because the faces'
+     anchors moved with them. On a page serving the substrate from baked
+     bytes it returns early by design — see recompose()'s note on what that
+     costs and why buying it back is not worth the substrate's largest
+     allocation mid-drag. */
+  const RECOMPOSE_SETTLE_S = 0.15;
+  let dockRevision = -1;
+  let recomposeIn = 0;
+
   sceneApi.addAnimator('journey-owned', (t, dt) => {
     // The remix swap advances AHEAD of the visibility gate below (see
     // portraits.tickSwap): a visitor who presses Remix and immediately scrubs
@@ -476,6 +515,21 @@ export function createOwned(sceneApi, content) {
     // arrangements. It writes one uniform and does nothing at all when no swap
     // is running, so it costs the resting frame nothing.
     portraits.tickSwap(dt);
+
+    const dock = railDock.dock();
+    if (dock.revision !== dockRevision) {
+      // the first observation is the epoch the chapter was BUILT in, not a
+      // change to it
+      if (dockRevision >= 0) recomposeIn = RECOMPOSE_SETTLE_S;
+      dockRevision = dock.revision;
+    }
+    if (recomposeIn > 0 && (recomposeIn -= dt) <= 0) {
+      recomposeIn = 0;
+      const v = dock.viewport;
+      if (portraits.recompose(v.w / Math.max(1, v.h))) {
+        substrate.assignOwners(portraits.nodes.map(n => ({ pos: n.pos, anchors: n.anchors })));
+      }
+    }
     // Arm ease at 6.0, not the old 2.6. With the reveal camera-pure (below),
     // the only place this ease can be SEEN at all is inside a nav jump's
     // blend: the T3/p-window arming edges all sit where sink and keep are
@@ -664,19 +718,259 @@ export function createOwned(sceneApi, content) {
       risePulseArmed = true;                // re-arm on the way back
     }
   });
+  /* DEF-C04-02 (portrait-remix.js:18-25) records that `tickSwap` and
+     `promoteSwap` are the two of six portrait mutators that do NOT guard
+     `disposed`. This animator's first statement is `portraits.tickSwap(dt)`
+     and it is the ONLY production caller of it; nothing in production frees
+     the portrait textures, so the exposure that pairing describes has no
+     production path. Full account:
+     e01/relocated/journey-chapters-owned-index.md */
 
   /* ================================================================
      Chapter contract (grey-box interface, kept)
      ================================================================ */
   const routableIds = portraits.nodes.filter(n => n.routable).map(n => n.id);
 
+  /* ---- descriptor members, hoisted (C05 slice B) ----------------------
+     Seven object-literal methods became function declarations so the
+     declared capabilities below can reference the SAME body the root
+     member exposes. A capability method that tried `this.nodeWorld(...)`
+     would resolve `this` to the capability object, which has no such
+     member — so delegation has to go through a lexical binding, and one
+     body per behaviour is the only way the two spellings cannot drift.
+     Bodies and their doc comments are unchanged, character for character,
+     including the SELECTION-channel comment that sits above trigger()
+     rather than above setSelected() (design.md §12, DI-6: moving it is a
+     change, so it travels as-is). */
+
+  function setHot(id, on) {
+    // THE CROWN — the one hover that answers with the WHOLE root system
+    // (Hannah, 2026-08-06, report C). This response used to hang off the
+    // chapter's prose sub line, a 416x77 box in the middle of the frame
+    // that a pointer travelling down to the faces crosses by accident: the
+    // entire network flashed at what felt like random moments. It belongs
+    // to the structure it describes. Every root leaves the crown, so a wave
+    // launched there is the only one that legitimately reaches everyone.
+    if (id === CROWN_ZONE_ID) {
+      // THE CROWN NO LONGER PULSES ON ENTRY (Hannah, 2026-08-16: "there's
+      // still a weird double pulse, and the profile switches immediately,
+      // there should be a delay so it happens when the light hits").
+      //
+      // It used to launch a full colony wave here, the instant the pointer
+      // arrived — and then the commit 340 ms later launched a SECOND wave,
+      // the one that actually carries the re-deal. Two waves from one
+      // gesture is the double pulse; and because the first wave was the one
+      // the eye read as "the light", the faces appeared to turn over on
+      // their own afterwards, unrelated to it.
+      //
+      // Now there is exactly one wave, launched at the commit by
+      // trigger('remixPortraits'), and the swap is phase-locked to it — its
+      // speed is derived from the swap's own duration so each face crosses
+      // over as the front reaches it (see remix() in portraits.js). The
+      // light and the switch are the same event, which is what she is
+      // describing, and the dwell before it is the delay.
+      //
+      // Hovering therefore has no immediate scene response, deliberately.
+      // The answer to the hover is the wave that follows it.
+      return;
+    }
+    const idx = portraits.indexOf(id);
+    if (idx < 0) return;
+    if (on) portraits.setHover(idx);
+    else if (portraits.hoverIdx === idx) portraits.setHover(-1);
+  }
+
+  /** SELECTION channel (W4-E) — the symmetric half of setHot, called by
+   *  core/ui.js's notifySelect for every open/close path (click, key, deep
+   *  link, inbound route, Escape, scroll-intent close). notifySelect reads
+   *  `selection.setSelected` and nothing else; the older
+   *  `mod.portraits.setSelected(index)` bridge it replaced is deleted.
+   *
+   *  Contributors take the same route the bridge took — indexOf(id) into
+   *  the portrait field's index-based selection, which drives the ember rim
+   *  (uSelIdx / uSelAmt).
+   *
+   *  Selection deliberately fires NO claim pulse: the colony-wide wave is an
+   *  ARRIVAL gesture and stays in setHot.
+   *  A card that is open for a minute must not sit on a pulsing colony. */
+  function trigger(name) {
+    if (name === 'remixPortraits') {
+      /* REMIX (Hannah, 2026-08-07) — the copy block's second button.
+         The field re-deals its faces (portraits.remix()) and the COLONY
+         answers along with it: a wave launched from the same epicentre the
+         swap is ordered by, at the speed the swap travels, so each face's
+         strands, ember rim and halo light as that face turns over. The
+         substrate surges underneath it, exactly as it does for the crown.
+         One gesture, one wave, sixteen faces changing inside it — not
+         sixteen simultaneous cuts and not a page-wide flash.
+
+         The return value is the trigger contract journey/ui.js reads:
+         `announce` for the polite live region (nothing moves focus, so this
+         is the only way the change is not silent) and `busyMs` to hold the
+         button lit and unpressable for exactly as long as the field is
+         actually turning over. */
+      const r = portraits.remix();
+      if (!r) return null;               // a swap is already running
+      // amp 0.62. THIS IS NOW THE ONLY WAVE the crown produces — the
+      // entry pulse it used to be measured against was removed 2026-08-16
+      // (see setHot) — but the 0.62 is KEPT, because the reason for it never
+      // had anything to do with that pulse: this wave lands on the same
+      // pixels as the per-node swap flare, and at 375x812 the two together
+      // at 1.0 washed the near faces out. Those two still co-occur, so the
+      // measurement still holds. If the single light now reads too faint on
+      // a big screen, this is the number to raise — and 375x812 is the shot
+      // that has to be re-checked when it moves.
+      portraits.wavePulse(r.epicentre, {
+        speed: r.speed, width: 3.0, maxR: r.maxR + 4, amp: 0.62,
+      });
+      substrate.surge();
+      return {
+        announce: `Contributor portraits remixed — arrangement ${r.arrangement}.`,
+        busyMs: r.ms,
+      };
+    }
+    return null;
+  }
+
+  function setSelected(id, on) {
+    const idx = portraits.indexOf(id);
+    if (idx < 0) return;
+    // Guarded release, exactly like setHot: a stale close arriving after a
+    // retarget must not blank the newly selected portrait.
+    if (on) portraits.setSelected(idx);
+    else if (portraits.selIdx === idx) portraits.setSelected(-1);
+  }
+
+  /** LABEL POLICY (core/ui.js registration contract).
+   *
+   *  The ownership pods are retired (Ride-through #2): no in-scene pod chip
+   *  remains, and nothing here returns a resting label for them.
+   *
+   *  The sixteen contributors do not. Sixteen role tags standing over
+   *  sixteen faces reads as a tag cloud and buries the thing the chapter
+   *  is actually about — the faces, the ember rims, the strands between
+   *  them. So each contributor asks for `labelOnHover`: no chip at rest,
+   *  and the chip appears (hover, keyboard focus or the first tap of the
+   *  touch model — ui.js treats all three as the same `hot` state) naming
+   *  the person AND what they contributed, which is the question pointing
+   *  at a face asks. Names are placeholders until the consent pipeline
+   *  lands (CO-1.4 / OW-4.4); the shape is already right.
+   *
+   *  The accessible name carries the same string whether or not the chip
+   *  is drawn, so this costs an AT user nothing (ui.js sets aria-label).
+   */
+  function labelPolicy(id) {
+    const c = contributors.find(x => x.id === id);
+    if (!c) return null;                 // anything else: default
+    const text = [c.name, c.role].filter(Boolean).join(' · ');
+    /* `chip: 'none'` — 2026-08-14, Hannah: "there are now two things that
+       show on the orbs upon hover, can you please delete the smaller ones,
+       we should only keep the black one above."
+       The two were this chip (a dark pill with a gold dot and
+       "CONTRIBUTOR · RESEARCHER") and the contributor card, which since
+       b3dc34b opens on hover instead of on click. The pill is the smaller,
+       and everything it said the card already says — `name` is the card's
+       heading and `role` is its first line, from these same two fields. So
+       it is deleted rather than duplicated.
+       `label` STAYS, and is the whole point of keeping this policy: ui.js
+       writes it to the button's `aria-label`, so the accessible name is
+       "Contributor · Researcher" exactly as before. Nothing was drawn for a
+       screen reader in the first place, and nothing is taken from one now.
+       `labelOnHover` is still declared, and still true — there is no resting
+       label — because the collision dodge and the arrival stagger both read
+       it, and a chip that paints nothing at all is the strongest possible
+       case of "nothing to stage". */
+    return { labelOnHover: true, chip: 'none', label: text || id };
+  }
+
+  function nodeWorld(id) {
+    if (id === CROWN_ZONE_ID) return leg.CROWN.clone();
+    return portraits.worldOf(id);
+  }
+
+  /** HIT RADIUS (core/ui.js hotspot contract, 2026-08-06 — report A).
+   *
+   *  World-space radius of the thing this node DRAWS. ui.js projects it and
+   *  gives the chip a round hit pad that size, centred exactly on the node.
+   *
+   *  Before this the chip's hit surface was the pill itself: a 23 px-tall
+   *  bar running 200-306 px to one side of the node, and for these
+   *  hover-only chips it was INVISIBLE at rest. So the region that answered
+   *  the pointer had almost nothing to do with the region that showed a
+   *  face — measured 116 px of mean offset between the two centres, and
+   *  only 74 of 208 sample points taken across the drawn faces landed on
+   *  the right chip at 1440x900. The worst were the near/edge faces, whose
+   *  discs are biggest (up to 50 px radius against a 11 px half-height of
+   *  pill): 2 of 13 points. Hannah: "it feels like it is in a different
+   *  point to where they actually show."
+   *
+   *  A chapter that does not implement this keeps the pill-only hit model
+   *  exactly as it was. */
+  function nodeRadius(id) {
+    if (id === CROWN_ZONE_ID) return CROWN_ZONE_R;
+    return portraits.radiusOf(id);
+  }
+
+  /** HOVER ZONES (core/ui.js, 2026-08-06 — report C; given the remix
+   *  2026-08-13).
+   *
+   *  A zone is a target with no chip, no label and no card: a piece of the
+   *  SCENE that answers the visitor directly. The crown is the only one —
+   *  "the top root thing", in Hannah's words — and it is the only thing
+   *  entitled to light the whole network.
+   *
+   *  It is still not a hotspot: a hotspot is a named node with a card
+   *  behind it, and the crown is not a contributor and has no content.
+   *
+   *  THE CROWN NOW CARRIES THE RE-DEAL (Hannah, 2026-08-13): "remove the
+   *  visible Remix button ... that existing [light-flash] interaction
+   *  should take over the Remix behaviour ... integrated into the scene
+   *  rather than exposed as a separate UI control." So the zone declares
+   *  the same chapter-contract trigger the retired pill declared, and
+   *  core/ui.js gives it the commit model (dwell, press, tap, Enter/Space)
+   *  and the announce/busy contract. The LIGHT is unchanged and still fires
+   *  on the bare hover — see setHot above; the re-deal is the commit.
+   *
+   *  Because it now DOES something it is also a real control: ui.js builds
+   *  it as a <button> with this accessible name, so the crown is finally
+   *  reachable from a keyboard. That retires residual 1 of the 2026-08-06
+   *  pass ("the crown is the one part of the composition that answers a
+   *  mouse and not a keyboard") — it took on information, so it took on the
+   *  obligations that come with information. It sits in the tab order
+   *  exactly where the Remix pill sat: after the chapter copy, ahead of the
+   *  sixteen people. */
+  function hoverZones() {
+    return [{
+      id: CROWN_ZONE_ID,
+      world: () => leg.CROWN.clone(),
+      radius: CROWN_ZONE_R,
+      // Chapter-contract trigger name — the same one the pill pulled.
+      action: 'remixPortraits',
+      // The accessible name of the crown as a CONTROL. It says what the
+      // press does, not what the thing is: the light response is the
+      // pointer's own answer and carries no information, so there is
+      // nothing else here for a screen reader to be told about.
+      label: 'Re-deal the contributor portraits',
+      // Fallback live-region text. trigger() returns its own sentence (it
+      // knows which arrangement it landed on); this is only used if it
+      // returns nothing.
+      announce: 'Contributor portraits remixed.',
+    }];
+  }
+
+  // The routable contributor set, allocated once: the root `nodeIds` and
+  // `visibility.nodeIds` publish the SAME array, so registration order is
+  // authored in exactly one place (design.md §8.2-H3/H6).
+  const nodeIds = [...routableIds];
+
   return {
+    id: 'owned',
     group,
     substrate, portraits, leg,          // QA / debug access
     counts: { substrate: substrate.counts, portraits: portraits.counts },
     // the routable contributor set — this fixes the grey-box reachability gap
     // where only 4 of 16 contributors were registered.
-    nodeIds: [...routableIds],
+    nodeIds,
 
     /** T3 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
@@ -710,221 +1004,103 @@ export function createOwned(sceneApi, content) {
     // Navigation landing settles only the seam fade. portraits.snap() is the
     // stronger placement/capture contract and must not truncate visible entry.
     snapLanding() { amount = amountTarget; },
-    dispose() { portraits.dispose(); },
+    setHot,
 
-    setHot(id, on) {
-      // THE CROWN — the one hover that answers with the WHOLE root system
-      // (Hannah, 2026-08-06, report C). This response used to hang off the
-      // chapter's prose sub line, a 416x77 box in the middle of the frame
-      // that a pointer travelling down to the faces crosses by accident: the
-      // entire network flashed at what felt like random moments. It belongs
-      // to the structure it describes. Every root leaves the crown, so a wave
-      // launched there is the only one that legitimately reaches everyone.
-      if (id === CROWN_ZONE_ID) {
-        // THE CROWN NO LONGER PULSES ON ENTRY (Hannah, 2026-08-16: "there's
-        // still a weird double pulse, and the profile switches immediately,
-        // there should be a delay so it happens when the light hits").
-        //
-        // It used to launch a full colony wave here, the instant the pointer
-        // arrived — and then the commit 340 ms later launched a SECOND wave,
-        // the one that actually carries the re-deal. Two waves from one
-        // gesture is the double pulse; and because the first wave was the one
-        // the eye read as "the light", the faces appeared to turn over on
-        // their own afterwards, unrelated to it.
-        //
-        // Now there is exactly one wave, launched at the commit by
-        // trigger('remixPortraits'), and the swap is phase-locked to it — its
-        // speed is derived from the swap's own duration so each face crosses
-        // over as the front reaches it (see remix() in portraits.js). The
-        // light and the switch are the same event, which is what she is
-        // describing, and the dwell before it is the delay.
-        //
-        // Hovering therefore has no immediate scene response, deliberately.
-        // The answer to the hover is the wave that follows it.
-        return;
-      }
-      const idx = portraits.indexOf(id);
-      if (idx < 0) return;
-      if (on) portraits.setHover(idx);
-      else if (portraits.hoverIdx === idx) portraits.setHover(-1);
+    trigger,
+
+    setSelected,
+
+    labelPolicy,
+
+    nodeWorld,
+
+    nodeRadius,
+
+    hoverZones,
+
+    /* ---- DECLARED DESCRIPTOR (journey/chapter-contract.js) --------------
+       Core: id/group/counts/setArmed/armed/snap/snapLanding, all above.
+
+       Owned is the only chapter that implements all four capabilities —
+       and the only one whose `focus` is a declared ABSENCE rather than a
+       source.
+
+       Every capability here has a consumer: chapter-interactions.js
+       registers this chapter from `visibility.nodeIds` and names no chapter
+       of its own, ui.js reads `visibility.labelPolicy` off the `chapters`
+       map and calls `visibility.setExcludedNodes(ids)` per chapter, and
+       `focus` is a declared absence read as one. Every member below still
+       references the same hoisted body the root member exposes, so nothing
+       here can drift away from what ships. How the migration was sliced:
+       e01/relocated/journey-chapters-owned-index.md */
+
+    /** NO FOCAL SOURCE, STATED. journey.js used to ask this chapter for
+     *  `nodeWorld('pod-shared')` and had been getting `null` for the whole
+     *  Owned leg ever since the ownership pods were retired: 'pod-shared'
+     *  is content-only and is not among portraits' node ids, so worldOf()
+     *  never found it. `focus: null` is byte-identical to that — journey.js's
+     *  pickChapterFocus tests `ch.focus` and does not ask at all, so the lens
+     *  keeps receiving setFocusHint(null) — and it converts an accidental
+     *  dead string into a reviewable statement. The dead string is gone from
+     *  journey.js as of slice D. Giving Owned a REAL focal source is a visual
+     *  authoring decision that drifts two goldens (design.md §8.2-H9,
+     *  §11-Q1, DI-5); it is deliberately not taken. */
+    focus: null,
+
+    /** The crown: a piece of the scene that answers the visitor directly
+     *  and commits the re-deal. `zones` is the generic seam
+     *  chapter-interactions.js's zone pass dispatches without naming a
+     *  chapter; `trigger` is what a committed zone pulls. */
+    interaction: {
+      zones() { return hoverZones(); },
+      trigger,
     },
 
-    /** SELECTION channel (W4-E) — the symmetric half of setHot, called by
-     *  core/ui.js's notifySelect for every open/close path (click, key, deep
-     *  link, inbound route, Escape, scroll-intent close). Its existence
-     *  retires ui.js's temporary `mod.portraits.setSelected(index)` bridge:
-     *  notifySelect prefers this method and never reaches the bridge branch.
-     *
-     *  Contributors take the same route the bridge took — indexOf(id) into
-     *  the portrait field's index-based selection, which drives the ember rim
-     *  (uSelIdx / uSelAmt).
-     *
-     *  Selection deliberately fires NO claim pulse: the colony-wide wave is an
-     *  ARRIVAL gesture and stays in setHot.
-     *  A card that is open for a minute must not sit on a pulsing colony. */
-    trigger(name) {
-      if (name === 'remixPortraits') {
-        /* REMIX (Hannah, 2026-08-07) — the copy block's second button.
-           The field re-deals its faces (portraits.remix()) and the COLONY
-           answers along with it: a wave launched from the same epicentre the
-           swap is ordered by, at the speed the swap travels, so each face's
-           strands, ember rim and halo light as that face turns over. The
-           substrate surges underneath it, exactly as it does for the crown.
-           One gesture, one wave, sixteen faces changing inside it — not
-           sixteen simultaneous cuts and not a page-wide flash.
-
-           The return value is the trigger contract journey/ui.js reads:
-           `announce` for the polite live region (nothing moves focus, so this
-           is the only way the change is not silent) and `busyMs` to hold the
-           button lit and unpressable for exactly as long as the field is
-           actually turning over. */
-        const r = portraits.remix();
-        if (!r) return null;               // a swap is already running
-        // amp 0.62. THIS IS NOW THE ONLY WAVE the crown produces — the
-        // entry pulse it used to be measured against was removed 2026-08-16
-        // (see setHot) — but the 0.62 is KEPT, because the reason for it never
-        // had anything to do with that pulse: this wave lands on the same
-        // pixels as the per-node swap flare, and at 375x812 the two together
-        // at 1.0 washed the near faces out. Those two still co-occur, so the
-        // measurement still holds. If the single light now reads too faint on
-        // a big screen, this is the number to raise — and 375x812 is the shot
-        // that has to be re-checked when it moves.
-        portraits.wavePulse(r.epicentre, {
-          speed: r.speed, width: 3.0, maxR: r.maxR + 4, amp: 0.62,
-        });
-        substrate.surge();
-        return {
-          announce: `Contributor portraits remixed — arrangement ${r.arrangement}.`,
-          busyMs: r.ms,
-        };
-      }
-      return null;
+    /** Both halves of the hover/selected channel pair. Owned is one of two
+     *  chapters that implements both. */
+    selection: {
+      setHot,
+      setSelected,
     },
 
-    setSelected(id, on) {
-      const idx = portraits.indexOf(id);
-      if (idx < 0) return;
-      // Guarded release, exactly like setHot: a stale close arriving after a
-      // retarget must not blank the newly selected portrait.
-      if (on) portraits.setSelected(idx);
-      else if (portraits.selIdx === idx) portraits.setSelected(-1);
-    },
-
-    /** LABEL POLICY (core/ui.js registration contract).
-     *
-     *  The ownership pods are retired (Ride-through #2): no in-scene pod chip
-     *  remains, and nothing here returns a resting label for them.
-     *
-     *  The sixteen contributors do not. Sixteen role tags standing over
-     *  sixteen faces reads as a tag cloud and buries the thing the chapter
-     *  is actually about — the faces, the ember rims, the strands between
-     *  them. So each contributor asks for `labelOnHover`: no chip at rest,
-     *  and the chip appears (hover, keyboard focus or the first tap of the
-     *  touch model — ui.js treats all three as the same `hot` state) naming
-     *  the person AND what they contributed, which is the question pointing
-     *  at a face asks. Names are placeholders until the consent pipeline
-     *  lands (CO-1.4 / OW-4.4); the shape is already right.
-     *
-     *  The accessible name carries the same string whether or not the chip
-     *  is drawn, so this costs an AT user nothing (ui.js sets aria-label).
-     */
-    labelPolicy(id) {
-      const c = contributors.find(x => x.id === id);
-      if (!c) return null;                 // anything else: default
-      const text = [c.name, c.role].filter(Boolean).join(' · ');
-      /* `chip: 'none'` — 2026-08-14, Hannah: "there are now two things that
-         show on the orbs upon hover, can you please delete the smaller ones,
-         we should only keep the black one above."
-         The two were this chip (a dark pill with a gold dot and
-         "CONTRIBUTOR · RESEARCHER") and the contributor card, which since
-         b3dc34b opens on hover instead of on click. The pill is the smaller,
-         and everything it said the card already says — `name` is the card's
-         heading and `role` is its first line, from these same two fields. So
-         it is deleted rather than duplicated.
-         `label` STAYS, and is the whole point of keeping this policy: ui.js
-         writes it to the button's `aria-label`, so the accessible name is
-         "Contributor · Researcher" exactly as before. Nothing was drawn for a
-         screen reader in the first place, and nothing is taken from one now.
-         `labelOnHover` is still declared, and still true — there is no resting
-         label — because the collision dodge and the arrival stagger both read
-         it, and a chip that paints nothing at all is the strongest possible
-         case of "nothing to stage". */
-      return { labelOnHover: true, chip: 'none', label: text || id };
-    },
-
-    nodeWorld(id) {
-      if (id === CROWN_ZONE_ID) return leg.CROWN.clone();
-      return portraits.worldOf(id);
-    },
-
-    /** HIT RADIUS (core/ui.js hotspot contract, 2026-08-06 — report A).
-     *
-     *  World-space radius of the thing this node DRAWS. ui.js projects it and
-     *  gives the chip a round hit pad that size, centred exactly on the node.
-     *
-     *  Before this the chip's hit surface was the pill itself: a 23 px-tall
-     *  bar running 200-306 px to one side of the node, and for these
-     *  hover-only chips it was INVISIBLE at rest. So the region that answered
-     *  the pointer had almost nothing to do with the region that showed a
-     *  face — measured 116 px of mean offset between the two centres, and
-     *  only 74 of 208 sample points taken across the drawn faces landed on
-     *  the right chip at 1440x900. The worst were the near/edge faces, whose
-     *  discs are biggest (up to 50 px radius against a 11 px half-height of
-     *  pill): 2 of 13 points. Hannah: "it feels like it is in a different
-     *  point to where they actually show."
-     *
-     *  A chapter that does not implement this keeps the pill-only hit model
-     *  exactly as it was. */
-    nodeRadius(id) {
-      if (id === CROWN_ZONE_ID) return CROWN_ZONE_R;
-      return portraits.radiusOf(id);
-    },
-
-    /** HOVER ZONES (core/ui.js, 2026-08-06 — report C; given the remix
-     *  2026-08-13).
-     *
-     *  A zone is a target with no chip, no label and no card: a piece of the
-     *  SCENE that answers the visitor directly. The crown is the only one —
-     *  "the top root thing", in Hannah's words — and it is the only thing
-     *  entitled to light the whole network.
-     *
-     *  It is still not a hotspot: a hotspot is a named node with a card
-     *  behind it, and the crown is not a contributor and has no content.
-     *
-     *  THE CROWN NOW CARRIES THE RE-DEAL (Hannah, 2026-08-13): "remove the
-     *  visible Remix button ... that existing [light-flash] interaction
-     *  should take over the Remix behaviour ... integrated into the scene
-     *  rather than exposed as a separate UI control." So the zone declares
-     *  the same chapter-contract trigger the retired pill declared, and
-     *  core/ui.js gives it the commit model (dwell, press, tap, Enter/Space)
-     *  and the announce/busy contract. The LIGHT is unchanged and still fires
-     *  on the bare hover — see setHot above; the re-deal is the commit.
-     *
-     *  Because it now DOES something it is also a real control: ui.js builds
-     *  it as a <button> with this accessible name, so the crown is finally
-     *  reachable from a keyboard. That retires residual 1 of the 2026-08-06
-     *  pass ("the crown is the one part of the composition that answers a
-     *  mouse and not a keyboard") — it took on information, so it took on the
-     *  obligations that come with information. It sits in the tab order
-     *  exactly where the Remix pill sat: after the chapter copy, ahead of the
-     *  sixteen people. */
-    hoverZones() {
-      return [{
-        id: CROWN_ZONE_ID,
-        world: () => leg.CROWN.clone(),
-        radius: CROWN_ZONE_R,
-        // Chapter-contract trigger name — the same one the pill pulled.
-        action: 'remixPortraits',
-        // The accessible name of the crown as a CONTROL. It says what the
-        // press does, not what the thing is: the light response is the
-        // pointer's own answer and carries no information, so there is
-        // nothing else here for a screen reader to be told about.
-        label: 'Re-deal the contributor portraits',
-        // Fallback live-region text. trigger() returns its own sentence (it
-        // knows which arrangement it landed on); this is only used if it
-        // returns nothing.
-        announce: 'Contributor portraits remixed.',
-      }];
+    visibility: {
+      // The SAME array the root `nodeIds` publishes (see the const above).
+      nodeIds,
+      nodeWorld,
+      // NO PER-NODE REVEAL, AND IT MUST STAY THAT WAY. Owned's sixteen
+      // contributor labels ride the chapter COPY EASE — ui.js's
+      // `(eased[h.chapter] || 0)` else-branch — precisely because
+      // chapter-interactions.js forwards `reveal: undefined` for a
+      // chapter with no nodeReveal. A consumer must convert this null to
+      // `undefined` at the addHotspot boundary; forwarding it as any
+      // function at all makes `h.reveal` truthy and switches all sixteen
+      // onto a reveal product with a different gate (design.md §8.2-H4).
+      nodeReveal: null,
+      nodeRadius,
+      labelPolicy,
+      // Neither reveal flag: owned has no nodeReveal to scrub or to read
+      // directly, so both are false, which is what today's absent members
+      // already evaluate to.
+      revealDirect: false,
+      revealScrub: false,
+      /** The private-internals reach in ui.js, given a door and then closed
+       *  through it (slice D). ui.js used to read
+       *  `window.journey.chapters.owned.portraits.setRailExcluded` — a named
+       *  chapter AND a private field. It now calls THIS, once per frame, for
+       *  every chapter that declares it, and knows nothing about `portraits`,
+       *  an index-based node model or a rail-exclusion concept: it hands over
+       *  a Set of node ids. `portraits.setRailExcluded` accepts a Set or any
+       *  iterable and no-ops when the mask CONTENT is unchanged, so a fresh
+       *  Set of the same ids uploads nothing.
+       *
+       *  NOT closed by slice D: journey.js's prepareGpu still reads
+       *  `chapters.owned.portraits` for the boot-time photo/remix warm-up.
+       *  That is now the only private-portrait reach left outside this
+       *  directory, and no C05 slice was assigned it. */
+      setExcludedNodes(ids) { portraits.setRailExcluded(ids); },
+      // Owned's labels are gated by the copy ease already (see nodeReveal
+      // above); it binds no separate ease callback.
+      bindCopyEase: null,
     },
 
     /** 'procedural' | 'photo' | 'anonymous' — anonymous is one call away. */

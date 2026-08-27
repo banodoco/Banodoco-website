@@ -1,0 +1,3 @@
+e85efe05cf8beae42364e2d10d854c6f00b4129d077270415f47e9227a16ec10  static/geom/manifest.json
+d7094e42d6dc7f357e178b9e93cf667c100dca19dc095bee230fa72e2e7a65de  static/geom/owned.bin
+6967a36ab309af7057336be64d6f0f9dd3c41b21  HEAD at oracle vendoring

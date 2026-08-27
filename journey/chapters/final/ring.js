@@ -84,7 +84,6 @@ import * as THREE from 'three';
 import {
   TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE, sweepReveal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat, REVEAL_W,
-  BATCH_LINE, BATCH_POINT,
 } from './world.js';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
 import {
@@ -99,7 +98,8 @@ import {
 } from './variation.js';
 import { createPicker } from './interact.js';
 import { createShed } from './shed.js';
-import { isBaked, geometry, payload } from '../../lib/baked.js';
+import { readBakedRing } from './ring-baked.js';
+import { createPrimordia } from './ring-primordia.js';
 import { CAMERA } from './camera.js';
 
 // The Final rest camera, for build-time LOD + occlusion only. M4 dedupe:
@@ -243,46 +243,10 @@ export function createFinalRing(sceneApi, uniforms) {
   const gauss = () => gaussOf(rand);
   const group = new THREE.Group();
 
-  // ---- baked-read wiring (2026-08-17) --------------------------------
-  // The shipped path skips the species-tissue emission below and rebuilds
-  // the two merged batches + primordia from static/geom bytes (baked once at
-  // commit time in the goldens' own headless Chrome; see journey/lib/baked.js).
-  // PLACEMENT stays live either way: clones, picker, seats, pokeMembers and
-  // the §8 ground-merge stubs are runtime-wired and always computed — only
-  // buildMushroom/buildCloneSeat tissue and the batch/primordia emission are
-  // skipped. ONE try/catch wraps the WHOLE read: any missing key or shape
-  // mismatch throws and the chapter falls back to the live builders in full,
-  // never a half-baked mix.
-  const baked = (() => {
-    if (!isBaked('final')) return null;
-    try {
-      const P = payload('final');
-      if (!P || !P.ring || !Array.isArray(P.ring.memberSegsPts)) {
-        throw new Error('final ring payload mismatch');
-      }
-      return {
-        g: {
-          ringLines: geometry('final/ringLines', BATCH_LINE),
-          ringGlows: geometry('final/ringGlows', BATCH_POINT),
-          primordia: geometry('final/primordia',
-            [['position', 3], ['color', 3], ['aDelay', 1], ['aTw', 1], ['psize', 1]]),
-        },
-        counts: {
-          ringSegs: P.ring.ringSegs,
-          glowPts: P.ring.glowPts,
-          primordia: P.ring.primordia,
-          // Per-body emission counts are not recoverable from the merged
-          // batches, so they round-trip keyed by the member index.
-          segsPtsByI: new Map(P.ring.memberSegsPts.map(r => [r.i, r])),
-          // ...and the plain array survives too, so bakePayload below can
-          // re-emit it verbatim on a baked build (counts-mirror, 2026-08-17).
-          memberSegsPts: P.ring.memberSegsPts,
-        },
-      };
-    } catch (e) {
-      return null;
-    }
-  })();
+  // The committed-bytes read (ring-baked.js). Its full rationale — what is
+  // skipped, what stays live either way, and the ONE try/catch that wraps the
+  // whole read — travels with the reader it documents.
+  const baked = readBakedRing();
 
   const lines = makeBatch();
   const glows = makeBatch();
@@ -461,7 +425,7 @@ export function createFinalRing(sceneApi, uniforms) {
       emit, mul: MUL,
       shade: { heatK, occlS, occlM, underVis, crowdK, innerK, camAz: camA },
     };
-    let body = null;
+    let body;
     if (asClone) {
       // The clone brings no soil with it (the hero's §8 ground network is
       // not in the stem/cap subtree), so the batch still carries this body's
@@ -1117,100 +1081,12 @@ export function createFinalRing(sceneApi, uniforms) {
   // of a ride nobody poked.
   group.add(shed.group);
 
-  /* ---- primordia: tiny buds that surface during a long hold (FN-2.4).
-       Time-compressed and subtle — soil-level ember points, no theatrical
-       sprouting. Driven by uDwell (seconds of settled dwell at the rest),
-       accumulated by the orchestrator. ---- */
-  const PRIM_DELAY = 6, PRIM_GROW = 9;
-  const primUniforms = {
-    uDwell: { value: 0 },
-    uAmount: uniforms.uAmount,
-    uFogNear: uniforms.uFogNear,
-    uFogFar: uniforms.uFogFar,
-    uTime: uniforms.uTime,
-    uMap: { value: glowTex },
-  };
-  const primPos = [], primCol = [], primDelay = [], primTw = [], primSize = [];
-  let primGeo;
-  if (baked) {
-    // Emission is fetched (final/primordia); only the shader below stays live.
-    primGeo = baked.g.primordia;
-  } else {
-    {
-      const c = new THREE.Color();
-      // in the arc gaps and along the lip edge — always on kept soil
-      const spots = [[100, 5.6], [160, 5.2], [300, 5.9], [335, 6.0], [20, 6.4]];
-      let di = 0;
-      for (const [azDeg, r0] of spots) {
-        const a = (azDeg * Math.PI) / 180;
-        let r = r0;
-        let x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
-        let guard = 0;
-        while (cutVal(x, z) < 0.4 && guard++ < 30) {
-          r -= 0.15;
-          x = RING_C.x + Math.cos(a) * r; z = RING_C.z + Math.sin(a) * r;
-        }
-        if (Math.hypot(x, z) < 3.2) continue;
-        primPos.push(x + gauss() * 0.2, groundY(x, z) + 0.05, z + gauss() * 0.2);
-        // warm bud tone
-        c.setRGB(1.0, 0.72, 0.38);
-        primCol.push(c.r, c.g, c.b);
-        primDelay.push(di * 2.2 + rand() * 1.2);
-        primTw.push(rand() * TAU);
-        primSize.push(0.10 + rand() * 0.06);
-        di++;
-      }
-    }
-    primGeo = new THREE.BufferGeometry();
-    primGeo.setAttribute('position', new THREE.Float32BufferAttribute(primPos, 3));
-    primGeo.setAttribute('color', new THREE.Float32BufferAttribute(primCol, 3));
-    primGeo.setAttribute('aDelay', new THREE.Float32BufferAttribute(primDelay, 1));
-    primGeo.setAttribute('aTw', new THREE.Float32BufferAttribute(primTw, 1));
-    primGeo.setAttribute('psize', new THREE.Float32BufferAttribute(primSize, 1));
-  }
-  const primMat = new THREE.ShaderMaterial({
-    uniforms: primUniforms,
-    vertexShader: /* glsl */ `
-      #define MIN_PT 1.7
-      attribute float aDelay, aTw, psize;
-      uniform float uDwell, uTime;
-      varying vec3 vColor;
-      varying float vA;
-      varying float vFog;
-      varying float vShrink;
-      void main() {
-        float grow = smoothstep(0.0, 1.0, (uDwell - ${PRIM_DELAY.toFixed(1)} - aDelay) / ${PRIM_GROW.toFixed(1)});
-        vA = grow * (0.55 + 0.30 * sin(uTime * 0.35 + aTw * 1.7));
-        vColor = color;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vFog = -mv.z;
-        float sz = psize * (0.2 + 0.8 * grow) * (300.0 / -mv.z);
-        vShrink = 1.0;
-        if (sz < MIN_PT) { vShrink = (sz * sz) / (MIN_PT * MIN_PT); sz = MIN_PT; }
-        gl_PointSize = sz;
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform sampler2D uMap;
-      uniform float uAmount, uFogNear, uFogFar;
-      varying vec3 vColor;
-      varying float vA;
-      varying float vFog;
-      varying float vShrink;
-      void main() {
-        vec4 t = texture2D(uMap, gl_PointCoord);
-        float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
-        gl_FragColor = vec4(vColor * t.a * vA * uAmount * fogF * vShrink, 1.0);
-      }
-    `,
-    vertexColors: true,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false,
-  });
-  const primordia = new THREE.Points(primGeo, primMat);
-  primordia.frustumCulled = false;
+  /* ---- primordia: the dwell-driven bud bed (FN-2.4), ring-primordia.js.
+       Built HERE, at the point the emission block occupied, because it draws
+       from `rand`/`gauss` and that stream's order IS the chapter's geometry
+       (h-series-contract.md §2.2). ---- */
+  const { points: primordia, geo: primGeo, count: primCount, uniforms: primUniforms } =
+    createPrimordia({ uniforms, glowTex, bakedGeo: baked ? baked.g.primordia : null, rand, gauss });
   group.add(primordia);
 
   /* ================================================================
@@ -1391,11 +1267,10 @@ export function createFinalRing(sceneApi, uniforms) {
      *  field is scene-parented), so this is a build product, not state. */
     seats,
     setDwell(s) { primUniforms.uDwell.value = s; },
-    dispose() { picker.dispose(); clones.disposeFigures(); },
     counts: {
       ringSegs: baked ? baked.counts.ringSegs : lines.segCount,
       glowPts: baked ? baked.counts.glowPts : glows.ptCount,
-      primordia: baked ? baked.counts.primordia : primSize.length,
+      primordia: baked ? baked.counts.primordia : primCount,
       ringMembers: memberStats,
       field: fieldStats,
       clones: clones.counts, pickTargets: picker.count,
@@ -1417,7 +1292,7 @@ export function createFinalRing(sceneApi, uniforms) {
     bakePayload: {
       ringSegs: baked ? baked.counts.ringSegs : lines.segCount,
       glowPts: baked ? baked.counts.glowPts : glows.ptCount,
-      primordia: baked ? baked.counts.primordia : primSize.length,
+      primordia: baked ? baked.counts.primordia : primCount,
       memberSegsPts: baked ? baked.counts.memberSegsPts
         : memberStats.map(({ i, segs, pts }) => ({ i, segs, pts })),
     },

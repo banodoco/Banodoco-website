@@ -370,6 +370,19 @@ export function createSpores(ctx) {
     pos.needsUpdate = true;
   }
 
+  // ---- R03: ownership bookkeeping for registerDrift()'s attachments ----
+  // Three things get attached below (the pointermove listener, the
+  // document mouseleave listener, and the 'spore-drift' animator) and,
+  // before this order, nothing ever detached any of them (see
+  // docs/code-health/evidence/2026-08-21-elegance-run-01/r03/CHARACTERIZATION.md).
+  // These stay closure-scoped to this createSpores() call — never hoisted
+  // to module scope — so two instances never share this bookkeeping (see
+  // the CHARACTERIZATION note on why that matters: this file has no
+  // module-global state today, and these variables must not become the
+  // first).
+  let driftAttached = false, driftDisposed = false;
+  let offPointerMove = null, offMouseLeave = null, offDriftAnimator = null;
+
   // ---- mouse wind + the drift integrator ----
   // Called by organism.js at the exact position the inline block held
   // before the M2 split. ORDERING CONSTRAINT (load-bearing): 'spore-drift'
@@ -381,6 +394,13 @@ export function createSpores(ctx) {
   // the seat writes light, render sees both: that order is proven
   // load-bearing (a8d4518).
   function registerDrift() {
+    // Idempotent: a second call (or any call after dispose()) attaches
+    // nothing new — there is exactly one live attachment per instance, or
+    // none. The one real caller (organism.js:1803) calls this once; this
+    // guard only matters for a hypothetical re-init/re-instantiation path,
+    // which today would otherwise stack listeners forever (see
+    // CHARACTERIZATION.md's "re-instantiation" section).
+    if (driftAttached || driftDisposed) return;
     const { breeze, camera, addAnimator } = ctx;
 
     // ---- mouse wind: the cursor drags a whisper of air with it ----
@@ -392,17 +412,29 @@ export function createSpores(ctx) {
     // The smoothed velocity makes the stirred air trail the cursor a beat.
     // Mouse only: touch drags are orbit gestures, and this is a hover thing.
     const mw = { x: 9, y: 9, px: 9, py: 9, svx: 0, svy: 0, on: false };
-    addEventListener('pointermove', (e) => {
+    const onPointerMove = (e) => {
       if (e.pointerType && e.pointerType !== 'mouse') return;
       if (e.buttons !== 0) { mw.on = false; return; } // dragging = orbiting, not hovering
       mw.x = (e.clientX / innerWidth) * 2 - 1;
       mw.y = -(e.clientY / innerHeight) * 2 + 1;
       mw.on = true;
-    });
-    document.addEventListener('mouseleave', () => { mw.on = false; });
+    };
+    addEventListener('pointermove', onPointerMove);
+    const onMouseLeave = () => { mw.on = false; };
+    document.addEventListener('mouseleave', onMouseLeave);
+    offPointerMove = () => removeEventListener('pointermove', onPointerMove);
+    offMouseLeave = () => document.removeEventListener('mouseleave', onMouseLeave);
     const _mwDir = new THREE.Vector3(), _mwRight = new THREE.Vector3(), _mwUp = new THREE.Vector3();
 
-    addAnimator('spore-drift', (t, dt) => {
+    offDriftAnimator = addAnimator('spore-drift', (t, dt) => {
+      // R03: post-dispose guard. The removal below (dispose() calling the
+      // handle addAnimator returned) is the real detachment — this is
+      // cheap defense in depth against the same defect class C04 found in
+      // portraits.tickSwap() (a disposed instance still mutated by
+      // late-arriving scheduled work), in case anything ever re-registers
+      // this name without going through this file's own dispose/register
+      // pair.
+      if (driftDisposed) return;
       // Seat watchdog (restore discipline is structural, not promised): if a
       // claimed driver stopped calling drive() — chapter torn down, journey
       // frame error — the system itself restores the colors and sizes
@@ -538,6 +570,33 @@ export function createSpores(ctx) {
       }
       pos.needsUpdate = true;
     });
+    driftAttached = true;
+  }
+
+  /** R03: detach everything registerDrift() attached — the pointermove
+   *  listener, the document mouseleave listener, and the 'spore-drift'
+   *  animator (via the identity-scoped, idempotent handle R01's
+   *  addAnimator now returns). Idempotent: safe to call twice, safe before
+   *  registerDrift() ever ran (registerDrift() then becomes a permanent
+   *  no-op too — see its own guard), and safe to call from inside a frame
+   *  (removing an animator mid-iteration is R01's proven-safe case; the
+   *  worst outcome is 'spore-drift' being skipped for the frame already in
+   *  flight, never a call after removal). Positions/colors/sizes are left
+   *  exactly where the integrator last wrote them — dispose() releases
+   *  ownership of the attachments, it does not reset spore state, mirroring
+   *  R02's teardown() for organism/intro.js. */
+  function disposeDrift() {
+    if (driftDisposed) return;
+    driftDisposed = true;
+    if (driftAttached) {
+      offPointerMove();
+      offMouseLeave();
+      offDriftAnimator();
+      offPointerMove = null;
+      offMouseLeave = null;
+      offDriftAnimator = null;
+      driftAttached = false;
+    }
   }
 
   // =====================================================================
@@ -1172,6 +1231,14 @@ export function createSpores(ctx) {
   const system = {
     sporePts,
     shedSpores, registerDrift,
+    // R03: the one named owner of everything registerDrift() attaches (the
+    // pointermove listener, the document mouseleave listener, the
+    // 'spore-drift' animator). See disposeDrift() above for the idempotence/
+    // safety contract. Exported but not wired into any caller — this
+    // codebase has no scene-teardown path yet (organism.js is outside this
+    // order's allowlist), the same posture R02 left organism/intro.js's
+    // teardown() in.
+    dispose: disposeDrift,
     // ---- driver seat (merge doc §3) ----
     // ONE driver at a time claims the seat with its static exit geometry and
     // gets the seat handle back; releasing (setDriver(null)) — like going

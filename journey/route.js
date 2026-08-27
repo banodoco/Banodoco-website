@@ -67,291 +67,88 @@ import { JOURNEY_SCHEMA } from './structure.js';
 // still reads as two speeds. Declare the incoming segment's allocation so its
 // mean slope lands NEAR the pin, and the join stops being a cliff.
 
-export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
+export const DEFAULT_STOP = 0.5;      // mid-chapter rest
 
-/* Historical tuning narrative retained beside the canonical schema.
-const DOCUMENTED_ROUTE = [
-  { id: 'mission', span: 14, nav: 'Intro', stops: [0.0], scrollVh: 3.5 },
-  // scrollVh 7.5 -> 5.6, ALL of it out of the tail (2026-08-11, Hannah's
-  // brief item 2 — "make the speed of the transition from Connect to
-  // Inspire be a little bit faster"). That travel is the Inspire rest
-  // (p 0.26) to the Connect rest (p 0.5230) and it cost 11.31 vh, but only
-  // its first stretch is free to trim: the ground-lighting schedule owns
-  // p 0.3510 (the network's first draw) onward and was slowed ~3.2x on
-  // purpose two passes ago (c77fb00, 0701653) — it keeps its road exactly.
-  // So the trim is taken from the chapter's SECOND sub-segment only, where
-  // the leg is pure travel with nothing lighting:
-  //   · seg 0 (p 0.14..0.26, the Mission -> Inspire arrival) UNCHANGED at
-  //     3.5 vh — nobody asked for that half and it does not move;
-  //   · seg 1 (p 0.26..0.38) 4.01 -> 2.1 vh.
-  // Measured: the whole travel 11.31 -> 9.40 vh (0.83x, 17% faster), of
-  // which the pure-travel head p 0.26..0.3510 goes 2.97 -> 1.52 and the
-  // network's pre-existence draw-in lead p 0.3510..0.3860 goes 1.27 ->
-  // 0.74. The ground lighting itself (LIGHT_LO..LIGHT_HI, p 0.3860 ->
-  // 0.5201 — connect/index.js) measures 6.94 -> 7.01 vh, 1.011x: kept.
-  // (16-connect-ground-restage.md, 2026-08-11.)
-  // seg 1 2.1 -> 3.2 vh (2026-08-14, the SIXTH pass on the Connect ground
-  // lighting). Not a change of heart about the 2026-08-11 trim above: that
-  // trim was denominated in scroll, and the glide that a released gesture
-  // actually rides is now denominated in scroll too (constants.js
-  // COMMIT_GLIDE_PX), so this tail is FASTER to a real visitor than the 2.1 vh
-  // version was — it used to be spent at a flat p/s, i.e. 48% of the leg's
-  // glide time for 24% of its road, and it now costs what it is worth.
-  // The 1.1 vh buys the join: Connect's seg 0 below declares a `shape`, and a
-  // pinned knot is shared with the segment before it (see the note at the top
-  // of this file), so this segment's own mean slope has to land near the pin or
-  // it collapses into the join. At 3.2 vh its mean is 3.81e-5 p/px against the
-  // pinned 2.31e-5 — a 0.61x handover instead of the 0.36x cliff that leaving
-  // it at 2.1 would have forced.
-  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 6.7, segVh: [3.5, 3.2] },
-  // stops [0.65], not the DEFAULT_STOP, and scrollVh 4.5 -> 10.0 (2026-08-10,
-  // Hannah's brief items 1-2 — the FIFTH pass on the ground-lighting pace, and
-  // the light schedule was reported FULLY SPENT at the fourth (c77fb00):
-  // 0.1021 of p was the whole distance between the camera-pure resolve's
-  // first draw (p 0.3500) plus its 0.035 pre-existence lead and the frozen
-  // rest at p 0.490. Both authorised levers are pulled here, together:
-  //   · the rest slides to leg-t 0.65 (p 0.490 -> 0.5230) — the SAME approved
-  //     pose (connect/camera.js re-keys the hold to t 0.65; references
-  //     re-shot same-commit, byte-checked), which hands the arrival another
-  //     0.033 of p that used to belong to the dive. The dive keys re-space
-  //     onto the remaining 0.35 of leg (same dive line, same owned keys).
-  //   · scrollVh 4.5 -> 10.0 stretches the chapter's wall-clock 2.22x at any
-  //     fixed scroll speed.
-  //   Net: the ground-lighting arrival runs ~3x its former wall-clock, which
-  //   is the "about a third of the current speed" asked for. The same road
-  //   also carries brief item 1: the Inspire->Connect travel is now ONE
-  //   analytic gesture (connect/camera.js approach()) and the extra scroll
-  //   is what lets it breathe. Page cost: +5.5 vh.
-  //   scrollVh 10.0 -> 10.15 with an explicit segVh (2026-08-11, the same
-  //   brief): the total barely moves, but the SPLIT is now declared rather
-  //   than inferred, because the Inspire trim above changes the tangent at
-  //   this chapter's opening knot and would otherwise have shifted road
-  //   from the ground lighting into the dive. seg 0 (p 0.38..0.5230, the
-  //   arrival Hannah slowed and wants kept) holds 7.30 vh — the 7.295 the
-  //   shipped spline gave it; seg 1 (0.5230..0.60, the Connect -> Owned
-  //   dive, 86883b9's one arc) takes 2.85 so the dive measures 5.12 vh
-  //   against its shipped 5.15 — 0.993x, i.e. unchanged.
-  //   scrollVh 10.15 -> 17.55, segVh [7.30, 2.85] -> [14.70, 2.85], and seg 0's
-  //   `shape` DECLARED (2026-08-14, Hannah's SIXTH request on this pace: "make
-  //   the lines that appear on the ground in the connect the community section
-  //   appear even slower, one at a time elegantly, they still appear rapidly
-  //   and manically"). Every previous pass on this arrival raised scrollVh and
-  //   measured the slowdown under a continuous scrub. Measured this time under
-  //   a real released gesture, the shipped arrival ran in 1.70 s, because the
-  //   commit glide was denominated in p/s and threw the road away — the whole
-  //   story is in constants.js COMMIT_GLIDE_PX. With the glide road-denominated
-  //   this chapter's scroll finally converts, so it is worth buying, and seg 0
-  //   (the arrival Hannah keeps reporting) takes all of it.
-  //   `shape` k [2.15, 0.80] is the OTHER half of her ask — "they should get
-  //   slower as they go", Hivemind into Discord into ADOS. The three light
-  //   windows are near-equal in p (0.0546 / 0.0591 / 0.0546, duration
-  //   proportional to each front's reach — connect/index.js), so a deceleration
-  //   authored as per-route weights would have to take p from the early routes
-  //   to give it to the late ones, which is precisely the trade 0b7ce1c built,
-  //   measured and rejected in this chapter for good reasons. Authored as ROAD
-  //   it costs nothing: the gain starts at 2.15x this segment's mean and ends
-  //   at 0.80x, so early p is cheap and late p is expensive, and the whole
-  //   arrival — light, camera and chips together — relaxes as it runs. The
-  //   shipped tangents here were [1.964, 1.188], measured on the live spline,
-  //   so this is a steepening of a curve that already decelerated, not a new
-  //   gesture. Page 46.12 -> 54.62 vh, +8.50.
-  //   scrollVh 17.55 -> 14.35, segVh [14.70, 2.85] -> [11.50, 2.85], shape k
-  //   [2.15, 0.80] -> [1.60, 0.95] (2026-08-16, Hannah's SEVENTH pass on this
-  //   arrival, and — exactly as on Final's seventh — the first asking for
-  //   LESS: "the 3 ground lights animation feels like it stalls the actual
-  //   motion from continuing"). The fault is where the road sat, not the
-  //   light schedule. ADOS's finale window (p ~0.4726..0.5201) plays entirely
-  //   inside the camera's own landing ramp (connect/camera.js trapEase, ramp
-  //   from p ~0.4757 to the rest), and the k1 = 0.80 tail made exactly that
-  //   stretch the most expensive scroll in the leg: the last third of seg 0's
-  //   p — camera braking to zero, particles and pulses still gated on full
-  //   arrival, one light line the only motion — held ~45% of 14.70 vh. Scroll
-  //   stopped converting into anything, which is the stall as reported.
-  //   Three coordinated edits, of which this is the road half (the other
-  //   half is the chips: connect/index.js nodeReveal now lands each label
-  //   with its own light, so the tail owns a narrative beat instead of
-  //   trailing one):
-  //   · seg 0 14.70 -> 11.50 vh. Six passes of "slower" are respected — the
-  //     light schedule (LIGHT_LO/HI, OVERLAP, order, one head speed) does not
-  //     move, and at the glide floor the arrival still reads ~6.9 s against
-  //     the shipped ~8.9 — but the fraction of that road parked on a
-  //     near-static frame stops being the plurality of it.
-  //   · k1 0.80 -> 0.95 releases the parking brake: the finale converts
-  //     scroll to light-motion near the leg's mean instead of at 0.62x of
-  //     it, while staying under 1 so the rest is still approached, not hit.
-  //   · k0 2.15 -> 1.60 spends what the tail gave back on the HEAD, where
-  //     the camera is at full trapezoid speed — the swing into the chapter
-  //     stops racing past its own best motion. The declared head slope
-  //     lands at 19.9 mp/vh against the shipped 20.9, so the Inspire seg-1
-  //     handover the 2026-08-14 note levelled holds at 0.58x against its
-  //     shipped 0.61x — same class, no new cliff.
-  //   The mild decelerando of the sixth pass ("slower as they go") survives
-  //   in shape — 1.60 down to 0.95 still relaxes as it runs — it just no
-  //   longer ends at a wall. Page 54.62 -> 51.42 vh, -3.20.
-  // EIGHTH PASS, 2026-08-21 ("still does a kinda stall going into connect
-  // then ... a roll through"). The measured scroll gain across the visible
-  // arrival fell 0.0198 -> 0.0100 p/vh, then rose to 0.0115 at the rest: the
-  // exact stall-then-roll shape. The declared 2.5 s released transit already
-  // owns total duration, so shorten only the road and flatten its normalised
-  // tangent profile. At [8.00, 2.85] / [1.10, 1.00], the same samples stay
-  // within 0.0196..0.0173 and finish at 0.0178 — no trough/re-acceleration,
-  // while the light schedule, camera path and rest remain position-identical.
-  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.85,
-    segVh: [8.00, 2.85], shape: { seg: 0, k: [1.10, 1.00] } },
-  // scrollVh 5.0 -> 9.27, declared as segVh [2.27, 7.00] with the POST-REST
-  // sub-segment's shape pinned (2026-08-12, Hannah: "the move currently reads
-  // as two motions, or one motion with two speeds. It feels jilted rather than
-  // continuous"). The leg she means is the Owned rest (p 0.725) to the Final
-  // rest (p 0.97), and the fault was NOT in the camera.
-  //
-  // WHAT WAS MEASURED (17-final-field.md 2026-08-12; live traces, both
-  // aspects, the scroll spline replicated bit-exactly — worst |Δp| 0 over all
-  // 13,392 px). Against its own subject distance the camera path is already
-  // ONE envelope: rotation crests at p 0.7888, parallax at p 0.7953, and the
-  // combined density crests 88.3 at p 0.792 and decays monotonically to zero
-  // at the rest. The scroll did the damage:
-  //
-  //   · this chapter ran at a mean 50.0 milli-p per vh while the Final
-  //     arrival next door runs at 7.06 — a 7.08x step in allocation density,
-  //     sitting in the MIDDLE of one continuous camera move;
-  //   · `shape` on that arrival pins their shared knot at p 0.85 to 2.219x
-  //     the ARRIVAL's mean, i.e. 15.66 mp/vh — only 0.31x of THIS chapter's
-  //     own mean. So Owned had to dump its progress early and collapse into
-  //     the join: gain 62.2 mp/vh at the rest, 15.7 at p 0.85.
-  //
-  // The visitor felt exactly that. In 15 equal scroll steps across the leg,
-  // the FIRST step covered p 0.725 -> 0.8009 (31% of the leg) and the second
-  // reached 0.8483 — the whole underground swing and the surfacing were spent
-  // in 2 steps of 15, and the remaining 13 shared what was left. On-screen
-  // motion per pixel of scroll spiked to 13.95 and fell to 2.45 within the
-  // first 15% of the road: peak-over-plateau 12.6, i.e. two speeds.
-  //
-  // THE FIX IS ROAD, NOT GEOMETRY. Nothing in the camera, the reveal or the
-  // arrival moves. The chapter simply stops spending its whole allocation
-  // before the join:
-  //   · seg 0 (p 0.60..0.725, the tail of the Connect -> Owned dive) is
-  //     declared at 2.27 vh — the 2.27 the shipped spline was already giving
-  //     it, so 86883b9's one arc still measures 5.12 vh end to end, its gain
-  //     at the Connect rest is the same 23.3, and it gains no trough;
-  //   · seg 1 (p 0.725..0.85, the swing Hannah is watching) 2.73 -> 7.00 vh,
-  //     which puts its mean at 17.86 mp/vh against the 15.66 it must hand over
-  //     at p 0.85 — a level handoff instead of a 3.2x cliff;
-  //   · `shape` k0 = 1.6 holds the departure tangent at 28.6 mp/vh. Low enough
-  //     that the leg no longer front-loads, high enough that the camera's own
-  //     -16% speed dip at the withdraw key (p 0.750) stays masked rather than
-  //     surfacing as a hitch — see the residual in 17-final-field.md. k1 =
-  //     0.877 is 15.66/17.86, i.e. it ASKS for precisely the value the
-  //     arrival's own k0 already pins at that shared knot; the two
-  //     declarations agree by design, and the arrival's wins by loop order.
-  //
-  // Measured after: on-screen motion per pixel goes 0.21 -> 4.64 -> 4.47 ->
-  // 4.18 -> 3.12 -> 2.70 -> 2.46 -> 1.82 -> 1.38 -> 0.76 -> ... -> 0. One
-  // rise, one broad crest, one monotone decay — peak-over-plateau 12.6 -> 1.89
-  // and the worst stall-then-surge anywhere on the leg 1.230 -> 1.038. The 15
-  // equal scroll steps now read 0.725 / 0.7644 / 0.794 / 0.8181 / 0.8409 /
-  // 0.8649 / 0.8857 / ... — the surfacing takes four steps where it took two.
-  //
-  // THE ARRIVAL IS UNTOUCHED, and that is checked rather than asserted: the
-  // Final arrival's gain curve as a function of distance INTO the segment is
-  // bit-identical before and after (worst |Δp| 3.3e-16 over its whole 17.0
-  // vh), because its length, its mean slope and both its k values are
-  // unchanged. 6282080's 1.99x survives by construction, not by measurement.
-  // No p-value, span, stop, camera key, ladder rung or golden moves — only
-  // wheel distance, which nothing in portrait.js or owned/leg.js reads.
-  // Page 41.85 -> 46.12 vh, +4.27.
-  { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 9.27,
-    segVh: [2.27, 7.00], shape: { seg: 1, k: [1.6, 0.877] } },
-  // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
-  // no nav entry — the LAST nav'd chapter stays highlighted through it (v6).
-  //
-  // stops [0.8], not the DEFAULT_STOP (2026-08-09, Hannah's "charging up"):
-  // the Final rest moves 0.925 -> 0.97. The old mid-chapter rest left the
-  // whole second half of the chapter — p 0.925..1.0, ~675 px of wheel — as a
-  // held frame with nothing to hold for (585dad8 removed the recede that used
-  // to spend it), while the field's arrival was compressed into ~500 px in
-  // front of it. That dead road is now spent ON the arrival: the camera leg's
-  // approach stretches to the new rest (chapters/final/camera.js re-times the
-  // rest key only — the two travel keys hold, so nothing before p 0.878
-  // moves and the Owned colony's leg sampling is untouched), and the arrival
-  // ladder is re-authored across it (18-one-species.md §14). The end-hold
-  // 0.97..1.0 (~270 px) remains a true hold: p = 1 stays a resolution anchor
-  // and renders the rest composition.
-  // scrollVh 3.5 -> 6.0 (2026-08-10, Hannah's brief item 3 — the FOURTH
-  // pass on this arrival's pacing, and the end-hold road is already spent
-  // (336f31d). This is the one lever left that buys real wall-clock
-  // without moving a single p-value, camera key, ladder rung or golden:
-  // the same p-progression stretches over 1.71x the physical scroll, so
-  // the whole kindle sequence — and everything else in the chapter —
-  // slows by that factor at any fixed scroll speed.
-  // scrollVh 6.0 -> 12.0 (2026-08-10 later, the FIFTH pass — "a quarter
-  // the speed on both axes". Same lever, doubled again, as half of the one
-  // route allocation planned with the Connect items (EXECUTION.md
-  // 2026-08-10): still no p-value, camera key, ladder rung or golden
-  // moves. Boundary/span moves were considered and rejected — scroll and
-  // p are decoupled by design, so a span change renormalizes every
-  // chapter's mapping while buying zero wall-clock; and the arrival
-  // already owns ~76% of the chapter's leg, so scrollVh IS the whole
-  // overall-axis lever. This delivers 2.0x overall (4x would need
-  // ~+18 vh more page for one chapter — declined, recorded in
-  // 18-one-species.md §15); the per-body axis gets the rest from
-  // clones.js DRAW_W. Page grows 32.0 -> 38.0 vh.)
-  // scrollVh 12.0 -> 17.6, declared as segVh [17.0, 0.6] with the arrival's
-  // shape pinned (2026-08-11, Hannah's SIXTH request on this moment: "can
-  // you make the mushrooms lighting up when I enter the Final section
-  // happen a lot slower too"). The fifth pass reported the ask as 4x and
-  // delivered 1.86x, and named the page as the bound. The page was not the
-  // whole bound — the END-HOLD was. p 0.97..1.0 is a held frame, and it was
-  // taking 3.47 vh of the chapter's 12.0 and 29% of every raise on top:
-  // that is why scrollVh 12 -> 24 (the fifth pass's lever, doubled again)
-  // buys only 1.75x for +12 vh of page. Reclaiming it costs nothing that
-  // shows:
-  //   · seg 0 (p 0.85..0.97, the whole arrival) 8.53 -> 17.0 vh;
-  //   · seg 1 (p 0.97..1.0, the end-hold) 3.47 -> 0.6 vh. It stays a true
-  //     hold and p = 1 stays a resolution anchor — a fling to the end still
-  //     settles there — it just stops charging the visitor three screens of
-  //     wheel for a frame that does not move.
-  //   · `shape` holds the arrival's own gain curve while it stretches. The
-  //     k values ARE the shipped spline's: measured on it, the arrival's
-  //     end tangents were 2.219x and 0.451x its mean slope, and re-imposing
-  //     those ratios makes the new curve the old curve scaled. That is what
-  //     turns this from a re-timing into a stretch — see the `shape` note
-  //     at the top of the file.
-  // Measured (live pull curve + the spline, 18-one-species.md §17): the
-  // whole progression 8.33 -> 16.61 vh, 1.99x, and EVERY ONE of the 72
-  // bodies' charge-and-take windows 1.99x, spread 0.2%. No p-value, camera
-  // key, ladder rung, DRAW_W or golden moves — the per-body axis is bought
-  // entirely from scroll this time, so §12/§13's "one at a time" is
-  // preserved exactly rather than traded against a wider kindling window.
-  // Page 38.00 -> 41.85 vh, +3.85, of which 1.9 is paid for by the Inspire
-  // trim above.
-  // scrollVh 17.6 -> 10.6, segVh [17.0, 0.6] -> [10.0, 0.6], shape k
-  // [2.219, 0.451] -> [1.305, 0.70] (2026-08-16, Hannah's SEVENTH pass on
-  // this arrival, and the first one asking for LESS: "the entry light up...
-  // feels a little bit uneven and lasts too long... its startup sequence at
-  // the end should feel slick and elegant", like the landing view's own
-  // 5.4 s intro). Measured on the shipped tree, the fault was distribution,
-  // not tempo: the 24 rungs occupied scroll 26.9k..32.4k of the leg's
-  // 26.7k..38.9k px — 44% of the road — and the k1 = 0.451 landing brake
-  // stretched the LAST pull units over ~6.5k px, so the closers' charge
-  // curves crawled through half a chapter of near-static settle. Two of the
-  // three axes of that fix live here:
-  //   · seg 0 17.0 -> 10.0 vh. Six passes gained road; with the ladder now
-  //     re-authored EVEN in scroll (world.js / ring.js, this commit) the
-  //     road is finally spent evenly, so less of it reads as more: a
-  //     deliberate ~1200 px/s read crosses the arrival in ~5.5 s — the
-  //     landing intro's own scale — instead of ~10 s of which half was tail.
-  //   · k1 0.451 -> 0.70 softens the landing brake: the crawl zone (pull
-  //     1.0 -> 1.12) stops eating a third of the leg, which is what let the
-  //     re-authored ladder finish its last kindle at pull ~1.05 with the
-  //     frame still visibly moving. k0 2.219 -> 1.305 is NOT a taste change:
-  //     it keeps the p 0.85 knot's ABSOLUTE slope at the 15.66 mp/vh the
-  //     Owned handover was levelled against (k0 x 120/segVh0 = 15.66 —
-  //     request 83's "one motion, not two speeds" survives by construction;
-  //     owned's own k1 = 0.877 still asks for exactly this value).
-  // Page 41.85 -> 34.85 vh, -7.0.
-  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 10.6,
-    segVh: [10.0, 0.6], shape: { seg: 0, k: [1.305, 0.70] } },
-]; */
+// F03 (2026-08-21-elegance-run-01): the commented-out `DOCUMENTED_ROUTE`
+// array that used to sit here — a dead, pre-manifest alternative
+// construction of the route table, interleaved with a per-chapter tuning
+// changelog — is removed. Its final values are proven identical to the
+// live, canonical `ROUTE` below (derived from structure.js's
+// JOURNEY_SCHEMA.chapters) by tools/fixtures/route-legacy.fixture.mjs.
+//
+// A fixture that preserves VALUES does not license deleting the RATIONALE
+// for those values (R1 review, MAJOR 1). Most of the changelog prose the
+// array carried is not lost — every dated entry that cites a doc names one
+// that already holds the full version: journey-v6-plan/16-connect-ground-restage.md,
+// journey-v6-plan/17-final-field.md, journey-v6-plan/18-one-species.md,
+// journey-v6-plan/EXECUTION.md. (journey-v6-plan/06-mission-preservation.md
+// and journey-v6-plan/26-scroll-loop.md are cited elsewhere in THIS file —
+// the mission-rest note above and the TRANSIT_S note below — not inside the
+// deleted array; naming them here was a citation error, corrected.) But
+// three dated passages carried reasoning that is NOT written down anywhere
+// else in the repo — confirmed by grepping journey-v6-plan/ for their
+// measured numbers and finding no match. One of them is the rationale for
+// the values Connect ships TODAY. Restored verbatim below, next to the
+// chapter each one explains.
+
+// ---- connect: rationale for segVh [8.00, 2.85], shape k [1.10, 1.00] ----
+// (structure.js JOURNEY_SCHEMA.chapters, id: 'connect') ----------------------
+//
+// SEVENTH pass, 2026-08-16 (Hannah — "the 3 ground lights animation feels
+// like it stalls the actual motion from continuing"). The fault is where
+// the road sat, not the light schedule. ADOS's finale window (p
+// ~0.4726..0.5201) plays entirely inside the camera's own landing ramp
+// (connect/camera.js trapEase, ramp from p ~0.4757 to the rest), and the k1
+// = 0.80 tail made exactly that stretch the most expensive scroll in the
+// leg: the last third of seg 0's p — camera braking to zero, particles and
+// pulses still gated on full arrival, one light line the only motion — held
+// ~45% of 14.70 vh. Scroll stopped converting into anything, which is the
+// stall as reported. Three coordinated edits, of which this is the road
+// half (the other half is the chips: connect/index.js nodeReveal now lands
+// each label with its own light, so the tail owns a narrative beat instead
+// of trailing one):
+//   · seg 0 14.70 -> 11.50 vh. Six passes of "slower" are respected — the
+//     light schedule (LIGHT_LO/HI, OVERLAP, order, one head speed) does not
+//     move, and at the glide floor the arrival still reads ~6.9 s against
+//     the shipped ~8.9 — but the fraction of that road parked on a
+//     near-static frame stops being the plurality of it.
+//   · k1 0.80 -> 0.95 releases the parking brake: the finale converts
+//     scroll to light-motion near the leg's mean instead of at 0.62x of
+//     it, while staying under 1 so the rest is still approached, not hit.
+//   · k0 2.15 -> 1.60 spends what the tail gave back on the HEAD, where the
+//     camera is at full trapezoid speed — the swing into the chapter stops
+//     racing past its own best motion. The declared head slope lands at
+//     19.9 mp/vh against the shipped 20.9, so the Inspire seg-1 handover
+//     the 2026-08-14 note levelled holds at 0.58x against its shipped
+//     0.61x — same class, no new cliff.
+//   The mild decelerando of the sixth pass ("slower as they go") survives
+//   in shape — 1.60 down to 0.95 still relaxes as it runs — it just no
+//   longer ends at a wall. Page 54.62 -> 51.42 vh, -3.20. (segVh at this
+//   point: [11.50, 2.85], shape k [1.60, 0.95] — superseded by the EIGHTH
+//   pass below, which is what ships today.)
+//
+// EIGHTH PASS, 2026-08-21 — the pass that produced today's shipped values
+// ("still does a kinda stall going into connect then ... a roll through").
+// The measured scroll gain across the visible arrival fell 0.0198 -> 0.0100
+// p/vh, then rose to 0.0115 at the rest: the exact stall-then-roll shape.
+// The declared 2.5 s released transit already owns total duration, so
+// shorten only the road and flatten its normalised tangent profile. At
+// [8.00, 2.85] / [1.10, 1.00], the same samples stay within 0.0196..0.0173
+// and finish at 0.0178 — no trough/re-acceleration, while the light
+// schedule, camera path and rest remain position-identical.
+
+// ---- final: rationale for scrollVh's fourth-pass step toward today's 10.6 --
+// (structure.js JOURNEY_SCHEMA.chapters, id: 'final') -----------------------
+//
+// scrollVh 3.5 -> 6.0 (2026-08-10, Hannah's brief item 3 — the FOURTH pass
+// on this arrival's pacing, and the end-hold road is already spent
+// (336f31d). This is the one lever left that buys real wall-clock without
+// moving a single p-value, camera key, ladder rung or golden: the same
+// p-progression stretches over 1.71x the physical scroll, so the whole
+// kindle sequence — and everything else in the chapter — slows by that
+// factor at any fixed scroll speed. (Superseded by later passes — fifth
+// through seventh, most with surviving detail in journey-v6-plan/18-one-species.md
+// — that carried scrollVh on to today's shipped 10.6.)
 
 export const ROUTE = JOURNEY_SCHEMA.chapters.map((chapter) => {
   const route = {
@@ -448,14 +245,100 @@ export const TRANSIT_S = {
  *
  * Most arrivals deliberately keep scroll.js's global SNAP_K brake: their
  * final camera easing is short enough that the resulting soft tail reads as
- * part of the settle. Connect is the exception. Its road decelerando, camera
- * trap-ease ramp and last ground-light pass all occupy the same final slice,
- * so the global exponential brake adds a second 0.7-0.9 s near-stop exactly
- * where the chapter is still visibly introducing itself. Keep the authored
- * 2.5 s cruise and all position-driven light timing; only bound that extra
- * controller tail to the same proven budget used for reverse glides. */
+ * part of the settle. Two arrivals are not like that. Their road decelerando,
+ * camera trap-ease ramp and last light pass all occupy the same final slice,
+ * so the global exponential brake adds a second near-stop exactly where the
+ * chapter is still visibly introducing itself. Keep the authored cruise and
+ * all position-driven light timing; only bound that extra controller tail to
+ * the same proven budget used for reverse glides.
+ *
+ * READ THE NUMBER AS A DIAL, NOT AS THE DELIVERED TAIL. scroll.js's brakeK
+ * solves K from an engage point taken at SNAP_K — "one fixed-point iteration",
+ * and it does not run a second — so what actually ships is shorter than what
+ * is written here, by a factor that depends on the leg's own cruise. Declared
+ * 0.35 delivers 183 ms on Inspire -> Connect and 300 ms on Connect -> Owned.
+ * The dial is monotone and the readings below are measurements, not algebra.
+ *
+ * ENTRIES
+ *
+ * 'inspire>connect' — 2026-08-17. The first of these, and the one that named
+ * the fault. Unchanged.
+ *
+ * 'connect>owned' — 2026-08-24 (DEFECT-04; owner: "the entry animation on the
+ * owner thing feels a little janky"). This leg had no entry, and nobody chose
+ * that — it was simply the global SNAP_K default, and SNAP_K is denominated in
+ * p, so its tail is a ~constant 0.9 s however the leg is paced. Here that lands
+ * on a camera whose own ease-out has already taken the picture to a standstill.
+ *
+ * 'mission>inspire' — 2026-08-25 (owner: "sometimes when I scroll from the
+ * first to the second section it moves really slow towards the end").
+ * "Sometimes" is exact, and it is the gesture class: only a RELEASED gesture
+ * rides the commit glide into this brake — a finger that scrubs all the way
+ * in is landed by the servo (SMOOTH_K) and never sees it. Measured at
+ * 1440x900 on the virtual clock (tools/trace/brake-tail.py), forward from
+ * the Mission rest:
+ *
+ *                          brake tail  camera <2% of its own peak, at settle
+ *   12-notch flick, no entry   783 ms   433 ms — buying 0.17% of a 24.0-u path
+ *   gentle release, no entry   700 ms   367 ms — buying 0.09%
+ *   sustained scrub (control)     --    100 ms
+ *
+ * Same violation as the two entries above, and the worst geometry of the
+ * three: this is the route's longest camera path (24.0 world units), and
+ * INSPIRE_CAM.arrival's trapezoid has its own C2 tail exactly where the
+ * exponential creep parks — an eased clock in p spending ~half a second that
+ * buys no visible motion. The nav-jump path of this same leg was already
+ * cured of exactly this in metric pacing (journey.js buildRoutePace,
+ * 2026-08-24); this entry is the scroll path's half of that finding, using
+ * the brake's own declared-tail mechanism rather than a new one. 0.35 for
+ * the third time: the budget is the class's, not the leg's, and the two
+ * shipped entries bracket this leg's cruise geometry. Delivered (measured,
+ * not algebra): 267 ms flick / 217 ms gentle, camera <2%-of-peak window
+ * 433 -> 167 ms (flick), 367 -> 133 ms (gentle), p settled 367 ms sooner;
+ * worst frame-to-frame camera-speed drop through the brake above a
+ * 10%-of-peak floor 26.8% (was 13.1%) — inside the shipped band (28.0% on
+ * Connect -> Owned, 39.0% on the firmest reverse glide). The scrub control
+ * is bit-identical before and after, as it must be: the brake never runs
+ * under a live finger. Evidence:
+ * docs/code-health/evidence/2026-08-21-elegance-run-01/mission-tail/.
+ *
+ * Measured at 1440x900 on a virtual clock (tools/trace/brake-tail.py), one
+ * released 12-notch wheel flick from the Connect rest; vt ms from boot:
+ *
+ *                        K_eff  brake tail  camera still  p settled  DEAD BEAT
+ *   before (no entry)     3.61      967 ms          1883       2317     433 ms
+ *   after  (0.35)         8.32      300 ms          1700       1867     167 ms
+ *   inspire>connect fwd  10.11      183 ms          2483       2617     133 ms
+ *
+ * WHY 0.35 AND NOT A NUMBER FITTED TO THIS LEG. The two legs' geometry really
+ * does differ — Connect's approach segment is 8.00 vh against Owned's 2.27, and
+ * the cruise brakeK derives its engage point from is 0.202/1.35 = 0.150 p/s here
+ * against 0.263/2.5 = 0.105 p/s there — so the same dial does NOT deliver the
+ * same tail. It was still kept, on the measurement: the dead beat lands 2 frames
+ * off the boundary that already has this treatment, which is the same class, and
+ * every shorter value is bought with jerk. Worst frame-to-frame drop in camera
+ * speed through the brake, above a 10%-of-peak floor: 12.4% before, 28.0% at
+ * 0.35, 39.2% at 0.25, 47.6% at 0.20 — against 25.9% on Inspire -> Connect
+ * forward and 39.0% on its backward glide, which is the firmest thing shipping.
+ * 0.25 would close the last 50 ms and spend the whole remaining jerk budget to
+ * do it; 0.20 would overspend it. The full ladder is in
+ * docs/code-health/evidence/2026-08-21-elegance-run-01/defect-04/.
+ *
+ * WHAT THIS DOES NOT FIX, and what is not the brake's to fix. The copy still
+ * finishes breathing in ~1.1 s after the picture stops — 1120 ms after, against
+ * 1034 ms before. That number gets slightly WORSE here by construction and the
+ * direction is not a regression: the picture now lands 183 ms sooner while
+ * COPY_IN_K (2.4/s) is wall-clock and does not compress when the tail does, so
+ * the same breathe starts from a nearer standstill. The residual is not this
+ * leg's: Inspire -> Connect, which has had this treatment for a week, measures
+ * 1083 ms on the same rig. It is the copy envelope's authored breathe — copy
+ * that is speed-gated on the p-servo rather than timed against the camera the
+ * way the nav-jump envelope is — and moving it is a deliberate design change in
+ * journey/ui/copy-arrival.js, not a side effect of a landing-tail budget. */
 export const FORWARD_BRAKE_TAIL_S = {
+  'mission>inspire': 0.35,
   'inspire>connect': 0.35,
+  'connect>owned': 0.35,
 };
 
 /* Desktop-only FORWARD speed limits for the three opening transitions.
@@ -575,16 +458,19 @@ export const SEGMENTS = CHAPTERS.flatMap((c) => {
     return [{ id: c.id, end: c.end, vh: c.scrollVh, k: null }];
   }
   // sub-segment i runs to stop i, and the last one to the chapter's end.
+  // DEF-04 (F03, 2026-08-21-elegance-run-01): this used to carry two
+  // console.error guards here — a segVh/stops count-mismatch check and a
+  // segVh/scrollVh sum-mismatch check. Both are removed: structure.js's
+  // validateJourneyStructure() (called unconditionally at structure.js's
+  // own module top level, before this module's body can run, per ES
+  // module import-evaluation order) now hard-validates both of those exact
+  // invariants on the raw manifest and throws before CHAPTERS/SEGMENTS —
+  // derived purely from JOURNEY_SCHEMA.chapters with no alternate
+  // construction path — are ever built. Reachability proof (isolated,
+  // out-of-repo, both branches) and the equivalence fixture are in
+  // tools/fixtures/route-def04.fixture.mjs and
+  // docs/code-health/evidence/2026-08-21-elegance-run-01/f03/def04-reachability/.
   const ends = [...c.stops, c.end];
-  if (c.segVh.length !== ends.length) {
-    console.error('[route]', c.id, 'declares', c.segVh.length, 'segVh entries for',
-      ends.length, 'sub-segments (stops + 1) — the spline will be wrong.');
-  }
-  const sum = c.segVh.reduce((a, b) => a + b, 0);
-  if (Math.abs(sum - c.scrollVh) > 1e-9) {
-    console.error('[route]', c.id, 'segVh sums to', sum, 'but scrollVh is',
-      c.scrollVh, '— the chapter would cost a different distance than it says.');
-  }
   return c.segVh.map((vh, i) => ({
     id: c.id, end: ends[i], vh,
     k: c.shape && c.shape.seg === i ? c.shape.k : null,
@@ -624,14 +510,81 @@ export function restProgress(id) {
 }
 
 /* ------------------------------------------------------------------ */
+/* The hero's place on the route                                       */
+/* ------------------------------------------------------------------ */
+/* WHICH CHAPTER IS THE HERO IS A DECLARED PROPERTY, NOT A P-LITERAL.
+ *
+ * "We are at, or near, the hero" was written three separate ways and derived
+ * from nothing: an ownership threshold `p > 0.0008` in journey.js (compared
+ * twice), a presence envelope opening at `p - 0.006` in the same file, and
+ * `CHAPTERS[1]` in rail.js standing for "the chapter after the hero". Each
+ * was correct only while the hero happened to be first on the route with its
+ * rest at exactly zero — and each had to be found separately by someone who
+ * already knew it existed.
+ *
+ * structure.js already says which chapter it is, once, in the only place the
+ * question is actually answered: `copySurface.host: 'hero'` — the chapter
+ * whose copy IS the hero's markup rather than a block the UI builds. Order
+ * U04 converted the `id === 'mission'` string tests in journey/ui.js onto
+ * that property; these two exports finish the job for the numbers.
+ *
+ * WHAT THIS DOES AND DOES NOT UNIFY. It publishes the ANCHOR — where the
+ * hero sits — and nothing else. The distances the three sites keep from that
+ * anchor (0.0008, 0.006, and the rail's own chapter-end boundary) are three
+ * different authored quantities and stay where they are authored, exactly as
+ * journey/seams.js keeps its own `startOf('connect') + 0.06` shape. Folding
+ * them into one shared threshold would make three unrelated decisions move
+ * together the first time any one of them was retuned.
+ */
+export const HERO_CHAPTER_ID = (() => {
+  const heroes = JOURNEY_SCHEMA.chapters.filter((c) => c.copySurface && c.copySurface.host === 'hero');
+  // Loud at module init, in the posture the shipped-value assert below already
+  // sets for this file. A silent miss would hand every consumer restProgress's
+  // unknown-id fallback of 0 — which is the hero's rest TODAY, so the defect
+  // would reproduce the current values perfectly and surface only on the route
+  // where it matters.
+  if (heroes.length !== 1) {
+    throw new Error(`[route] the route must declare exactly one hero chapter `
+      + `(copySurface.host === 'hero'); found ${heroes.length}`
+      + `${heroes.length ? `: ${heroes.map((c) => c.id).join(', ')}` : ''}`);
+  }
+  return heroes[0].id;
+})();
+
+/** The hero's frozen pose, in route progress — its first declared stop.
+ *  Zero today, because Mission opens the route and rests at its own start;
+ *  the point of the name is that nothing downstream has to know that. */
+export const HERO_REST_P = restProgress(HERO_CHAPTER_ID);
+
+/** Where the hero's leg ends and the ride proper begins. Identical BY
+ *  CONSTRUCTION to the next chapter's `start` — CHAPTERS accumulates one
+ *  `acc / TOTAL` and hands the same double to this chapter's `end` and the
+ *  next one's `start` — so this is the same boundary the rail used to reach
+ *  positionally, said in terms of the hero instead of an index. */
+export const HERO_END_P = endOf(HERO_CHAPTER_ID);
+
+/* ------------------------------------------------------------------ */
 /* Shipped-value assert (merge doc M4 gate)                            */
 /* ------------------------------------------------------------------ */
 // The manifest replaces a hand-authored table; the shipped p-values must be
 // IDENTICAL. Recompute-and-compare at module init: the legacy literals of
 // the pre-manifest build, checked to float-noise tolerance. Costs a few
-// comparisons once per load; shouts in the console if an edit to the spans
+// comparisons once per load; THROWS at module init if an edit to the spans
 // silently moved the shipped route (renormalizing IS allowed — then this
 // table is updated deliberately, with the diff in front of the reviewer).
+//
+// It throws rather than logging because the LEGACY table below IS the escape
+// hatch the sentence above describes, and it only works as one if skipping it
+// is impossible: a maintainer who moves a span deliberately says so by
+// editing LEGACY in the same diff, and the throw goes away. A console.error
+// let the same edit ship unannounced — and this guards the higher-stakes
+// invariant of the two here, since journey/portrait.js and
+// chapters/owned/leg.js hang absolute-p literals off these spans (see the
+// note in the block below). Same module-init phase and same posture as
+// structure.js's validateJourneyStructure(), and the same direction DEF-04
+// took above — its two console.error guards are gone because that validator
+// now throws for their invariants. This one has no validator to hand it to,
+// so it does the throwing itself.
 {
   // NOT UPDATED by the 2026-08-11 re-allocation, deliberately, and that is the
   // headline of that change: `span` and `stops` were not touched, so every
@@ -658,6 +611,19 @@ export function restProgress(id) {
              0.60 + (0.85 - 0.60) * 0.5, 0.85 + (1.00 - 0.85) * 0.8],
   };
   const TOL = 1e-12;
+  /* CARDINALITY FIRST, and it is not decoration. The order that derived the hero anchors measured that this
+     guard was blind to the exact scenario it exists for: insert a chapter before
+     Mission and every shipped p renormalises (mission.end 0.14 -> 0.2182), yet
+     `LEGACY.starts[5]` is `undefined`, `c.start - undefined` is NaN, and
+     `NaN > TOL` is FALSE — so the throw never fires. A length change is a
+     deliberate act by definition; it gets its own sentence rather than being
+     laundered through a comparison that cannot see it. */
+  if (CHAPTERS.length !== LEGACY.starts.length) {
+    throw new Error(`[route] the manifest now declares ${CHAPTERS.length} chapters, `
+      + `the shipped table ${LEGACY.starts.length} — every derived p has renormalised. `
+      + 'Update the LEGACY table in route.js in the same diff, with the diff in front '
+      + 'of a reviewer; there is no drift small enough to make this safe.');
+  }
   let worst = 0;
   CHAPTERS.forEach((c, i) => {
     worst = Math.max(worst,
@@ -666,8 +632,8 @@ export function restProgress(id) {
       Math.abs(c.stops[0] - LEGACY.rests[i]));
   });
   if (worst > TOL) {
-    console.error('[route] derived p-values drifted from the shipped table by',
-      worst, '— if the manifest was edited deliberately, update the LEGACY',
-      'table in route.js; otherwise this is a regression.');
+    throw new Error(`[route] derived p-values drifted from the shipped table by ${worst
+      } — if the manifest was edited deliberately, update the LEGACY table in route.js `
+      + 'in the same diff; otherwise this is a regression.');
   }
 }
