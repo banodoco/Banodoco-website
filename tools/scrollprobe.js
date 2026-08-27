@@ -158,7 +158,7 @@
     return ev;
   }
 
-  async function run({ at = 0.30, aspectW = null, settleMs = 700, holdMs = 2600, ...gest }) {
+  async function run({ at = 0.30, aspectW: _aspectW = null, settleMs = 700, holdMs = 2600, ...gest }) {
     // place, let everything settle, then record
     J.scrollTo(at);
     await new Promise(r => setTimeout(r, settleMs));

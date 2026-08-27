@@ -71,7 +71,26 @@ function viewOf(chapterId, attr) {
 }
 
 // ---- the background fetch (shipped path, module-load time) ------------
-
+//
+// F06/D4 CLASSIFICATION (2026-08-21): this IIFE is a PAGE-LIFETIME SINGLETON,
+// not a journey-owned cancellable loader. It runs exactly once at module-load
+// time, takes no per-caller identity, and is never restarted or aborted —
+// `manifest`/`bins` below are bare module-top-level state, the same shared
+// cache for every importer for the life of the page (there is one journey
+// per page load here; nothing in this codebase unmounts and remounts the
+// journey within a single page lifetime the way a chapter mounts/unmounts).
+// Evidence: `tools/test-portrait-baked.mjs` B5/B5-neg (C04) proves two
+// separate `import()` call sites resolving the same specifier receive the
+// IDENTICAL module namespace object and share exactly ONE manifest fetch +
+// ONE bin fetch — real singleton semantics, not merely equal values. A
+// cancellable-loader shape would need a factory/instantiation point and an
+// abort/dispose hook; this module exposes neither, and adding either now
+// would be the structural change this order is forbidden from making.
+// Precedent: U01a/U01d classified their own import-time self-starts as KEPT
+// (not retired) for the same reason — no requirement forces the other
+// verdict here either. See journey/lib/baked.js's block comment above for
+// the "how it flows" design this classification is consistent with, and
+// tools/test-baked-lifecycle.mjs for this order's own standalone proof.
 export const ready = (async () => {
   if (LIVEBUILD) {
     // The one console line that answers "which am I looking at?" (2026-08-17,
@@ -86,6 +105,13 @@ export const ready = (async () => {
     if (!res.ok) return;                 // no bake present -> live everywhere
     m = await res.json();
   } catch {
+    // Manifest fetch/parse failure (network error, malformed JSON): every
+    // chapter's isBaked() stays false and they all build live, same as the
+    // !res.ok branch above. Visitor-safe by construction — the live
+    // builders are the automatic fallback, not a degraded state.
+    // (F06/D4: INTENTIONAL-SAFE. Proven by tools/test-portrait-baked.mjs B2
+    // [C04] and this order's own tools/test-baked-lifecycle.mjs; no
+    // behavior change here — documentation only.)
     return;                              // network/JSON error -> live everywhere
   }
   if (!m || m.version !== MANIFEST_VERSION) return;   // wrong schema -> live
@@ -95,7 +121,17 @@ export const ready = (async () => {
       const res = await fetch('static/geom/' + ch.file);
       if (!res.ok) return;
       bins.set(id, await res.arrayBuffer());
-    } catch { /* absorbed: isBaked(id) stays false; that chapter builds live */ }
+    } catch {
+      /* absorbed: isBaked(id) stays false; that chapter builds live */
+      // Per-chapter .bin fetch failure. isBaked() is per-chapter (this
+      // Promise.all entry only), so a failure here never affects sibling
+      // chapters whose own fetch succeeded. Visitor-safe: that one chapter
+      // falls back to its live builder, same as every "no bake present"
+      // path. (F06/D4: INTENTIONAL-SAFE. Proven by
+      // tools/test-portrait-baked.mjs B3 [C04] and this order's own
+      // tools/test-baked-lifecycle.mjs; no behavior change here —
+      // documentation only.)
+    }
   }));
   // Which-path legibility (2026-08-17): one line naming every chapter that
   // will build from bytes; anything unnamed builds live. ?livebuild=1 logs

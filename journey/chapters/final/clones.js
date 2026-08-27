@@ -75,8 +75,15 @@
 
 import * as THREE from 'three';
 import { heroPulse, PULL_MAX } from './world.js';
-import { VARY_GLSL, varyUniforms, IDENTITY } from './variation.js';
+import { varyUniforms, IDENTITY } from './variation.js';
 import { analyseHeroFigure, buildCapFigure } from './capfigure.js';
+import {
+  TAP_W, TAP_ZETA, stepTap, kickTap, isRinging, clearTap,
+} from './clones-tap.js';
+import {
+  injectCloneDraw, varyVertex, frameOf, rootFrame, cloneShellMat,
+  CLAMP_OFF, clonePointsMat, cloneDenseMat,
+} from './clones-materials.js';
 
 /* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
    over the mushrooms at the bottom they still light up") -------------------
@@ -120,63 +127,15 @@ function shellFade(meshes, mats, k) {
 }
 
 /* ---- THE POKE, MECHANICAL HALF (organism/organism.js §10c) --------------
-   Hannah: "why is the touch-interaction on the new mushrooms different to the
-   OG one?" The hero's answer to a poke is not a brightness ramp — it is a
-   CANTILEVER. The stalk stands on an elastic root; a tap is an impulse at the
-   hit point; the torque r x F about the base kicks the body's angular
-   velocity, which then rings down as a lightly damped oscillator at the
-   stalk's own flutter frequency, riding ON TOP of the breeze rather than
-   replacing it.
+   Moved WHOLE to ./clones-tap.js (H06 seam A) — organism §10c's damped
+   spring, its four constants and its four operations, with the argument for
+   copying rather than importing organism's numbers. It went out intact
+   because ring.js runs the SAME integrator for the batched species bodies
+   (ring.js:94-96), so it was never only this file's.
 
-   These are §10c's numbers, unchanged. They are copied rather than imported
-   because organism/* is read-only and keeps them in a closure — the same
-   arrangement this file's breeze() already lives under.
-
-   The lever arm falls out of the cross product and is the whole character of
-   the move: a tap on the cap (r.y ~ 4) tips a body four times as far as one
-   low on the stem, and pressing one edge of the cap tips it toward that side.
-   That is why the hit point has to be REAL and not the axis of a proxy
-   collider — see interact.js's narrow phase.
-
-   UNITS. For a clone, r and F are taken in the body's OWN frame (root-local,
-   which is hero units because root.scale carries the clone's only scale), so
-   the impulse constant, the saturation clamp and the resulting ANGLE are
-   identical for every body whatever its size. A poked field mushroom leans by
-   the same number of degrees as the poked hero — which is what "the same way
-   the hero does" has to mean when the bodies are different sizes. */
-export const TAP_W = 2.3;      // ring frequency (rad/s) — the stalk's fine-flutter mode
-export const TAP_ZETA = 0.14;  // light damping: a few visible wobbles, settled in ~3s
-const TAP_IMP = 0.008;         // impulse -> angular velocity
-const TAP_MAX = 0.09;          // flesh, not a bell: repeated pokes saturate
-
-/** Advance one body's tap ring-down by dt. Shared with ring.js so the batched
- *  species bodies ring down on the SAME integrator (semi-implicit Euler on the
- *  damped spring — stable at these frequencies and frame rates, and it
- *  conserves the impulse's feel). `st` is any object with {tx,tz,tvx,tvz}. */
-export function stepTap(st, dt) {
-  st.tvx += (-TAP_W * TAP_W * st.tx - 2 * TAP_ZETA * TAP_W * st.tvx) * dt;
-  st.tvz += (-TAP_W * TAP_W * st.tz - 2 * TAP_ZETA * TAP_W * st.tvz) * dt;
-  st.tx += st.tvx * dt;
-  st.tz += st.tvz * dt;
-}
-
-/** The impulse itself: hit point `r` and push direction `F`, both already in
- *  the body's own frame and in hero units. organism §10c, line for line. */
-export function kickTap(st, r, F) {
-  st.tvx += TAP_IMP * (r.y * F.z - r.z * F.y);
-  st.tvz += TAP_IMP * (r.x * F.y - r.y * F.x);
-  const v = Math.hypot(st.tvx, st.tvz);
-  if (v > TAP_MAX) { st.tvx *= TAP_MAX / v; st.tvz *= TAP_MAX / v; }
-}
-
-/** True while a body is still ringing — lets a caller skip still bodies and
- *  lets ring.js hand a wobble slot back the moment it has nothing to say. */
-export const isRinging = (st) =>
-  Math.abs(st.tx) > 1e-5 || Math.abs(st.tz) > 1e-5 ||
-  Math.abs(st.tvx) > 1e-5 || Math.abs(st.tvz) > 1e-5;
-
-/** Zero a tap state (retire, or a slot being reclaimed). */
-export function clearTap(st) { st.tx = 0; st.tz = 0; st.tvx = 0; st.tvz = 0; }
+   Re-exported here unchanged, in the module's own original export order, so
+   ring.js's and shed.js's imports are untouched by this order. ---- */
+export { TAP_W, TAP_ZETA, stepTap, kickTap, isRinging, clearTap };
 
 /* ---- THE ENTRY, AS THE FIELD'S REVEAL (organism/organism.js DRAW_GLSL) ---
    Hannah: "what about the entry animation, too heavy to run on them?" It is
@@ -373,55 +332,8 @@ const BLOOM_A = 0.35;
 const FLICKER_A = 0.10;
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
-// material. The hero grafts uProg/uWin/pulse into the stock line shader at
-// compile time and keeps the handle in userData; a clone rebuilds the
-// material (it needs an owned .opacity for the reveal write-port), so the
-// graft has to be redone here — pointed at THIS clone's uProg and the hero's
-// own uWin for that layer. Without it the overlay net is the one layer that
-// stands fully drawn while the cap lattice under it is still being stroked,
-// and the one layer that does not answer a poke's ripple.
-function injectCloneDraw(mat, uProg, uWin, pulse, own, frame, vary) {
-  mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uProg = uProg;
-    sh.uniforms.uWin = uWin;
-    sh.uniforms.uPulseC = pulse.uPulseC;
-    sh.uniforms.uPulseT = pulse.uPulseT;
-    sh.uniforms.uPulseP = pulse.uPulseP;
-    if (vary) bindVary(sh.uniforms, own, frame);
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>',
-        '#include <common>\n' + (vary ? VARY_GLSL : '') +
-        'uniform float uProg;\nuniform vec2 uWin;\n' +
-        'attribute float aDraw;\nvarying float vDraw;\n' +
-        'uniform vec3 uPulseC;\nuniform float uPulseT;\nuniform vec3 uPulseP;\n' +
-        'varying float vPulse;\n' +
-        'float pulseAt(vec3 wp) {\n' +
-        '  float d = distance(wp, uPulseC);\n' +
-        '  float w = uPulseP.x * (0.15 + 0.21 * uPulseT);\n' +
-        // rb*rb, never pow(rb, 2.0) — negative base is undefined GLSL (see
-        // organism.js's PULSE_GLSL note; Metal hides it, D3D11/Mali may not)
-        '  float rb = (d - uPulseP.x * uPulseT) / w;\n' +
-        '  float ring = exp(-(rb * rb));\n' +
-        '  return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);\n' +
-        '}')
-      .replace('#include <begin_vertex>',
-        '#include <begin_vertex>\n' +
-        (vary ? '  transformed = varyPt(transformed);\n' : '') +
-        '{ float dp = clamp((uProg - uWin.x) / (uWin.y - uWin.x), 0.0, 1.0);\n' +
-        '  float head = smoothstep(0.0, 0.012, dp - aDraw);\n' +
-        '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
-        '  vDraw = head + tip * 1.7;\n' +
-        '  vPulse = pulseAt((modelMatrix * vec4(transformed, 1.0)).xyz); }');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vDraw;\nvarying float vPulse;')
-      .replace('#include <color_fragment>',
-        '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;');
-  };
-  // Same source for every clone, so three compiles ONE extra program for the
-  // whole set. A key distinct from the hero's 'draw-injected' keeps the two
-  // grafts from being confused for each other if organism's ever drifts.
-  mat.customProgramCacheKey = () => 'clone-draw-injected';
-}
+// material — moved to ./clones-materials.js (H06 seam B) with the rest of the
+// per-clone material construction.
 
 // Below this reveal value a clone's opaque shells are switched off: an unlit
 // body must read as a body in the dark, not as a silhouette cut out of the
@@ -471,234 +383,14 @@ const STEM_SHELL_LO = 0.40, STEM_SHELL_HI = 0.58;   // s-window: stem solidifies
 const CAP_SHELL_LO = 0.60, CAP_SHELL_HI = 0.80;     // s-window: cap lands WITH the take
 
 /* ---- PER-BODY VARIATION (variation.js, 2026-08-05) ----------------------
-   Hannah, on the shipped field: "the mushrooms at the end seem too similar to
-   one another... make them each their own unique thing."
-
-   She is describing the price of the step-back above. A clone IS the hero's
-   vertices; a uniform scale, a yaw and a few degrees of lean are the only
-   things that have ever differed between two bodies. Variation therefore
-   cannot come from the build — the buffers are shared and must stay shared —
-   so it comes from a DEFORMATION: variation.js's `varyPt()`, one smooth map
-   of the body frame to itself, seeded per individual and evaluated in the
-   vertex shader.
-
-   THE WHOLE DIFFICULTY IS CONSISTENCY. A body here is fifteen drawables with
-   thirteen materials. Deform the cap lattice and not the cap SHELL and the
-   body's lit outline stops agreeing with its own opaque interior — a rim
-   floating off a black cap, which is the most broken a thing in this scene
-   can look. Three mechanisms hold the line, and they are the reason this
-   section is longer than the map itself:
-
-     1. ONE UNIFORM SET PER BODY. `varyUniforms(V)` is built once in add() and
-        the SAME four objects (uVarA..uVarD) are handed to every one of that
-        body's materials. Not copied — the same object. A layer cannot
-        disagree with its neighbour even for a frame, because there is nothing
-        to disagree with.
-     2. ONE FRAME, CARRIED EXPLICITLY. The map is written in the body frame
-        (soil at the origin, hero units), and a layer's geometry is NOT
-        necessarily in it. The first cut of this file assumed it was; the
-        guard below said otherwise, which is the argument for having written
-        the guard. `mushroom` carries the authored cap tilt (~8 deg about x)
-        and a residual offset, so cap leaves live in a tilted, translated
-        frame while stem leaves live in the body frame — and a map applied to
-        raw local coordinates would have meant two different things on the two
-        halves of one mushroom. Every layer therefore carries uVarM/uVarMI,
-        the exact matrix from ITS frame to the body frame; varyPt hops in,
-        deforms, and hops back. frameOf() reuses the parent's frame object
-        whenever a node adds no transform, so there are exactly TWO frames per
-        body, not fifteen.
-     3. ONE GUARD, TAKEN BEFORE THE FIRST BODY IS BUILT. `probeVary()` test-
-        patches every distinct shader source the walk will meet and checks
-        every frame matrix is invertible. If ANY of them refuses, `varyOk` is
-        false and NOTHING is deformed — clones and species band together, since
-        ring.js reads clones.varyOk for both. Half a deformed body is not a
-        degraded outcome, it is a bug; the only safe fallback is none at all.
-
-   The shells had to stop being shared for this. That is a real change to the
-   rules table above, and it costs 24 x ~2 extra MeshBasicMaterials — but zero
-   extra draw calls (same meshes, same count) and one extra program (the cache
-   key is constant across the set). It also fixes a latent bug it inherited:
-   a shared shell material carries the hero's intro clipping plane and fade
-   opacity, so a clone set built during the hero's grow-in would have baked
-   those in. cloneShellMat pins the restored state explicitly. ---- */
-
-// The three ways `position` reaches the pipeline in organism's own shaders.
-// Every one is rewritten to go through varyPt(); anything else reaching the
-// raw attribute would be an UNDEFORMED coordinate mixed into a deformed body,
-// so the patcher refuses rather than half-applying.
-function varyVertex(src) {
-  if (!src.includes('void main() {')) return null;
-  let n = src;
-  // the dense-line coverage fade measures the screen gap to the neighbouring
-  // line: deform the NEIGHBOUR too, or a stretched body reports its unstretched
-  // spacing and fades by the wrong amount
-  n = n.split('vec4(position + tang, 1.0)').join('vec4(varyPt(position + tang), 1.0)');
-  n = n.split('vec4(position + tang2, 1.0)').join('vec4(varyPt(position + tang2), 1.0)');
-  n = n.split('vec4(position, 1.0)').join('vec4(vPosD, 1.0)');
-  n = n.split('drawAt(position)').join('drawAt(vPosD)');
-  if (n === src) return null;                       // matched nothing: refuse
-  n = n.replace('void main() {',
-    VARY_GLSL + '\n      void main() {\n        vec3 vPosD = varyPt(position);');
-  // residue check: after removing the three legitimate varyPt() arguments,
-  // no path to the raw attribute may remain anywhere in the source
-  const residue = n
-    .split('varyPt(position + tang2)').join('')
-    .split('varyPt(position + tang)').join('')
-    .split('varyPt(position)').join('');
-  if (residue.includes('position')) return null;
-  return n;
-}
-
-const VARY_U = ['uVarA', 'uVarB', 'uVarC', 'uVarD'];
-/** Bind one layer's variation uniforms: the body's SHAPE (four objects shared
- *  by every layer of the body — the consistency guarantee) and this layer's
- *  own geometry FRAME (see VARY_GLSL's varyPt: the spine is not flat). */
-function bindVary(target, own, frame) {
-  for (const k of VARY_U) target[k] = own[k];
-  target.uVarM = frame.uVarM;
-  target.uVarMI = frame.uVarMI;
-}
-
-const IDENT_M = new THREE.Matrix4();
-const isIdentityM = (m) => {
-  const e = m.elements, I = IDENT_M.elements;
-  for (let i = 0; i < 16; i++) if (Math.abs(e[i] - I[i]) > 1e-9) return false;
-  return true;
-};
-/** The frame a node's geometry lives in, as the accumulated matrix from the
- *  clone's own spine root. Returns the PARENT's frame object unchanged when
- *  the node adds no transform, so the whole stem side shares one identity
- *  frame and the whole cap side shares one tilted frame — two uniform pairs
- *  per body, not fifteen. `bendRoot` mirrors cloneNode stripping capBend's
- *  live bend snapshot: the frame must describe the clone, not the hero. */
-function frameOf(parent, o, bendRoot) {
-  const local = new THREE.Matrix4();
-  if (bendRoot) local.makeTranslation(o.position.x, o.position.y, o.position.z);
-  else local.compose(o.position, o.quaternion, o.scale);
-  if (isIdentityM(local)) return parent;
-  const m = parent.m.clone().multiply(local);
-  return {
-    m,
-    uVarM: { value: m },
-    uVarMI: { value: new THREE.Matrix4().copy(m).invert() },
-  };
-}
-/** The spine root's frame: identity, so uVarM and uVarMI can share one matrix
- *  (identity is its own inverse). Every stem-side layer ends up on this pair. */
-const rootFrame = () => {
-  const m = new THREE.Matrix4();
-  return { m, uVarM: { value: m }, uVarMI: { value: m } };
-};
-
-/** The opaque shells: a per-body clone of the hero's MeshBasicMaterial with
- *  the same map grafted into the stock shader. `transformed` is the stock
- *  local position — varyPt's frame hop is what puts it in the body frame. */
-function cloneShellMat(src, own, frame) {
-  const m = src.clone();
-  // intro.js's shellsRestore() state, pinned rather than inherited — see the
-  // section header. A clone is never mid-grow-in.
-  m.opacity = 1; m.transparent = false; m.clippingPlanes = null;
-  m.onBeforeCompile = (sh) => {
-    bindVary(sh.uniforms, own, frame);
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + VARY_GLSL)
-      .replace('#include <begin_vertex>',
-        '#include <begin_vertex>\n  transformed = varyPt(transformed);');
-  };
-  m.customProgramCacheKey = () => 'clone-vary-shell';
-  return m;
-}
-
-/* ------------------------------------------------------------------ */
-/* Material cloning                                                    */
-/* ------------------------------------------------------------------ */
-// Uniform objects a clone must SHARE with its source material, by name.
-// Anything animated or global lands here; anything owned is created fresh.
-const SHARE = [
-  'map', 'time',                          // glow sprite + shimmer clock
-  'uWin',                                 // the hero's per-LAYER draw windows
-  'uPulseC', 'uPulseT', 'uPulseP',        // the tap pulse — taps ripple into clones
-  'uRes', 'uFadeOn',                      // coverage fade (resize keeps working)
-];
-
-// NOT shared, and both for the entry draw (see DRAW_LO above):
-//
-//   uProg    OWNED PER BODY. This is the whole of part B: the draw progress
-//            is the one piece of entry state that has to differ per body for
-//            the field to reveal itself by drawing on. uWin stays shared, so
-//            the ORDER of the choreography is still the hero's.
-//   uClampY  owned by the CLONE SET (one object, all bodies). The hero parks
-//            its stem materials at 3.65 to stop the stipe inking against open
-//            sky before the cap exists, and the lid tests WORLD y — a metric
-//            that means nothing to a body standing at another place and
-//            scale. Every clone's stem happens to sit below 3.45 world y, so
-//            the lid is already inert for all of them; pinning it at 1e3
-//            makes that structural instead of a coincidence waiting for a
-//            taller member. The joint the hero's lid protects is covered on a
-//            clone by its own §5 cap shell, which is opaque from SHELL_ON.
-const CLAMP_OFF = 1e3;
-
-// THE ONE UNIFORM A CLONE MUST NOT INHERIT: fog.
-//
-// The first cut of this file shared fogNear/fogFar with the hero on the
-// reasoning that "a clone should dim with distance exactly as the hero
-// does". Measured at the rest, that is wrong, and visibly so. The hero's
-// pair is FIXED at 7 -> 20 — a hero-page parameterisation for a lens two
-// metres off one organism — while the director re-parameterises the world's
-// fog to 15 -> 62 across the Final leg because the composition is now forty
-// units deep, and every other thing in the frame (terrain, sky, the species
-// batch) rides that ramp. A clone on 7/20 therefore dims about five times
-// faster than the soil it stands on and reaches BLACK at 20 units, which
-// put a hard wall through the middle of the field and — worse — left the
-// far ring bodies DIMMER than the species bodies standing behind them. A
-// brightness inversion is a seam you cannot not see.
-//
-// So the clone set owns ONE shared pair of fog uniforms (shared across all
-// clones, so it is two writes a frame however many bodies there are), fed
-// from the chapter's own uFogNear/uFogFar. The depth cue that the hero's
-// fog used to supply is now explicit instead: each clone carries a distance
-// LUMINANCE (ring.js's cloneLum) into its reveal value, which is the same
-// device the species field already uses for its own tiers — so a clone and
-// a species body at the same distance land at the same luminance, and the
-// hero keeps the frame because it is the biggest and the brightest, not
-// because everything else was fogged out.
-const FOG = ['fogNear', 'fogFar'];
-
-function shareUniforms(dst, src, fogU, own, frame) {
-  for (const k of SHARE) if (src.uniforms[k]) dst.uniforms[k] = src.uniforms[k];
-  for (let i = 0; i < FOG.length; i++)
-    if (src.uniforms[FOG[i]]) dst.uniforms[FOG[i]] = fogU[i];
-  // the entry-draw state this body owns (or the set owns) — see SHARE above
-  if (src.uniforms.uProg) dst.uniforms.uProg = own.uProg;
-  if (src.uniforms.uClampY) dst.uniforms.uClampY = own.uClampY;
-  // this body's shape — the same four objects on every layer it owns
-  bindVary(dst.uniforms, own, frame);
-}
-
-const SZ_TAG = 'float sz = psize * vTw * (300.0 / -mv.z)';
-
-function clonePointsMat(src, s, dropped, fogU, own, frame, vary) {
-  if (!src.vertexShader.includes(SZ_TAG) || !src.vertexShader.includes('uniform float time;')) {
-    dropped.push('points');               // organism shader drifted: drop, never mis-size
-    return null;
-  }
-  const m = src.clone();
-  shareUniforms(m, src, fogU, own, frame);
-  m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
-  m.uniforms.uScl = { value: s };
-  m.vertexShader = (vary ? varyVertex(m.vertexShader) : m.vertexShader)
-    .replace('uniform float time;', 'uniform float time;\n      uniform float uScl;')
-    .replace(SZ_TAG, 'float sz = uScl * psize * vTw * (300.0 / -mv.z)');
-  return m;
-}
-
-function cloneDenseMat(src, fogU, own, frame, vary) {
-  const m = src.clone();
-  shareUniforms(m, src, fogU, own, frame);
-  m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
-  if (vary) m.vertexShader = varyVertex(m.vertexShader);
-  return m;
-}
+   The deformation contract — varyVertex's patcher and its residue check,
+   bindVary, the geometry FRAMES (frameOf/rootFrame) and cloneShellMat — and
+   the material-cloning table below it (SHARE, FOG, CLAMP_OFF, shareUniforms,
+   clonePointsMat, cloneDenseMat) both moved to ./clones-materials.js (H06
+   seam B). The three consistency mechanisms the section header argues for are
+   unchanged and live there; what stayed here is the pair of GUARDS that
+   decide whether the set may deform at all (probeVary/framesInvertible),
+   because both read this closure's own scene roots. ---- */
 
 /* ------------------------------------------------------------------ */
 /* The clone set                                                       */
@@ -811,7 +503,6 @@ export function createClones(sceneApi) {
   let figSpec = analyseHeroFigure(sceneApi.groups.mushroom);
   if (figSpec && !buildCapFigure(figSpec, 1)) figSpec = null;
   let figures = 0;
-  const ownedGeos = [];
 
   /** This body's geometry for one source layer: its OWN cap figure for the
    *  two figure layers, the hero's shared buffer for everything else. The
@@ -953,7 +644,7 @@ export function createClones(sceneApi) {
     // reads it. A body with no seed (or a set whose guard refused) shares the
     // hero's buffers, and geoFor() is then the identity.
     own.fig = (figSpec && seed !== undefined) ? buildCapFigure(figSpec, seed) : null;
-    if (own.fig) { figures++; ownedGeos.push(own.fig.net, own.fig.pts); }
+    if (own.fig) figures++;
     const F0 = rootFrame();
     const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own, F0);
     const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own, F0);
@@ -1027,7 +718,6 @@ export function createClones(sceneApi) {
    *  clones and nothing self-ignites (D16). */
   function update(t, dt, uniforms) {
     const eff = uniforms.uAmount.value;
-    const pull = uniforms.uPull.value;
     // The draw front runs on the UNCLAMPED pull. pullOf() floors at 0 from
     // camera x −8 back, which is the surface pierce — a body keyed to draw
     // before then would arrive at the pierce already 80% inked and finish the
@@ -1060,11 +750,9 @@ export function createClones(sceneApi) {
       // switched off by the same step(), and the lid is inert at
       // CLAMP_OFF), so the rest frame is the shipped rest frame.
       const d = smooth01(s / INK_SPAN);
-      let prog = c.uProg.value;
       if (d !== c.prog) {
         c.prog = d;
-        prog = d >= 1 ? 2 : DRAW_LO + d * (DRAW_HI - DRAW_LO);
-        c.uProg.value = prog;
+        c.uProg.value = d >= 1 ? 2 : DRAW_LO + d * (DRAW_HI - DRAW_LO);
       }
       // ---- the light: charge -> take -> settle (see the §14 block) ----
       // g² is the charge: slow first, leaning forward — gathering. The
@@ -1177,15 +865,6 @@ export function createClones(sceneApi) {
 
   return {
     group, add, update, cool, poke, ringing,
-    /** The only buffers this module owns (two per body — see capfigure.js).
-     *  Everything else it draws is the hero's and is not ours to free. The
-     *  chapter is built once for the page's life so this is never reached
-     *  today; it exists so that the exception to "geometry is shared" carries
-     *  its own cleanup rather than leaving the next teardown to discover it. */
-    disposeFigures() {
-      for (const g of ownedGeos) g.dispose();
-      ownedGeos.length = 0;
-    },
     /** Whether per-body variation survived the guard. ring.js reads it so the
      *  species band varies exactly when the clone band does — one field, one
      *  answer, never a near half that varies and a far half that does not. */

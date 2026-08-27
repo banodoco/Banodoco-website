@@ -44,16 +44,70 @@
 //   fov     62 -> 58 on the SAME sinking ease — MONOTONE, the widening
 //           arriving with the ground instead of a zoom-in-then-out;
 //   gaze    quadratic bezier CONNECT rest target -> rest target, bowed
-//           through PIN3 (the stipe base), eased by the MEAN of the two
-//           eases above — the aim leads the dolly early and the sink late,
-//           which is what keeps pitch to a single -20.1 deg valley
-//           (shipped: -26.5) and its recovery at 462 deg/p (shipped: 520).
+//           through PIN3 (the stipe base), eased by 0.85*easeM + 0.15*easeY
+//           — mostly the dolly's ease, with a minority share of the sink so
+//           the aim still walks down with the descent (see THE GAZE CARRIES
+//           YAW below for why this is not the mean of the two).
 //
 // Measured on the built gesture: ONE speed envelope — 0 -> a 59-68 u/p
 // plateau (peak 68.4 at p 0.667) -> a monotone decay through the crossing
 // to 0 at the rest. No trough anywhere. Yaw strictly monotone (peak 442
 // deg/p), subject distance 10.45 -> 3.20 with zero re-approach beyond
 // 0.0005 u/step, radius and height strictly monotone, roll zero.
+//
+// THE GAZE CARRIES YAW, SO IT SCHEDULES THE COMPOSITION (2026-08-24, Hannah
+// reporting the same motion twice — "it can feel too much to the left side,
+// and then it goes into the middle… it should be more of a steady arc", then
+// again on a phone: "it's off to the left and then it turns in when it's
+// near to it").
+//
+// This ease was `(easeM + easeY) / 2`, and every word of the reasoning behind
+// that choice was about PITCH. But the gaze is a direction, not an angle: the
+// same curve that pitches the eye down also yaws it round, and the yaw is what
+// decides where the subject sits ACROSS the frame. easeY is deliberately,
+// heavily back-loaded — it is what steepens the descent into the soil and
+// pins the T3 crossing — so half-weighting it back-loaded the composition too.
+//
+// Measured at 1440x900, tracking the root crown in screen space against the
+// visitor's own axis (scroll, not p): the crown sat 347 px left of centre and
+// moved FOUR PIXELS across the first half of the leg's scroll, then travelled
+// the whole 347 px in the back half. 47.7% of the leg ran under 10% of the
+// mean horizontal rate; peak/mean 4.09x. That trough is not authored — nobody
+// chose "hold at the left edge for 2.44 vh and then rush" — it fell out of a
+// parameter picked for the vertical. The 2026-08-11 rework's own acceptance
+// criterion for this leg was "one movement, one envelope, no trough anywhere",
+// applied to camera speed; the channel the visitor actually reads was never
+// measured, because it is a FRAME channel and not a camera one.
+//
+// 0.85/0.15 halves the trough — 2.44 vh -> 1.20 vh, peak/mean 4.09x -> 3.06x,
+// 1.2% -> 13.2% of the recentring done by the scroll midpoint — while keeping
+// screen-x strictly monotone (g = easeM alone is faster still but reverses,
+// 6 negative steps). Past ~0.90 the trough stops shrinking and the pitch cost
+// keeps growing, so 0.85 is the knee rather than a taste call.
+//
+// WHAT IT DOES NOT MOVE, checked and not assumed: az, r, y and fov never read
+// the gaze, so camera POSITION is bit-exact — the T3 soil crossing (0.687771,
+// unchanged to six decimals), owned/leg.js's sampled corridor and the whole
+// colony placement are untouched. Owned's reveal is camera-position-pure.
+// Connect's camera-pure resolve needs forward.y <= -0.1253 and the leg's max
+// is -0.1343 either way. Both rest poses are bit-exact at both aspects.
+//
+// THE COST, and it is the whole cost: the pitch valley deepens, -15.99 deg ->
+// -21.65 deg (at p 0.6811), and its recovery steepens 320 -> 577 deg/p. It is
+// still ONE valley — a single local minimum, which was always the design
+// property — and the ends are untouched (-7.72 -> -7.99).
+//
+// (The header figures this block replaces claimed a -20.1 deg valley
+// recovering at 462 deg/p. Re-measured on the shipped gesture at aspect 1.6
+// and again at 0.4614, the shipped valley was -15.99 deg recovering at
+// 320 deg/p — the stated numbers matched neither the shipped schedule nor any
+// candidate, so they described a `g` that was never shipped. Every figure in
+// this comment is measured; docs/code-health/evidence/…/a5b/scripts/pitch.mjs
+// re-takes them.)
+//
+// PORTRAIT IS A SECOND, DIFFERENT FAULT — it is not fixed here, and this
+// change alone does not fix it. See journey/portrait.js's Connect->Owned
+// mid-leg key.
 //
 // BOTH ENDPOINTS ARE THE FROZEN APPROVED POSES, derived rather than copied:
 // u = 0 reconstructs CONNECT's rest hold (imported), u = 1 this file's own
@@ -168,9 +222,12 @@ function dive(u, out) {
   const r = D0.r + (D1.r - D0.r) * e;
   const y = D0.y + (D1.y - D0.y) * h;
   out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
-  // Gaze: bezier C0.tgt -> REST_KEY.tgt through PIN3, eased by the mean of
-  // the dolly and the sink so the aim walks with both.
-  const g = (e + h) / 2;
+  // Gaze: bezier C0.tgt -> REST_KEY.tgt through PIN3. Eased mostly by the
+  // dolly, with a 0.15 share of the sink so the aim still walks down with the
+  // descent. The gaze carries YAW as well as pitch, so this ease schedules
+  // where the subject sits across the frame — it may not simply inherit the
+  // sink's deliberate back-loading (header, THE GAZE CARRIES YAW).
+  const g = 0.85 * e + 0.15 * h;
   quadBezier(g, C0.tgt, PIN3, REST_KEY.tgt, out.target);
   out.fov = D0.fov + (D1.fov - D0.fov) * h;
   return out;

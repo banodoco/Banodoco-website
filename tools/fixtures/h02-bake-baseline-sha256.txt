@@ -1,0 +1,8 @@
+# H02 — HB6a baseline, recorded at oracle vendoring, BEFORE any write
+# order: H02   chapter: connect   subject: journey/chapters/connect/tendrils.js
+# HEAD: 6967a36ab309af7057336be64d6f0f9dd3c41b21
+# taken: 2026-08-21T17:34:37Z
+a422ead3853ec4bcd930b507a6b563670610f9ae63a3f4f0b0d82a2f252a1131  static/geom/manifest.json
+cf610e19cd107a57d3928d875b78e03ab35aa8992ee95c31ddb409e959a9ce29  static/geom/connect.bin
+# oracle vendored as bytes (NOT a git show ref):
+56501c6b862d94c0386249892ad079501216a22b369bda5e6404cc1408c93b68  docs/code-health/evidence/2026-08-21-elegance-run-01/h02/proof/oracle/tendrils.pre-split.js

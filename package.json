@@ -8,9 +8,19 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "cycles": "madge --circular --warning --extensions js,mjs --webpack-config madge.webpack.cjs main.js journey organism ownership content tools",
-    "test": "node tools/scroll-touch-gates.mjs && node tools/test-connect-motion.mjs && node tools/test-chapter-entry.mjs && node tools/test-static-content.mjs && node tools/browser-smoke.mjs",
-    "check": "npm run lint && npm run cycles && npm test"
+    "cycles": "node tools/check-cycles.mjs",
+    "test:unit": "node journey/structure.test.mjs && node tools/scroll-touch-gates.mjs",
+    "test:contracts": "node tools/test-gate-composition.mjs --prove-failure && node tools/test-instrument-layer.mjs --prove-failure && node tools/test-assertion-provenance.mjs --prove-failure && node tools/test-comment-stripper.mjs && node tools/test-error-classes.mjs --prove-failure && node tools/test-renderer-resources.mjs --prove-failure && node tools/test-check-cycles.mjs && node tools/test-browser-harness.mjs && node tools/test-chapter-entry.mjs && node tools/test-connect-motion.mjs && node tools/test-scroll-trace.mjs && node tools/test-frame-order.mjs && node tools/test-scroll-perturbation.mjs && node tools/test-render-perturbation.mjs --prove-failure && node tools/test-render-determinism.mjs && node tools/test-portrait-dealer.mjs && node tools/test-portrait-baked.mjs && node tools/test-portrait-textures.mjs && node tools/test-portrait-lifecycle.mjs && node tools/test-portrait-perturbation.mjs && node tools/test-animation-lifecycle.mjs && node tools/test-intro-lifecycle.mjs && node tools/test-card-warming.mjs && node tools/test-discord-card.mjs && node tools/test-detail-close-focus.mjs && node tools/test-ui-lifecycle.mjs --prove-failure && node tools/test-chapter-contract.mjs --prove-failure && node tools/test-spores-lifecycle.mjs --prove-failure && node tools/test-baked-lifecycle.mjs --prove-failure && node tools/test-portrait-paint.mjs --prove-failure && node tools/test-road.mjs --prove-failure && node tools/test-dwell-oracle.mjs --prove-failure && node tools/test-pose-oracle.mjs --prove-failure && node tools/test-input-claim.mjs --prove-failure && node tools/test-transition.mjs --prove-failure && node tools/test-frame-publication.mjs --prove-failure && node tools/test-ui-closure.mjs --prove-failure && node tools/test-global-hooks.mjs --prove-failure && node tools/test-page-lifetime.mjs --prove-failure && node tools/test-card-registry.mjs && node tools/test-card-icons.mjs && node tools/test-hot-state.mjs && node tools/test-rest-composition.mjs --prove-failure && node tools/test-rest-authority.mjs --prove-failure && node tools/test-detail-shell-monotone.mjs --prove-failure && node tools/test-declared-conversions.mjs --prove-failure && node tools/test-coverage-floor.mjs --prove-failure && node tools/test-render-baseline.mjs",
+    "test:static": "node tools/test-static-content.mjs",
+    "test:dwell": "node tools/dwell-run.mjs",
+    "test:pose": "node tools/pose-run.mjs",
+    "test:tempo": "node tools/tempo-run.mjs",
+    "test:browser": "node tools/browser-smoke.mjs && node tools/test-epilogue-retire.mjs && node tools/tempo-run.mjs",
+    "test:browser:required": "node tools/browser-smoke.mjs --mode=required",
+    "test:mobile": "node tools/trace/mobile/gate.mjs",
+    "test": "npm run test:unit && node tools/run-contracts.mjs && npm run test:static",
+    "check": "npm run lint && npm run cycles && npm run test:unit && node tools/run-contracts.mjs && npm run test:static",
+    "check:browser": "npm run check && npm run test:browser && npm run test:mobile"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

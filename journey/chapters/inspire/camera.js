@@ -148,6 +148,17 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // is (-0.4211, 0, -0.9070), giving the target below. Az/r/y, pitch and every
 // reveal input remain exact. Portrait cancels the remaining 0.038-u offset in
 // portrait.js, so its solved phone/tablet framing stays visually unchanged.
+// (2026-08-27: the PHONE rest is since re-composed downstream — a close-up
+// from below, portrait.js PHONE_KEYS, per Hannah's mobile feedback. Nothing
+// here moved: tablets still read this rest through the D23 solve verbatim,
+// and the phone pose is a pure portrait-field fold over it. A second pass the
+// same day checked whether the close-up had SPENT D23 on the phone, and it
+// had not: measured on the rendered no-chrome frame, the stalk's silhouette
+// centre sits at x 211.0 against a 215 midline — the same ~4 px the shipped
+// pose carries at 210.5. A camera pan that would have moved it to 221.0 was
+// tried and rejected for exactly that reason. D21's equal-voids rule WAS
+// re-solved for the close-up in that pass, through PHONE_KEYS' tgtUp; both
+// records live with the values, in portrait.js.)
 export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3531, 2.4199, -1.0707), fov: 40 };
 
 // The gaze's mid-swing waypoint (was the old "early pin" target): the cap,

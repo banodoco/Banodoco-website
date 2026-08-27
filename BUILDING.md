@@ -45,9 +45,11 @@ remote tree. It confirms the overall release, staging, commit, any pre-existing
 local commits, and push. `--yes` is the explicit non-interactive
 authorization. `--no-verify` skips only the post-push URL poll; it is not a
 dry run. `--skip-captures` preserves the former loaded-machine escape hatch.
-After staging, it runs `npm run check` once for lint, cycle, unit, and browser
-contracts, then `tools/check.sh` once for scene drift and the same
-manifest-defined artifact Railway builds after the push. Production
+After staging, it runs `npm run check` once for lint, cycles, unit, contract,
+and static-content tests (no browser — `test:browser` / `check:browser` are
+separate `package.json` scripts and are never invoked by the release flow),
+then `tools/check.sh` once for scene drift and the same manifest-defined
+artifact Railway builds after the push. Production
 verification polls `release-revision.txt` for the exact
 pushed commit, so an unchanged homepage cannot make an old deployment pass.
 
@@ -59,9 +61,18 @@ ancestor of local main. Both histories remain preserved; future divergence
 fails closed instead of silently discarding remote changes.
 
 **Known flake.** `final@430x932` re-shoots with ~24 MAE drift (chrome bakes
-into the mobile final golden). The check command and pre-commit hook treat a
-SOLE final@430x932 FAIL-band with everything else at 0.00 MAE as the known
-flake — reported loudly, not a blocker. Any other drift fails the run.
+into the mobile final golden). Neither gate carries a named-pose exemption
+for it any more: `tools/check.sh` (and therefore `tools/release.sh`, which
+runs it) and the **pre-commit hook** (`tools/pre-commit`) share the exact
+same decision logic — `tools/pre-commit` sources `check.sh`'s
+`decide_captures()` rather than keeping a second copy, so the two gates
+cannot drift apart again. Every `[FAIL-band]` row is a hard non-pass,
+including a sole `final@430x932`, because a fail-band count and a green
+exit code disagreeing is itself treated as a fault rather than papered
+over. An explicit, non-blank `CAPTURE_CHECK_ADJUDICATION=<reason>` turns a
+fail-band result from a plain fail into a distinct `blocked` status (still
+non-zero) — it is a recorded adjudication, never a pass, and it is the only
+sanctioned way past a genuine environment issue on either gate.
 
 Precondition for the fast mode's bake step and for captures: the static
 server must be up — `python3 serve.py` on :8137 (START-WEBSITE.command does
@@ -94,16 +105,17 @@ Everything else on the site is always live — there is no other bundling.
 
 ## Known issue — mission mobile can also drift
 
-Separately from the release gate's `final@430x932` known-flake exception,
-`mission@430x932.png` has re-shot with a reproducible ~2.4 MAE drift (whole
-frame, ~6 % of pixels), while the other nine stills are pixel-identical
-(MAE 0.00) under the `?capture=` freeze. Suspected: the perf-governor
-pixelRatio ratchet landing differently on a slow mobile frame. It predates
-any card work and is unrelated to DOM/assets. Do not chase it as part of a
-normal build; if it blocks a commit, re-shoot that pose
+Distinct from the `final@430x932` known flake above, `mission@430x932.png`
+has re-shot with a reproducible ~2.4 MAE drift (whole frame, ~6 % of
+pixels), while the other nine stills are pixel-identical (MAE 0.00) under
+the `?capture=` freeze. Suspected: the perf-governor pixelRatio ratchet
+landing differently on a slow mobile frame. It predates any card work and
+is unrelated to DOM/assets. Do not chase it as part of a normal build; if
+it blocks a commit, re-shoot that pose
 (`python3 tools/capture.py --pose mission --size mobile`) and check whether
-it lands within band before touching scene code. It is not covered by the
-release gate's sole-final exception.
+it lands within band before touching scene code. Neither gate exempts it
+automatically; a genuine environment flake on either pose needs the
+`CAPTURE_CHECK_ADJUDICATION` escape hatch, not a named-pose exception.
 
 ## Related
 

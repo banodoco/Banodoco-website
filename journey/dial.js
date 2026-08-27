@@ -20,6 +20,23 @@
 // as plain config (see chapters/inspire/index.js for the TRANSFORM
 // instantiation). dial.js owns only the PATTERN: clamping, keys, the
 // readout DOM, and calling the caller's persist hook.
+//
+// REGISTRATION (J04c, 2026-08-22). The two things this module attaches to
+// something it does not own — one QA-only `keydown` on the global, and the
+// readout element it appends to `document.body` — go through a single named
+// owner, so both are countable. ON THE SHIPPED PATH IT REGISTERS NOTHING AT
+// ALL: the listener is inside a `qaDial` branch and the readout is created
+// only from showDial(), which returns early when `qaDial` is false. There is
+// no `destroy()` any more and there never was a caller for one; see
+// docs/code-health/DISPOSAL-REMOVED.md.
+//
+// THE OWNER LIVES UNDER journey/ui/ AND SHOULD NOT — this module is not UI.
+// `lifecycle.md` §2 names it `journey/lifecycle/owner.js`; the relocation is
+// open debt, not an accepted shape. Why it landed there and why each order
+// since has been unable to move it:
+// docs/code-health/evidence/2026-08-21-elegance-run-01/e01/relocated/journey-dial.md
+
+import { createOwner } from './ui/owner.js';
 
 let _readoutCount = 0; // stacks multiple simultaneous dials' readouts without overlap
 
@@ -51,7 +68,8 @@ let _readoutCount = 0; // stacks multiple simultaneous dials' readouts without o
  *                                a self-referential update loop; read
  *                                `.value` directly for the initial number.
  * @returns {{ readonly value: number, readonly active: boolean,
- *             set: (v: number, opts?: { persist?: boolean }) => number }}
+ *             set: (v: number, opts?: { persist?: boolean }) => number,
+ *             destroy: () => void }}
  */
 export function createDial({
   name,
@@ -82,6 +100,11 @@ export function createDial({
 
   const qaDial = !!active;
   let v = shipped;
+
+  /* THIS DIAL'S OWNER (J04c). Created on BOTH paths, deliberately: a shipped
+     dial registers nothing, and the funnel is where that zero is read. It
+     registers nothing by existing. */
+  const owner = createOwner(`dial:${name}`);
 
   // SHIPPED: the baked default, nothing else consulted. QA (active): the
   // query value if it parses, else the last persisted QA value, else the
@@ -129,6 +152,9 @@ export function createDial({
       dialVal = document.createElement('b');
       dialEl.appendChild(dialVal);
       document.body.appendChild(dialEl);
+      /* The readout is the only DOM this module creates, and `#j-dial-style`
+         is one shared page-level stylesheet for every dial (the id guard is
+         what makes it one). Both live as long as the document does. */
     }
     dialVal.textContent = format(v);
     dialEl.style.opacity = 1;
@@ -136,8 +162,22 @@ export function createDial({
 
   // key-adjust in `step` increments, clamped, persisting. QA-only: the
   // listener is not even registered on a plain load.
+  /* THE TARGET IS SPELLED OUT, AND IT IS THE SAME TARGET AS BEFORE (J04c).
+     What stood here was a bare, unqualified `addEventListener` call on the
+     'keydown' type — deliberately not re-spelled with its parenthesis here,
+     because M6's comment filter (render-report-lib.mjs's `isCode`) only
+     rejects lines starting `//` or `*` and would count this line as a
+     fourth call site (D101's shape, met while re-baselining M6). An
+     unqualified call resolves the identifier through the global environment
+     record — i.e. to `globalThis.addEventListener` — and WebIDL's
+     global-object fallback for a `this` of `undefined` is why the bare form
+     worked at all. `owner.listen` needs a named target to remove FROM, so the
+     target is written down. The guard is deliberately left exactly as it was:
+     `typeof addEventListener` tests the same property this now calls, so the
+     registration remains conditional on precisely what it was conditional on
+     (design.md J-H19 — a conditional registration stays conditional). */
   if (qaDial && typeof addEventListener === 'function') {
-    addEventListener('keydown', (e) => {
+    owner.listen(globalThis, 'keydown', (e) => {
       if (e.key !== keys[0] && e.key !== keys[1]) return;
       // same raw-listener seam guard as every other key handler in this
       // codebase (M5 key-routing pass): modified chords are browser

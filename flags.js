@@ -1,4 +1,4 @@
-// glowshroom/flags.js — THE flag registry (M5 debt burn-down,
+// flags.js — THE flag registry, at the site root (M5 debt burn-down,
 // journey-v6-plan/15-merge-and-architecture.md M5 row + §1 rule 1).
 //
 // Before this file: five-plus modules each parsed `location.search` (or
@@ -11,11 +11,11 @@
 // named, documented accessors. Every scattered parse site now imports from
 // here instead.
 //
-// WHY IT LIVES AT glowshroom/flags.js, not journey/flags.js: organism/
+// WHY IT LIVES AT THE SITE ROOT, not journey/flags.js: organism/
 // modules read flags too (organism.js, spores.js, intro.js), and the merge
 // doc's ownership rule (§1 rule 1: "organism is a library, journey extends
 // it") means organism must never import FROM journey. Sitting the registry
-// one level above both — at the glowshroom/ root, beside main.js — lets
+// one level above both — at the site root, beside main.js — lets
 // main.js, organism/*, and journey/* all import it without either layer
 // depending on the other.
 //
@@ -210,6 +210,45 @@ export const TKDBG = _search.includes('tkdbg'); // boolean
 const TRANSFORM_KEY = 'journey.transform';
 const TRANSFORM_KEY_OLD = 'journey-v6.transform';
 
+/* ================================================================
+   AN ACCEPTED PAGE-LIFETIME SINGLETON — THE THREE REASONS.
+   ================================================================
+   `tools/test-page-lifetime.mjs` area A executes all three of these
+   against this file's real text and against the imported module.
+
+   1. IT RUNS EXACTLY ONCE PER PAGE, BY THE LANGUAGE. ES modules are cached
+      by RESOLVED SPECIFIER, so every importer of `./flags.js` shares one
+      evaluation. The census in `tools/test-page-lifetime.mjs` area D proves
+      the antecedent that makes that guarantee bite on THIS page: every
+      importer in the shipped graph names this module under one specifier
+      form. A `?v=` cache-buster on one importer and a bare path on another
+      would be two modules, two evaluations, and two of every module-global
+      in this file — and `main.js` already imports one module that way, so
+      the hazard is live rather than theoretical.
+
+   2. A SECOND EVALUATION WOULD STILL BE HARMLESS. The body is idempotent
+      by construction: after the first run the old key is gone, so the copy
+      branch cannot be taken again and the removal branch is a no-op. That
+      is the property that makes "singleton" a classification rather than a
+      requirement — the code does not DEPEND on running once.
+
+   3. CONVERTING IT WOULD TRADE A GUARANTEE FOR A CONVENTION, and Wave 3 is
+      behaviour-preserving. The migration must complete before the first
+      `getTransformStorage()` read, and that read is NOT in `main.js`: it is
+      `journey/chapters/inspire/index.js`, which reaches it through the dial
+      it builds during chapter construction. Today the ordering is enforced
+      by ESM — a module body runs to completion before any importer's body —
+      and no call site can get it wrong. An explicit init call moves the
+      ordering into a caller's hands and makes a new class of bug possible
+      for no gain, because (1) and (2) already deliver everything the
+      conversion would.
+
+   THE RESIDUAL, STATED. This runs at import time, so it touches
+   localStorage before any consent surface the page might ever grow. That is
+   pre-existing and unchanged by J05; it is recorded here because it is the
+   only real argument for the explicit-call form and it is a privacy
+   question, not a lifecycle one.
+   ================================================================ */
 (function migrateTransformStorage() {
   try {
     if (localStorage.getItem(TRANSFORM_KEY) === null) {

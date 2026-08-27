@@ -5,7 +5,16 @@ export function el(tag, cls, text) {
   return node;
 }
 
-/** Builds chapter destination controls in declaration order. */
+import { buildSymbol } from '../symbols.js';
+
+/** Builds chapter destination controls in declaration order.
+ *
+ *  Two weights of control come out of this: the pill/CTA family
+ *  (`j-act-primary` etc., styled as buttons) and the DOOR — the editorial
+ *  text link the Epilogue carries (owner, 2026-08-27: "more like
+ *  editorial links than buttons... deeper reading"). A door is a bare
+ *  anchor: a small glyph from the site's own symbol set, the label in the
+ *  body's sans, a trailing arrow, and a hairline rule drawn by CSS. */
 export function buildActions(specs) {
   const row = el('div', 'j-actions');
   for (const spec of specs) {
@@ -13,7 +22,21 @@ export function buildActions(specs) {
     const node = el('a', `j-act j-act-${spec.weight || 'primary'}`);
     node.href = spec.href || '#';
     if (spec.id) node.dataset.action = spec.id;
-    node.appendChild(el('span', 'j-act-t', spec.label));
+    if (spec.weight === 'door') {
+      // No trailing arrow (owner, 2026-08-27): an outward arrow claims
+      // "leaves this page", and this door is an in-page destination. The
+      // small glyph carries the affordance; label + glyph is the whole
+      // grammar.
+      if (spec.glyph) {
+        const g = el('span', 'j-door-g');
+        g.setAttribute('aria-hidden', 'true');
+        g.appendChild(buildSymbol(spec.glyph));
+        node.appendChild(g);
+      }
+      node.appendChild(el('span', 'j-act-t', spec.label));
+    } else {
+      node.appendChild(el('span', 'j-act-t', spec.label));
+    }
     row.appendChild(node);
   }
   return row;

@@ -2,7 +2,7 @@ BANODOCO — the website, complete with its history
 =================================================
 
 This is the Banodoco site: a glowing wireframe mushroom you scroll
-through, built by Hannah. The full git history is inside — 235 commits
+through, built by Hannah. The full git history is inside — 485 commits
 with unusually lovely messages. Try:  git log --oneline
 
 TO SEE THE WEBSITE:

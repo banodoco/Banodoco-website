@@ -148,11 +148,32 @@ results.push({ name: 'coalesced wheel after a frame stall keeps physical rate',
   value: stalledWheelPeak,
   pass: stalledWheelPeak > 0 && stalledWheelPeak < 0.012 });
 
-// A same-direction second gesture may extend an in-flight Connect resolution
-// toward Owned, but its immature rate EMA must not replace the speed floor the
-// first gesture is already delivering. That replacement was the controller's
-// exact stall-then-roll shape: collapse during the eight modest deltas, then
-// recovery when their cruise latched.
+// A same-direction second gesture arriving mid-flight is SPENT AT THE LANDING
+// (owner report #26, 2026-08-26). Two properties are pinned here.
+//
+// UNCHANGED since DEF-SKIP (2026-08-23): the repeat may not retarget the
+// flight past the rest it was going to (that overfly was the owner's "keeps
+// scrolling through sections", measured at 98.4% of in-flight repeats), and
+// its immature rate EMA must not replace the speed floor the first gesture is
+// already delivering. `midTarget` and `troughRatio` below are those two, and
+// they still assert exactly what they always did.
+//
+// CHANGED, 2026-08-26 — the settled position, 0.725 -> 0.523. DEF-SKIP queued
+// the repeat behind the landing and the arrival armed that leg, so the ride
+// stopped at Connect and then left it after a timed beat with nothing
+// touching the page. That is the defect the owner reported ("NOT auto scroll
+// to the next section would be nice when I haven't made any gesture to do
+// so"), and lengthening the beat 300 -> 900 did not answer it ("So you didn't
+// fix it? This is when scrolling through"). The queue is gone; the repeat's
+// deltas complete THIS arrival and buy no further leg.
+//
+// THIS IS A RE-BASELINE AGAINST A DECIDED CHANGE, NOT A LOOSENING. The pin is
+// still an exact anchor with the same tolerance; it names a different anchor
+// because the owner moved the behaviour. Measured at the second stream's first
+// delta: resolving=true, answeredAt=null, target=0.523, p=0.44562 — squarely
+// mid-flight, which is the condition the ruling turns on. The visitor's ask is
+// not lost, only deferred: the same repeat delivered AFTER the landing still
+// buys the next section in 176 ms, which the case below this one pins.
 reset(0.30);
 for (let i = 0; i < 8; i++) wheel(120);
 for (const delta of [96, 72, 48, 32, 20, 12]) wheel(delta);
@@ -169,14 +190,35 @@ for (let i = 0; i < 16; i++) {
 }
 const repeatMinRate = Math.min(...repeatRates);
 const repeatTroughRatio = repeatMinRate / repeatPreRate;
+const repeatMidTarget = scroll.resolveTarget;
+settle();
 results.push({ name: 'second gesture cannot collapse an in-flight Connect floor',
   value: repeatTroughRatio,
-  pass: scroll.resolveTarget === 0.725 && repeatTroughRatio >= 0.70,
+  pass: repeatMidTarget === 0.523 && repeatTroughRatio >= 0.70
+    && near(scroll.progress, 0.523),
   trace: {
     preRate: +repeatPreRate.toFixed(5),
     minRate: +repeatMinRate.toFixed(5),
-    target: scroll.resolveTarget,
+    midTarget: repeatMidTarget,
+    settledP: +scroll.progress.toFixed(5),
   } });
+
+// THE OTHER SIDE OF THE SAME RULING, and the reason the case above cannot go
+// green over a wall that refuses everything: the SAME repeat, delivered once
+// the ride has landed at Connect, must still buy Ownership. If a future edit answers the
+// owner's report by refusing second gestures generally, this reds.
+reset(0.30);
+for (let i = 0; i < 8; i++) wheel(120);
+for (const delta of [96, 72, 48, 32, 20, 12]) wheel(delta);
+settle(4000);
+const afterLandingFrom = scroll.progress;
+for (let i = 0; i < 19; i++) frame(16);
+for (let i = 0; i < 8; i++) wheel(24);
+settle(6000);
+results.push({ name: 'the same repeat AFTER the landing still buys Ownership',
+  value: scroll.progress,
+  pass: near(afterLandingFrom, 0.523) && near(scroll.progress, 0.725),
+  trace: { landedAt: +afterLandingFrom.toFixed(5) } });
 
 reset();
 swipe();
@@ -230,13 +272,38 @@ settle(10000);
 results.push({ name: 'one cold-boot touch contact cannot buy two sections',
   value: scroll.progress, pass: longBootConsumed && near(scroll.progress, 0.26) });
 
+/* THE RAPID-REPEAT FAMILY, RE-ANCHORED 2026-08-26 (owner report #26).
+   0.523 -> 0.26 on all five: a second flick delivered 128 ms into a 2.9 s
+   transit no longer buys a second section.
+
+   WHY THIS IS THE RULING AND NOT A SWALLOWED FLICK — the distinction the
+   owner drew, and the one this suite must keep visible. Measured at the second
+   swipe's touchstart on this very trace: `resolving=true`, `answeredAt=null`,
+   target 0.26, and p between 0.02982 and 0.03108. The visitor has seen THREE
+   PER CENT of the transition they already bought. The second flick is what a
+   visitor does when nothing has visibly happened yet, not a request for a
+   further section — and under the old law it bought one anyway, delivered by
+   parking on Inspire for a timed beat and then leaving unattended.
+   That unattended departure is the report.
+
+   Those deltas are not discarded. They scrub the surface and the arrival comes
+   144 ms SOONER with the second flick than without it (2800 vs 2944 ms,
+   identical before and after this change), which is what the owner's "its
+   deltas help complete the arrival" means in numbers.
+
+   THE FLICK IS DEFERRED, NOT REFUSED. The after-landing case below buys the
+   second section at the same 144 ms it always did. Both sides are pinned here
+   deliberately: a wall that refuses second flicks outright reds the case
+   below, and a fix that restores the unattended departure reds these five.
+   Full two-sided coverage across all eight boundaries and both input kinds is
+   tools/test-rest-authority.mjs. */
 reset();
 swipe();
 for (let i = 0; i < 8; i++) frame();
 swipe();
 settle(10000);
-results.push({ name: 'rapid repeat buys Connect', value: scroll.progress,
-  pass: near(scroll.progress, 0.523) });
+results.push({ name: 'rapid repeat mid-flight buys Inspire only', value: scroll.progress,
+  pass: near(scroll.progress, 0.26) });
 
 for (const moves of [2, 3, 4]) {
   reset();
@@ -244,8 +311,8 @@ for (const moves of [2, 3, 4]) {
   for (let i = 0; i < 8; i++) frame();
   swipe({ moves });
   settle(10000);
-  results.push({ name: `rapid repeat (${moves} delivered moves) buys Connect`,
-    value: scroll.progress, pass: near(scroll.progress, 0.523) });
+  results.push({ name: `rapid repeat mid-flight (${moves} delivered moves) buys Inspire only`,
+    value: scroll.progress, pass: near(scroll.progress, 0.26) });
 }
 
 reset();
@@ -253,8 +320,26 @@ swipe({ moves: 1 });
 for (let i = 0; i < 8; i++) frame();
 swipe({ moves: 1 });
 settle(10000);
-results.push({ name: 'rapid repeat (one coalesced move each) buys Connect',
-  value: scroll.progress, pass: near(scroll.progress, 0.523) });
+results.push({ name: 'rapid repeat mid-flight (one coalesced move each) buys Inspire only',
+  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+
+// THE DUAL'S GUARD ON THE TOUCH PATH. The same two flicks, the second one
+// delivered after the ride has landed, must still buy Connect — and must do so
+// without the visitor waiting on anything the model invented. The earlier
+// owner report known as the two-flicks-buy-one-section complaint ("two
+// flicks buy one section") was a real defect and this is the case that keeps
+// it fixed: it reds if a fix for report #26 over-refuses.
+reset();
+swipe();
+settle(4000);
+const twoFlickLanded = scroll.progress;
+for (let i = 0; i < 19; i++) frame(16);
+swipe();
+settle(10000);
+results.push({ name: 'two flicks either side of the landing buy Connect',
+  value: scroll.progress,
+  pass: near(twoFlickLanded, 0.26) && near(scroll.progress, 0.523),
+  trace: { landedAt: +twoFlickLanded.toFixed(5) } });
 
 reset();
 swipe();
@@ -285,14 +370,44 @@ settle(10000);
 results.push({ name: 'cold-boot delayed tail buys one section only',
   value: scroll.progress, pass: near(scroll.progress, 0.26) });
 
+/* THE GENUINE POST-BOOT REPEAT, RESTAGED 2026-08-26 (owner report #26).
+   This case exists to prove the BOOT GUARD does not swallow a real second
+   push, and it used to prove it mid-flight, because mid-flight was where a
+   second push could still buy a section. Under the ruling it no longer can,
+   so asserting 0.26 here would have left the case green over a boot guard
+   that swallowed everything — the blind-spot failure this suite has been
+   bitten by before. The repeat is therefore moved to where a real second push
+   IS honoured, after the landing, and the mid-flight arm is kept below as its
+   own two-sided partner.
+
+   The second stream is deliberately delivered at ordinary 16 ms spacing, well
+   inside the SNAP_ENGAGE_MS the time-only boundary demands of wheel, so the
+   ONLY thing that can honour it is wheelPulseRestart's quiet-then-
+   re-acceleration proof. That proof is the model's own evidence that a
+   visitor pushed again rather than a momentum tail decaying, and it is what
+   keeps a deliberate repeat immediate instead of making it wait out the
+   arrival wall — i.e. it is load-bearing for the dual, not for the skip. */
+reset();
+scroll.primeBootWheel(100);
+for (const delta of [100, 70, 35, 12]) wheel(delta);
+settle(6000);
+const bootLanded = scroll.progress;
+for (let i = 0; i < 5; i++) frame(16);
+for (const delta of [20, 50, 110, 110, 110]) wheel(delta);
+settle(12000);
+results.push({ name: 'genuine post-boot repeat after the landing still buys Connect',
+  value: scroll.progress,
+  pass: near(bootLanded, 0.26) && near(scroll.progress, 0.523),
+  trace: { landedAt: +bootLanded.toFixed(5) } });
+
 reset();
 scroll.primeBootWheel(100);
 for (const delta of [100, 70, 35, 12]) wheel(delta);
 for (let i = 0; i < 11; i++) frame(16);
 for (const delta of [20, 50, 110, 110, 110]) wheel(delta);
 settle(12000);
-results.push({ name: 'genuine post-boot repeat still buys Connect',
-  value: scroll.progress, pass: near(scroll.progress, 0.523) });
+results.push({ name: 'post-boot repeat delivered mid-flight buys Inspire only',
+  value: scroll.progress, pass: near(scroll.progress, 0.26) });
 
 // A delivered momentum tail can straddle the shorter arrival-wall timeout
 // without crossing the longer gesture timeout. Once the first landing has

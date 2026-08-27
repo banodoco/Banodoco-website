@@ -566,14 +566,21 @@
   pointer-events: none;
 }
 
-/* Desktop keeps the existing wordmark-over-footer composition. The DOM is
-   grouped so phones can turn the same pieces into one centred stack below. */
+/* ONE CENTRED IDENTITY STACK AT EVERY WIDTH (Hannah, 2026-08-26: "the place
+   and date label should be above the ADOS, and all 3 elements should be
+   vertically aligned together").
+
+   Desktop used to pin .ad-center OUT of this flex column -- absolute, bottom
+   -50px, negative left/right cancelling the padding -- so the caption sat on
+   the card's bottom edge as a footer strip while mark and eyebrow floated
+   centred above it. Three elements, two alignments. Phones already had the
+   stack (the 620px rule below), so this is desktop adopting what mobile was
+   given, not a new composition: caption, ADOS, eyebrow, one column, one
+   centre line. .ad-word loses the bottom: 50px that reserved the strip's
+   room. */
 .ad-word {
   position: absolute;
-  top: 26px;
-  left: 38px;
-  right: 38px;
-  bottom: 50px;
+  inset: 0 38px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -626,11 +633,6 @@
 .ad-next { right: 8px; }
 .ad-nav:is(:hover, :focus-visible) { color: #fff; border-color: rgba(255, 255, 255, 0.55); }
 .ad-center {
-  position: absolute;
-  left: -38px;
-  right: -38px;
-  bottom: -50px;
-  min-height: 50px;
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
@@ -642,18 +644,12 @@
 }
 .ad-mark { order: 1; }
 .ad-eyebrow { order: 2; }
-.ad-center { order: 3; }
+.ad-center { order: 0; }
 
-@media (max-width: 620px) and (orientation: portrait) {
-  /* Mobile feedback: location/date above ADOS, AI ART GATHERINGS below, and
-     the three-line identity group centred vertically in the media frame. */
-  .ad-word { inset: 0 38px; }
-  .ad-center {
-    position: static;
-    order: 0;
-    min-height: 0;
-  }
-}
+/* The 620px portrait rule that used to carry this composition is gone: it
+   said `inset: 0 38px`, `position: static`, `order: 0`, `min-height: 0` --
+   every one of which is now the shared default above. A media query whose
+   body equals its own default is a rule that cannot be seen to fire. */
 /* the caption shuffles with its event — a small rise under the media
    crossfade so the two read as one gesture (re-armed per swap in ados.js) */
 .ad-center.ad-swap { animation: ad-cap-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }

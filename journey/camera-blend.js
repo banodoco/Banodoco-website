@@ -1,5 +1,31 @@
 import { arcLerp } from './camera-path.js';
 
+/** The route-faithful flight's presented coordinate for eased phase `e`.
+ *  With a pace table (journey.js buildRoutePace) the phase advances along the
+ *  leg's own sampled path metric, so equal eased time buys equal path and the
+ *  hero-end dead band can no longer park the camera for a third of the move
+ *  (measured 0.38 s parked, then 24 units in ~0.7 s — see the block at
+ *  buildRoutePace). Without one — a degenerate leg, or a fixture-built blend —
+ *  it falls back to the shipped linear map. Monotone by construction: the
+ *  metric is a strictly positive per-segment sum. */
+function routePaceP(blend, e) {
+  const pace = blend.routePace;
+  if (!pace) {
+    return blend.routeFromP + (blend.routeTargetP - blend.routeFromP) * e;
+  }
+  const cum = pace.cum, n = cum.length - 1;
+  const u = e * pace.total;
+  let lo = 0, hi = n;
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (cum[m] < u) lo = m; else hi = m;
+  }
+  const span = cum[hi] - cum[lo];
+  let f = (lo + (span > 0 ? (u - cum[lo]) / span : 1)) / n;
+  if (f < 0) f = 0; else if (f > 1) f = 1;
+  return blend.routeFromP + (blend.routeTargetP - blend.routeFromP) * f;
+}
+
 /** Build the frame-critical direct-jump camera compositor once. */
 export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEnd) {
   const dstPos = sceneApi.camera.position.clone();
@@ -21,8 +47,7 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
        easing, not a mesh clock. Publish the exact compositor coordinate so
        every later frame reader can consume the same value. */
     if (blend.routeFaithful) {
-      blend.presentedP = blend.routeFromP
-        + (blend.routeTargetP - blend.routeFromP) * e;
+      blend.presentedP = routePaceP(blend, e);
       director.apply(blend.presentedP, dt);
       guarded('lens', () => lens.setLookOverride(lens.lookOf(blend.presentedP)));
       if (f >= 1) onEnd(true);

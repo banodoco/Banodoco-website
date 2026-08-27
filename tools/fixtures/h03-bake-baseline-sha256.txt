@@ -1,0 +1,7 @@
+# HB6a baseline — recorded at oracle vendoring, BEFORE any write
+HEAD 6967a36ab309af7057336be64d6f0f9dd3c41b21
+date 2026-08-21T18:15:35Z
+a422ead3853ec4bcd930b507a6b563670610f9ae63a3f4f0b0d82a2f252a1131  static/geom/manifest.json
+c9ababa77505a974d6c641462da5f4ad32d08618e9c6e1ffada910828aba454f  static/geom/final.bin
+456339585fc0c9fddb5f33015ec3cbaf543c690e39a3004872c062c3f0e6e407  /Users/hannahomalley/nigel/ados-paris/banodoco-website/docs/code-health/evidence/2026-08-21-elegance-run-01/h03/proof/oracle/ring.pre-split.js
+456339585fc0c9fddb5f33015ec3cbaf543c690e39a3004872c062c3f0e6e407  journey/chapters/final/ring.js
