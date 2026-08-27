@@ -198,18 +198,13 @@ export function createPicker(sceneApi, gate) {
     return m;
   }
 
-  function dispose() {
-    el.removeEventListener('pointerdown', onDown, OPT);
-    el.removeEventListener('pointerup', onUp, OPT);
-  }
-
   // No poll(): there is no per-frame pointer work left to do. A tap resolves
   // and is answered synchronously inside pointerup, and the chapter's own
   // gate.armed() is what silences this module when the epilogue is off screen
   // — there is no longer any state here that could be left stale behind the
   // camera, because there is no state here at all.
   return {
-    add, dispose,
+    add,
     get count() { return targets.length; },
     /** QA: mean measured cost of one cast of each phase, in ms — both once
      *  per tap. Null until something has actually been tapped. */

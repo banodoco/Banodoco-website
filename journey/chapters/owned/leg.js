@@ -116,17 +116,44 @@ export function buildLeg() {
   // 375/812), so the owned@430x932 golden still pins the phone placement.
   // The clamp only fences QA extremes (?aspect=0.1) off the placement math.
   //
-  // The predicate is decided ONCE, at build time, from the same effective
-  // aspect the director composes with (?aspect QA override first, viewport
-  // otherwise) — portraitWeight >= 0.5 is the midpoint of portrait.js's blend
-  // band. Rotating a phone after load keeps the built placement: chapters
-  // never rebuild on resize, and the camera's own portrait blend still tracks
-  // the live aspect continuously.
+  // WHICH FIELD A VIEWPORT ASKS FOR — one law, asked as often as it is
+  // needed. portraitWeight >= 0.5 is the midpoint of portrait.js's blend band,
+  // i.e. aspect 0.875 exactly; below it the tall arc is the composition, above
+  // it the landscape one is.
+  //
+  // THIS USED TO BE THREE `const`s EVALUATED ONCE (2026-08-17 → 2026-08-25),
+  // and the comment here said so in as many words: "Rotating a phone after
+  // load keeps the built placement: chapters never rebuild on resize, and the
+  // camera's own portrait blend still tracks the live aspect continuously."
+  // That sentence describes the DEFECT the site owner reported ("when I resize
+  // the screen, the number of items that shows in the ownership section
+  // doesn't update appropriately"), because the two halves it puts side by
+  // side do not agree with each other: the camera DOES re-pose every frame
+  // (fov 58 → 64 across the band), so a page that crossed the boundary showed
+  // the landscape arc through the portrait lens — 4 of 16 faces on frame at
+  // 430x932 against 16 on a fresh load, and the twelve missing ones were not
+  // stale, they were placed for a frame that no longer exists.
+  //
+  // So the predicate is now a FUNCTION OF ASPECT, and the build-time trio is
+  // simply its first call. `?aspect=` still wins outright — a capture pinned
+  // to an aspect must not re-compose when its window is sized — which keeps
+  // capture.py and every golden on exactly the composition they shoot today.
+  //
+  // The consumer side is portraits.js `recompose()`, driven off the rail
+  // dock's viewport revision (chapters/owned/index.js). Nothing here decides
+  // WHEN to ask; this only answers.
+  function fieldFor(aspect) {
+    const a = ASPECT ?? aspect;
+    const portraitAspect = clamp(a, 0.40, 0.875);
+    return {
+      portraitField: portraitWeight(a) >= 0.5,
+      portraitAspect,
+      restFramePortrait: frameAt(REST_P, portraitAspect),
+    };
+  }
   const buildAspect = ASPECT
     ?? (typeof window !== 'undefined' ? window.innerWidth / Math.max(1, window.innerHeight) : 1.6);
-  const portraitField = portraitWeight(buildAspect) >= 0.5;
-  const portraitAspect = clamp(buildAspect, 0.40, 0.875);
-  const restFramePortrait = frameAt(REST_P, portraitAspect);
+  const { portraitField, portraitAspect, restFramePortrait } = fieldFor(buildAspect);
 
   /** NDC-space projection into an authored frame (aspect = design 1.55). */
   function projectInto(f, v, aspect = 1.55) {
@@ -187,7 +214,7 @@ export function buildLeg() {
 
   return {
     camPts, camPs, camDist, nearestCamPt, frameAt, restFrame, projectInto,
-    portraitField, portraitAspect, restFramePortrait,
+    portraitField, portraitAspect, restFramePortrait, fieldFor,
     SA, SB, SD, SLEN2, SDIR, RIGHT, UPN, spineDist, spineAt, clampUnder,
     exitP, exitPt, groundY, CROWN: crownPoint(),
   };

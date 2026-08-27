@@ -971,6 +971,64 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-color: var(--parchment);
     background: rgba(242, 237, 225, 0.10);
   }
+  /* --- THE DOOR (owner, 2026-08-27): the Epilogue's Ownership control is
+     deeper reading, not an action — "more like editorial links than
+     buttons". A bare anchor: the collective mark small, the word in the
+     body's sans a step brighter than body copy, and a hairline gold rule
+     beneath that grows outward on hover while the word lifts to gold. No
+     pill, no fill, no outline, very little glow. Built one-door wide; a
+     second door laid in the same row needs no new structure.
+
+     NO ARROW. An earlier cut carried a trailing ↗ and it was removed
+     (see ui/dom.js, same decision): the glyph means "leaves this page",
+     and Ownership is an in-page destination. Nothing replaced it —
+     substituting another glyph would only be worth it if that glyph
+     claimed something true, and the door's own mark already carries the
+     affordance. */
+  .j-act-door {
+    position: relative;
+    padding: 0.2rem 0.1rem 0.55rem;
+    border-radius: 0;
+    gap: 0.55em;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    /* One step brighter than the body copy, NOT parchment — parchment
+       reads as white in this composition (the same trap as the active
+       mark's rejected hover). A warm off-white in the gold family. */
+    color: rgba(233, 216, 181, 0.92);
+    text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9);
+    transition: color 0.25s;
+  }
+  .j-act-door .j-door-g {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(230, 189, 110, 0.9);
+  }
+  .j-act-door .j-door-g .j-sym {
+    width: 15px;
+    height: 15px;
+    filter: none;
+  }
+  .j-act-door::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 58%;
+    height: 1px;
+    background: rgba(224, 177, 84, 0.5);
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s;
+  }
+  .j-act-door:is(:hover, :focus-visible) {
+    color: var(--parchment);
+  }
+  .j-act-door:is(:hover, :focus-visible) .j-act-t { color: var(--gold-bright); }
+  .j-act-door:is(:hover, :focus-visible)::after {
+    width: 100%;
+    background: rgba(240, 200, 119, 0.8);
+  }
   /* --- entry: the row is the LAST part of the arriving copy -------------
      Same envelope as the heading and the sub above (`--j-in-wait` +
      fractions of `--j-in`), so a longer flight stretches it with
@@ -1032,7 +1090,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   .j-block.pos-left       { left: 5.2vw; top: 50%; transform: translateY(-50%); }
-  .j-block.pos-bottom     { left: 50%; bottom: 8vh; transform: translateX(-50%); text-align: center; }
+  /* Bottom-anchored copy RESERVES THE NAVIGATOR'S BAND (2026-08-27; owner:
+     the Inspire copy ran 21px into the icons at 430x932). The max() takes
+     the block's own authored seat unless the navigator's band — read from
+     the same :root variables the rail itself is laid out by — would reach
+     it; then the block rises just clear. Composition, not coincidence:
+     the two share one declaration, so retuning the nav's seat cannot
+     silently re-open the collision.
+
+     THE AIR IS 30px, AND IT IS NOT A TASTE NUMBER (2026-08-27, second
+     pass). The first cut of this rule reserved 14px and cleared the
+     collision arithmetically while leaving it visually intact — measured
+     on Inspire at 430x932, copy bottom 828 against a mark top of 841:
+     13px, which is LESS than the body copy's own 22px line gap. Anything
+     under one line's leading is read as another line of the paragraph, so
+     the navigator was still inside the copy even though nothing overlapped.
+     30px is comfortably past that leading and is what makes the row read as
+     its own object. Measured after: 30px at 430x932 and at 1440x900.
+
+     The blocks can afford it because bottom-anchored copy has headroom
+     ABOVE — the scene, not more type. And note what this does NOT trade
+     against: the hero seat is a different seat. The row rides up by
+     `--nav-hero-lift` at the hero and back down to `--nav-centre-bottom`
+     once detached, so hero clearance (~103px) and this air (30px) are set
+     independently and do not pull on each other. */
+  .j-block.pos-bottom     { left: 50%;
+    bottom: max(8vh, calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px));
+    transform: translateX(-50%); text-align: center; }
   .j-block.pos-bottom .j-sub { margin: 0 auto; }
   /* D22 (2026-08-17, Hannah's balance pass): the Inspire copy steps up out of
      the ground network's brightest band — the block used to sit with the
@@ -1047,7 +1131,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      (max-height 520) still wins for squat windows: same specificity, later
      rule. */
   @media (min-width: 901px) {
-    .j-block.pos-bottom { bottom: calc(8vh + 40px); }
+    .j-block.pos-bottom {
+      bottom: max(calc(8vh + 40px),
+                  calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px));
+    }
   }
   @media (min-width: 600px) and (max-width: 900px) and (orientation: portrait) {
     .j-block.pos-bottom { bottom: calc(8vh + 88px); }
@@ -1134,7 +1221,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      mushroom field. (The 9vh bottom was chosen to clear the footer cue's
      band; the cue is gone — navigation redux, 2026-08-09 — and the offset
      stays because the composition was signed off with it.) */
-  .j-block.pos-bottomleft { left: 5.2vw; bottom: 9vh; }
+  .j-block.pos-bottomleft { left: 5.2vw;
+    bottom: max(9vh, calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px)); }
 
   /* ============================================================
      FINAL HEADING MEASURE (Hannah, 2026-08-05)
@@ -1268,6 +1356,26 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     transition: color 0.3s, background 0.3s;
   }
   .j-hot.vis { visibility: visible; pointer-events: auto; }
+  /* THE CONDENSE'S NEW AXIS (ICON-ARRIVAL, 2026-08-23). The initiative
+     marker's entry gesture — housing unfolding from the centre line, the
+     pictograph's grow-and-settle breath — needs a horizontal scale on three
+     elements whose `transform` templates are owned by cards.css. Rather than
+     out-specifying those templates (and having to chase their hover variants),
+     the gesture rides the INDIVIDUAL `scale` property, which the UA composes
+     with `transform` and which no rule in cards.css touches. The variables are
+     written once per frame by hotspot-frame.js's paintIconTab off `h.a` — the
+     chip's one truthful arrival clock — so there is no CSS animation to drift,
+     replay on hover, or disagree with a dt = 0 freeze; both default to 1, so a
+     chip nobody paints (and every settled frame) is byte-identical to the
+     pre-ICON-ARRIVAL rendering. transform-origins are inherited from the
+     cards.css rules (::after 50% 30%, svg center), so the unfold is about the
+     centre line by construction. WHAT WOULD BREAK IT: a cards.css rule that
+     starts setting `scale` on these elements would silently override the
+     gesture — the individual property was chosen precisely because that sheet
+     does not use it. */
+  .j-hot--icon-tab::after,
+  .j-hot--icon-tab .j-hot-dot.j-hot-ico::before { scale: var(--j-hot-shell-sx, 1) 1; }
+  .j-hot--icon-tab .j-hot-dot.j-hot-ico svg { scale: var(--j-hot-ico-s, 1); }
   /* THE HIT PAD (2026-08-06, report A). A round target the size of the thing
      the node draws, pinned to the node inside the button's own box — so the
      edge-flip and the narrow-viewport nudge below move the LABEL and leave the
@@ -1447,7 +1555,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     visibility: hidden;         /* also takes it out of the a11y tree when shut */
     pointer-events: none;
     background: rgba(14, 9, 3, 0.94);
-    border: 1px solid rgba(217, 164, 65, 0.3);
+    /* 0.35, NOT the 0.30 authored on 2026-08-05, and it is the shared
+       keyframes' own settle point rather than a taste change. `j-detail-arrive`
+       ends at 0.35 and `j-detail-depart` starts there, so a 0.30 rest made the
+       arrival's last frame step DOWN 14% and the exit's first frame step UP
+       17% — the second of those breaks the monotone gate's stated contract
+       ("never brighter on the way out than it was at rest",
+       tools/test-detail-shell-monotone.mjs), which cannot see it because it
+       reads keyframe stops and not resting declarations. `.j-card` is the
+       sibling on the identical keyframes and has always rested at 0.35
+       (below); `.j-pop` was the outlier. Report #30: edges must not step. */
+    border: 1px solid rgba(217, 164, 65, 0.35);
     border-radius: 3px;
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
     text-align: left;           /* never inherit pos-topright's ragged-right */
@@ -1527,18 +1645,54 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-pop[data-side="below"] { --fil-x0: 0.12; --fil-y0: 1; }
   /* One fast shell gesture for every journey detail surface. The box itself
      never translates: ui.js owns transform for live world anchoring (and the
-     mobile sheet owns it for drag-to-dismiss). A quick lamp-up plus a small
-     gold border glint gives popovers and profile cards the same arrival
-     without moving their hit area or stacking a second slide on their own
-     interior choreography. */
+     mobile sheet owns it for drag-to-dismiss). A quick lamp-up gives popovers
+     and profile cards the same arrival without moving their hit area or
+     stacking a second slide on their own interior choreography.
+
+     THE EDGE ONLY EVER RISES (report #30, 2026-08-26). Owner: "when I hover
+     over any of the items, the sections or owners, there's a weird border
+     flash that disappears when I first hover. It feels unintentional."
+
+     BOTH surfaces they name are this one keyframe. Hovering an initiative
+     chip inside a section opens `.j-pop`; hovering a contributor face in
+     Owned opens `.j-card`, whose TRANSIENT tier is a hover tier
+     (ui/card-tier.js). Both are armed with `.j-detail-enter`, so one cause
+     served two complaints — and "on the first hover" is the entry itself:
+     runPopEntry/runCardEntry fire only on a FRESH reveal, so a pointer that
+     leaves and comes back inside POP_HIDE_MS (160 ms) sees no entry at all
+     and therefore no flash. It was never first-hover-only; it was
+     fresh-reveal-only, which from a chair looks the same.
+
+     The `border-color` stop below used to be a deliberate "gold glint":
+     rgba(255, 226, 160, 0.62) at 68%, brighter and whiter than both the
+     keyframe's own 100% (0.35) and the element's resting edge (0.30).
+     Measured per frame in Chrome, p95 frame gap 29.9 ms: 0.12 -> 0.62 by
+     t+137 ms -> 0.35 -> 0.30. Folding hue, alpha and the simultaneous
+     opacity ramp together, the edge peaked at 3.32x the brightness it
+     settles to and then fell away — a rise-then-fall, which is what the eye
+     reads as a flash. Exactly the shape of report #20's portrait flare, in
+     CSS instead of a shader, and answered the same way: strictly monotone,
+     ENDPOINTS UNMOVED.
+
+     The stop no longer states `border-color` at all, so the UA runs it 0% ->
+     100% in one monotone ramp. That is deliberate over writing an
+     intermediate number: there is then no value for a later edit to nudge
+     back above the settle point. The lamp-up (`opacity`) and the wipe
+     (`clip-path`) are untouched — the arrival still reads as an arrival; it
+     just no longer overshoots. Gated by tools/test-detail-shell-monotone.mjs,
+     which measures relativeLuminance x alpha x opacity across the stops of
+     every keyframe in the sheet that animates an edge. */
   @keyframes j-detail-arrive {
     0%   { opacity: 0; clip-path: var(--detail-clip-start); border-color: rgba(217, 164, 65, 0.12); }
-    68%  { opacity: 1; clip-path: inset(-80px); border-color: rgba(255, 226, 160, 0.62); }
+    68%  { opacity: 1; clip-path: inset(-80px); }
     100% { opacity: 1; clip-path: inset(-80px); border-color: rgba(217, 164, 65, 0.35); }
   }
+  /* The exit carried the same overshoot in reverse — 0.35 -> 0.48 at 32%, a
+     2.32x flare on the way out, i.e. the panel brightened its own edge while
+     leaving. Same treatment, same endpoints. */
   @keyframes j-detail-depart {
     0%   { opacity: 1; clip-path: inset(-80px); border-color: rgba(217, 164, 65, 0.35); }
-    32%  { opacity: 0.9; clip-path: inset(-80px); border-color: rgba(255, 226, 160, 0.48); }
+    32%  { opacity: 0.9; clip-path: inset(-80px); }
     100% { opacity: 0; clip-path: var(--detail-clip-start); border-color: rgba(217, 164, 65, 0.12); }
   }
   .j-pop.j-detail-enter,
@@ -1999,7 +2153,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-act { min-height: 44px; }
     .j-block { max-width: none; width: 88vw; }
     .j-block.pos-left { left: 6vw; }
-    .j-block.pos-bottomleft { left: 6vw; bottom: 11vh; }
+    /* 11vh is the authored seat; the max() is the navigator's band, the same
+       one the base rule and the ≤480 block reserve. At 481-599 portrait
+       11vh alone is ~99px against a 120px band — short, by the same
+       arithmetic that put the Epilogue door on the Intro bookend at 430. */
+    .j-block.pos-bottomleft { left: 6vw;
+      bottom: max(11vh, calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px)); }
     .j-block.pos-topright   { right: 6vw; top: 11vh; }
     .j-block.pos-bottom, .j-block.pos-topcentre { left: 50%; }
     .j-card { right: 50%; transform: translate(50%, -50%); }
@@ -2219,9 +2378,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        the epilogue: the wider measure gives the heading a calmer three-line
        shape, while the lower anchor leaves the field to curl over the copy
        instead of leaving both elements stranded around the frame's middle. */
+    /* …and then the navigator came BACK into this lane, from the other
+       direction (2026-08-27). The row is bottom-CENTRE now, so the block no
+       longer has a side to be safe on: measured at 430x932 with a bare 6vh,
+       the Epilogue box ended at y 876 and its Ownership door occupied
+       x 24..143 / y 806..850 while the Intro bookend's mark sat at
+       x 81..115 / y 845..879 — a real 34x5.5px overlap of two things that
+       both take a tap, with the rail on top. That is a hit-target fault, not
+       only a picture.
+
+       So this override joins the same reservation the base rule uses rather
+       than restating a bare seat. Nothing else here changes: the full-bleed
+       width and the reclaimed left gutter were the point of this block and
+       they stand. Measured after: door bottom 786, mark top 842. */
     .j-block.pos-bottomleft {
       left: 0;
-      bottom: 6vh;
+      bottom: max(6vh, calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px));
       width: 100vw;
       padding-left: 1.5rem;
       padding-right: 1.5rem;
@@ -2559,9 +2731,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
       transform: translateY(var(--rail-recycle-y, 0px));
     }
-    .j-rail:not(.j-rail-column).j-rail-between .j-rail-name {
-      opacity: 0 !important;
-    }
+    /* RETIRED (2026-08-26, owner: "when I scroll between sections the
+       labels disappear"). This half-moon-era rule blanked every name with
+       an !important whenever the rail sat between two rests — correct for
+       the fan (whose pills hang mid-air during a turn), wrong for the
+       centred row, whose core labels are part of the content and must hold
+       through a scroll. Same FAMILY as the pill-side fault fixed earlier
+       today (a retired geometry's state rule reaching the new DOM), but a
+       different rule — the two are separate faults, not one. */
     /* ---- RESTATING THE ANGLE IS NOT A MOVE ----
        rail.js re-canonicalises `--ang-to` while the moon is HOME — folded and
        finished folding, so `--u` is 0, `--ae` is 0 whatever the angle says,
@@ -3022,6 +3199,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
   @media (prefers-reduced-motion: reduce) {
     .j-hot, .j-hot-dot, .j-card { transition: none; }
+    /* The initiative marker's condense (ICON-ARRIVAL): cards.css already
+       flattens the entry's opacity/transform variables under reduced motion;
+       this flattens the `scale` axis site.css added beside them. What
+       remains is DELIBERATE, not missing: the performed beat still times
+       each marker's arrival (pacing is not motion), so the six chips fade up
+       one at a time, fully formed — a cadence of crossfades instead of three
+       simultaneous pops. */
+    .j-hot--icon-tab::after,
+    .j-hot--icon-tab .j-hot-dot.j-hot-ico::before,
+    .j-hot--icon-tab .j-hot-dot.j-hot-ico svg { scale: none; }
     .j-pop, .j-pop-link { transition: none; }
     /* the rail's step-back is a state change, not a dissolve — the end state
        (copy at 0.14 while held open, full when not) is intact and instant */
@@ -3130,52 +3317,127 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
 /* ========================================================================
-   HORIZONTAL JOURNEY NAVIGATION — 2026-08-20
+   THE CENTRED JOURNEY NAVIGATOR — 2026-08-26 (owner's navigation restage)
 
-   One five-link landmark has two placements: beneath Mission's copy, then at
-   the lower-left for every later chapter. These late rules deliberately retire
-   the old column/half-moon geometry at matching or greater specificity while
-   preserving the links, chapter state, menu dialog and focus model built by
-   rail.js.
+   "I want to switch the navigation to be in the middle of the screen ...
+    Inspire, Connect, and Equip [in the middle] with Equip showing Coming
+    Soon when you hover over it. Intro and Epilogue should be smaller. All
+    the icons should show the text below them in the intro section and then
+    it should only appear upon hover."
+
+   One five-item row, fixed at the bottom centre AT EVERY TIER: a minor
+   circle (Intro), three major circles (Inspire / Equip / Connect), a minor
+   circle (Epilogue), all on ONE horizontal centre line, fine dotted rules
+   between neighbours, and the travelling gold ring gliding along that line
+   with journey progress. This SUPERSEDES both of the geometries behind it
+   in this file — the 2026-08-20 horizontal strip that docked from under
+   the hero copy to the lower-left, and the mobile edge file with its
+   first-tap arming (a permanently visible row has nothing to unfold, so a
+   phone tap navigates directly, exactly like a desktop click). The
+   half-moon/column rules further up are therefore dead at EVERY viewport
+   now; they are retired in place, exactly as the horizontal strip already
+   retired them for desktop, and this block neutralises them at matching or
+   greater specificity.
+
+   GEOMETRY HAS ONE OWNER. The circle diameters, the gap, and the row's
+   centre line are journey/layout/rail-geometry.js's rowMetrics(); the live
+   rail republishes them as the --nav-* custom properties on its root every
+   viewport change, and the paint (ring x, connector fills) is computed in
+   the same pixel frame. The declarations just below are the PREBOOT TWIN
+   of that table — they exist so the first-paint shell (index.html), which
+   has no JS writing on it, lays out identically. Keep the two in step, the
+   same way the shell itself is a kept-in-step twin of the live DOM.
    ======================================================================== */
-/* The first-paint strip did not exist in the historical mobile design. Hide
-   it at the same boundary used by rail.js; the live, accessible fixed file
-   replaces it as soon as the lightweight journey module mounts. */
-@media (pointer: coarse), (max-width: 900px) {
-  .j-rail-preboot { display: none !important; }
+/* Declared on :root, not on .j-rail, ON PURPOSE: the navigator's geometry
+   is now something other compositions must be able to compose AGAINST —
+   the bottom-anchored copy blocks below reserve its band with these same
+   numbers, which is what ended the independent-layout collision the owner
+   reported on Inspire at phone width (copy last line 21px into the
+   icons). Custom properties inherit, so the rail and its preboot shell
+   read them exactly as before; rail.js's per-frame inline writes on the
+   rail root still override within the rail's own subtree. */
+:root {
+  --nav-major: 44px;   /* hit boxes — see rowMetrics(); the DRAWN circle is --nav-ring-d */
+  --nav-minor: 40px;
+  --nav-gap: 36px;
+  --nav-centre-bottom: 92px;
+  --nav-fit-major: 0.9;    /* ~21.5px of ink inside a 36px circle */
+  --nav-fit-minor: 0.83;   /* ~20px bookend glyphs, no circle */
+  --nav-ring-d: 36px;      /* the core three's fine circles ("34-38px") */
+  /* CONTENT POSE (owner, fourth pass): at the hero the whole instrument is
+     this much larger — part of the content, "the three things we're
+     doing" — and it eases back to 1 as the visitor scrolls out of the
+     intro. --nav-content-u is painted by rail.js (1 at the hero rest, 0
+     once the intro is left, continuous in journey progress between); the
+     preboot default 1 means the shell boots in the content pose. */
+  --nav-content-u: 1;
+  --nav-content-max: 1.28;
+  /* EMBEDDED, NOT STACKED (owner, fifth pass: "move it further away from
+     the content... near the threshold of the hero, not directly underneath
+     its copy"), WITH ITS OWN FLOOR (owner, sixth pass: "probably a little
+     bit too close to the bottom edge now"). The hero seat is derived from
+     the VIEWPORT, not a desktop pixel: the row's centre line sits at
+     13.5% of viewport height in the hero pose (~121px at 900 tall, the
+     region the owner asked for; the reference render's own row sits at
+     ~13%), never below the scrolled seat. The instrument RIDES DOWN to
+     the scrolled seat as it detaches — the hero pose keeps the bigger
+     clearance, the navigation pose deliberately sits nearer the edge. The
+     copy separation survives by construction: the hero seat is measured
+     from the BOTTOM, so it can never climb back toward the paragraph. */
+  --nav-hero-lift: max(0px, calc(13.5vh - var(--nav-centre-bottom)));
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  :root {
+    --nav-major: 42px;
+    --nav-minor: 36px;
+    --nav-gap: 28px;
+    --nav-centre-bottom: 84px;
+    --nav-ring-d: 34px;
+    --nav-content-max: 1.22;
+  }
+}
+@media (orientation: portrait) and (max-width: 620px) {
+  :root {
+    --nav-major: 40px;
+    --nav-minor: 34px;
+    --nav-gap: 20px;
+    --nav-centre-bottom: 70px;
+    --nav-fit-major: 0.85;
+    --nav-fit-minor: 0.72;
+    --nav-ring-d: 30px;
+    --nav-content-max: 1.15;
+  }
+  .j-rail .j-rail-name,
+  .j-rail:not(.j-rail-column) .j-rail-name,
+  .j-rail .j-rail-soon-note {
+    font-size: 0.72rem !important;
+  }
 }
 
-/* The horizontal redesign is desktop-only. All pre-existing rail rules above
-   remain the exact mobile/touch implementation from 4b02a6a^; scoping these
-   late overrides is enough to reveal that implementation again without a
-   parallel DOM or a second source of navigation state. */
-@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
 .j-rail,
 .j-rail:not(.j-rail-column) {
   position: fixed;
   inset: auto;
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: calc(var(--nav-centre-bottom) - var(--nav-major) / 2);
   z-index: 4;
   display: block;
   width: max-content;
   height: auto;
+  margin: 0;
   padding: 0;
   pointer-events: none;
+  isolation: auto;
   opacity: 0;
   transition: opacity 0.45s ease;
 }
 .j-rail.on,
 .j-rail:focus-within { opacity: 1; }
+.j-rail.on.dim { opacity: 0.1; }
 .j-rail-preboot {
   animation: fade-on 0.9s ease 0.15s both;
-}
-
-.j-rail[data-layout="mission"] {
-  left: 5.2vw;
-  top: calc(50% + clamp(10rem, 12.5vw, 11.5rem) + 14px);
-}
-.j-rail[data-layout="chapter"] {
-  left: 3.4rem;
-  bottom: 2.1rem;
 }
 
 .j-rail .j-rail-inner,
@@ -3184,24 +3446,139 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   width: auto;
   height: auto;
   margin: 0;
+  isolation: auto;
 }
+/* THE SCRIM — the hero copy's own idiom, extended (owner, seventh pass:
+   "see the way we darken the left side under the hero text... could you
+   also extend that subtle darkness to under the icons?"). This is
+   .j-block::before's treatment — a soft radial ellipse in the same ink,
+   fading fully to transparent, never a visible box — sized for the row
+   plus its labels and SYMMETRIC about the row's centre (the band it
+   replaces was the right-rail era's directional gradient, wrong for a
+   centred object). Like the copy block's, it is the navigator's OWN
+   legibility, owned locally rather than borrowed from a scene effect.
+   Its strength rides the detachment: subtle while the group sits
+   embedded in the hero's quieter ground, full over the busy root network
+   once the object becomes navigation — "thin orange geometry directly
+   over other thin orange geometry" is the diagnosed failure this
+   prevents.
+
+   IT HANGS ON THE ROW, NOT ON `.j-rail` — and that is the whole of the
+   second fix (2026-08-27, NAV-2). Replacing the right-rail's directional
+   band with a symmetric ellipse fixed the SHAPE and left the ANCHOR alone,
+   so the new scrim missed the icons in the same direction the old one did.
+   Measured at 1440x900, connect:
+
+       .j-rail          box  l 720  r 1076   centre 898
+       .j-rail-list     box  l 542  r  898   centre 720
+       icons + labels        l 542  r 903.6  centre 722.8
+       scrim, on .j-rail     l 550  r 1246   centre 898
+
+   `.j-rail` is still the right-rail's rectangle: it begins AT the viewport
+   centre and runs rightwards. What centres the row is `.j-rail-list`'s own
+   `translateX(-50%)`. So a scrim centred on `.j-rail` puts its densest ink
+   at x 898 — the row's right END — and spends its right half, out to
+   x 1197, darkening empty scene, while Intro and half of Inspire sit past
+   its left edge in ink that has already fallen to zero.
+
+   The row is `.j-rail-list`. The ground belongs to the row, so it is the
+   row's own `::before`, and then it cannot drift again: the list's single
+   transform — the centring AND the detachment's lift and scale — carries
+   the ground with the marks by construction, which also deletes the copy of
+   that transform this rule used to keep in sync by hand. One coordinate,
+   one transform, one object. (`z-index: -1` inside the list's isolated
+   stacking context puts it behind every slot; `pointer-events` is forced,
+   because the moon-era rule this pseudo-element inherits turns them on for
+   a big invisible square whenever the rail is hot.) */
+.j-rail .j-rail-list::before,
+.j-rail:not(.j-rail-column) .j-rail-list::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  z-index: -1;
+  width: calc(100% + 340px);
+  height: 260px;
+  /* THE HERO FLOOR IS 0.72, NOT 0.55, AND THE REASON IS A MEASUREMENT
+     (2026-08-27, NAV-2). The ramp was authored on the idea that the hero
+     "sits in the scene's quieter ground" and so needs less. The hero's
+     ground under this row is not quieter — it is the brightest ground the
+     row ever sits on, because the row is seated among the organism's roots.
+     Sampled per mark at 1440x900, mark mean against its OWN local ground:
+
+         Intro    30.4 / 24.9   +5.5
+         Inspire  32.0 / 28.9   +3.1
+         Equip    36.0 / 29.7   +6.4
+         Connect  43.8 / 45.8   -2.0
+         Epilogue 44.2 / 55.0  -10.8
+
+     The two rightmost marks were DARKER than what they sat on: not subtle,
+     inverted — a hole where a mark should be, which is why Epilogue could
+     not be found in the hero frame at all. (Compare the scrolled frame,
+     where the same band measures 17-20 across its whole width.)
+
+     0.72 is solved, not chosen: back out the raw ground from the composite
+     at 0.55 (R = (g - 10a)/(1 - a) -> ~110 under Epilogue), then pick the
+     alpha that brings the worst case under the weakest mark with the same
+     headroom the working items have (110 - 100a ~ 38 at a = 0.72). It
+     stays a ramp — 0.72 embedded, 1.0 as navigation — so the detachment
+     still strengthens the ground, which was the point of having one. */
+  opacity: calc(0.72 + 0.28 * (1 - var(--nav-content-u)));
+  transform: translate(-50%, calc(-50% + 18px));
+  background: radial-gradient(ellipse 58% 62% at 50% 50%,
+    rgba(12, 8, 3, 0.7),
+    rgba(10, 7, 2, 0.42) 52%,
+    rgba(9, 6, 2, 0) 74%);
+  -webkit-mask-image: none;
+  mask-image: none;
+  pointer-events: none !important;
+}
+/* The legacy geometries' furniture: the edge veil, the resting halo, the
+   half-moon's drawn arc. None of it exists in the row. `content: none`
+   as well as display — the right-rail era authors these with their own
+   !important display and a directional gradient (a band fading LEFT,
+   measured live 2026-08-27 still painting from viewport centre to the
+   row's right edge), and killing the content is the one veto a later
+   block always holds over a pseudo-element. */
 .j-rail .j-rail-inner::before,
+.j-rail:not(.j-rail-column) .j-rail-inner::before,
 .j-rail .j-rail-inner::after,
-.j-rail .j-rail-arc { display: none !important; }
+.j-rail:not(.j-rail-column) .j-rail-inner::after {
+  content: none !important;
+  display: none !important;
+}
+.j-rail .j-rail-arc,
+.j-rail:not(.j-rail-column) .j-rail-arc { display: none !important; }
+/* (`.j-rail-list::before` used to be killed here alongside them. It is not
+   any more: it is the row's scrim, authored above. The moon's version of it
+   was an invisible hover-catcher with no paint of its own, so the rule above
+   restates every box property it set rather than resetting it — there is no
+   inherited appearance to suppress, only geometry to replace.) */
 
 .j-rail .j-rail-list {
   position: relative;
   isolation: isolate;
   display: flex;
-  align-items: flex-start;
-  gap: var(--nav-gap, clamp(14px, 2.2vw, 32px));
+  align-items: center;
+  gap: var(--nav-gap);
   margin: 0;
   padding: 0;
   list-style: none;
-  transform: translate3d(var(--nav-x, 0px), var(--nav-y, 0px), 0);
-  transform-origin: left top;
-  will-change: transform;
+  /* One transform scales the whole instrument — circles, glyphs, labels,
+     hairline, node — so the bookends breathe WITH the trio and the
+     internal hierarchy (the weights, the two ink sizes) never re-ranks
+     mid-scroll. Continuous in --nav-content-u; no transition, because the
+     coordinate itself is continuous and a CSS clock here would chase it. */
+  transform: translateX(-50%)
+             translateY(calc(-1 * var(--nav-hero-lift) * var(--nav-content-u)))
+             scale(calc(1 + (var(--nav-content-max) - 1) * var(--nav-content-u)));
+  transform-origin: 50% 50%;
+  height: var(--nav-major);
 }
+
+/* ---- the slots: two circle sizes on one centre line -------------------- */
 .j-rail .j-rail-slot,
 .j-rail:not(.j-rail-column) .j-rail-slot,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot,
@@ -3209,73 +3586,86 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   position: relative;
   inset: auto;
   z-index: auto;
-  width: 48px;
-  height: 70px;
+  width: var(--item-d);
+  height: var(--nav-major);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 1;
   pointer-events: auto;
   transform: none !important;
   transition: none;
 }
-/* The retired half-moon hid its single resting (`.now`) mark inside the menu
-   hub. The horizontal strip has no hub: its current mark is the first, visible
-   destination. Match that old rule's specificity here so Mission is present
-   in both the first-paint shell and the live rail that replaces it. */
-.j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active) {
-  opacity: 1;
-}
-.j-rail .j-rail-slot::before,
+.j-rail .j-rail-slot.j-rail-major { --item-d: var(--nav-major); --glyph-fit: var(--nav-fit-major); }
+.j-rail .j-rail-slot.j-rail-minor { --item-d: var(--nav-minor); --glyph-fit: var(--nav-fit-minor); }
+.j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active) { opacity: 1; }
+
+/* ---- ONE CONTINUOUS HAIRLINE (owner, 2026-08-26, third pass: "Use one
+   continuous hairline through the navigation rather than the dotted
+   line"). A single 1px rule runs through the gaps between neighbours —
+   solid, quiet, unlit: the thread the marks are strung on, not a progress
+   bar. (::before, the old dotted FILL layer, stays retired: progress is
+   not this line's job.) */
+.j-rail .j-rail-slot::before { content: none !important; }
 .j-rail .j-rail-slot::after {
   content: "";
   position: absolute;
-  top: 23px;
-  left: calc(100% + 2px);
+  top: 50%;
+  left: calc(100% - 1px);
   z-index: 0;
-  width: calc(var(--nav-gap, clamp(14px, 2.2vw, 32px)) - 4px);
-  border-top: 2px dotted rgba(217, 164, 65, 0.23);
+  width: calc(var(--nav-gap) + 2px);
+  height: 1px;
+  margin-top: -0.5px;
+  background: rgba(220, 170, 76, 0.3);
   pointer-events: none;
 }
-.j-rail .j-rail-slot::before {
-  z-index: 1;
-  width: var(--connector-fill, 0px);
-  border-color: rgba(230, 178, 82, 0.32);
-  filter: drop-shadow(0 0 2px rgba(255, 190, 90, 0.08));
-  overflow: hidden;
-}
-.j-rail .j-rail-slot:last-child::before,
 .j-rail .j-rail-slot:last-child::after { content: none; }
 
-/* This is the only full ring in the strip. Its warm near-black wash remains
-   translucent enough to belong to the scene rather than reading as a solid
-   button; the gold edge and glow, not the fill, carry the active state. */
+/* The hero paints NO node at all (owner, seventh pass: "the dot below
+   should NOT show in the hero. It shows right now and then disappears").
+   The preboot shell is data-layout="mission" and carries no inline
+   opacity, so without this rule the dot was PAINTED at first paint and
+   then killed ~100ms later when the live rail's inline write landed —
+   the same wrong-first-frame silhouette as the glyph-fit jump. The live
+   rail's per-frame inline opacity (ringOpacity x dockingU) takes over
+   from this rule the moment it exists, and agrees with it at the hero. */
+.j-rail[data-layout="mission"] .j-rail-active-ring { opacity: 0; }
+/* ---- THE NODE (owner, third pass: "a brighter ring + perhaps a tiny
+   filled gold node underneath. No underline, giant bloom, extra ring.")
+   One small filled gold point, hanging under the active item at the
+   label's depth. It rides --active-x — the same continuous coordinate the
+   old ring rode — so between chapters it simply travels along beneath the
+   row, and mid-leg (or through the rowless Owned chapter) it IS the
+   statement of where you are. */
 .j-rail .j-rail-active-ring {
   position: absolute;
-  top: 0;
+  top: calc(50% + var(--nav-major) / 2 + 26px);
   left: 0;
-  z-index: 2;
+  z-index: 1;
   box-sizing: border-box;
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgba(244, 195, 96, 0.98);
+  width: 5px;
+  height: 5px;
+  border: 0;
   border-radius: 50%;
-  background: rgba(7, 5, 2, 0.54);
-  box-shadow: 0 0 7px rgba(240, 190, 90, 0.52),
-              0 0 22px rgba(230, 175, 70, 0.2);
+  background: rgba(250, 208, 112, 0.95);
+  box-shadow: 0 0 5px rgba(240, 190, 90, 0.45);
   pointer-events: none;
-  transform: translate3d(var(--active-x, 0px), var(--active-y, 0px), 0)
-             scale(var(--nav-scale, 1));
+  transform: translate(calc(var(--active-x, 22px) - 50%), -50%);
   transform-origin: center;
   will-change: transform;
+  display: block;
 }
 
+/* ---- the items --------------------------------------------------------- */
 .j-rail .j-rail-item,
 .j-rail:not(.j-rail-column) .j-rail-item {
   position: relative;
   z-index: 3;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 70px;
+  width: var(--item-d);
+  height: var(--nav-major);
   color: rgba(
     var(--glyph-r, 202),
     var(--glyph-g, 202),
@@ -3283,30 +3673,70 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     var(--glyph-alpha, 0.72)
   );
   text-decoration: none;
+  cursor: pointer;
   pointer-events: auto !important;
-  /* Colour is already a continuous, reversible function of the live rail
-     coordinate. The retired fan's 0.3s colour transition made that value
-     chase the ring a second time and visibly lag during click flights. */
+  /* Colour is a continuous, reversible function of the live journey
+     coordinate; a transition here would chase the ring a second time. */
   transition: none;
 }
+.j-rail .j-rail-soon-item { cursor: default; }
+
+/* THE TWO TIERS OF CHROME (owner, 2026-08-26, third pass). The CORE THREE
+   sit in fine circles again — smaller and much quieter than the first
+   pass's buttons: a 1px hairline ring at --nav-ring-d with a soft dark
+   fill, no glow. The BOOKENDS have no circle at all — a bare small glyph
+   is the whole of what they are, which is what makes them read as
+   bookends ("from across the room, you should immediately see three
+   navigation controls; only when you look closer should you notice the
+   mushroom and fairy ring at either end"). */
 .j-rail .j-rail-slot .j-rail-mark,
 .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot .j-rail-mark {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: var(--item-d);
+  height: var(--item-d);
   box-sizing: border-box;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 50%;
   background: transparent;
-  transform: scale(var(--nav-scale, 1));
-  /* Do not transition inherited colour: the item above owns it directly from
-     journey progress. Keep the independent hover/focus surface treatments. */
-  transition: border-color 0.25s, background 0.25s,
-              box-shadow 0.25s, filter 0.25s;
+  box-shadow: none;
+  transform: scale(var(--glyph-scale, 1));
+  transform-origin: center;
+  transition: none;
+}
+/* The core circle is a pseudo so its diameter is free of the hit box. */
+.j-rail .j-rail-slot.j-rail-major .j-rail-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--nav-ring-d);
+  height: var(--nav-ring-d);
+  margin: calc(var(--nav-ring-d) / -2) 0 0 calc(var(--nav-ring-d) / -2);
+  box-sizing: border-box;
+  border: 1px solid rgba(222, 172, 78, 0.52);
+  border-radius: 50%;
+  background: rgba(8, 5, 2, 0.5);
+  z-index: -1;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  pointer-events: none;
+}
+/* ONE clear active signal on the ring: it brightens. (The second half of
+   the signal is the small gold node underneath — see THE NODE below.)
+   `.at` rides with :hover — the row moves by transform, and a transform
+   move does not re-run the browser's hit test; see rail.js, THE POINTER'S
+   OWN TRUTH. */
+.j-rail .j-rail-slot.j-rail-major.active .j-rail-mark::after {
+  border-color: rgba(248, 208, 112, 0.95);
+  box-shadow: 0 0 7px rgba(240, 190, 90, 0.28);
+}
+.j-rail .j-rail-slot.j-rail-major .j-rail-item:is(:hover, :focus-visible) .j-rail-mark::after,
+.j-rail .j-rail-slot.j-rail-major.at .j-rail-item .j-rail-mark::after {
+  border-color: rgba(244, 202, 110, 0.85);
 }
 .j-rail .j-rail-slot .j-sym {
   --glyph-optical-x: 0px;
@@ -3322,49 +3752,49 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
             var(--glyph-glow, 0.02)
           ));
   transform: translate3d(
-               var(--glyph-optical-x),
-               var(--glyph-optical-y),
+               calc(var(--glyph-optical-x) * var(--glyph-fit, 1)),
+               calc(var(--glyph-optical-y) * var(--glyph-fit, 1)),
                0
-             ) scale(var(--glyph-scale, 1)) !important;
+             ) scale(var(--glyph-fit, 1)) !important;
   transform-origin: center;
   transition: none !important;
 }
-/* Optical, rather than mathematical, parity: the denser network marks need
-   slightly less canvas while the sparse skyline needs a touch more. Vertical
-   offsets center the PAINTED silhouettes, whose authored geometry is
-   intentionally asymmetric inside the shared 22-unit viewBox. */
+/* Optical, rather than mathematical, parity: offsets centre the PAINTED
+   silhouettes where a mark's authored geometry is asymmetric inside the
+   shared 22-unit viewBox. Re-derived 2026-08-26 for the restaged marks:
+   the burst, the rings and the dot-circle are symmetric about the box
+   centre (offset 0); Mission keeps its authored lift; Equip's ink sits
+   high in the box (the foreshortened bowl, y 5.4..13.7 of 22), so it takes
+   a small drop. The two circle sizes reuse one pass through --glyph-fit. */
 .j-rail .j-rail-slot .j-sym-mission {
   --glyph-optical-y: -2px;
   width: 23px;
   height: 23px;
 }
 .j-rail .j-rail-slot .j-sym-inspire { width: 24px; height: 24px; }
-.j-rail .j-rail-slot .j-sym-connect {
-  --glyph-optical-y: -1px;
+.j-rail .j-rail-slot .j-sym-equip {
+  --glyph-optical-y: 1px;
   width: 24.5px;
   height: 24.5px;
 }
+.j-rail .j-rail-slot .j-sym-connect { width: 24px; height: 24px; }
 .j-rail .j-rail-slot .j-sym-owned { width: 22.5px; height: 22.5px; }
-.j-rail .j-rail-slot .j-sym-final {
-  --glyph-optical-x: -0.5px;
-  --glyph-optical-y: -2.5px;
-  width: 24.5px;
-  height: 24.5px;
-}
+.j-rail .j-rail-slot .j-sym-final { width: 24px; height: 24px; }
 /* The retired half-moon recycled one off-edge symbol by translating its SVG
-   vertically as chapter progress advanced. The horizontal strip keeps every
-   chapter in a permanent slot, so letting that legacy transform through made
-   a single icon visibly drop and wrap while the other four stayed put. Keep
-   the class/state bookkeeping harmless here while preserving Connect's
-   authored horizontal flip. */
+   vertically as progress advanced; the row keeps every item in a permanent
+   slot, so that legacy transform must never reach a glyph here. */
+.j-rail .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym,
+.j-rail:not(.j-rail-column) .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym,
 .j-rail:not(.j-rail-column).j-rail-following
   .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
   transform: translate3d(
-               var(--glyph-optical-x),
-               var(--glyph-optical-y),
+               calc(var(--glyph-optical-x) * var(--glyph-fit, 1)),
+               calc(var(--glyph-optical-y) * var(--glyph-fit, 1)),
                0
-             ) scale(var(--glyph-scale, 1)) !important;
+             ) scale(var(--glyph-fit, 1)) !important;
 }
+
+/* ---- colour: current, hover, and the pointer's resolved truth ---------- */
 .j-rail .j-rail-slot:is(.now, .active) .j-rail-item,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot:is(.now, .active) .j-rail-item {
@@ -3375,10 +3805,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     var(--glyph-alpha, 1)
   );
 }
-/* Final used to be a quieter "echo" in the retired side fan. In the
-   horizontal map it is a peer destination, so that old high-specificity fan
-   colour must not bypass the same continuous neutral-to-gold variables used
-   by every other glyph. */
+/* The retired fan gave the nav-less Final slot a quieter "echo" voice at
+   high specificity; in the row Epilogue is a peer, and rail.js no longer
+   assigns the class — this pair stands only against a stale DOM. */
 .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot.j-rail-echo:not(.now) .j-rail-item {
   color: rgba(
@@ -3388,10 +3817,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     var(--glyph-alpha, 0.72)
   );
 }
-.j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-  .j-rail-slot.j-rail-echo:not(.now) .j-rail-item:is(:hover, :focus-visible) {
-  color: var(--gold-bright);
-}
 .j-rail .j-rail-slot:is(.now, .active) .j-rail-mark,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot:is(.now, .active) .j-rail-mark {
@@ -3399,87 +3824,221 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   background: transparent;
   box-shadow: none;
 }
-.j-rail .j-rail-item:is(:hover, :focus-visible) { color: var(--gold-bright); }
-.j-rail .j-rail-slot:not(.now):not(.active)
-  .j-rail-item:is(:hover, :focus-visible) .j-rail-mark {
-  border-color: rgba(240, 200, 119, 0.26);
-  background: rgba(217, 164, 65, 0.025);
-  box-shadow: 0 0 12px rgba(230, 175, 70, 0.08);
-}
-.j-rail .j-rail-ret { display: none; }
-
-.j-rail .j-rail-name,
-.j-rail:not(.j-rail-column) .j-rail-name {
-  --rail-label-spacing: 0.06em;
-  position: absolute;
-  top: 56px;
-  right: auto;
-  bottom: auto;
-  left: 50%;
-  margin: 0;
-  padding: 0;
-  transform: translateX(-50%);
-  border-radius: 0;
-  background: none;
-  color: var(--parchment);
-  /* Retired half-moon hover/`.at` rules carry much higher specificity and
-     used to widen tracking while the label was visible, then snap it back on
-     dehover — perceived as a font change. Typography is invariant in the
-     horizontal navigator; only its reveal/surface treatment is stateful. */
-  font-family: Inter, -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif !important;
-  font-style: normal !important;
-  font-weight: 600 !important;
-  font-size: 0.62rem !important;
-  line-height: 1 !important;
-  letter-spacing: var(--rail-label-spacing) !important;
-  text-shadow: 0 1px 7px rgba(5, 3, 1, 0.95);
-  opacity: 0;
-  white-space: nowrap;
-  transition: opacity 0.2s ease;
-}
-.j-rail:not(.j-rail-column)
-  .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name {
-  top: 56px;
-  right: auto;
-  bottom: auto;
-  left: 50%;
-  margin: 0;
-  transform: translateX(-50%);
-}
-.j-rail[data-layout="mission"] .j-rail-slot:is(.now, .active) .j-rail-name {
+/* THE POINTED-AT MARK (owner reports #34 and its 2026-08-27 sequel "when I
+   hover over the currently selected icon it turns white too"). #34's
+   constraint still holds: the active mark rests at the palette's brightest
+   gold, so HUE cannot be its hover signal — but #34's parchment answer is
+   rejected. The redesign: PEERS lift to gold (they rest dimmer, so hue
+   reads); the ACTIVE item answers with a small NON-HUE gesture instead — a
+   +4% scale of ring and glyph together, with its ring held at full
+   brightness (the rule below outranks the generic hover ring, which would
+   otherwise DIM an already-active ring from 0.95 to 0.85). `.at` rides
+   with :hover and :focus-visible in every rule of this family, so keyboard
+   and pointer stay visually equal (PL-2.2), and a transform-moved row
+   still answers a stationary cursor (rail.js, THE POINTER'S OWN TRUTH). */
+.j-rail:not(.j-rail-column) .j-rail-slot:not(.now):not(.active)
+  .j-rail-item:is(:hover, :focus-visible),
+.j-rail:not(.j-rail-column) .j-rail-slot.at:not(.now):not(.active)
+  .j-rail-item {
   color: var(--gold-bright);
 }
-.j-rail .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
-  opacity: 1 !important;
+.j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active)
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-mark,
+.j-rail:not(.j-rail-column) .j-rail-slot.at:is(.now, .active)
+  .j-rail-item .j-rail-mark {
+  transform: scale(calc(var(--glyph-scale, 1) * 1.04));
 }
-.j-rail[data-layout="chapter"] .j-rail-name {
-  --rail-label-spacing: 0.12em;
-  top: auto;
-  bottom: 100%;
-  margin-bottom: 0.45rem;
-  padding: 0.35rem 0.55rem;
-  border-radius: 2px;
-  background: rgba(9, 6, 2, 0.88);
+.j-rail:not(.j-rail-column) .j-rail-slot.j-rail-major.active
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-mark::after,
+.j-rail:not(.j-rail-column) .j-rail-slot.j-rail-major.active.at
+  .j-rail-item .j-rail-mark::after {
+  border-color: rgba(248, 208, 112, 0.95);
+  box-shadow: 0 0 7px rgba(240, 190, 90, 0.28);
+}
+/* THE WEIGHTS (owner, third pass): active core = 100%, inactive core =
+   60-70% (GLYPH_COLOURS' future/past alphas carry that), bookends =
+   35-45%. The bookends' extra step down is taken here, on the item, so
+   one rule covers glyph and label together — and comes off the moment
+   the bookend is the active chapter or is being pointed at. */
+.j-rail .j-rail-slot.j-rail-minor .j-rail-item { opacity: 0.68; transition: opacity 0.3s ease; }
+.j-rail .j-rail-slot.j-rail-minor.active .j-rail-item,
+.j-rail .j-rail-slot.j-rail-minor.at .j-rail-item,
+.j-rail .j-rail-slot.j-rail-minor .j-rail-item:is(:hover, :focus-visible) { opacity: 1; }
+.j-rail .j-rail-ret { display: none !important; }
+
+/* ---- the labels --------------------------------------------------------
+   EDITORIAL, NOT UI (owner's design review, 2026-08-26: "The spaced
+   uppercase INSPIRE / EQUIP / CONNECT beneath circles feels like a product
+   dashboard rather than the editorial/organic world established by the
+   typography"). The word is set in the site's own serif voice, sentence
+   case, small and quiet, seated beneath its glyph.
+
+   WHO SHOWS A LABEL, AND WHEN — the two-tier hierarchy is carried by the
+   words as much as the sizes:
+     · the CORE THREE (Inspire / Equip / Connect) keep their labels at all
+       times, at partial presence; active, hover, focus or `.at` lifts one
+       to full, and the active word answers in gold.
+     · the BOOKENDS (Intro / Epilogue) never label themselves at rest — a
+       bookend is just its small glyph, and its name appears only under a
+       pointer. That silence is what makes them read as bookends. */
+.j-rail .j-rail-name,
+.j-rail:not(.j-rail-column) .j-rail-name,
+.j-rail:not(.j-rail-column) .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name {
+  display: block;
+  position: absolute;
+  top: calc(50% + var(--item-d) / 2 + 4px);
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  margin: 0;
+  padding: 0 !important;
+  transform: translateX(-50%);
+  border: 0 !important;
+  border-radius: 0;
+  background: none !important;
+  box-shadow: none !important;
+  color: var(--parchment);
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  font-size: 0.76rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none;
+  text-shadow: 0 1px 6px rgba(5, 3, 1, 0.9);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  transition: opacity 0.25s ease, color 0.25s ease;
+  pointer-events: none;
 }
-.j-rail[data-layout="chapter"]
-  .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name {
-  top: auto;
-  bottom: 100%;
-  margin: 0 0 0.45rem;
+/* Core labels are ALWAYS visible (owner, third pass: "Keep the labels for
+   Inspire / Equip / Connect visible at all times"); active or pointed-at
+   lifts one to full.
+   BOOKEND labels are staged by the detachment (owner, fifth pass): in the
+   hero they do not exist at all — "at most, have the tiny mushroom and
+   fairy-ring glyphs subtly bookending the three" — and once the
+   instrument detaches into navigation they ride along faintly, lifting to
+   full under a pointer. */
+.j-rail .j-rail-slot.j-rail-major .j-rail-name { opacity: 0.72; }
+.j-rail .j-rail-slot.active .j-rail-name { color: var(--gold-bright); }
+.j-rail .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+.j-rail .j-rail-slot.at .j-rail-item .j-rail-name,
+.j-rail .j-rail-slot.j-rail-major.active .j-rail-name {
+  opacity: 1;
 }
-.j-rail[data-layout="chapter"] .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
-  opacity: 1 !important;
+.j-rail[data-layout="chapter"] .j-rail-slot.j-rail-minor .j-rail-name { opacity: 0.62; }
+.j-rail[data-layout="chapter"] .j-rail-slot.j-rail-minor
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+.j-rail[data-layout="chapter"] .j-rail-slot.j-rail-minor.at .j-rail-item .j-rail-name {
+  opacity: 1;
+}
+.j-rail[data-layout="mission"] .j-rail-slot.j-rail-minor .j-rail-name {
+  opacity: 0 !important;
+}
+/* THE LABEL ANSWERS THE POINTER WITH ITS GLYPH (owner, 2026-08-27: "when
+   you hover over one of the items it should change the colour of the label
+   too, not just the icon"). One item, one colour change — the word and the
+   mark move together or the hover reads as two half-answers.
+
+   It needs its OWN rule rather than inheriting the item's hover gold: the
+   name pins `color: var(--parchment)` above, and it must, because the item's
+   RESTING colour is the dim neutral→gold ramp rail.js writes per frame — a
+   label inheriting that would be unreadable at the row's cold end.
+
+   THE ACTIVE ITEM IS EXCLUDED, deliberately. Its label already rests at
+   `--gold-bright`; there is no brighter gold to move to, which is the same
+   constraint that made the active mark's hover answer non-chromatic (the
+   +4% scale above). Turning it any other hue is precisely the fault owner
+   report #34's sequel named. So the active item's word does not answer —
+   the scale does, for the whole item at once. */
+.j-rail:not(.j-rail-column) .j-rail-slot:not(.now):not(.active)
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+.j-rail:not(.j-rail-column) .j-rail-slot:not(.now):not(.active).at
+  .j-rail-item .j-rail-name {
+  color: var(--gold-bright);
 }
 
-/* The site-menu control is visually independent of the section strip. Its
-   DOM remains inside the same nav so the existing dialog ownership, inert
-   state and focus return stay unchanged. */
+/* ---- Equip's answer ----------------------------------------------------
+   The placeholder's label swaps to its note while pointed at — hover or
+   focus on fine pointers, `.at` when the row turns under a parked cursor,
+   and the timed `.j-rail-note` flash a touch sets. The note takes the
+   label's exact seat and voice so the swap reads as the item answering,
+   not as a badge appearing. */
+.j-rail .j-rail-soon-note {
+  display: block;
+  position: absolute;
+  top: calc(50% + var(--item-d) / 2 + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--gold-bright);
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.76rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 6px rgba(5, 3, 1, 0.9);
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.j-rail .j-rail-slot .j-rail-soon-item:is(:hover, :focus-visible) .j-rail-soon-note,
+.j-rail .j-rail-slot.at .j-rail-soon-item .j-rail-soon-note,
+.j-rail .j-rail-slot.j-rail-note .j-rail-soon-item .j-rail-soon-note {
+  opacity: 1;
+}
+.j-rail .j-rail-slot .j-rail-soon-item:is(:hover, :focus-visible) .j-rail-name,
+.j-rail .j-rail-slot.at .j-rail-soon-item .j-rail-name,
+.j-rail .j-rail-slot.j-rail-note .j-rail-soon-item .j-rail-name {
+  opacity: 0 !important;
+}
+
+/* (The underline/dot active marker is gone — owner's design review,
+   2026-08-26: "No huge glow and no underline." The active statement is the
+   glyph's own brightness, the fine halo, and the gathered light.) */
+
+/* ---- the site-menu control: top-right, IN PARITY WITH THE LOGO ----------
+   (owner, 2026-08-27: "make sure that the menu button and icon are
+   precisely the same size and distance from the top and edge on mobile").
+   EDGE parity is exact and uncontested: the menu's inset from the right
+   equals the logo's from the left (54.4px desktop, 6vw phone) — measured
+   both sides, both frames.
+
+   VERTICAL PARITY IS OF THE TOP EDGES, NOT THE CENTRES, and that is the
+   part worth writing down. Three things decide it:
+
+   · The owner's own reference render is the tie-breaker, because it holds
+     both marks in one picture. Measured off it (nav-target-with-labels,
+     1672x941, scale 1.161): the menu ring is 50px -> 43.1px at 1440, the
+     logo 36x47 -> 31x40.5, and BOTH TOPS SIT ON y=34 -> 29.3. The ring is
+     deliberately the larger object there; so it is not shrunk here, and
+     "the same size" is honoured as the touch box (44px), not the ink.
+   · "The same distance from the top" reads most directly as the top edge's
+     distance from the viewport edge — which is what the render shows.
+   · The owner also reported the menu FEELS higher while its centre sat
+     20.6px LOWER. Whatever produces that (the ring is the heavier, closed,
+     higher-contrast mark, and both objects are read against the top edge),
+     the correction it asks for is downward — and top alignment moves the
+     ring DOWN from centre parity. Two independent signals agree.
+
+   SO THE OFFSET IS NOT ZERO, on purpose: the menu's centre finishes 5.5px
+   (desktop) / 7.8px (phone) BELOW the logo ink's centre. That residual is
+   just the ring being the taller object with its top on the same line —
+   the previous cut drove it to zero against the logo's LINE BOX (whose
+   extra 5-7px is invisible descender space) and put the ring's top 2px
+   (desktop) / 5px (phone) above the logo's, the wrong way for every signal
+   above.
+
+   The mobile block lives HERE, after the base rule, because an earlier
+   ≤620 override was silently losing this cascade — measured live with the
+   desktop inset on a 430px frame. */
 .j-rail .j-rail-menu,
 .j-rail:not(.j-rail-column) .j-rail-menu,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
   position: fixed;
+  inset: auto;
+  /* 2.1rem = 33.6px = the logo ink's own top at 1440x900. */
   top: 2.1rem;
   right: 3.4rem;
   z-index: 5;
@@ -3495,12 +4054,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   color: rgba(230, 189, 110, 0.92);
   opacity: 1;
   pointer-events: auto !important;
-  transform: none;
+  transform: none !important;
   transition: color 0.25s, border-color 0.25s, background 0.25s,
               box-shadow 0.25s;
 }
 .j-rail .j-rail-menu::before,
-.j-rail .j-rail-menu::after { display: none; }
+.j-rail:not(.j-rail-column) .j-rail-menu::before,
+.j-rail .j-rail-menu::after { display: none !important; }
 .j-rail .j-rail-menu .j-rail-mark,
 .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark {
   display: flex;
@@ -3521,7 +4081,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   transform: translateX(0.5px);
   transform-origin: center;
 }
-.j-rail .j-rail-menu .j-rail-name { display: none; }
+.j-rail .j-rail-menu .j-rail-name { display: none !important; }
 .j-rail .j-rail-menu:is(:hover, :focus-visible) {
   color: var(--gold-bright);
   border-color: var(--gold-bright);
@@ -3529,27 +4089,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   box-shadow: 0 0 22px rgba(230, 175, 70, 0.2);
 }
 
-@media (max-width: 900px) and (orientation: portrait) {
-  .j-rail[data-layout="mission"] {
-    --nav-gap: clamp(10px, 3vw, 24px);
-    left: 6vw;
-    top: calc(4vh + 25rem + 14px);
-  }
-  .j-rail[data-layout="chapter"] { left: 6vw; bottom: 1.35rem; }
-}
-
 @media (max-width: 620px) and (orientation: portrait) {
-  .j-rail[data-layout="mission"] {
-    --nav-gap: max(10px, calc((88vw - 240px) / 4));
-    left: 6vw;
-    top: calc(7vh + 20.5rem + 14px);
-  }
   .j-rail .j-rail-menu,
-  .j-rail:not(.j-rail-column) .j-rail-menu {
-    top: 1.3rem;
+  .j-rail:not(.j-rail-column) .j-rail-menu,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
+    /* logo INK top 20.8px at 430x932 — the ring's top sits on it. */
+    top: 20.8px;
     right: 6vw;
-    width: 44px;
-    height: 44px;
   }
   .j-rail .j-rail-menu .j-rail-mark,
   .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark,
@@ -3559,274 +4105,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     height: 20px;
   }
   .j-rail .j-rail-menu .j-sym-menu { transform: none; }
-
-  /* The old side-fan treatment dimmed chapter content whenever its expanded
-     state was latched. The replacement strip is deliberately always present,
-     so that class no longer means that content is occluded. */
-  body.j-rail-on .j-copy,
-  body.j-rail-on .j-hotspots { opacity: 1; }
-
 }
+
+/* The retired edge file dimmed chapter copy and chips whenever the rail's
+   open state was latched (`body.j-rail-on`, ≤720px rules further up). The
+   centred row is permanently formed and never stands over the copy, so the
+   class no longer means occlusion — at any width. */
+body.j-rail-on .j-copy,
+body.j-rail-on .j-hotspots { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .j-rail,
   .j-rail .j-rail-mark,
   .j-rail .j-rail-name,
+  .j-rail .j-rail-soon-note,
+  .j-rail .j-rail-under,
   .j-rail .j-rail-menu { transition: none !important; }
-}
-}
-
-/* ========================================================================
-   MOBILE FIXED FILE — final cascade authority
-
-   The historical fixed-file rules live before the later desktop half-moon
-   experiment. On a narrow laptop/devtools viewport `(hover:hover)` still
-   matched that later block, so its zero-width hub, polar transforms, arc SVG
-   and circular pointer floor won even though rail.js had selected the mobile
-   interaction. State and geometry were describing different controls.
-
-   Restate the fixed file after every legacy geometry. This does more than
-   cover the arc: the arc and circular hit floor are removed, polar custom-
-   property motion is neutralised, all boxes return to 52x44 file rows, and
-   the menu returns below them. The one surface below is therefore exactly the
-   expanded file's footprint, never a disguised semicircle.
-   ======================================================================== */
-@media (pointer: coarse), (max-width: 900px) {
-  .j-rail,
-  .j-rail:not(.j-rail-column) {
-    --mobile-veil-width: 10rem;
-    right: 0 !important;
-    z-index: 4;
-    isolation: isolate;
-  }
-
-  /* Scene annotations live in a separate fixed layer whose card stylesheet
-     raises it above the rail. On the mobile file only, restore the intended
-     scene-under-navigation order; modal cards remain on their own z:5 layer. */
-  body .j-hotspots { z-index: 1; }
-  body.j-rail-on .j-hotspots { opacity: 0.24; }
-
-  .j-rail:not(.j-rail-column) .j-rail-inner {
-    width: 52px;
-    height: calc(var(--n, 5) * 44px + 52px);
-    margin-right: 0;
-    isolation: isolate;
-  }
-
-  /* A smoked amber edge veil: almost open to the scene at its exposed edge,
-     progressively denser only where the controls need contrast. */
-  .j-rail .j-rail-inner::before,
-  .j-rail:not(.j-rail-column) .j-rail-inner::before {
-    content: "";
-    display: block !important;
-    position: absolute;
-    top: -12px !important;
-    right: 0;
-    width: min(var(--mobile-veil-width), calc(100vw - 12px));
-    height: calc(100% + 24px) !important;
-    z-index: 0;
-    border: 0;
-    border-left: 1px solid rgba(224, 177, 84, 0.14);
-    border-radius: 11px 0 0 11px;
-    background: linear-gradient(90deg,
-      rgba(8, 5, 2, 0.28) 0%,
-      rgba(8, 5, 2, 0.46) 58%,
-      rgba(8, 5, 2, 0.7) 100%) !important;
-    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.15);
-    -webkit-mask-image: none !important;
-    mask-image: none !important;
-    opacity: 0 !important;
-    transform: translateX(8px) scale(0.985);
-    transform-origin: right center;
-    pointer-events: none;
-    transition: opacity 0.24s ease,
-                transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-    .j-rail .j-rail-inner::before,
-    .j-rail:not(.j-rail-column) .j-rail-inner::before {
-      background: linear-gradient(90deg,
-        rgba(8, 5, 2, 0.21) 0%,
-        rgba(8, 5, 2, 0.34) 58%,
-        rgba(8, 5, 2, 0.62) 100%) !important;
-      -webkit-backdrop-filter: blur(17px) saturate(0.88) brightness(0.9);
-      backdrop-filter: blur(17px) saturate(0.88) brightness(0.9);
-    }
-  }
-  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-inner::before {
-    opacity: 1 !important;
-    transform: none;
-  }
-  .j-rail .j-rail-inner::after,
-  .j-rail:not(.j-rail-column) .j-rail-inner::after { display: none !important; }
-
-  /* Remove both pieces of the half-moon, including its invisible circular
-     pointer floor. This keeps the mobile hit map the same rectangle it draws. */
-  .j-rail .j-rail-arc,
-  .j-rail:not(.j-rail-column) .j-rail-arc { display: none !important; }
-  .j-rail .j-rail-arc path { stroke: none !important; }
-  .j-rail .j-rail-list::before,
-  .j-rail:not(.j-rail-column) .j-rail-list::before {
-    content: none !important;
-    display: none !important;
-    pointer-events: none !important;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-slot::before,
-  .j-rail:not(.j-rail-column) .j-rail-slot::after {
-    content: none !important;
-    display: none !important;
-  }
-
-  /* Mobile uses one restrained gold ring. Retire both the four-corner debug
-     reticle and the desktop strip's travelling ring in this geometry. */
-  .j-rail .j-rail-ret,
-  .j-rail .j-rail-active-ring { display: none !important; }
-  .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark::before {
-    content: none;
-  }
-  .j-rail:not(.j-rail-column):not(.j-rail-open):not(.j-rail-hot):not(:has(:focus-visible))
-    .j-rail-slot.now .j-rail-mark::before,
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-slot.active .j-rail-mark::before {
-    content: "";
-    position: absolute;
-    inset: -5px;
-    box-sizing: border-box;
-    border: 1px solid rgba(242, 192, 92, 0.62);
-    border-radius: 50%;
-    background: rgba(217, 164, 65, 0.025);
-    box-shadow: 0 0 8px rgba(238, 181, 73, 0.2);
-    pointer-events: none;
-  }
-
-  .j-rail:not(.j-rail-column) .j-rail-slot,
-  .j-rail:not(.j-rail-column).j-rail-following .j-rail-slot {
-    top: calc(50% - 22px);
-    right: 0;
-    width: auto;
-    height: auto;
-    z-index: 2 !important;
-    --t: 0;
-    --u: 0;
-    transform: none !important;
-    opacity: 0;
-    transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 0.3s ease;
-    transition-delay: 0s;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-slot.now {
-    opacity: 1 !important;
-    pointer-events: auto;
-  }
-  .j-rail:not(.j-rail-column):not(.j-rail-open):not(.j-rail-hot):not(:has(:focus-visible))
-    .j-rail-slot:not(.now) { pointer-events: none; }
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-slot {
-    top: calc(var(--i, 0) * 44px);
-    right: 0;
-    --t: 0;
-    --u: 0;
-    transform: none !important;
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-item {
-    width: 52px;
-    height: 44px;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark {
-    width: 24px;
-    height: 24px;
-    transform: none !important;
-    transition: none;
-  }
-
-  .j-rail:not(.j-rail-column) .j-rail-menu,
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-menu {
-    top: calc(50% + 30px);
-    right: 0;
-    width: 52px;
-    height: 44px;
-    z-index: 2;
-    transform: none !important;
-    opacity: 1;
-    transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
-  }
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-menu {
-    top: calc(var(--n, 5) * 44px + 8px);
-  }
-  .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark,
-  .j-rail:not(.j-rail-column) .j-rail-menu .j-sym {
-    width: 24px;
-    height: 24px;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-menu::before {
-    content: none;
-    display: none !important;
-  }
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-menu::before {
-    content: "";
-    display: block !important;
-    position: absolute;
-    top: -8px;
-    right: 10px;
-    left: auto;
-    width: calc(var(--mobile-veil-width) - 20px);
-    height: 1px;
-    transform: none;
-    background: linear-gradient(90deg,
-      rgba(224, 177, 84, 0.04), rgba(224, 177, 84, 0.2));
-    pointer-events: none;
-  }
-
-  /* Plain right-aligned labels sit directly on the veil — no nested pills. */
-  .j-rail:not(.j-rail-column) .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name,
-  .j-rail:not(.j-rail-column) .j-rail-name {
-    display: block;
-    top: 50%;
-    right: 100%;
-    bottom: auto;
-    left: auto;
-    margin: 0 0.6rem 0 0;
-    padding: 0 !important;
-    transform: translateY(-50%);
-    border: 0 !important;
-    border-radius: 0;
-    background: none !important;
-    box-shadow: none !important;
-    color: rgba(242, 237, 225, 0.86);
-    font-family: Inter, -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif !important;
-    font-size: 0.59rem !important;
-    font-style: normal !important;
-    font-weight: 500 !important;
-    line-height: 1.15 !important;
-    letter-spacing: 0.17em !important;
-    text-align: right;
-    text-shadow: none !important;
-  }
-  .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name { display: block; }
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-name,
-  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-    .j-rail-slot.active .j-rail-name {
-    opacity: 1 !important;
-    letter-spacing: 0.17em !important;
-  }
-}
-
-/* Short landscape layouts use the same file with slightly wider tracked
-   labels. Give that real footprint the same ~10px glass inset as portrait. */
-@media (pointer: coarse) and (orientation: landscape),
-       (max-width: 900px) and (orientation: landscape) {
-  .j-rail,
-  .j-rail:not(.j-rail-column) {
-    --mobile-veil-width: 10.75rem;
-  }
-  .j-rail .j-rail-inner::before,
-  .j-rail:not(.j-rail-column) .j-rail-inner::before {
-    width: min(var(--mobile-veil-width), calc(100vw - 12px));
-  }
 }

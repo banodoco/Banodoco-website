@@ -99,12 +99,26 @@ function firstImage(t) {
 
 // Rows → display topics. full_summary is a JSON string; a row whose summary
 // won't parse is skipped (a parse miss, not a network failure).
-function topicsFromRows(rows) {
+// Exported ONLY so tools/test-discord-card.mjs can exercise the :107
+// diagnostic-loss-catch fix directly (same-row-skip proof) without a
+// network fetch; every internal call site still uses it exactly as before.
+export function topicsFromRows(rows) {
   const out = [];
   if (!Array.isArray(rows)) return out;
   for (const row of rows) {
     let arr;
-    try { arr = JSON.parse(row.full_summary); } catch { continue; }
+    try {
+      arr = JSON.parse(row.full_summary);
+    } catch (err) {
+      // Q04/D9: the ONE diagnostic-loss catch in this file. Skipping a
+      // malformed row is still the right visitor-facing behavior (same
+      // skip, same continue, same output) — this warn only stops a real
+      // content-pipeline bug from sitting unnoticed forever. The other
+      // three catches in this module (:148, :167, :218) are intentional-
+      // safe fallbacks with visible fallback copy and stay silent.
+      console.warn('[discord-card] full_summary row failed to parse as JSON — skipping row', err);
+      continue;
+    }
     if (!Array.isArray(arr)) continue;
     const rel = Array.isArray(row.discord_channels)
       ? row.discord_channels[0] : row.discord_channels;
@@ -454,15 +468,90 @@ export default {
   },
 };
 
-// discord.js executes while cards/index.js is still initializing, so defer one
-// task before touching CARD_ASSETS. Parse the tiny local floor immediately;
-// start the remote request only when the opening work yields (or after the
-// timeout), well before a normal journey can reach Connect.
-if (typeof document !== 'undefined') {
-  setTimeout(prepareFallback, 0);
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(prepareLive, { timeout: 1500 });
+// startDiscordPreparation() — the sole owner of the two-step boot schedule
+// below. Behavior is byte-for-byte identical to the old bare self-start:
+// discord.js executes while cards/index.js is still initializing, so defer
+// one task before touching CARD_ASSETS. Parse the tiny local floor
+// immediately (setTimeout(prepareFallback, 0)); start the remote request
+// only when the opening work yields — requestIdleCallback(prepareLive,
+// {timeout: 1500}) when available, else setTimeout(prepareLive, 1200) —
+// well before a normal journey can reach Connect. `overrides` exists ONLY
+// so tests can inject clock/idle doubles without a browser and without a
+// real network request; every default resolves to the real ambient
+// global, so a call with no arguments (the only way this is called today,
+// via the self-start guard below) is indistinguishable from the old code.
+//
+// `prepareFallback`/`prepareLive` themselves are untouched — same
+// functions, same promises, same fetch calls inside them, called from the
+// same two scheduled sites as before AND still directly from activate()
+// (line ~439) for the direct-deep-link race. This owner only wraps *when*
+// those two calls get scheduled and gives that schedule a cancel handle;
+// it does not change what gets fetched or when the fetch itself fires
+// once a call has been made.
+//
+// requestIdleCallback availability is resolved at call time of
+// startDiscordPreparation() — i.e. import time via the guard below, the
+// same moment the original bare code checked it — so there is no
+// deferred-vs-immediate divergence to introduce here (unlike U01a's
+// warming cascade, this file's original check was never deferred to
+// begin with).
+//
+// Returns cancelDiscordPreparation(): idempotent, safe to call before
+// either scheduled call fires (zero fetches — neither prepareFallback nor
+// prepareLive ever runs), mid-flight (if the fallback call already fired
+// but the live call has not, cancelling prevents prepareLive from ever
+// starting; the fallback's own in-flight work is not aborted — this does
+// not attempt to abort in-flight requests, matching U01a's cascade), or
+// after both have already fired naturally (true no-op, does not throw).
+// Both scheduled callbacks re-check the cancelled flag at fire time as the
+// actual correctness mechanism; clearing the timer/idle handle is a
+// best-effort optimization on top of that, not the only guard.
+export function startDiscordPreparation(overrides = {}) {
+  const setTimeoutFn = overrides.setTimeoutFn || setTimeout;
+  const clearTimeoutFn = overrides.clearTimeoutFn || clearTimeout;
+  const ric = typeof overrides.requestIdleCallbackFn === 'function'
+    ? overrides.requestIdleCallbackFn
+    : (typeof requestIdleCallback === 'function' ? requestIdleCallback : undefined);
+  const cancelRic = typeof overrides.cancelIdleCallbackFn === 'function'
+    ? overrides.cancelIdleCallbackFn
+    : (typeof cancelIdleCallback === 'function' ? cancelIdleCallback : undefined);
+
+  let cancelled = false;
+
+  const fallbackTimerId = setTimeoutFn(() => {
+    if (cancelled) return;
+    prepareFallback();
+  }, 0);
+
+  let liveTimerId = null;
+  let liveIdleHandle = null;
+  if (ric) {
+    liveIdleHandle = ric(() => {
+      if (cancelled) return;
+      prepareLive();
+    }, { timeout: 1500 });
   } else {
-    setTimeout(prepareLive, 1200);
+    liveTimerId = setTimeoutFn(() => {
+      if (cancelled) return;
+      prepareLive();
+    }, 1200);
   }
+
+  return function cancelDiscordPreparation() {
+    if (cancelled) return;
+    cancelled = true;
+    clearTimeoutFn(fallbackTimerId);
+    if (liveTimerId !== null) clearTimeoutFn(liveTimerId);
+    if (liveIdleHandle !== null && cancelRic) cancelRic(liveIdleHandle);
+  };
+}
+
+if (typeof document !== 'undefined') {
+  // Self-start by design (U01d preserves today's behavior, matching the
+  // sequencing decision U01a made for the sibling warming cascade) — a
+  // later order (U01c/B-series) replaces this with an explicit call site
+  // from main.js or the journey facade so the schedule can actually be
+  // stopped. This card's import-time fetch of live Discord topic data is
+  // NOT retired here; only its ownership and cancellability change.
+  startDiscordPreparation();
 }

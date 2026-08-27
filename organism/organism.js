@@ -9,8 +9,9 @@ import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
 import { createRandomGeometryHelpers } from './random.js';
 import { createAnimationLifecycle } from './animation.js';
+import { createAdaptiveResolution } from './performance.js';
 import { DRAW_GLSL, PULSE_GLSL } from './shaders.js';
-import { createRendererSetup } from './renderer.js';
+import { createRendererSetup, createViewportSync } from './renderer.js';
 import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
 
 // =====================================================================
@@ -36,6 +37,63 @@ import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
 //      Entry choreography — ./intro.js (draw windows, shells, 'intro-draw')
 //  13. Public API         — the object returned by createScene()
 // =====================================================================
+
+/* ================================================================
+   createScene — THE LIFETIME CLASSIFICATION.
+   ================================================================
+   The same three classes `main.js`'s page-lifetime register uses (PAGE /
+   GATED / BOUNDED). This is the entry that register never had, and it is the
+   one that matters most for resources: createScene owns the largest GPU
+   allocation on the page.
+
+   THE CLASSIFICATION: **PAGE**. One instance is constructed per document, by
+   `main.js`, and lives until the document does. Nothing in production disposes
+   it, and — unlike a journey, which is genuinely recreated — nothing is
+   designed to. There is no second organism, no re-entry, and no path that
+   would construct one.
+
+   That is a claim about callers, not a claim that teardown is impossible, so
+   the capability was built anyway, piecewise, and is listed here because a
+   capability nobody can find is a capability nobody will use:
+
+     ./renderer.js      createRendererSetup().dispose() — the WebGL context,
+                        OrbitControls' DOM listeners, and the canvas this
+                        library appended.
+     ./animation.js     start() returns a stop handle for the rAF loop, and
+                        addAnimator() returns a per-registration remover.
+     ./intro.js         teardown() — reachable today as sceneApi.intro.teardown().
+     ./spores.js        dispose() — the drift animator and its pointer listeners.
+
+   And one registration that is classified PAGE and deliberately has NO
+   disposer: the window `resize` hook this file installs beside
+   createViewportSync. A page-lifetime listener legitimately never detaches
+   (`runtime-design/lifecycle.md` §5.3, and main.js's register says the same of
+   its own resize hook); building a remover for it would be insurance for a
+   caller that does not exist. It is registered at the call site rather than
+   inside the factory precisely so it stays visible to a lifetime audit.
+
+   WHAT WOULD HAVE TO BE TRUE BEFORE THAT LIST BECOMES A `dispose()` ON THIS
+   FUNCTION — i.e. what is NOT built, and is the actual work:
+
+     · The scene graph itself. The world-build below allocates on the order of
+       30 geometries, 35 materials and 6 textures directly into `scene`, none
+       of them individually owned. Disposing the renderer frees the GL context
+       and with it the driver-side objects, but the JS-side graph is reclaimed
+       only by dropping every reference to `scene` — which the public API,
+       held by main.js, is precisely what prevents.
+     · The composer's three render targets and the TAA history (the pass owns
+       `dispose()`; nothing calls it).
+     · A caller. `sceneApi` is handed to the journey layer, which holds it for
+       the page's life; there is no generation counter and no revocation, so a
+       disposed scene would stay reachable and still be driven — the same
+       `readyState` hazard main.js records on its own side.
+
+   So the honest status is: PAGE by design, with the leaf disposers built and
+   proven idempotent, the aggregate one deliberately absent, and no caller for
+   it. Building the aggregate before a caller exists would be insurance for a
+   caller that does not exist — which this program has explicitly declined to
+   keep buying.
+   ================================================================ */
 
 /**
  * Build the glowing mycelium-mushroom scene: engine, mushroom, stem, ground
@@ -274,6 +332,57 @@ function steadyProject(v) {
   // perspective divide — exactly the two steps project() itself takes.
   return v.applyMatrix4(camera.matrixWorldInverse).applyMatrix4(_steadyProj);
 }
+
+/* ================================================================
+   THE WORLD-BUILD, AND WHY IT IS ONE PIECE — the recorded cohesion
+   justification. Sections 3 through 11 below are deliberately not split.
+   ================================================================
+   The elegance criterion this program measures is "no closure holding more
+   than ~15 mutable variables WITHOUT a recorded cohesion justification." This
+   is the justification, and it is a claim about what the code IS, not a plea
+   for the code it happens to be.
+
+   Everything from here to the frame loop is ONE SEEDED ARTISTIC CONSTRUCTION.
+   It executes exactly once, top to bottom, and its output is a single
+   specimen. Three properties make it one piece rather than several:
+
+     1. ONE RNG STREAM, CONSUMED IN ORDER. `rand()` is seeded once (1337, see
+        ./random.js) and every builder below draws from it in source order.
+        The specimen's whole appearance — every filament's angle, every mote's
+        position, every spore's seat — is a function of that draw order. Move
+        a builder and you do not get the same organism rendered differently;
+        you get a DIFFERENT ORGANISM. The order is the artwork, and a module
+        boundary that can be reordered is a boundary that can silently destroy
+        it. This is pinned: `tools/test-render-baseline.mjs` R1-R3 pin the seed
+        and the stream digest precisely because it is this fragile.
+
+     2. THE FORM LANGUAGE IS SHARED, NOT LAYERED. `capTopPt`, `beadM`,
+        `rimRad` and their neighbours are not utilities — they are the
+        specimen's anatomy, the parametric surface that the cap, the gills,
+        the rim, the occlusion shells and the stem all sample so they MEET.
+        A gill that computed its own cap curve would detach from the cap on
+        the first tuning change. Splitting them into a "geometry utils" module
+        would move the definitions and leave the coupling exactly where it is,
+        while adding an import boundary that implies an independence that does
+        not exist. That is the decorative split, and it is refused here by
+        name.
+
+     3. THE MUTABLE STATE IS CONSTRUCTION SCAFFOLDING, NOT A STATE MACHINE.
+        The bindings this region holds are accumulators being filled during a
+        single pass (vertex arrays, the material list, group handles). They
+        have one writer, in one straight line, and are frozen in practice the
+        moment construction ends. The census counts them; they are not modes,
+        there are no transitions between them, and no two sub-owners contend
+        for one. That is the thing the ~15 bar exists to catch, and it is
+        absent here.
+
+   WHAT IS NOT COVERED BY THIS JUSTIFICATION, and was therefore composed out:
+   the engine's runtime concerns. Renderer construction, sizing and the
+   pixel-ratio governor are not part of the specimen — they are how it is
+   PHOTOGRAPHED, they run every frame rather than once, and they hold real
+   mode state. They live in ./renderer.js and ./performance.js. The
+   justification above is for the construction, and only for the construction.
+   ================================================================ */
 
 // =====================================================================
 // 3. BUILDERS — glow texture, makePoints, makeLines
@@ -1833,151 +1942,41 @@ const introApi = setupIntro(ctx);
 // cycling through the 8-sample orbit.
 animationLifecycle.start();
 
-function syncRenderSizes() {
-  renderer.setSize(innerWidth, innerHeight);
-  const db = renderer.getDrawingBufferSize(new THREE.Vector2());
-  composer.renderTarget1.setSize(db.width, db.height);
-  composer.renderTarget2.setSize(db.width, db.height);
-  taaPass.setSize(db.width, db.height);
-  bloom.setSize(innerWidth, innerHeight); // bloom's spread is tuned in CSS pixels
-  for (const m of _denseMats) m.uniforms.uRes.value.set(db.width, db.height);
-}
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  syncRenderSizes();
+// Sizing is owned by ./renderer.js; this file supplies only the list of things
+// that must agree, because it is the only place that knows what they are. The
+// two spaces are load-bearing and the callback receives both: the composer's
+// targets, the TAA history and the dense-line shader's `uRes` index real
+// texels, so they take the drawing-buffer size; bloom's spread is tuned in CSS
+// pixels, so it takes the window's.
+const viewport = createViewportSync({
+  renderer, camera,
+  onSize: (db, cssW, cssH) => {
+    composer.renderTarget1.setSize(db.width, db.height);
+    composer.renderTarget2.setSize(db.width, db.height);
+    taaPass.setSize(db.width, db.height);
+    bloom.setSize(cssW, cssH);
+    for (const m of _denseMats) m.uniforms.uRes.value.set(db.width, db.height);
+  },
 });
+// PAGE-lifetime, in the sense main.js's register uses: installed once, lives
+// until the document does, never taken back off. See the lifetime
+// classification at the head of createScene.
+addEventListener('resize', viewport.resize);
 
-// ---- adaptive resolution: keep weak GPUs smooth ----
-// The pipeline (4x MSAA + bloom + TAA at up to 2x DPR) is heavy for older
-// hardware. If the frame budget is blown for a sustained window, step the
-// pixel ratio down a notch and re-check. One-way ratchet — it never steps
-// back up, so there is no visible resolution flicker; on machines that hold
-// 60fps it never engages at all.
-//
-// ...AND ONE-TIME STALLS ARE NOT GPU LOAD (2026-08-16 — Hannah: "a visual
-// shift and then a lag... smooth other than that", consistently a few seconds
-// after the settled hero). The page's own cold-start work — the journey's
-// chapter-build slices and shader warm renders, each a 100-450 ms main-thread
-// stall landing 8-13 s in — used to pollute exactly the windows this governor
-// judges, so it misread "cold start" as "weak GPU" and stepped the ratchet on
-// a machine that holds 60 fps at steady state: measured at DPR 2, 2 -> 1.75
-// -> 1.5 -> 1.25 across the 10-22 s window, each step a one-frame sharpness
-// snap (syncRenderSizes flushes the TAA history) plus a target-reallocation
-// hitch — the reported shift-then-lag, made PERMANENT by the one-way ratchet.
-// Two guards, both preserving the governor's real job:
-//   · a window containing a FEW clamped frames (dt at the 0.05 ceiling —
-//     stalls, not sustained load) casts no verdict. A genuinely dying GPU is
-//     still caught: sustained sub-20 fps clamps the MAJORITY of its frames,
-//     and that window still counts. Sustained 25-40 fps has no clamped
-//     frames at all and still counts.
-//   · one bad window is a strike, not a verdict — the visible step needs two
-//     CONSECUTIVE bad windows (5 s of genuinely missed budget), so a stray
-//     spike the clamp test misses still cannot trip it.
-// ...AND THE DECISION IS TAKEN ONCE, DURING THE CHOREOGRAPHY (2026-08-17 —
-// Hannah, the third round on the same report: a consistent glitch "5 seconds
-// after the full hero view is done"). Reactive stepping can never win on a
-// machine that genuinely misses budget at full DPR: the cold-start stalls
-// void the intro windows (correctly — they are stalls, not load), so the
-// ratchet's first honest verdict is forced PAST the settle, and with the
-// two-strike guard it lands at exactly settle + ~5 s — a visible sharpness
-// snap on a still frame, every load, at the most attentive moment there is.
-// So the governor no longer reacts its way down. It CALIBRATES: through the
-// intro it samples only clean frames (clamped dt = a one-time stall, skipped),
-// and at `intro + 1.4` s — the callout power-up, the last stretch where the
-// whole frame is still visibly in motion — it computes the pixel ratio the
-// measured budget actually affords (frame cost ~ pr², so pr * sqrt(24/avg),
-// floored to the 0.25 grid — one notch conservative beats a second visible
-// step) and applies the WHOLE drop in one masked adjustment. After that the
-// windowed ratchet remains only as a drift backstop, always two consecutive
-// clean bad windows, so a settled frame is never re-graded on a fluke.
-let _perfTime = 0, _perfFrames = 0, _perfClamped = 0, _perfStrikes = 0;
-// A remembered calibration (applied at init above) IS the calibration: skip
-// the per-visit measurement entirely so no step can occur — only the
-// catastrophic backstop below stays armed, and its steps update the memory.
-let _calSum = 0, _calN = 0, _calDone = pixelRatioPolicy.stored !== null;
-const _calAt = intro > 0 ? intro + 1.4 : 2.5;   // no-intro loads decide early
-if (PIN_PR === null)                            // ?pr= pins: no governor at all
-addAnimator('perf-governor', (t, dt) => {
-  if (!_calDone) {
-    if (dt > 0 && dt < 0.0499) { _calSum += dt; _calN++; }
-    // A machine where nearly every frame hits the dt clamp (sustained <=20fps)
-    // never fills the clean-sample quota — and is exactly the machine that
-    // needs the drop most. Past a grace deadline, calibrate from the clamp
-    // itself: 50 ms IS the measured floor of what we know.
-    const starved = t >= _calAt + 2.5 && _calN < 30;
-    if ((t < _calAt || _calN < 30) && !starved) return;
-    _calDone = true;
-    /* THE INTRO UNDERESTIMATES THE SETTLED PAGE (2026-08-17 — Hannah, on the
-       stubborn residual: "it flashes a TINY bit lighter and stalls just
-       before it does", still at settle + ~5 s. That pairing is a resolution
-       step at rest: the stall is syncRenderSizes reallocating every target,
-       and the light flash is the TAA history flush — one un-accumulated
-       frame renders the thin bright filaments brighter before the average
-       re-converges. It kept firing because calibration measures the INTRO's
-       workload, and the settled page runs more per frame: the journey spine,
-       four chapter animators and the ui tracker all start at boot. A machine
-       that passes the audition can still miss the budget at the show, and
-       the old post-settle backstop then stepped it — stall plus flash — at
-       the most attentive moment there is. Two changes close it:
-         · the calibration decision projects the measured average forward by
-           1.25x for the journey's post-boot per-frame overhead, so machines
-           near the line take their (masked) step during the choreography;
-         · the post-settle ratchet no longer steps for a missed 24 ms budget
-           AT ALL. Missing 60 fps at rest on this slow ambient scene is
-           invisible; the correction was the only visible artifact. The one
-           post-settle step left is the catastrophic case — a majority of
-           frames at the 50 ms clamp, i.e. the page is at ~20 fps and
-           genuinely unusable — where a one-frame flash is mercy. */
-    /* FLUIDITY OVER THE LAST NOTCH OF SHARPNESS (2026-08-17 — Hannah, A/B on
-       her own retina machine: "?pr=1.5 feels noticeably smoother" than the
-       pr=2 the old 24 ms budget let stand. A machine that misses 60 fps only
-       slightly was being held at full resolution and paid in a permanent
-       light stutter — the wrong trade for a slow ambient scene whose motion
-       is its whole point. The calibration budget is therefore 20 ms (a ~50
-       fps floor with headroom, which reads as smooth on this content) and
-       the post-boot projection 1.35x, both of which only bite machines that
-       were already missing 60: a machine averaging under ~14.8 ms projected
-       still clears 20 and keeps full retina untouched. */
-    const projected = (starved ? 50 : (_calSum / _calN) * 1000) * 1.35;
-    const pr = renderer.getPixelRatio();
-    if (projected > 20 && pr > 1) {
-      const afford = pr * Math.sqrt(20 / projected);
-      const target = Math.max(1, Math.floor(afford / 0.25) * 0.25);
-      if (target < pr) {
-        renderer.setPixelRatio(target);
-        syncRenderSizes();
-      }
-    }
-    // Remember the DECISION either way — a machine that cleared the budget
-    // remembers full ratio, one that stepped remembers its landing — so every
-    // later visit applies it at the first frame and never steps in view.
-    pixelRatioPolicy.remember(renderer.getPixelRatio());
-    return;
-  }
-  _perfTime += dt;
-  _perfFrames++;
-  if (dt >= 0.0499) _perfClamped++;
-  if (_perfTime < 2.5) return;
-  const clampedShare = _perfClamped / _perfFrames;
-  _perfTime = 0;
-  _perfFrames = 0;
-  _perfClamped = 0;
-  // Post-settle: ONLY the catastrophic escape remains (see the calibration
-  // comment above) — a majority-clamped window is ~20 fps, and even that
-  // needs two consecutive windows so a single seized-up stretch (another
-  // app hogging the GPU for a moment) cannot re-grade a settled frame.
-  const pr = renderer.getPixelRatio();
-  if (clampedShare > 0.5 && pr > 1) {
-    if (++_perfStrikes < 2) return;
-    _perfStrikes = 0;
-    renderer.setPixelRatio(Math.max(1, pr - 0.25));
-    syncRenderSizes();
-    pixelRatioPolicy.remember(renderer.getPixelRatio());   // the memory follows the machine
-  } else {
-    _perfStrikes = 0;
-  }
-});
+// The adaptive-resolution governor is owned by ./performance.js, beside the
+// calibration memory it reads and writes. Registered here so it keeps its slot
+// in the frame order, and registered CONDITIONALLY: `?pr=` pins the ratio, and
+// a pinned ratio means no governor exists at all rather than one that runs and
+// always declines. `intro + 1.4` is the callout power-up — a no-intro load has
+// no choreography to hide a step behind, so it decides early instead.
+// (PIN_PR is parsed once, in ../flags.js — THE flag registry.)
+if (PIN_PR === null)
+  addAnimator('perf-governor', createAdaptiveResolution({
+    renderer,
+    policy: pixelRatioPolicy,
+    syncSizes: viewport.sync,
+    calibrateAt: intro > 0 ? intro + 1.4 : 2.5,
+  }));
 
 /** Input policy (M5 — replaces the page's DOM event shield, which was the
  *  same reach-in class as buffer overwrites, aimed at input). Two modes:

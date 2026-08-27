@@ -303,7 +303,7 @@ export function createLens(sceneApi) {
   if (_lens) return _lens;
   const { composer, renderer, camera } = sceneApi;
 
-  const taaHardened = hardenTAA(composer);
+  hardenTAA(composer);
 
   const pass = new ShaderPass(GradeShader);
   const db = renderer.getDrawingBufferSize(new THREE.Vector2());

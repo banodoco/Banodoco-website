@@ -20,35 +20,129 @@
 import * as THREE from 'three';
 import { createJourneyState } from './state.js';
 import { createScrollModel } from './scroll.js';
-import { createDirector } from './director.js';
+import { createDirector, poseAt } from './director.js';
 import { createSeams } from './seams.js';
 import { createLens } from './lens.js';
 import { createUI } from './ui.js';
 import { createRail } from './rail.js';
 import {
-  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
+  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf, HERO_REST_P,
 } from './route.js';
-import {
-  HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS,
-  COPY_JUMP_LEAD, COPY_JUMP_TAIL_S, COPY_IN_K,
-} from './constants.js';
-import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE } from '../flags.js';
-import {
-  startChapterEntry, snapChapterLandings, snapChapterPlacements,
-} from './chapter-entry.js';
+import { HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS } from './constants.js';
+import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE, ASPECT } from '../flags.js';
+import { startChapterEntry, snapChapterPlacements } from './chapter-entry.js';
 import { registerChapterInteractions } from './chapter-interactions.js';
-import { buildChapters } from './chapter-registry.js';
+import { RUNTIME_CHAPTER_IDS } from './structure.js';
+import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
 import { arcLength, azTurn } from './camera-path.js';
 import { normaliseNode } from './navigation.js';
-import { createCameraBlendStepper } from './camera-blend.js';
 import { applyChapterFrame } from './frame-application.js';
+import { inputPortOf } from './claim.js';
+import { createTransitionController } from './transition/controller.js';
+import { createFramePublisher } from './frame/publication.js';
 
-export { prepareChapter } from './chapter-registry.js';
-export function prepareRail(onNav) { return createRail({ onNav }); }
-
+const journeyRegistry = createChapterRegistry();
+export function prepareChapter(sceneApi) { return journeyRegistry.prepare(sceneApi); }
+/* J04e / A02's D-A02-4. The page builds the rail with its OWN intro-handoff
+   callback and hands it to boot(); `journey/ui.js` then re-points the rail's
+   `navigate` at the journey and nothing ever puts it back, so after a journey
+   disposal a page-owned rail would still be calling into a disposed journey.
+   `journey/rail.js` has a setter and no getter, so the callback the page
+   supplied is recorded HERE, at the one site that knows it, and boot()
+   registers the restore. Keyed on the rail object and weak, so a rail the
+   page drops is not retained by this map. */
+const railPageNav = new WeakMap();
+export function prepareRail(onNav) {
+  const rail = createRail({ onNav });
+  railPageNav.set(rail, onNav);
+  return rail;
+}
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/* TWO DISTANCES FROM THE HERO'S POSE, AND THEY ARE NOT THE SAME QUANTITY.
+ *
+ * Both used to be absolute p-literals — `p > 0.0008` down in applyFrame, and
+ * `p - 0.006` in heroPresence — which made them look like two spellings of
+ * one threshold sitting near each other. They are not. What they share is the
+ * ANCHOR, and only the anchor is derived: HERO_REST_P is the frozen hero pose
+ * the route declares (journey/route.js), so moving the hero's rest, or giving
+ * it a chapter to sit behind, carries both of these with it. This is the same
+ * shape journey/seams.js has used since M4 — `startOf('connect') + 0.06`, the
+ * anchor from the route and the offset authored against the camera path.
+ *
+ * HERO_OWNED_P IS A BOUNDARY. It decides who drives the camera: below it the
+ * scene is the hero's own frozen composition, above it the director owns it.
+ * 0.0008 is a dead-zone hair, sibling to scroll.js's SNAP_DEAD_P — the wheel
+ * delta that bought the stuck-hero defect crossed it twenty-eight times over.
+ * It is read ONCE per frame and both of applyFrame's former comparisons now
+ * read that one value; see the block there.
+ *
+ * HERO_PRESENCE_* ARE AN ENVELOPE. They are the hero furniture fading out as
+ * the camera leaves, and they are composition, not a switch: the lead says
+ * when the fade opens, the fade width says how it falls. The width is left
+ * exactly as authored and deliberately NOT anchored on anything — it is a
+ * distance, not a place, and the three flash bugs the furniture channel was
+ * shaped against were fought at that curve. Only the START moves with the
+ * hero.
+ *
+ * A NOTE ON SIDEDNESS, because the derivation makes the assumption visible
+ * for the first time. Both are one-sided (`p >`, and a fade that only opens
+ * upward), which is complete only while the hero's rest is the route's floor
+ * — true today, since HERO_REST_P is 0. A hero placed mid-route would want
+ * both to read the DISTANCE from the pose, in either direction. That is a
+ * behaviour change, so it is not made here; it is written down here so the
+ * next reader inherits the assumption instead of rediscovering it. */
+const HERO_OWNERSHIP_EPS   = 0.0008;  // p — dead zone off the pose before the director takes over
+const HERO_PRESENCE_LEAD   = 0.006;   // p — how far past the pose the furniture starts to go
+const HERO_PRESENCE_FADE   = 0.05;    // p — and how far it takes to go completely (authored)
+const HERO_OWNED_P         = HERO_REST_P + HERO_OWNERSHIP_EPS;
+const HERO_PRESENCE_START  = HERO_REST_P + HERO_PRESENCE_LEAD;
+
+/** The lens focal source for this frame — the ONE chapter whose leg the
+ *  camera is on, asked for its own focal point (C05 slice D/E, design.md
+ *  §5.3).
+ *
+ *  This replaced four legs written out by name, each naming a different
+ *  member; they are quoted in full in
+ *  docs/code-health/evidence/2026-08-21-elegance-run-01/e01/relocated/journey-journey.md
+ *
+ *  WHAT IS THE SAME, exactly. The handoff thresholds are ROUTE DATA and stay
+ *  here: shortly (+0.02) after each chapter's range begins, `startOf(...)`
+ *  (shipped values 0.40 / 0.62 / 0.87). RUNTIME_CHAPTER_IDS is
+ *  ['inspire','connect','owned','final'] (structure.js), which is exactly the
+ *  order the four branches ran in, and the loop `break`s on the first leg it
+ *  does not skip — so at most one chapter is asked, as before. An unarmed
+ *  chapter yields null on its own leg, as before.
+ *
+ *  WHAT MOVED INTO THE CHAPTERS: which point each one offers. Inspire's
+ *  `activeWorld()`, connect's `nodeWorld('ados')` and final's `focusWorld()`
+ *  are now `focus.world()` on each chapter's own descriptor, bound to the same
+ *  hoisted bodies. Owned declares `focus: null` and is not asked at all — it
+ *  has been returning null for the whole Owned leg since the ownership pods
+ *  were retired ('pod-shared' is content-only and is not among portraits'
+ *  node ids, so worldOf() never found it), so the lens keeps receiving
+ *  setFocusHint(null) there. The dead string is gone; the behaviour is not.
+ *
+ *  MODULE SCOPE, AND A PURE FUNCTION OF ITS ARGUMENTS PLUS `startOf` AND
+ *  `RUNTIME_CHAPTER_IDS`, deliberately. journey.js cannot be imported under
+ *  plain node (`three` resolves through the page's import map), so
+ *  tools/test-chapter-contract.mjs's I3(b) reconstitutes THIS body from these
+ *  bytes and runs it. A reference copy of this loop used to live in that suite
+ *  instead; it is deleted. Keep the free names to those two. */
+function pickChapterFocus(chapters, frameP) {
+  let focus = null;
+  for (let i = 0; i < RUNTIME_CHAPTER_IDS.length; i++) {
+    const id = RUNTIME_CHAPTER_IDS[i];
+    const next = RUNTIME_CHAPTER_IDS[i + 1];
+    if (next && frameP >= startOf(next) + 0.02) continue;
+    const ch = chapters[id];
+    if (ch.armed && ch.focus) focus = ch.focus.world();
+    break;
+  }
+  return focus;
+}
 
 /* ================================================================
    The nav jump's interpolation frame (see directJumpTo)
@@ -103,7 +197,9 @@ let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
                          // rotational sense — how the shipped path was chosen
                          // against the short way, and how it can be re-judged.
 
-let started = false;
+/* ONE JOURNEY EVER. main.js boots once; a second boot returns the handle the
+   first one published rather than building a second generation. */
+let booted = false;
 
 /* THE CHAPTERS BUILD ONE PER SLICE (2026-08-16 — Hannah: "still a little
    stagger once it's fully loaded"). boot() used to construct all four
@@ -121,16 +217,23 @@ let started = false;
    still run after the spine. A caller that skips prepareChapter entirely
    (flush paths, direct boot) gets the old synchronous build inside boot(). */
 export function boot(opts = {}) {
-  if (started) return window.journey;
-  started = true;
+  if (booted) return window.journey;
 
   const sceneApi = window.sceneApi;
+  /* THE LATCH IS TAKEN BEFORE THE sceneApi GUARD. A boot with no scene handle
+     therefore still latches the module for good: it returns null, no handle
+     escapes, and the next boot returns `window.journey` without logging a
+     second time. That is today's behaviour on that path and it is preserved
+     deliberately rather than tidied. */
+  booted = true;
+
   if (!sceneApi) {
     console.error('[journey-v6] no hero scene handle — journey not started');
     return null;
   }
   const deferActivation = opts.deferActivation === true;
   let activated = false;
+
 
   /* ================================================================
      State, scroll, camera
@@ -161,6 +264,9 @@ export function boot(opts = {}) {
      spineFrame is a hoisted function declaration; nothing in it runs until
      the first rAF, long after boot() has finished defining what it closes
      over. */
+  /* REPLACES main.js's parked placeholder IN ITS ORIGINAL Map SLOT
+     (organism/animation.js's documented semantics), which is what keeps the
+     spine ahead of every chapter animator in frame order. */
   sceneApi.addAnimator('journey', (t, dt) => spineFrame(t, dt));
 
   // ?steady=1 kills the documentary handheld layer (QA: pose sampling at
@@ -175,7 +281,7 @@ export function boot(opts = {}) {
   // Guarded like every raw-listener key seam (M5): a modified chord is a
   // browser shortcut (Cmd+G = find next), and a key typed into a text-entry
   // control is content — neither may toggle the grade.
-  addEventListener('keydown', (e) => {
+  globalThis.addEventListener('keydown', (e) => {
     if (e.key !== 'g' && e.key !== 'G') return;
     if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
     const t = e.target;
@@ -186,7 +292,7 @@ export function boot(opts = {}) {
   // One chapter per idle slice (prepareChapter below) when the loader had
   // time; anything not prebuilt lands here synchronously, so boot's contract
   // — chapters exist when it returns — is unchanged on every path.
-  const chapters = buildChapters(sceneApi);
+  const chapters = journeyRegistry.build(sceneApi);
 
   const seams = createSeams({
     camera: sceneApi.camera,
@@ -234,8 +340,9 @@ export function boot(opts = {}) {
          instead is exactly what the visitor meant, and the wrap block that
          called us raises the wall itself, so the gesture is retired the same
          way either branch. */
-      if (camBlend && camBlend.wrapDir && dir === -camBlend.wrapDir) {
-        steerWrapBlend(dir);
+      const flying = transition.blend;
+      if (flying && flying.wrapDir && dir === -flying.wrapDir) {
+        transition.steerWrapBlend(dir);
         return;
       }
       navigateTo(dir > 0 ? 'mission' : 'final', dir);
@@ -270,7 +377,17 @@ export function boot(opts = {}) {
     // jitter-free lens rather than the raw one the renderer is mid-way through
     // perturbing (organism.js, STEADY PROJECTION).
     project: sceneApi.steadyProject,
+    /* C05 slice D. ui.js used to reach the chapter modules through
+       `window.journey.chapters` — a global this file publishes inside
+       activate(), i.e. AFTER registration, which is why the label-policy pass
+       was written as a frame retry. The value has existed since
+       the registry build() above; passing it is the whole of §6. ui.js reads only
+       DECLARED CAPABILITIES off it (`selection`, `visibility`), never a
+       chapter's own fields. The global stays published and still holds these
+       same objects — tools/fieldpace.js and tools/revealgates.js read it. */
+    chapters,
   });
+
 
   // hotspot proxies, one per named node (GB-4.1)
   // registration order = importance (ArtCompute -> Arca -> 2RP, per Plate II)
@@ -354,29 +471,16 @@ export function boot(opts = {}) {
   const heroFurniture = ['.callouts', '.scrim', '.spill'].map(s => document.querySelector(s)).filter(Boolean);
   const calloutsEl = document.querySelector('.callouts');
 
-  let heroEntry = null;   // { t, lead, dur } while a jump is flying INTO the hero
-  let heroGate = 1;       // the eased arrival term; 1 = the hero is ours to show
-  /* ...AND A DEPARTURE TERM TO MATCH (2026-08-16 — Hannah, the up-wrap:
-     "there's a similar flash when I scroll UP from the top section [to] the
-     last section"). A jump AWAY from the hero snapped this furniture to
-     opacity 0 on the click frame — p jumps to the destination, presence reads
-     0, and the repaint below shipped it before the camera had moved an inch.
-     The scrim is the heavy member of the set: a 0.55-alpha dark gradient over
-     exactly the bottom-left where the ground web's brightest filaments live,
-     so its one-frame removal UNVEILED them all at once and the grade's
-     halation flared around the newly-hot cores (measured: bottom-left region
-     +4.3/255 in one frame; pinning the furniture removes the flash entirely,
-     +0.06). Departures were the one member of the a8d4518 family — fog
-     (2026-08-09), grade (2026-08-13), chapter geometry — still stepping on
-     the click frame. `heroExit` retires the furniture over the blend's
-     opening beat instead: armed only by jumps (scroll-driven presence is
-     pure in p and untouched), snapped by placements (dt === 0, so deep
-     links, ?capture= and the goldens are bit-identical), and composed with
-     max() so a lap steered back into the hero hands over cleanly. */
-  let heroExit = null;    // { from, t, dur } while a jump is flying OUT of the hero
+  /* THE TWO TRAVEL TERMS ARE THE TRANSITION CONTROLLER'S (J01). The arrival
+     gate and the departure fade are transition state — armed by a jump, run
+     on the blend's own clock, reversed by a steered lap — so they live in
+     journey/transition/controller.js with the rest of it, and the note that
+     bought the departure term (the up-wrap scrim flash, 2026-08-16) moved
+     with them. What stays here is the PAINTER: the elements, and its own
+     memo of what it last put up. */
   let heroShown = 1;      // last painted value — the exit fades from what is actually up
 
-  const heroPresence = (p) => 1 - smooth01((p - 0.006) / 0.05);
+  const heroPresence = (p) => 1 - smooth01((p - HERO_PRESENCE_START) / HERO_PRESENCE_FADE);
 
   /** The ONE place the hero furniture's visibility reaches the DOM. */
   function paintHeroFurniture(a) {
@@ -384,7 +488,7 @@ export function boot(opts = {}) {
     // A departing set leaves the hit tree on the CLICK frame, not at the 0.05
     // threshold — the fade is for the eye; a callout must not keep arming
     // region highlights while the lap lifts off through it.
-    const inert = a < 0.05 || !!heroExit;
+    const inert = a < 0.05 || transition.heroExiting;
     for (const f of heroFurniture) {
       f.style.opacity = a;
       // Swarm census finding (2026-08-03): opacity-0 elements are still
@@ -404,100 +508,64 @@ export function boot(opts = {}) {
     }
   }
 
-  /** Arm the arrival term for a jump. Called for EVERY jump: a jump to
-   *  anywhere else has no hero arrival to time, so it simply clears the term
-   *  (invisibly — presence is 0 at the destination the same tick).
-   *
-   *  The repaint is not optional. placeAt() has ALREADY run two dt = 0
-   *  applyFrame passes by the time directJumpTo can call us, so the furniture
-   *  is sitting at full opacity right now; leaving the correction to the next
-   *  animator frame ships one rendered frame of exactly the flash this exists
-   *  to remove. Same reasoning, same shape, as ui.js's armCopyEntry. */
-  /** Arm the DEPARTURE term (see heroExit above). Called from directJumpTo
-   *  BEFORE placeAt — the two dt = 0 placement passes inside placeAt are what
-   *  used to ship the snap, so arming afterwards (in armHeroEntry, where the
-   *  arrival is armed) is exactly one placement too late. `holdSnaps` lets
-   *  the term survive those two passes and nothing else: a REAL placement
-   *  (deep link, ?capture=, QA scrollTo) never has an exit armed, and one
-   *  that lands mid-fade spends the two held snaps and then kills it, which
-   *  is the snap a placement is owed. */
-  function armHeroExit(wrap) {
-    if (heroShown <= 0.05) return;
-    // 0.35 s reads as a fade on the shortest jumps; the wrap's 4 s lap gets
-    // 0.6 s so the furniture is gone before the camera swings through it.
-    heroExit = { from: heroShown, t: 0, dur: wrap ? 0.6 : 0.35, holdSnaps: 2 };
-  }
+  // Error isolation for the spine's own subsystem calls (M5). The organism's
+  // frame loop already isolates whole animators, but everything below runs
+  // INSIDE the one 'journey' animator — an exception in a single chapter's
+  // drive() would otherwise disable scroll, nav and copy along with it.
+  // guarded() latches per name: first throw logs the error once and disables
+  // that subsystem; every later call is skipped; the rest of the frame runs.
+  // (Constructed here rather than beside applyFrame: the transition
+  // controller below is its first consumer.)
+  const guarded = createFailureGuard();
 
-  function armHeroEntry(chapterId, blendDur) {
-    if (chapterId !== 'mission') { heroEntry = null; heroGate = 1; }
-    else {
-      heroExit = null;
-      const lead = blendDur * COPY_JUMP_LEAD;
-      heroEntry = { t: 0, lead, dur: blendDur + COPY_JUMP_TAIL_S - lead, play: 1 };
-      heroGate = 0;
-    }
-    // The departure repaint deliberately paints the UNCHANGED value (the click
-    // frame moves nothing); the arrival repaint still snaps to 0 — see the
-    // "repaint is not optional" note above.
-    paintHeroFurniture(Math.max(heroPresence(journey.progress) * heroGate,
-      heroExit ? heroExit.from : 0));
-  }
+  /* ================================================================
+     THE TRANSITION — ONE OWNER (J01)
+     ================================================================
+     Every piece of state a transition holds — the camera blend, the wrap's
+     lap and its rail ticket, an ordinary click's rail flight, the
+     navigation-only chapter entry clock, the state/camera disagreement flag,
+     and the hero furniture's two travel terms — is inside this object. This
+     file reads it and sequences it; it no longer keeps a copy.
 
-  /** The visitor took the wheel: the arrival this was timed against is not
-   *  coming. Only the AUTHORITY is dropped, never the value — the gate then
-   *  relaxes back on COPY_IN_K below, so the furniture breathes in from
-   *  wherever the envelope had reached instead of snapping. (The copy layer
-   *  hands back to its scroll rule for the same reason; here there is no
-   *  second rule to hand back to, so the relaxation is the handback.) */
-  function cancelHeroEntry() { heroEntry = null; }
+     `input` is the model's DECISION PORT, not the model (boundaries.md §A.6
+     E-A2). The controller is handed `inputPortOf(scroll)` — a two-member
+     frozen surface — so there is no `scroll` identifier in its scope to
+     reach `sinceInput`, `answeredAt`, `gesturePeak` or any other diagnostic
+     getter through. The cancellation question it used to assemble out of two
+     of those getters and a bare 50 is now one call to claimNow(), which
+     answers with a discriminated `null | {dir}`.
 
-  /** A steered wrap (steerWrapBlend): the arrival term runs on the lap's own
-   *  clock, so it reverses with the lap rather than being cancelled — the
-   *  furniture backs out along the same curve it entered on, and the gate is
-   *  shut again the frame the rewound lap lands. Same statement the copy
-   *  layer makes in ui.setCopyEntryPlay. */
-  function setHeroEntryPlay(play) { if (heroEntry) heroEntry.play = play < 0 ? -1 : 1; }
+     `placeAt` and `paintHero` are late-bound on purpose: both are this
+     file's, and both are what the controller must call back into when a
+     rewound lap lands or a jump arms the furniture. */
+  const transition = createTransitionController({
+    input: inputPortOf(scroll),
+    sceneApi, director, lens, ui, chapters, guarded, chapterAt,
+    placeAt: (p) => placeAt(p),
+    paintHero: (a) => paintHeroFurniture(a),
+    heroShownNow: () => heroShown,
+    heroPresenceNow: () => heroPresence(journey.progress),
+  });
 
-  /** One step of the departure term (see heroExit above): the current value
-   *  eased to 0 over the blend's opening beat, 0 whenever no jump is leaving.
-   *  Composed with the presence product via max() at the paint site, so a lap
-   *  steered back into the hero (presence rising) takes over seamlessly. */
-  function stepHeroExit(dt) {
-    if (!heroExit) return 0;
-    // The jump's own two placement passes are held (see armHeroExit); any
-    // further dt === 0 is a real placement and snaps, exactly as the arrival
-    // term does.
-    if (dt === 0) {
-      if (heroExit.holdSnaps > 0) { heroExit.holdSnaps--; return heroExit.from; }
-      heroExit = null; return 0;
-    }
-    heroExit.t += dt;
-    const f = clamp01(heroExit.t / heroExit.dur);
-    const e = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
-    const v = heroExit.from * (1 - e);
-    if (f >= 1) heroExit = null;
-    return v;
-  }
+  /* THE FRAME PUBLICATION (J02). One immutable value per frame, taken where
+     the camera is finished, so that "the camera is complete before anything
+     reads it" stops being a property of statement order alone and becomes a
+     value a reader holds. See journey/frame/publication.js for what it
+     carries and, more importantly, for what it must never carry.
 
-  /** One step of the arrival term. */
-  function stepHeroEntry(dt) {
-    // A placement is not an arrival: a deep link, a ?capture= still or a QA
-    // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
-    if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }
-    if (heroEntry) {
-      heroEntry.t += dt * (heroEntry.play || 1);
-      const f = clamp01((heroEntry.t - heroEntry.lead) / heroEntry.dur);
-      heroGate = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
-      if (heroEntry.t >= heroEntry.lead + heroEntry.dur) { heroEntry = null; heroGate = 1; }
-      // ...or rewound past its own start (a steered wrap): the arrival is not
-      // happening, so the gate is shut exactly as it was before the lap.
-      else if (heroEntry.t <= 0) { heroEntry = null; heroGate = 0; }
-    } else if (heroGate < 1) {
-      heroGate += (1 - heroGate) * Math.min(1, dt * COPY_IN_K);
-      if (heroGate > 0.999) heroGate = 1;
-    }
-    return heroGate;
-  }
+     The capability is installed on the scene handle rather than exported,
+     because that is how a chapter reaches it: chapters are built with
+     sceneApi and nothing else. It is JOURNEY-SCOPED on purpose — the handle
+     gains `frame` only when a journey boots, and the accessor answers null
+     until the first publication, so a page-lifetime reader (the annotation
+     rail, the organism's trackers, the lens's focus projection) can neither
+     find it before the journey exists nor be quietly rewritten to depend on
+     it. Those three run on pages that have no journey at all. */
+  const framePublisher = createFramePublisher(sceneApi);
+  /* A journey-scoped accessor written onto a page-lifetime handle. Installed
+     exactly once — tools/test-frame-publication.mjs's `C4` is the pin. */
+  sceneApi.frame = framePublisher.frame;
+
 
   // Explore CTA hands off into the journey (GB-1.1): one restrained flow
   // toward the cap, then the orbit. No reset, no reload.
@@ -553,33 +621,75 @@ export function boot(opts = {}) {
      fixed stare. Timing is untouched — the same smootherstep and the same
      duration law, now measured along the path actually travelled instead of
      along a chord the camera no longer follows. */
-  let camBlend = null;
-  /* A nav jump snaps global progress before its camera travels. A progress-
-     authored chapter may opt into a LOCAL arrival with driveEntry(f), plus an
-     optional entryReady()/entryDuration contract. Its clock starts only when
-     the chapter says the travelling camera can actually show it and may finish
-     after the camera lands. Keeping this separate from drive(p) preserves the
-     placement contract: deep links, ?pose/?capture and QA scrollTo never
-     receive a synthetic progress value. */
-  let chapterEntry = null;
-  /* A direct jump places journey progress at its destination before the
-     camera starts travelling there. Most visual layers have their own blend
-     contract for that disagreement; the rail only needs to preserve the
-     visibility it had at departure until the camera and progress agree
-     again. This flag starts before placeAt() because that function renders
-     two synchronous destination-progress frames before camBlend exists. */
-  let cameraStateDisagree = false;
-  // A wrap parks p at its destination before the four-second lap begins, so
-  // p cannot tell the rail where that visible move is. This small ticket is
-  // created before placeAt's synchronous frames and follows the camera clock.
-  let railWrap = null;          // { dir, homeP, phase } while a wrap is flying
-  // Ordinary clicks have the same destination-progress disagreement. Carry
-  // their visible origin and destination separately so the horizontal rail
-  // can scrub between them on the camera blend's exact eased phase.
-  let railFlight = null;        // { fromP, targetP, phase } for non-wrap clicks
+  /* The blend, the two rail tickets, the chapter-entry clock and the
+     state/camera disagreement flag were eleven `let`s here. They are the
+     transition controller's now (J01); the notes that describe each one
+     moved with it. What remains on this side is the frame's own readback and
+     the rail's interpolation of a flight ticket. */
   let presentedP = journey.progress; // QA/readback: camera-authoritative route coordinate
   const flightProgress = (flight) => flight.fromP
     + (flight.targetP - flight.fromP) * flight.phase;
+  /* THE ROUTE-FAITHFUL FLIGHT IS PACED BY ITS OWN PATH (2026-08-24 — Hannah:
+     "Navigating into the Inspire section from the hero moves WAY too quickly
+     for some reason").
+
+     The reason, measured: the first-leg flight presented its route coordinate
+     UNIFORMLY in p under the blend's ease, but the leg's camera path is
+     extremely non-uniform in p — INSPIRE_CAM.arrival holds the hero pose
+     exactly through ARRIVAL_DEAD (p 0..0.045, 17% of the leg buys 0.0 world
+     units of path) and its trapezoid concentrates the rest. So of the move's
+     1.20 s, the first 0.38 s rendered a parked camera, and the whole 24.0-unit
+     path — the longest of ANY ordinary jump — was ridden in the remaining
+     ~0.7 s: peak 56.6 u/s and 269 deg/s of gaze, 0 -> 47 u/s inside 120 ms,
+     against a sibling family of 15.0-45.6 u/s, 77-217 deg/s, and no jump
+     opening faster than 147 u/s^2 over any 100 ms (all measured at 1440x900,
+     60 fps virtual clock). 56.6 is within 1% of the 57 u/s the WRAP_EXTRA_S
+     note above rules un-shippable — "4x every other transition on the site".
+     Mirrored on the way home: the camera brakes 47 -> 0 in 120 ms and then
+     sits parked for the blend's last 0.35 s before the hero copy breathes in.
+
+     The cure keeps every pose ON the authored route (the point of the
+     route-faithful presentation) and re-times only WHEN each p is presented:
+     the blend's eased clock now advances along a per-segment METRIC sampled
+     from the leg itself at arm time — poseAt is pure, which is what makes the
+     sample valid — so equal fractions of eased time buy equal fractions of
+     path, and the C2 envelope's zero-velocity promise holds for the move the
+     eye actually sees. Re-measured: peak 38.6 u/s / 180 deg/s, opening
+     176 u/s^2, motion from 0.18 s — inside the family on every axis.
+
+     ROUTE_PACE_FLOOR is the fraction of uniform-p pace a zero-motion stretch
+     of route retains. It exists because a floor of 0 would cross ARRIVAL_DEAD
+     in a single frame and snap the hero furniture (presence rides travelP) —
+     the exact one-frame-scrim class of a8d4518/2026-08-16. At 0.15 the
+     departure fade takes ~0.20 s and the return breathe ~0.14 s, matching the
+     0.23 s / 0.15 s the same furniture measures on a generic hero jump
+     (mission -> final), so the fade keeps its beat without stalling the
+     flight. */
+  const ROUTE_PACE_FLOOR = 0.15;
+  const ROUTE_PACE_N = 64;
+  const _pacePose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 };
+  const _pacePrev = new THREE.Vector3();
+  function buildRoutePace(fromP, toP) {
+    const cam = sceneApi.camera;
+    const aspect = ASPECT ?? cam.aspect;   // mirror director.apply's composition
+    const cum = new Float64Array(ROUTE_PACE_N + 1);
+    let pathLen = 0;
+    for (let i = 0; i <= ROUTE_PACE_N; i++) {
+      poseAt(fromP + (toP - fromP) * (i / ROUTE_PACE_N), _pacePose,
+        director.heroPose, aspect, innerWidth);
+      if (i) { cum[i] = pathLen += _pacePose.pos.distanceTo(_pacePrev); }
+      _pacePrev.copy(_pacePose.pos);
+    }
+    if (!(pathLen > 1e-6)) return null;    // degenerate leg: linear fallback
+    const floor = (ROUTE_PACE_FLOOR * pathLen) / ROUTE_PACE_N;
+    let total = 0, prevRaw = 0;
+    for (let i = 1; i <= ROUTE_PACE_N; i++) {
+      total += Math.max(cum[i] - prevRaw, floor);
+      prevRaw = cum[i];
+      cum[i] = total;
+    }
+    return { cum, total, pathLen };
+  }
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -591,8 +701,17 @@ export function boot(opts = {}) {
     // older flight's destination, while the rail is visibly between rests;
     // start the replacement from the visible coordinate so interruption and
     // reversal cannot produce a second jump.
-    const railFromP = railFlight ? flightProgress(railFlight) : fromP;
-    const wasRouteFaithful = !!(camBlend && camBlend.routeFaithful);
+    const flying = transition.railFlight;
+    const overtaken = transition.blend;
+    const wasRouteFaithful = !!(overtaken && overtaken.routeFaithful);
+    /* A route-faithful blend's camera is at its PRESENTED coordinate, which
+       is metric-paced (buildRoutePace) and therefore no longer equal to the
+       rail ticket's linear phase mid-flight. A replacement that continues on
+       the route must depart from where the camera actually is — starting from
+       the linear coordinate would teleport it by the pacing difference. */
+    const railFromP = wasRouteFaithful && Number.isFinite(overtaken.presentedP)
+      ? overtaken.presentedP
+      : flying ? flightProgress(flying) : fromP;
     const inspireP = restProgress('inspire');
     const at = (a, b) => Math.abs(a - b) < 1e-4;
     const onFirstLeg = railFromP >= -1e-4 && railFromP <= inspireP + 1e-4;
@@ -606,7 +725,7 @@ export function boot(opts = {}) {
       // With no blend, the live camera is director(p); with a first-leg blend,
       // it is director(presentedP). A generic jump may cross the same numeric
       // interval but its live pose is not on the route, so never switch it.
-      && (!camBlend || wasRouteFaithful);
+      && (!overtaken || wasRouteFaithful);
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
@@ -620,23 +739,12 @@ export function boot(opts = {}) {
     // inside applyFrame — see the frame-order block there). The new blend
     // starts from where the old one had actually reached, which pos0 above
     // has already captured.
-    camBlend = null;
-    railWrap = null;
-    railFlight = null;
-    chapterEntry = null;
+    transition.abandonForJump();
     // ...and a jump AWAY from the hero arms its furniture DEPARTURE here,
     // before placeAt's dt = 0 passes can snap the scrim off on the click
-    // frame — the up-wrap flash (2026-08-16; see heroExit).
-    if (wrap && chapterId !== 'mission') armHeroExit(true);
-    else if (!wrap) {
-      // An ordinary click now presents a real continuous progress coordinate
-      // over the camera flight. Hero presence can therefore use the same pure
-      // p envelope as scroll; retire the legacy click-only timer so it cannot
-      // race or soften that authoritative signal.
-      heroExit = null;
-      heroEntry = null;
-      heroGate = 1;
-    }
+    // frame — the up-wrap flash (2026-08-16; see the departure term).
+    if (wrap && chapterId !== 'mission') transition.armHeroExit(true);
+    else if (!wrap) transition.clearHeroTerms();
     // pos0 is banked, so assert the un-owned invariant before placing: if the
     // director is un-owned the camera may be MID-LAP (a nav click over a
     // flying down-wrap — the blend just dropped without restoring), and
@@ -651,21 +759,23 @@ export function boot(opts = {}) {
     // is the frame the journey's state and camera agree again. Visible intro
     // clocks are deliberately excluded; they may outlive the camera move.
     // This is the WebGL half of what ui.armCopyEntry does for the copy layer.
-    cameraStateDisagree = true;
-    railWrap = wrap ? {
-      dir: wrap,
-      homeP: restProgress(chapterAt(fromP).id),
-      phase: 0,
-    } : null;
-    railFlight = wrap ? null : { fromP: railFromP, targetP, phase: 0 };
     // Install before placeAt: its two synchronous dt=0 passes must see the
     // beginning of the entry, not one transient fully-arrived drive(p) state.
     // This first leg already owns a complete progress-authored arrival. A
     // second navigation-only chapter clock would make its scene diverge from
     // an equal-p scroll sample even after the camera path was corrected.
-    chapterEntry = routeFaithful
-      ? null
-      : startChapterEntry(chapterId, chapters[chapterId], guarded);
+    const wrapTicket = wrap ? {
+      dir: wrap,
+      homeP: restProgress(chapterAt(fromP).id),
+      phase: 0,
+    } : null;
+    transition.beginFlight({
+      railWrap: wrapTicket,
+      railFlight: wrap ? null : { fromP: railFromP, targetP, phase: 0 },
+      chapterEntry: routeFaithful
+        ? null
+        : startChapterEntry(chapterId, chapters[chapterId], guarded),
+    });
     placeAt(targetP, { snap: false });
     /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
        every other nav jump; only its PATH is authored, because the shortest
@@ -692,7 +802,14 @@ export function boot(opts = {}) {
        any other transition — a whip, not a considered move. */
     const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
     const bow = wrap ? WRAP_BOW : 0, rise = wrap ? WRAP_RISE : 0;
-    const len = arcLength(pos0, cam.position, az1);
+    // A route-faithful flight is priced by the route path it actually rides
+    // (buildRoutePace above), not by the cylindrical arc it no longer follows
+    // — the same "measured along the path actually travelled" rule the
+    // arcLerp rewrite stated for every other jump. Both give the capped
+    // 1.20 s on the shipped first leg (arc ~20+, route 24.0), so the shipped
+    // duration is unchanged; they differ only for a mid-leg overtake.
+    const routePace = routeFaithful ? buildRoutePace(railFromP, targetP) : null;
+    const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
     const dur = wrap
       ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
       : 0.85 + 0.35 * Math.min(len / 20, 1);
@@ -714,17 +831,17 @@ export function boot(opts = {}) {
     // because it is what is on screen; look1 is read here, after placeAt has
     // let lens.update() write the destination's per-leg curve.
     const look1 = lens.lookOf(journey.progress);
-    camBlend = { t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
+    transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
       az1, bow, rise, look0, look1, look: { ...look1 },
       // The lap's reverse gear (wrap only): the scroll direction that asked
       // for this move, the rest it departed — where a rewound lap places the
       // journey when it gets back (steerWrapBlend / landWrapHome) — and the
       // destination pose's camera x, kept so a steer can re-announce the
       // chapters' blend contract with whichever end the lap now lands at.
-      wrapDir: wrap, homeP: railWrap ? railWrap.homeP : 0,
-      routeFaithful, routeFromP: railFromP, routeTargetP: targetP,
+      wrapDir: wrap, homeP: wrapTicket ? wrapTicket.homeP : 0,
+      routeFaithful, routeFromP: railFromP, routeTargetP: targetP, routePace,
       presentedP: routeFaithful ? railFromP : null,
-      dstX: cam.position.x };
+      dstX: cam.position.x });
     // cam.position is the DESTINATION pose here — placeAt above let the
     // director write it, and az1/len are already measured against it. A
     // chapter whose reveal is paced (not merely gated) by the camera needs to
@@ -741,7 +858,7 @@ export function boot(opts = {}) {
     // On the route-faithful first leg the chapters already consume frameP,
     // exactly as they do under scroll. Advertising a destination-parked
     // camera disagreement here would reintroduce nav-only reveal behaviour.
-    if (!routeFaithful) setBlending(true, cam.position.x, dur);
+    if (!routeFaithful) transition.setBlending(true, cam.position.x, dur);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
     // The duration is only knowable here, after placeAt has let the director
@@ -757,7 +874,7 @@ export function boot(opts = {}) {
     // same reason and on the same envelope. It is the third member of the
     // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
     // the only one that had never been given a ticket.
-    if (wrap) armHeroEntry(chapterId, dur);
+    if (wrap) transition.armHeroEntry(chapterId, dur);
   }
 
   /* THE DETAIL NO LONGER HAS A HISTORY ENTRY (2026-08-11 — the URL is not a
@@ -813,14 +930,6 @@ export function boot(opts = {}) {
   // used to make on every chapter crossing. The write is gone — see the block
   // at the foot of applyFrame — and it had no other reader.)
 
-  // Error isolation for the spine's own subsystem calls (M5). The organism's
-  // frame loop already isolates whole animators, but everything below runs
-  // INSIDE the one 'journey' animator — an exception in a single chapter's
-  // drive() would otherwise disable scroll, nav and copy along with it.
-  // guarded() latches per name: first throw logs the error once and disables
-  // that subsystem; every later call is skipped; the rest of the frame runs.
-  const guarded = createFailureGuard();
-  const stepCamBlend = createCameraBlendStepper(sceneApi, director, lens, guarded, endCamBlend);
 
   /* ================================================================
      FRAME ORDER: THE CAMERA IS FINISHED BEFORE ANYTHING READS IT
@@ -857,8 +966,9 @@ export function boot(opts = {}) {
        stepCamBlend, i.e. AFTER director.setOwned() and director.apply() had
        already run for this frame. That is one line too late in exactly one
        case, and it is the case that bites: when the delta that cancels the
-       blend is also the delta that carries p across the 0.0008 ownership
-       threshold, setOwned(true) ran first and captured `hero` from a camera
+       blend is also the delta that carries p across the ownership boundary
+       (HERO_OWNED_P, 0.0008 past the hero's pose — read once, below), then
+       setOwned(true) ran first and captured `hero` from a camera
        the dying blend still had mid-lap. Measured on a real wheel-driven
        down-wrap (in-page rAF-timed WheelEvents, ~17 ms apart, one case per
        fresh page) interrupted by a single 500 px delta at 1800 ms: that delta
@@ -889,22 +999,47 @@ export function boot(opts = {}) {
        A rewound lap that reaches its own first frame lands the journey back
        on the rest it departed (landWrapHome, top of spineFrame), and the
        visitor's continued reverse scroll simply carries on from there. */
-    if (camBlend && blendCancelled()) {
-      if (camBlend.wrapDir && scroll.lastDir) {
-        steerWrapBlend(scroll.lastDir);
-        // The steering gesture is retired on the spot — the same retirement
-        // the wrap gives the gesture that fires it — so the rest of the same
-        // flick cannot re-enter this block, cancel the lap, or buy a wrap of
-        // its own while the lap flies. (The onWrap steering path skips this:
-        // the wrap block that calls it raises the wall itself.)
-        scroll.retire(scroll.lastDir);
-      } else dropCamBlend();
+    /* THE ANSWER IS THE MODEL'S, AND IT ARRIVES DISCRIMINATED (J01). This
+       used to be `scroll.sinceInput < 50 && scroll.answeredAt === null`: a
+       clock read, a private wall and a threshold that existed in no model.
+       transition.blendCancelled() is one call to the model's decision port,
+       and it answers `null` or a frozen `{dir}` — so the steering branch
+       needs no second question about direction, and there is no scalar here
+       to truthiness-test. It is called INSIDE this guard, never hoisted: on
+       the no-blend path the model must not read its clock at all. */
+    if (transition.blend) {
+      const claim = transition.blendCancelled();
+      if (claim) {
+        if (transition.blend.wrapDir && claim.dir) {
+          transition.steerWrapBlend(claim.dir);
+          // The steering gesture is retired on the spot — the same retirement
+          // the wrap gives the gesture that fires it — so the rest of the same
+          // flick cannot re-enter this block, cancel the lap, or buy a wrap of
+          // its own while the lap flies. (The onWrap steering path skips this:
+          // the wrap block that calls it raises the wall itself.) The model
+          // owns its own gesture bookkeeping, so this stays on this side of
+          // the seam rather than reaching through the controller.
+          scroll.retire(claim.dir);
+        } else transition.dropCamBlend();
+      }
     }
     // A visible entry may deliberately outlive its camera flight. The first
     // real scroll after landing still owns the scene immediately: retire the
     // synthetic clock so this very frame goes back to the chapter's pure p
     // drive, just as dropCamBlend does while the flight is active.
-    if (!camBlend && chapterEntry && blendCancelled()) chapterEntry = null;
+    if (!transition.blend && transition.chapterEntry && transition.blendCancelled())
+      transition.chapterEntry = null;
+    /* ONE READ OF THE OWNERSHIP BOUNDARY, USED BY BOTH OF THE FRAME'S
+       QUESTIONS ABOUT IT. These were two separate `p > 0.0008` comparisons —
+       the mid-lap guard below, and setOwned's own argument — and the comment
+       at the head of applyFrame turns on the fact that the delta cancelling a
+       blend can be the same delta that carries p across this boundary. Two
+       spellings of one boundary is how those two frames drift apart; hoisting
+       it to a single evaluation is stronger than keeping the two literals in
+       step, because there is now nothing to keep in step. Pure in `p`, which
+       nothing between here and setOwned touches, so the frame's observable
+       order is unchanged. */
+    const owned = p > HERO_OWNED_P;
     /* OWNERSHIP MAY NOT BE TAKEN FROM A CAMERA A BLEND HOLDS MID-LAP
        (2026-08-16). setOwned(true) captures the hero composition from the
        LIVE camera, which is right only while the un-owned camera IS the
@@ -919,30 +1054,21 @@ export function boot(opts = {}) {
        the blend, so the restore has to happen here. Synchronous, and both the
        director's apply() and the surviving blend overwrite the camera later
        this same frame, so nothing of the re-asserted pose ever renders. */
-    if (camBlend && !director.owned && p > 0.0008) {
+    if (transition.blend && !director.owned && owned) {
       guarded('director', () => director.applyHeroPose());
     }
-    const owned = p > 0.0008;
     director.setOwned(owned);
     // A route-faithful first-leg flight is written below by the compositor at
     // its continuously presented coordinate. Writing the parked destination
     // here first would advance handheld state twice and briefly let two camera
     // clocks disagree inside one frame.
-    const blendThisFrame = camBlend;
+    const blendThisFrame = transition.blend;
     const routeFaithfulThisFrame = !!(blendThisFrame && blendThisFrame.routeFaithful);
     if (owned && !routeFaithfulThisFrame) guarded('director', () => director.apply(p, dt));
-    // ...and then the jump's blend composes onto that written pose. Not
-    // guarded() by name: a latched-dead blend would strand `camBlend` and
-    // leave the chapters detached for the rest of the session, so a throw
-    // abandons the blend instead — the camera keeps the destination pose the
-    // director just wrote, which is where the jump was going anyway.
-    if (camBlend) {
-      try { stepCamBlend(camBlend, railWrap || railFlight, dt); }
-      catch (err) {
-        console.error('[journey] camera blend threw — the jump lands directly:', err);
-        endCamBlend();
-      }
-    }
+    // ...and then the jump's blend composes onto that written pose. The
+    // throw-abandons-the-blend rule travelled with the stepper into the
+    // controller; see stepCamBlend there.
+    if (transition.blend) transition.stepCamBlend(dt);
 
     // Route state is parked at the destination throughout a direct click.
     // Reconstruct the coordinate actually being presented from the camera's
@@ -951,14 +1077,75 @@ export function boot(opts = {}) {
     // rail/camera rather than reacting to a destination snap.
     const travelP = routeFaithfulThisFrame && Number.isFinite(blendThisFrame.presentedP)
       ? blendThisFrame.presentedP
-      : railFlight ? flightProgress(railFlight) : p;
+      : transition.railFlight ? flightProgress(transition.railFlight) : p;
     presentedP = travelP;
     // State remains parked at the clicked destination for routing and active
     // nav semantics. Only the route-authored adjacent flight presents its
     // synthetic coordinate to scene/chapter/lens readers, exactly as scroll.
     const frameP = routeFaithfulThisFrame ? travelP : p;
 
-    guarded('seams', () => seams.update(frameP));
+    /* THE ONE CAMERA PUBLICATION (J02). Here, and nowhere else: after
+       stepCamBlend has finished composing the camera, and above the first
+       reader of it. Earlier inverts the fog correction — the blend writes
+       fog, and a publication taken at the top of this function would hand
+       every reader the departure's ramp while the camera flew the arrival's
+       (measured on Mission -> Final: the Mission pose rendered 3.6/255
+       brighter the instant the click landed). Later would mean at least one
+       reader had already gone to the live object.
+
+       Nothing between stepCamBlend above and this line touches the camera.
+       That is the load-bearing property, and it is what makes the frozen
+       pose below equal to the pose this frame will actually present.
+
+       `gliding` is taken here rather than at applyChapterFrame's call: the
+       model's glide state is written by scroll.update(), which spineFrame
+       calls once per frame above applyFrame, and nothing between this line
+       and that call reaches the model at all. The value is the same one; it
+       is now a member of the frame instead of a second reach for a live
+       object halfway down the reader list. */
+    const frame = framePublisher.publish({
+      dt,
+      stateP: p,
+      routeP: frameP,
+      presentedP: travelP,
+      transition,
+      gliding: scroll.gliding,
+    });
+
+    /* AND FROM HERE DOWN, THE FRAME IS THE ONLY COORDINATE AUTHORITY (D1).
+       Every reader below this line takes its progress, its delta and its
+       glide state off `frame` — never off `p`, `dt`, `frameP` or `travelP`,
+       which are the publication's INPUTS and are not read again. The values
+       are identical by construction (`routeP: frameP`, `presentedP: travelP`,
+       `stateP: p`, `dt`) so nothing changes; what changes is that the answer
+       to "which time coordinate am I in?" is now ONE object with a `seq` on
+       it, instead of four live locals a later edit could re-point one at a
+       time. tools/test-frame-publication.mjs C6 holds it: it reads the region
+       of this function below the publish call and fails on any reappearance
+       of the loose names, and it carries an enumerated allow-list of the
+       live reaches that legitimately survive (below).
+
+       WHAT DELIBERATELY STAYS LIVE HERE, and why each one cannot be a member:
+
+         * `sceneApi.camera` — ui.js binds a PROJECTION from it
+           (ui/frame-projection.js) and the publication refuses to carry a
+           projection matrix (see its header, boundaries.md B.8). C5 pins the
+           file-level camera allow-list this respects.
+         * `transition.railWrap` / `transition.railFlight` — journey/rail.js
+           and journey/ui/copy-arrival.js compare these tickets BY IDENTITY
+           and read `phase` as it is mutated. A frozen copy would stop the
+           rail docking and the copy carry from tracking the lap. The
+           publication's own header states this refusal.
+         * `transition.cameraStateDisagree` — NOT the same value as
+           `frame.transitionPhase.disagree`. beginFlight() raises the flag
+           BEFORE beginBlend() exists, and placeAt() publishes two dt=0 frames
+           in between, on which phaseOf() answers null. rail.js edge-detects
+           this flag (`jumpStarted`), so routing it through the frame would
+           move that edge by two frames. Measured by reading the order in
+           directJumpTo; see D1's evidence note.
+         * `transition.chapterEntry`, `transition.stepHeroEntry/Exit` — the
+           controller's own per-frame steppers, called not read. */
+    guarded('seams', () => seams.update(frame.routeP));
     /* Advance a navigation-only entry against what is actually visible, not
        against the camera flight's fraction. Connect is camera-gated: spending
        this clock while the gaze still hid the ground made its fronts finish in
@@ -970,7 +1157,9 @@ export function boot(opts = {}) {
     // lives in chapters/inspire/index.js now — the spine knows no chapter's
     // internals. Each chapter is guarded individually: one broken chapter is
     // dropped, the others keep driving.
-    chapterEntry = applyChapterFrame(chapters, chapterEntry, frameP, dt, scroll.gliding, guarded);
+    transition.chapterEntry =
+      applyChapterFrame(chapters, transition.chapterEntry, frame.routeP, frame.dt,
+        frame.gliding, guarded);
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
@@ -979,32 +1168,40 @@ export function boot(opts = {}) {
     // Final leg the nearest lit ring member — the "selected fairy-ring
     // highlight", since the travelling front has no exposed world position).
     guarded('lens', () => {
-      lens.update(frameP);
-      let focus = null;
+      lens.update(frame.routeP);
       // Focal-source handoff points: shortly (+0.02) after each chapter's range
-      // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87).
-      if (frameP < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
-      else if (frameP < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
-      else if (frameP < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
-      else if (chapters.final.armed) {
-        // the Final chapter owns its focal anatomy (M4): the travelling
-        // growth front while it runs, else its own rest-member hint
-        focus = chapters.final.focusWorld();
-      }
-      lens.setFocusHint(focus);
+      // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87). Each
+      // chapter owns its own focal anatomy — Final's is the travelling growth
+      // front while it runs, else its own rest-member hint. See
+      // pickChapterFocus at module scope.
+      lens.setFocusHint(pickChapterFocus(chapters, frame.routeP));
     });
 
-    const ch = chapterAt(p);
+    const ch = chapterAt(frame.stateP);
     // Hero furniture releases as the journey leaves the Mission composition,
     // and comes back only once the camera has actually got here. PRESENCE x
     // ARRIVAL, one writer — see THE HERO FURNITURE block in boot(). max()ed
     // with the DEPARTURE term (heroExit): a jump out of the hero fades what
     // is up over the blend's opening beat instead of stepping it on the
     // click frame — the up-wrap scrim flash (2026-08-16).
-    paintHeroFurniture(Math.max(heroPresence(travelP) * stepHeroEntry(dt), stepHeroExit(dt)));
+    paintHeroFurniture(Math.max(
+      heroPresence(frame.presentedP) * transition.stepHeroEntry(frame.dt),
+      transition.stepHeroExit(frame.dt)));
 
-    guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt,
-      { cameraStateDisagree, railWrap, railFlight, travelP }));
+    /* THE UI'S FIVE. Four of them are now the frame's own members; the three
+       that are not are the enumerated residue named in the block above the
+       seams call — a live camera the projection must bind, and the two rail
+       tickets two files compare by identity. They are passed as the loose
+       parameters they are, so that the ones that ARE frozen cannot be
+       mistaken for them. ui.update()'s SIGNATURE is unchanged: its opts bag
+       is also the contract tools/trace/deck.mjs drives, which is outside this
+       order's allow-list, so the retirement here is of the loose READS, not
+       of the parameter names. */
+    guarded('ui', () => ui.update(frame.stateP, ch.id, sceneApi.camera, frame.dt,
+      { cameraStateDisagree: transition.cameraStateDisagree,
+        railWrap: transition.railWrap,
+        railFlight: transition.railFlight,
+        travelP: frame.presentedP }));
 
     /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
        used to replaceState `#/<chapter>` from right here, every time the
@@ -1015,244 +1212,13 @@ export function boot(opts = {}) {
        opinion about the URL. Nothing replaces this block. */
   }
 
-  /** Has manual input taken the camera back? Read once per frame, at the TOP
-   *  of applyFrame — see the block there for why the answer must be acted on
-   *  before the director decides ownership. */
-  function blendCancelled() {
-    /* THE GESTURE THAT BOUGHT THE MOVE IS NOT THE VISITOR CANCELLING IT
-       (2026-08-14 — Hannah: "it still just jumps DIRECTLY when I scroll up
-       from the top, or down from the bottom").
-
-       Manual input drops the blend — and with it the arrival the copy was
-       being timed against. Handing the copy back to the scroll rule here
-       (rather than letting the envelope play out over a camera that is no
-       longer travelling) is what keeps the two from fighting: the scroll
-       rule picks the block up at exactly the opacity the envelope had
-       reached, so there is no step and no second animation.
-
-       That rule was written for a jump the visitor asks for with a CLICK,
-       where any scroll afterwards is unambiguously them taking the camera
-       back. A WRAP is asked for with the scroll itself, and it is armed from
-       inside scroll.update() — one line before applyFrame() runs in the very
-       same frame (see the tick order in boot()). `sinceInput` at that moment
-       is the age of the wheel delta that just caused the wrap: measured on a
-       real wheel-driven wrap, 1.3 ms forward and 7.1 ms back. So the test
-       below fired on the blend's OWN FIRST FRAME and every wrap ran exactly
-       ZERO blend frames — the camera stood where placeAt's director pass had
-       put it, which is the destination. Measured before this change: the
-       camera moved 14.6643 world units in ONE frame and did not move again
-       for the next 5 s. A teleport, in both directions, on every wrap.
-
-       Two passes missed it because both measured the wrap through
-       `journey.wrap(dir)`, the QA hook — which is navigateTo() with no wheel
-       event anywhere near it, so `sinceInput` is ~1e9 and the blend runs in
-       full. Same call, same destination, traced side by side: the QA hook
-       travels 76.42 units over 3.8 s across 178 frames; the wheel does 14.66
-       units in one frame. `2c22844`'s authored 4 s lap and its frame strip
-       were real — and unreachable by any visitor. The lesson is that a wrap
-       must never be gated from a script that does not deliver the input that
-       causes it.
-
-       THE RULE IS NOW: a blend is cancelled by input the model ACTS ON.
-       Input the model is currently refusing is not the visitor taking
-       control — it is the gesture that asked for this move still finishing.
-       `scroll.answeredAt` is exactly that refusal: the arrival wall, which
-       the wrap raises at the end of its own placement (scroll.js) and which
-       makes `carrying()` refuse every remaining delta of the same gesture.
-       While it stands, the tail of the flick buys nothing and moves nothing,
-       so cancelling on it could only strand the camera mid-lap.
-
-       It comes down — and the camera goes back to the visitor — on exactly
-       the three events that already mean "the visitor is asking for
-       something new": an ARRIVAL_HOLD_MS (90 ms) pause, a reversal, or a
-       placement (dropWall). Tying the camera hand-back to that same
-       threshold is the point rather than a coincidence: the instant a
-       visitor has earned another section is the instant they have earned the
-       camera back.
-
-       Safe for the click jump it was written for, whose contract is
-       unchanged: directJumpTo -> placeAt -> setProgress -> newGesture ->
-       dropWall, so the wall is DOWN on every frame of a click blend and the
-       first stray delta still cancels it within one frame. (`answeredAt` can
-       be 0 — the Mission anchor — so this must be a null test, never a
-       truthiness test.) */
-    return scroll.sinceInput < 50 && scroll.answeredAt === null;
-  }
-
-  /** Cancelled: end the blend and hand back everything it was carrying — the
-   *  copy envelope to its scroll rule, the hero furniture's arrival term, and
-   *  (inside endCamBlend) the camera itself. */
-  function dropCamBlend() {
-    endCamBlend(false);
-    guarded('ui', () => ui.cancelCopyEntry());
-    cancelHeroEntry();
-  }
-
-  /** Steer the wrap's lap to the scroll's own direction (see the block at the
-   *  top of applyFrame). With the wrap: keep flying — a second same-way
-   *  gesture is spent on the ride already under way, never answered with a
-   *  teleport. Against it: the lap retraces its own path (stepCamBlend runs t
-   *  backwards, so bow, rise and the authored turn all unwind exactly as they
-   *  wound). Either caller retires the steering gesture — the applyFrame
-   *  block via scroll.retire, the onWrap path via the wrap block's own wall —
-   *  so the rest of the same flick buys nothing further. */
-  function steerWrapBlend(dir) {
-    const play = dir === camBlend.wrapDir ? 1 : -1;
-    if (play === camBlend.play) return;
-    camBlend.play = play;
-    // The copy envelope and the hero furniture's arrival term were armed on
-    // this lap's own frame and step by its same dt, so they reverse with it
-    // and unwind to exactly the pre-wrap frame as the rewound lap lands.
-    // Cancelling them here instead handed the copy to the scroll rule, which
-    // reads a p the wrap parks at the DESTINATION — it painted the copy of
-    // the section the camera was flying away from, and held it up through
-    // the whole retrace (Hannah, 2026-08-16).
-    guarded('ui', () => ui.setCopyEntryPlay(play));
-    setHeroEntryPlay(play);
-    /* AND THE CHAPTERS ARE TOLD THE MOVE'S NEW LANDING (2026-08-16 — Hannah:
-       "weirdness with how the group mushrooms show... some kind of
-       glitchiness in when and how that appears"). The Final chapter paces its
-       whole reveal against the blend contract — destination pull, direction
-       (retire vs arrive), and the move's remaining room (setBlending there).
-       A steered lap changes all three: a down-wrap that rewinds is no longer
-       a departure from the field, it is an arrival back INTO it, and left
-       un-announced the driver kept retiring toward the hero's pull — with
-       the monotone fade latch holding the chapter dark — while the camera
-       flew back to a field that should have been relighting, and the whole
-       thing popped on at the landing instead. Same re-announcement a jump
-       overtaking a jump already makes; setBlending is written to be
-       recomputed from the new arguments. */
-    setBlending(true,
-      play > 0 ? camBlend.dstX : camBlend.pos0.x,
-      Math.max(0.05, play > 0 ? camBlend.dur - camBlend.t : camBlend.t));
-  }
-
-  /** A rewound lap has reached its own first frame: the camera stands where
-   *  the wrap departed, so place the journey back on that rest and the two
-   *  agree again — the same contract endCamBlend keeps for a landing, at the
-   *  other end of the path. Runs at the TOP of spineFrame, never from inside
-   *  stepCamBlend: placeAt composes a full frame at the home rest, and
-   *  landing mid-applyFrame would let the remainder of that frame re-drive
-   *  every reader at the stale destination p (exactly the mixed-frame class
-   *  the frame-order block above applyFrame exists to rule out). */
-  function landWrapHome() {
-    const homeP = camBlend.homeP;
-    camBlend = null;
-    railWrap = null;
-    railFlight = null;
-    chapterEntry = null;
-    cameraStateDisagree = false;
-    guarded('lens', () => lens.setLookOverride(null));
-    setBlending(false);
-    /* Capture hygiene, same invariant restoreHero() guards for endCamBlend:
-       placeAt is about to decide ownership, and setOwned(true) captures the
-       hero composition from the LIVE camera — which, un-owned mid-rewind,
-       holds the lap's first frame rather than the hero's pose. Re-assert the
-       hero first (synchronous, placeAt overwrites it in the same tick, so
-       nothing of it renders) so the capture can never bake a lap frame into
-       `hero`. */
-    if (!director.owned) guarded('director', () => director.restoreHero());
-    placeAt(homeP);
-    // The hero furniture cannot ride the reversed envelope home the way the
-    // copy does: an up-wrap ARMS no entry (its destination is not the hero),
-    // and presence is keyed to p, which the lap parked at the far end — so a
-    // rewound lap would land on the hero with the callouts popping on at
-    // full. A zero-length arm gives the landing the COPY_JUMP_TAIL_S breathe
-    // the copy's own envelope already ends on; for a non-hero home it clears
-    // the term, which is a no-op. (The copy needs nothing here: its envelope
-    // unwound to exactly this frame, so placeAt's snap painted it already.)
-    armHeroEntry(chapterAt(homeP).id, 0);
-  }
-
-  /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
-   *  after the director has written the destination pose and before anything
-   *  reads the camera — see the frame-order block above applyFrame. State is
-   *  already AT the destination; the camera glides straight from where it was
-   *  onto that pose. A blend manual input has cancelled never reaches here:
-   *  applyFrame drops it at the top of the frame. */
-
-  /** The blend is over — landed, cancelled, or abandoned. The camera and the
-   *  journey's state agree again from here, so this is where the eased arming
-   *  snap directJumpTo deferred happens. A naturally landed chapter entry may
-   *  keep its own visible reveal clock; cancellation/placement clears it. */
-  function endCamBlend(keepEntry = false) {
-    camBlend = null;
-    railWrap = null;
-    railFlight = null;
-    if (!keepEntry) chapterEntry = null;
-    cameraStateDisagree = false;
-    /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
-       "halfway through the loop I stop the scroll, the hero mushroom can end
-       up displaced... and it stays permanently stuck").
-
-       "The camera and the journey's state agree again from here" was true of
-       the two endings this comment was written for. It was not true of the
-       third. A blend that LANDS has just written the destination pose itself;
-       a blend that is cancelled while the director OWNS the camera is
-       corrected on the very next line of applyFrame, by director.apply(p) —
-       measured on a real wheel-driven UP-wrap interrupted at
-       400/1200/2000/3200 ms, the camera is on pose(0.97) within one frame and
-       stays there, 0.0000 units of disagreement at all four. But a blend
-       cancelled while the director is UN-OWNED — the down-wrap, whose
-       destination is p = 0 — had no such writer. setOwned(false)'s restore is
-       a one-shot that fired at the start of the lap, applyHeroPose() only ran
-       from inside the blend, and the blend is what just stopped. So the camera
-       simply stayed wherever the lap had reached: measured 16.11, 24.98, 22.29
-       and 1.07 world units from the hero pose (fov out by 7.30, 5.73, 2.97 and
-       0.14 deg) at those same four moments, and it never moved again — 5 s of
-       trace past the cut, drift 0.0000 on every frame of every case. That is
-       the "permanently", and the reason the state was one no scroll position
-       described.
-
-       It does not stop at the frame, either. The strand is what the NEXT
-       setOwned(true) hands to captureHero(), so `hero` inherits it, and the
-       wrap's own destination is `hero`: re-fired from the same page, the lap
-       covered 7.97 / 22.84 / 53.77 / 75.67 units over 0.98 / 1.97 / 3.14 /
-       3.88 s against the clean 76.43 units over 3.86 s. One interruption
-       therefore un-does `e4df4b0` — "the wrap genuinely travels" — for the
-       rest of the session, which is the loudest thing the strand costs and
-       the reason this is not merely a framing blemish.
-
-       The cure is to make the un-owned half do what the owned half already
-       does, rather than to invent a third behaviour for it. p = 0's pose is
-       the hero composition, so that is what gets written. Three candidates
-       were weighed and this is the only one that keeps the model's contract
-       that state is a pure function of scroll position: leaving the camera
-       where it is and letting the next gesture take over from there makes the
-       view a function of HISTORY (the same class of fault as the M4 stuck
-       camera); refusing to be cancelled past some point of the lap would trade
-       a bug for a 3.8 s lockout and break "manual input takes control back
-       within a frame". A hard hand-back is a step — but it is the step every
-       cancelled jump on this site has always made (§15's residual), and it is
-       now the SAME step in both directions instead of a step in one and a
-       stranding in the other.
-
-       Ordering: this runs while `owned` still reflects the frame's p, before
-       director.apply() would write anything, and the assertion is skipped when
-       the director owns the camera precisely so it can never fight it. */
-    if (!director.owned) guarded('director', () => director.restoreHero());
-    // The grade goes back to being a pure function of p. The last override
-    // written was look1 — lookOf(destination p) — so the hand-back is a no-op
-    // by construction, exactly as the copy envelope's is (d1ecc23).
-    guarded('lens', () => lens.setLookOverride(null));
-    setBlending(false);
-    snapChapterLandings(chapters, guarded);
-  }
-
-  /** Tell every chapter that owns the distinction whether the journey's state
-   *  and the camera currently DISAGREE — i.e. a jump has snapped the state to
-   *  the destination while the camera is still travelling toward it. A chapter
-   *  in that window may trust only its camera-pure terms. Optional: a chapter
-   *  whose reveal is a product of camera-pure factors (Connect's
-   *  `amount * resolve`, Inspire's `master(az) * arr(az)`) self-corrects on
-   *  the first blend frame and does not implement this. */
-  function setBlending(on, dstCamX, durS) {
-    for (const id in chapters) {
-      const mod = chapters[id];
-      if (mod.setBlending)
-        guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX, durS));
-    }
-  }
+  /* THE SIX TRANSITION OPERATIONS LIVED HERE (J01). blendCancelled,
+     dropCamBlend, steerWrapBlend, landWrapHome, endCamBlend and setBlending
+     are journey/transition/controller.js's now, with every line of their
+     measured rationale, and the state they read and write went with them.
+     applyFrame and spineFrame call them through `transition`; the writer
+     order this file is pinned on (tools/test-frame-order.mjs S1/S2) is
+     unchanged, because a receiver is not a reorder. */
 
   /** Jump every chapter's eased state to its target (the placeAt contract). */
   function snapChapters() {
@@ -1263,7 +1229,7 @@ export function boot(opts = {}) {
     // A fully rewound wrap lands before anything else runs, so the whole
     // frame — scroll, state, readers — composes at the home rest (see
     // landWrapHome for why it must not happen mid-applyFrame).
-    if (camBlend && camBlend.play < 0 && camBlend.t <= 0) landWrapHome();
+    if (transition.rewoundHome) transition.landWrapHome();
     scroll.update(dt);
     journey.setProgress(scroll.progress);
     const p = journey.update(dt);
@@ -1297,7 +1263,7 @@ export function boot(opts = {}) {
     // A placement is already-arrived by definition. This also keeps a QA
     // placement issued during a flight deterministic rather than inheriting
     // that flight's synthetic chapter-entry position.
-    if (snap) chapterEntry = null;
+    if (snap) transition.chapterEntry = null;
     journey.snapTo(p);
     scroll.setProgress(p);
     // force every seam up to and including the target to arm before anything
@@ -1382,6 +1348,10 @@ export function boot(opts = {}) {
       activated = true;
       scroll.enabled = true;
       state.revealRail();
+      /* THE COMPATIBILITY GLOBAL. Written out here on purpose:
+         `tools/test-ui-closure.mjs`'s A6 reads this file's TEXT for every
+         site that names the global, and a publication that scan cannot see
+         is one nobody guards. `activate()` is idempotent and re-publishes. */
       window.journey = state;
       if (first) {
         const target = activationEntry || queuedEntry;

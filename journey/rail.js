@@ -120,11 +120,14 @@
 // `expanded()` covers that focus in the release rule too.
 
 import { CONTENT } from '../content/content.js';
-import { CHAPTERS, chapterAt, restProgress, startOf } from './route.js';
+import { CHAPTERS, chapterAt, restProgress, HERO_END_P } from './route.js';
 import { buildSymbol } from './symbols.js';
 import { CARD_ICONS } from './cards/index.js';
 import { installBackdropDismiss } from './backdrop.js';
 import { claimInput, releaseInput } from './scroll.js';
+import { createOwner } from './ui/owner.js';
+import { mediaQuery, REDUCE_MOTION } from './ui/media.js';
+import { NAV_ROW_ITEMS, rowLayout } from './layout/rail-geometry.js';
 
 /* The panel reuses the initiative pictographs already drawn for the in-scene
    chips. Social marks are local to this panel: they replace the former text
@@ -137,14 +140,26 @@ const SOCIAL_ICONS = {
 const SOCIAL_ORDER = ['X', 'Discord', 'GitHub'];
 const CLOSE_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15"/></svg>';
 
-/* The exact Mission pose stays useful for placements and capture hygiene. */
-const SHOW_P = 0.004;
-/* The first non-Mission chapter boundary is the handoff while scrolling: the
-   rail should join as Inspire begins, not wait until Inspire's late rest pose.
-   Direct jumps still use cameraStateDisagree below, so they reveal only when
-   their camera has actually landed. Derived from the route so retiming moves
-   the threshold with the chapter. */
-const FIRST_OUTSIDE_P = CHAPTERS[1] ? startOf(CHAPTERS[1].id) : SHOW_P;
+/* THE END OF THE HERO'S LEG is the handoff while scrolling: the rail should
+   join as the first chapter proper begins, not wait until that chapter's late
+   rest pose. Direct jumps still use cameraStateDisagree below, so they reveal
+   only when their camera has actually landed.
+
+   IT IS THE HERO'S OWN BOUNDARY, NOT AN INDEX. This read `CHAPTERS[1] ?
+   startOf(CHAPTERS[1].id) : SHOW_P` — derived from the route, but positionally:
+   "chapter one" means "the one after the hero" only while the hero is chapter
+   zero, which is the same undeclared assumption the p-literals in journey.js
+   carried. HERO_END_P says the thing itself, and route.js's CHAPTERS builds
+   one chapter's `end` and the next one's `start` from a single accumulated
+   `acc / TOTAL`, so it is the identical double, not merely an equal one.
+
+   AND THE FALLBACK IS GONE, WHICH IS THE POINT. `SHOW_P = 0.004` was the
+   alternate of that conditional — reachable only on a route with no second
+   chapter, and even there wrong: it was a fossil of the retired pose-aligned
+   latch described further down, a value near the hero's POSE standing in for
+   a boundary at the end of the hero's LEG. A hero always has an end, so the
+   expression that needed a stand-in no longer exists. */
+const FIRST_OUTSIDE_P = HERO_END_P;
 
 /* ===========================================================================
    THE HALF MOON (Hannah, 2026-08-13 later still)
@@ -223,15 +238,79 @@ const FIRST_OUTSIDE_P = CHAPTERS[1] ? startOf(CHAPTERS[1].id) : SHOW_P;
    PATH there. */
 const N = CHAPTERS.length;
 const RAIL_RESTS = CHAPTERS.map(c => restProgress(c.id));
+
+/* ===========================================================================
+   THE ROW IS NOT THE CHAPTER LIST (owner's navigation restage, 2026-08-26)
+   ===========================================================================
+   "In the middle, we should have Inspire, Connect, and Equip with Equip
+    showing Coming Soon when you hover over it. Intro and Epilogue should be
+    smaller. ... Ownership should become a button in the Epilogue section."
+
+   This ends the one-to-one derivation the header above describes: the
+   navigator's items are now DECLARED (content/content.js `navigator.items`,
+   re-exported frozen by layout/rail-geometry.js so painting and the dock
+   consumers share one object) rather than being CHAPTERS in manifest order.
+   Two divergences exist, both authored:
+
+     · `equip` is an item with NO chapter — a placeholder whose whole
+       behaviour is its answer ("Coming soon"). It is not a link, it never
+       reads active, and it is absent from the site-map panel.
+     · `owned` is a chapter with NO item — reached from the Epilogue's
+       Ownership action and from the panel. While the visitor rides through
+       it, the ring travels the Connect->Epilogue connector and NO item
+       reads active, which is the honest statement of "you are somewhere
+       the menu does not list".
+
+   The route itself is untouched: CHAPTERS keeps its five entries, its
+   p-ranges and its cardinality guard. The validation below is loud on
+   purpose — a row item naming an unknown chapter is a content bug and must
+   not fail silently into a dead link. */
+const ROW = NAV_ROW_ITEMS.map((it) => {
+  if (it.chapter) {
+    const ci = CHAPTERS.findIndex(c => c.id === it.chapter);
+    if (ci < 0) {
+      throw new Error(`[rail] navigator row names unknown chapter '${it.chapter}'`);
+    }
+    return { kind: 'chapter', id: it.chapter, ci, size: it.size || 'major' };
+  }
+  return {
+    kind: 'placeholder', id: it.placeholder || 'soon', ci: null,
+    label: it.label || '', note: it.note || '', size: it.size || 'major',
+  };
+});
+const ROW_N = ROW.length;
+{
+  const seen = new Set();
+  for (const r of ROW) {
+    if (seen.has(r.id)) throw new Error(`[rail] navigator row repeats '${r.id}'`);
+    seen.add(r.id);
+  }
+}
+
+/** Chapter index -> row index, or -1 for a chapter with no row item. */
+const ROW_OF_CHAPTER = CHAPTERS.map((c) => ROW.findIndex(r => r.id === c.id));
 /* The horizontal map speaks status through colour, continuously: future is a
    legible neutral grey, completed chapters are a slightly brighter warm grey,
    and proximity blends either base into the one gold arrival. Keeping these
    values here also lets the live rail start in the exact state authored by
    the first-paint shell in index.html. */
+/* RE-WARMED FOR THE CENTRED ROW (owner's navigation restage, 2026-08-26).
+   The reference renders draw every item's ink in the scene's own gold —
+   inactive rings ~rgb(160,125,72), inactive glyph strokes brighter warm
+   gold — where the strip's future tier was a neutral grey that read as
+   disabled against the lit ground. The STATUS LANGUAGE IS KEPT: future is
+   still the dimmest tier, past sits brighter, and the one saturated gold
+   arrival stays the active voice; only the greys' hue moves into the
+   scene's palette. */
+/* THE WEIGHTS (owner, 2026-08-26, third pass): active core = 100%,
+   inactive core = 60-70% (these alphas), bookends = 35-45% (the minors'
+   extra opacity step lives in site.css so it covers glyph and label
+   together). Warm gold throughout — the neutral-grey future tier died
+   with the first restage pass. */
 const GLYPH_COLOURS = Object.freeze({
-  future: Object.freeze({ rgb: [202, 202, 198], alpha: 0.72 }),
-  past: Object.freeze({ rgb: [222, 219, 210], alpha: 0.84 }),
-  active: Object.freeze({ rgb: [240, 200, 119], alpha: 1 }),
+  future: Object.freeze({ rgb: [226, 190, 122], alpha: 0.66 }),
+  past: Object.freeze({ rgb: [232, 200, 142], alpha: 0.72 }),
+  active: Object.freeze({ rgb: [246, 208, 126], alpha: 1 }),
 });
 /* The arc the marks inhabit. 180deg is the half moon itself, and it is the
    number the whole geometry is derived from: the pitch, the radius and the
@@ -357,37 +436,43 @@ function ringY(k) {
    and go above and below. No position needs a holdoff, so none is written —
    `--pillx` and its `margin-right` arithmetic are gone with it.
 
-   PILL_H is the pill's own box (0.34rem of padding either side of a 0.6rem
-   line = 27.63px measured, at both font sizes — the padding, not the type, is
-   what sets it). It is the ROW WIDTH for the test and nothing else, and the
-   test is not delicate in it: at n = 5 the tips fail on 9.5px of overlap and
-   would keep failing anywhere down to ~11px of pill height. */
-const PILL_H = 28;
-const HUG = 9;                             // site.css `--cl-hug`, 0.56rem
-
-const PILL_SIDE = (() => {
-  const out = [];
-  for (let k = 0; k < N; k++) {
-    const x = ringX(k), y = ringY(k);
-    // where this pill's own right edge would land if it hung left
-    const edge = x - TILE / 2 - HUG;
-    let crowded = false;
-    for (let j = 0; j < N && !crowded; j++) {
-      if (j === k) continue;
-      const sharesRow = Math.abs(ringY(j) - y) < TILE / 2 + PILL_H / 2;
-      const reachesIn = ringX(j) - TILE / 2 < edge;
-      crowded = sharesRow && reachesIn;
-    }
-    out.push(crowded ? (y <= 0 ? 'up' : 'dn') : null);
-  }
-  return out;
-})();
+   RETIRED WITH THE PILLS (owner's navigation restage, 2026-08-26): the
+   centred row seats every name below its own circle, so the side test and
+   its PILL_H/HUG constants are gone; the two paint sites now REMOVE the
+   pill classes instead of restating them (see the note at the first
+   removal site for the label-hiding fault re-toggling them caused). */
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
   if (text != null) n.textContent = text;
   return n;
+}
+
+/* WHO OWNS A CHAPTER'S VISIBLE NAME: content/content.js, and only it. Said
+   here because the name had three claimants and no decision — `chapters.<id>
+   .nav` in content.js, `nav:` in journey/structure.js, and a `|| 'Purpose'`
+   literal that used to sit inline below. It is content's: the site-map panel
+   already declares that source ("section name chapters.<id>.nav"), and a
+   layout file is the wrong place to keep a word a visitor reads.
+
+   structure.js's `nav` is NOT a second copy of this and must not be collapsed
+   into it — it is a TREATMENT FLAG. `nav: null` is the whole of how Final
+   asks for the echo voice (see the j-rail-echo line in the item builder). It
+   is read for its nullness, never for its text.
+
+   The fallback is the chapter id on purpose: a missing label is a content
+   bug, and it should read as one on screen rather than be papered over with a
+   plausible word that is right for exactly one chapter.
+
+   RESOLVED 2026-08-23 (NAV-01). The rail used to override `mission` to
+   "Mission" while this returned content's "Intro", so the rail and the
+   site-map panel printed different names for the same chapter. Both were
+   shipped copy, so settling it was a copy decision, not a cleanup: the site
+   owner chose "Intro". The override is gone and every surface now reads
+   through content/content.js. */
+function chapterName(id) {
+  return (CONTENT.chapters[id] || {}).nav || id;
 }
 
 /** The reticle: four corner brackets that lock in clockwise around the current
@@ -407,17 +492,43 @@ export function createRail({ onNav } = {}) {
   // Navigation iteration: make the rail the hero's persistent navigation
   // surface instead of revealing it only after the first chapter departure.
   const ALWAYS_OPEN = true;
-  const reduceMotion = typeof matchMedia === 'function'
-    ? matchMedia('(prefers-reduced-motion: reduce)')
-    : { matches: false };
+  /* ------------------------------------------------------------------ *
+   * THE OWNER TREE (J04b, lifecycle.md §6.2/§6.3)
+   *
+   * 19 listeners, 6 timers and 2 rAFs, all of which the rail attaches at
+   * construction and none of which it has ever removed. They now go through
+   * an owner, so `destroy()` can.
+   *
+   * INERT ON THE SHIPPED PATH: `owner.listen` is `addEventListener` plus a
+   * stored remover; `owner.timer` and `owner.raf` return the raw ids the
+   * platform calls return, so every stored-id site and every truthiness
+   * guard below reads exactly what it read before. Nothing calls
+   * `destroy()` in production.
+   *
+   * THE FOUR CHILDREN, and what `lifecycle.md` §6.2 asks A02 to decide.
+   * A02 — the read-only page-versus-journey ownership map — HAS NOT RUN.
+   * The rail is page-lifetime on the shipped path (`main.js:1189` ->
+   * `journey.js:48` `prepareRail`) and journey-lifetime on the fallback,
+   * and §6.2 poses the `document`-scoped keydown (`global` below) and
+   * `document` pointerdown as open questions. THIS SPLIT ANSWERS NEITHER.
+   * All four children hang off one root, so `destroy()` drains all of them
+   * together and the grouping is descriptive, not a disposal policy. When
+   * A02 lands, re-parenting a child is a one-line edit and changes no
+   * behaviour. Recorded as J04b's single unverified ownership call.
+   * ------------------------------------------------------------------ */
+  const owner = createOwner('rail');
+  const itemsOwner = owner.child('items');    // the per-chapter slot + menu links
+  const hoverOwner = owner.child('hover');    // the hover fan and its fold timers
+  const menuOwner = owner.child('menu');      // the menu dialog's own controls
+  const globalOwner = owner.child('global');  // listeners on `document`
+
+  const reduceMotion = mediaQuery(REDUCE_MOTION);
   /* The horizontal map is a desktop instrument. The previous mobile
      navigator remains the authored touch/portrait model: a fixed current
      mark, a separate Menu mark, and a deliberate first tap that unfolds the
      five-section file. Keep this query identical to the stylesheet boundary
      below so interaction and geometry can never disagree. */
-  const mobileRail = typeof matchMedia === 'function'
-    ? matchMedia('(pointer: coarse), (max-width: 900px)')
-    : { matches: false };
+  const mobileRail = mediaQuery('(pointer: coarse), (max-width: 900px)');
 
   /* ------------------------------------------------------------------ */
   /* THE RAIL                                                            */
@@ -428,7 +539,6 @@ export function createRail({ onNav } = {}) {
   const root = el('nav', 'j-rail');
   root.setAttribute('aria-label', 'Journey sections');
   root.dataset.layout = 'mission';
-  const logoMark = document.querySelector('.logo .mark');
   // The fan geometry: every slot's position is (--i - --cur) tiles from the
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
@@ -495,64 +605,98 @@ export function createRail({ onNav } = {}) {
   }
   inner.appendChild(arc);
 
-  const slots = [];      // { id, li, item }
-  const links = {};      // chapterId -> <a> — all five; see THE EPILOGUE
+  const slots = [];      // { id, li, item } — one per ROW entry, in row order
+  const links = {};      // chapterId -> <a> — every chapter WITH a row item
 
-  CHAPTERS.forEach((c, i) => {
+  ROW.forEach((r, i) => {
     const li = el('li', 'j-rail-slot');
-    li.dataset.chapter = c.id;
+    li.dataset.chapter = r.id;
     li.style.setProperty('--i', String(i));
-    const initialColour = i === 0 ? GLYPH_COLOURS.active : GLYPH_COLOURS.future;
+    // The two circle sizes ("Intro and Epilogue should be smaller"). The
+    // class picks which of the root's published diameters this slot reads.
+    li.classList.add(r.size === 'minor' ? 'j-rail-minor' : 'j-rail-major');
+    const isBootCurrent = r.id === 'mission';
+    const initialColour = isBootCurrent ? GLYPH_COLOURS.active : GLYPH_COLOURS.future;
     li.style.setProperty('--glyph-r', String(initialColour.rgb[0]));
     li.style.setProperty('--glyph-g', String(initialColour.rgb[1]));
     li.style.setProperty('--glyph-b', String(initialColour.rgb[2]));
     li.style.setProperty('--glyph-alpha', String(initialColour.alpha));
-    li.style.setProperty('--glyph-scale', i === 0 ? '1.05' : '1');
-    li.style.setProperty('--glyph-glow', i === 0 ? '0.34' : '0.02');
+    li.style.setProperty('--glyph-scale', isBootCurrent ? '1.05' : '1');
+    li.style.setProperty('--glyph-glow', isBootCurrent ? '0.34' : '0.02');
 
-    // Every slot is a real link: every chapter has a route, and a tile a
-    // pointer can reach must be a tile a pointer can press (THE EPILOGUE).
-    const item = el('a', 'j-rail-item');
-    item.href = `#/${c.id}`;
-    item.dataset.chapter = c.id;
-    // createRail() is mounted before the journey's first update. Match the
-    // preboot shell's Mission state at construction time so replacing that
-    // shell cannot briefly drop its gold current-state halo. update() remains
-    // the authority as soon as progress exists and will move both classes and
-    // aria-current together for every later chapter.
-    if (c.id === 'mission') {
-      li.classList.add('now', 'active');
-      item.setAttribute('aria-current', 'true');
+    let item;
+    if (r.kind === 'chapter') {
+      // A chapter's slot is a real link: the chapter has a route, and a tile
+      // a pointer can reach must be a tile a pointer can press.
+      item = el('a', 'j-rail-item');
+      item.href = `#/${r.id}`;
+      item.dataset.chapter = r.id;
+      // createRail() is mounted before the journey's first update. Match the
+      // preboot shell's Mission state at construction time so replacing that
+      // shell cannot briefly drop its gold current-state treatment. update()
+      // remains the authority as soon as progress exists and will move both
+      // classes and aria-current together for every later chapter.
+      if (isBootCurrent) {
+        li.classList.add('now', 'active');
+        item.setAttribute('aria-current', 'true');
+      }
+      // Collapse the TOUCH state only: a second tap acted, the arming is
+      // spent. (The arming itself is dormant while the row is permanently
+      // formed — see the pointerdown listener below — but the contract is
+      // kept for the day ALWAYS_OPEN is retired.)
+      itemsOwner.listen(item, 'click', (e) => {
+        e.preventDefault();
+        const viaTouch = mobileRail.matches && touchOpen;
+        if (viaTouch) collapseTouch();
+        navigate(r.id);
+        if (viaTouch && document.activeElement === item) item.blur();
+      });
+      links[r.id] = item;
+    } else {
+      /* THE PLACEHOLDER IS NOT A LINK, and is deliberately not focusable:
+         it has no destination, so putting it in the tab order would promise
+         one. Its answer is visual — the label swaps to `note` while the
+         pointer is on it (CSS, driven by :hover and `.at`), and a touch
+         flashes the same answer through the timed class below. The note
+         text also sits in the DOM for assistive tech, so the item reads
+         "Equip Soon" rather than as an unexplained dead control. (The word
+         is "Soon", not "Coming Soon" — owner, 2026-08-27 — and it is
+         content/content.js's `navigator.items[].note`, never a literal
+         here. Halving the width is what let the phone row keep its
+         spacing.) */
+      item = el('span', 'j-rail-item j-rail-soon-item');
+      itemsOwner.listen(item, 'pointerdown', (e) => {
+        if (e.pointerType !== 'touch') return;
+        li.classList.add('j-rail-note');
+        itemsOwner.timer(() => li.classList.remove('j-rail-note'), 1600);
+      });
     }
-    // Collapse the TOUCH state only: a second tap acted, the arming is spent.
-    // The hover fan deliberately stays — the pointer is still on the control,
-    // and it folds on pointer-leave (Hannah, 2026-08-09: close on de-hover,
-    // not on click-elsewhere).
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const viaTouch = mobileRail.matches && touchOpen;
-      if (viaTouch) collapseTouch();
-      navigate(c.id);
-      // Android may leave a tapped link matching :focus-visible. The old
-      // mobile control deliberately returned to its one-symbol rest state
-      // after the acting (second) tap; keyboard focus remains untouched.
-      if (viaTouch && document.activeElement === item) item.blur();
-    });
-    links[c.id] = item;
-    // The nav-less chapter keeps the echo's quieter voice, as a style only.
-    if (!c.nav) li.classList.add('j-rail-echo');
 
     const mark = el('span', 'j-rail-mark');
-    mark.appendChild(buildSymbol(c.id));
+    mark.appendChild(buildSymbol(r.id));
     mark.appendChild(reticle());
     item.appendChild(mark);
-    item.appendChild(el('span', 'j-rail-name', c.id === 'mission'
-      ? 'Mission'
-      : (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Purpose'));
-
+    // Name from content (see chapterName above for who owns it and why).
+    // No overrides: content/content.js is the sole owner of the visible
+    // chapter name, and the rail reads through it like every other surface.
+    // The placeholder's label and note are content's too (navigator.items).
+    item.appendChild(el('span', 'j-rail-name', r.kind === 'chapter' ? chapterName(r.id) : r.label));
+    if (r.kind === 'placeholder' && r.note) {
+      item.appendChild(el('span', 'j-rail-soon-note', r.note));
+    }
+    // No PER-SLOT active marker: the owner's design review (2026-08-26)
+    // retired the underline that used to be built into each item ("no huge
+    // glow and no underline"). What states the active chapter is (a) the
+    // item's own brighter ring and ink and (b) the ONE travelling node —
+    // `.j-rail-active-ring`, built once above the loop, which hangs at label
+    // depth and glides along the row. Do not read this comment as "the row
+    // has no dot": it has exactly one, and it belongs to the row rather than
+    // to any slot, which is why it can travel and cannot flash on a state
+    // change. It is also pinned to opacity 0 in the mission layout — the
+    // node is chrome, and chrome arrives with the detachment.
     li.appendChild(item);
     list.appendChild(li);
-    slots.push({ id: c.id, li, item });
+    slots.push({ id: r.id, li, item });
   });
 
   /* ---- the menu control: the second resting symbol ---- */
@@ -669,12 +813,12 @@ export function createRail({ onNav } = {}) {
     // "01 — Mission": the hero callouts number themselves the same way, and so
     // does the static tier's eyebrow. Derived from manifest order.
     txt.appendChild(el('span', 'j-menu-no', String(i + 1).padStart(2, '0')));
-    txt.appendChild(el('span', 'j-menu-name', data.nav || 'Purpose'));
+    txt.appendChild(el('span', 'j-menu-name', chapterName(c.id)));
     if (c.id === 'mission' || c.id === 'final') {
       txt.appendChild(el('span', 'j-menu-line', data.heading || ''));
     }
     a.appendChild(txt);
-    a.addEventListener('click', (e) => { e.preventDefault(); closeMenu({ focusBack: false }); navigate(c.id); });
+    itemsOwner.listen(a, 'click', (e) => { e.preventDefault(); closeMenu({ focusBack: false }); navigate(c.id); });
     li.appendChild(a);
 
     // The section's own contents: label — one sentence → primary link.
@@ -802,11 +946,14 @@ export function createRail({ onNav } = {}) {
   let pinnedRevealed = false;
   let followReadyAt = Infinity;
 
-  /** Desktop keeps the authored moon permanently formed. On touch, the one
-   *  current mark remains the trigger and the existing first-tap expansion
-   *  model owns the fixed mobile list. */
+  /** The centred row is permanently formed on EVERY tier once revealed —
+   *  the touch first-tap arming model belonged to the retired edge file,
+   *  whose slots were hidden at rest and needed an unfold before a tap
+   *  could mean anything. A row that is always visible has nothing to
+   *  unfold, so a first tap is a navigation on phones exactly as a first
+   *  click is on desktops. */
   function keptOpen() {
-    return ALWAYS_OPEN && pinnedRevealed && !mobileRail.matches;
+    return ALWAYS_OPEN && pinnedRevealed;
   }
 
   /** Release the persistent rail only after the hero intro has landed. Adding
@@ -817,12 +964,15 @@ export function createRail({ onNav } = {}) {
     pinnedRevealed = true;
     root.classList.add('on');
     void root.offsetWidth;
-    requestAnimationFrame(() => {
-      if (!mobileRail.matches) {
-        hotOpen = true;
-        root.classList.add('j-rail-hot');
-        document.body.classList.add('j-rail-on');
-      }
+    owner.raf(() => {
+      // Every tier keeps the row formed (see keptOpen). The old mobile guard
+      // is gone with the edge file it protected; the two copy-dimming rules
+      // `body.j-rail-on` used to reach on narrow frames are overridden by
+      // the centred-row block in site.css, which is always-present chrome
+      // and never stands over the copy.
+      hotOpen = true;
+      root.classList.add('j-rail-hot');
+      document.body.classList.add('j-rail-on');
       // The longest existing desktop formation is ~660ms. Only after it lands
       // does progress take direct ownership of the rail's angle.
       followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;
@@ -902,17 +1052,17 @@ export function createRail({ onNav } = {}) {
   // differ) marks the pointer as on it, and seeds `lastPt`: the dwell can
   // open the fan without a single further pointermove, and syncAt needs a
   // position to resolve from when it does.
-  inner.addEventListener('pointerenter', (e) => {
+  hoverOwner.listen(inner, 'pointerenter', (e) => {
     if (e.pointerType === 'touch') return;
     hovering = true;
     lastPt = { x: e.clientX, y: e.clientY };
   });
-  hotZone.addEventListener('pointerenter', (e) => {
+  hoverOwner.listen(hotZone, 'pointerenter', (e) => {
     if (e.pointerType === 'touch' || hotOpen) return;
     // Dwell before unfolding — see the header note. A pointer that is only
     // crossing the flank is gone well inside HOT_INTENT_MS.
     clearTimeout(hotTimer);
-    hotTimer = setTimeout(() => {
+    hotTimer = hoverOwner.timer(() => {
       hotOpen = true;
       root.classList.add('j-rail-hot');
       announceOpen();
@@ -929,17 +1079,17 @@ export function createRail({ onNav } = {}) {
          pointer that is actually on the button (measured — the Epilogue's
          pill flashed on every dwell). */
       clearTimeout(formTimer);
-      formTimer = setTimeout(syncAt, FOLD_HOME_MS);
+      formTimer = hoverOwner.timer(syncAt, FOLD_HOME_MS);
     }, HOT_INTENT_MS);
   });
-  hotZone.addEventListener('pointerleave', (e) => {
+  hoverOwner.listen(hotZone, 'pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
     clearTimeout(hotTimer);
   });
   // Leaving the whole control folds an open ring. (On the column fallback this
   // is the second listener it has always had: the list cancels a pending
   // unfold, the control folds an open one.)
-  inner.addEventListener('pointerleave', (e) => {
+  hoverOwner.listen(inner, 'pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
     hovering = false;
     clearTimeout(hotTimer);
@@ -1017,7 +1167,7 @@ export function createRail({ onNav } = {}) {
     if (atSlot) atSlot.classList.add('at');
   }
 
-  inner.addEventListener('pointermove', (e) => {
+  hoverOwner.listen(inner, 'pointermove', (e) => {
     if (e.pointerType === 'touch') return;
     lastPt = { x: e.clientX, y: e.clientY };
     syncAt();
@@ -1026,7 +1176,12 @@ export function createRail({ onNav } = {}) {
   /* Restore the pre-redesign mobile contract verbatim: the first touch on a
      section mark unfolds the fixed file and is swallowed; the second touch
      acts. Desktop keeps the horizontal strip's one-click links. */
-  root.addEventListener('pointerdown', (e) => {
+  owner.listen(root, 'pointerdown', (e) => {
+    // Dormant while the row is permanently formed: there is nothing for a
+    // first tap to unfold, so it must not be swallowed as an arming tap.
+    // (ALWAYS_OPEN is checked directly, not keptOpen(), so a tap BEFORE the
+    // reveal cannot arm either.)
+    if (ALWAYS_OPEN) return;
     if (!mobileRail.matches || keptOpen()) return;
     if (e.pointerType !== 'touch' || touchOpen) return;
     // Menu is the other resting control and opens its panel on its first tap.
@@ -1035,10 +1190,10 @@ export function createRail({ onNav } = {}) {
     root.classList.add('j-rail-open');
     announceOpen();
     swallowClick = true;
-    setTimeout(() => { swallowClick = false; }, 500);
+    owner.timer(() => { swallowClick = false; }, 500);
   }, true);
 
-  root.addEventListener('click', (e) => {
+  owner.listen(root, 'click', (e) => {
     if (!mobileRail.matches || !swallowClick) return;
     swallowClick = false;
     if (e.target instanceof Node && menuBtn.contains(e.target)) return;
@@ -1046,7 +1201,7 @@ export function createRail({ onNav } = {}) {
     e.stopPropagation();
   }, true);
 
-  document.addEventListener('pointerdown', (e) => {
+  globalOwner.listen(document, 'pointerdown', (e) => {
     if (!mobileRail.matches || !touchOpen) return;
     if (e.target instanceof Node && root.contains(e.target)) return;
     collapse();
@@ -1109,7 +1264,7 @@ export function createRail({ onNav } = {}) {
     // Let the fade play, then leave the box tree. Reduced motion has no fade
     // to protect (the stylesheet drops the transition), so it goes on the tick.
     if (reduceMotion.matches) finishMenuClose();
-    else setTimeout(finishMenuClose, 320);
+    else menuOwner.timer(finishMenuClose, 320);
   }
 
   function finishMenuClose() {
@@ -1129,12 +1284,12 @@ export function createRail({ onNav } = {}) {
      The click listener remains for the keyboard: Enter/Space synthesise a
      click with no pointerdown before it, and openMenu() itself is guarded
      against running twice. */
-  menuBtn.addEventListener('pointerdown', (e) => {
+  menuOwner.listen(menuBtn, 'pointerdown', (e) => {
     if (e.isPrimary === false || e.button !== 0) return;
     e.preventDefault();
     openMenu(menuBtn, { keyboard: false });
   });
-  menuBtn.addEventListener('click', (e) => openMenu(menuBtn, { keyboard: e.detail === 0 }));
+  menuOwner.listen(menuBtn, 'click', (e) => openMenu(menuBtn, { keyboard: e.detail === 0 }));
 
   /* ===================================================================== */
   /* THE BUTTON SAYS IT IS A BUTTON — immediate hover/focus gesture         */
@@ -1171,32 +1326,35 @@ export function createRail({ onNav } = {}) {
     menuBtn.classList.add('j-rail-nudge');
   }
 
-  menuBtn.addEventListener('pointerenter', (e) => {
+  menuOwner.listen(menuBtn, 'pointerenter', (e) => {
     if (e.pointerType === 'touch' || menuIsOpen) return;
     replayMenuGlyph();
   });
-  menuBtn.addEventListener('focus', () => {
+  menuOwner.listen(menuBtn, 'focus', () => {
     if (menuBtn.matches(':focus-visible')) replayMenuGlyph();
   });
-  menuBtn.addEventListener('animationend', (e) => {
+  menuOwner.listen(menuBtn, 'animationend', (e) => {
     if (e.animationName === 'j-menu-rewrite') menuBtn.classList.remove('j-rail-nudge');
   });
   // Prevent pointer focus from landing on the close button before dismissal;
   // keyboard/screen-reader activation still arrives as a click with detail 0
   // and returns focus to the opener.
-  menuClose.addEventListener('pointerdown', (e) => {
+  menuOwner.listen(menuClose, 'pointerdown', (e) => {
     if (e.isPrimary === false || e.button !== 0) return;
     e.preventDefault();
     closeMenu({ focusBack: false });
   });
-  menuClose.addEventListener('click', (e) => {
+  menuOwner.listen(menuClose, 'click', (e) => {
     if (menuIsOpen) closeMenu({ focusBack: e.detail === 0 });
   });
+  // backdrop.js returns a matching uninstall for all four of its listeners.
+  // Nothing tears this rail down, so the handle is discarded; its listeners
+  // are pinned by name in tools/test-render-baseline.mjs's M7 floor.
   installBackdropDismiss(scrim, menu, () => closeMenu({ focusBack: false }));
 
   // Focus trap. While the dialog is open its own controls are the whole world,
   // so Tab cycles inside it; Shift+Tab wraps the other way.
-  menu.addEventListener('keydown', (e) => {
+  menuOwner.listen(menu, 'keydown', (e) => {
     if (e.key !== 'Tab' || !menuIsOpen) return;
     const items = focusables();
     if (!items.length) return;
@@ -1211,7 +1369,7 @@ export function createRail({ onNav } = {}) {
      in front of you), then an expanded rail. Registered in the CAPTURE phase
      so a menu Escape is settled before journey/ui.js's own Escape handler can
      act on a popover or card behind it. */
-  document.addEventListener('keydown', (e) => {
+  globalOwner.listen(document, 'keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (menuIsOpen) { e.preventDefault(); e.stopPropagation(); closeMenu(); return; }
     if (!keptOpen() && (touchOpen || hotOpen)) {
@@ -1227,11 +1385,11 @@ export function createRail({ onNav } = {}) {
   let shown = null;
   let nowId = null;
   let activeId = null;
+  let semanticId = null;   // aria-current's owner — rides p, not railP
   let dimmed = null;
   let wasCameraStateDisagree = false;
   let wasBetweenRests = false;
   let horizontalPosition = 0;
-  let horizontalGap = 32;
   let horizontalWrap = null;
   let horizontalFlight = null;
   let dockingProgress = 0;
@@ -1239,21 +1397,30 @@ export function createRail({ onNav } = {}) {
   let dockingFlight = null;
   let dockingFlightFrom = 0;
   let dockingFlightTarget = 0;
-  let heroLayoutW = -1;
-  let heroLayoutH = -1;
-  let heroLogoTop = 0;
-  let heroLogoLeft = 0;
 
-  function setInlineStyle(name, value) {
-    if (root.style.getPropertyValue(name) !== value) root.style.setProperty(name, value);
-  }
+  /* THE CROSSING, GIVEN AN OWNER — and only this one crossing (DEFECT-01 #2).
+     The centred row no longer writes ANY inline geometry (the DOCK_INLINE
+     list and releaseDock() retired with the travelling dock — position is
+     the stylesheet's alone, at every tier), so the scale-down hazard that
+     fix answered cannot recur. What the crossing still owns is the resting
+     STATE: collapse() re-forms the permanently open row on both sides of
+     the boundary. */
+  owner.listen(mobileRail, 'change', () => {
+    collapse();
+  });
 
-  /** Dock the strip from the continuous journey coordinate painted by
-   *  update(). The list moves inside the root because the menu button is a
-   *  fixed descendant and must remain pinned to the viewport. */
+  /* THE HERO GATE, WITHOUT THE DOCK. setHeroEase() used to paint the
+     strip's whole Mission-to-dock journey — left/top, --nav-x/y, gap and
+     scale — and the hero copy's gate fell out of the same docking
+     coordinate `u`. The centred row DOES NOT MOVE: it is fixed
+     bottom-centre from the first frame, so every inline write is gone and
+     `u` survives only as what it always really was — "how far has the
+     visitor left the intro", the reversible coordinate the hero copy's
+     fade reads. The flight interpolation is kept exactly: a nav jump still
+     fades the hero copy with the camera's own smootherstep phase, and an
+     interrupted or reversed flight still starts from the value already on
+     screen. */
   function setHeroEase() {
-    // The mobile file is fixed to the right edge and ignores desktop docking.
-    if (mobileRail.matches) return 1;
     let u;
     if (horizontalFlight) {
       /* A non-adjacent click traverses several semantic rail positions in one
@@ -1284,65 +1451,31 @@ export function createRail({ onNav } = {}) {
         : travel * travel * (3 - 2 * travel);
     }
     dockingU = u;
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const portrait = h > w;
-    const phone = portrait && w <= 620;
-    const tablet = portrait && w <= 900;
-
-    const heroLeft = (tablet ? 0.06 : 0.052) * w;
-    const heroTop = phone
-        ? 0.07 * h + 342
-      : tablet
-        ? 0.04 * h + 414
-        : 0.5 * h + Math.min(184, Math.max(160, 0.125 * w)) + 14;
-    const missionGap = phone
-      ? Math.max(10, (0.88 * w - 240) / 4)
-      : tablet
-        ? Math.min(24, Math.max(10, 0.03 * w))
-        : Math.min(32, Math.max(14, 0.022 * w));
-    // Leave enough air for the travelling ring to pass between neighbouring
-    // glyphs without covering either one at the half-way coordinate.
-    const compactGap = 16;
-    const compactScale = phone ? 0.82 : tablet ? 0.84 : 0.86;
-    // Match the later strip's visible lower edge to the logo's visible upper
-    // edge. The circle scales around its centre, so its bottom is
-    // 24 + 24*scale pixels below the list's top (not the list's 70px box).
-    const fallbackLogoTop = (phone ? 1.3 : tablet ? 1.6 : 2.1) * 16;
-    const fallbackLogoLeft = (phone ? 1.3 : tablet ? 1.6 : 3.4) * 16;
-    if (w !== heroLayoutW || h !== heroLayoutH) {
-      heroLayoutW = w;
-      heroLayoutH = h;
-      const logoRect = logoMark && logoMark.getBoundingClientRect();
-      heroLogoTop = logoRect ? logoRect.top : fallbackLogoTop;
-      heroLogoLeft = logoRect ? logoRect.left : fallbackLogoLeft;
-    }
-    const logoTop = heroLogoTop;
-    // The compact mark scales about its 24px centre. Align its PAINTED 48px
-    // circle edge—not the unscaled list box—to the logo's measured left edge.
-    // Mission keeps heroLeft; interpolation moves only the docked endpoint.
-    const finalLeft = heroLogoLeft - 24 * (1 - compactScale);
-    const finalTop = h - logoTop - 24 * (1 + compactScale);
-
-    setInlineStyle('left', `${heroLeft.toFixed(2)}px`);
-    setInlineStyle('top', `${heroTop.toFixed(2)}px`);
-    setInlineStyle('bottom', 'auto');
-    setInlineStyle('--nav-x', `${((finalLeft - heroLeft) * u).toFixed(2)}px`);
-    setInlineStyle('--nav-y', `${((finalTop - heroTop) * u).toFixed(2)}px`);
-    horizontalGap = missionGap + (compactGap - missionGap) * u;
-    setInlineStyle('--nav-gap', `${horizontalGap.toFixed(2)}px`);
-    setInlineStyle('--nav-scale', (1 + (compactScale - 1) * u).toFixed(4));
-    setInlineStyle('--nav-u', u.toFixed(4));
-    /* Gap/scale changes alter the ring's pixel coordinate. Repaint from the
-       same wrap sample update() just supplied; dropping the wrap here would
-       replace the seam path with the ordinary linear coordinate later in the
-       same frame. */
-    paintHorizontalProgress(horizontalPosition, horizontalWrap);
-
-    /* Mission copy may arrive only with the strip's final approach. `u` is
-       the same reversible docking coordinate that just painted --nav-y, so
-       scroll, direct return and an interrupted/reversed flight cannot disagree
-       about which of the pair arrived first. Cold boot is u=0 -> gate=1. */
+    /* CONTENT AT THE TOP, NAVIGATION BELOW (owner, 2026-08-26, fourth
+       pass: "it feels more part of the content when you're at the top,
+       and then when I scroll down it shrinks down"). The row's scale is a
+       pure function of this same reversible coordinate — content-sized at
+       the hero rest, easing to navigation scale as the visitor leaves the
+       intro. Published as 1-u ("how much content pose remains"): the
+       stylesheet turns it into a scale with each band's own --nav-content-max,
+       so the growth is responsive without a second table here. No clock
+       and no conversion: u is already priced across the actual
+       mission-to-inspire span (scroll) or the camera flight's own phase
+       (nav jumps), which is exactly the tempo law's ask — and it is why
+       the change cannot pop: it is continuous in the same coordinate
+       every other painted quantity here rides. Written for EVERY tier;
+       only the hero-copy GATE below stays desktop-only. */
+    root.style.setProperty('--nav-content-u', (1 - u).toFixed(4));
+    /* The phone tier keeps its own hero-copy timing (copy-arrival treats
+       `null` as "the rail is not gating here") — see DEFECT-01 #2 for why
+       stepping this gate on a resize crossing latched the hero copy over
+       a chapter's. The bail sits AFTER the scale write on purpose: the
+       content-to-navigation breathing belongs to phones too. */
+    if (mobileRail.matches) return null;
+    /* Mission copy fades against this same reversible coordinate, so
+       scroll, direct return and an interrupted/reversed flight cannot
+       disagree about which of the pair arrived first. Cold boot is
+       u=0 -> gate=1. */
     const heroGateX = Math.max(0, Math.min(1, u / 0.05));
     const heroGate = reduceMotion.matches
       ? (u <= 0.001 ? 1 : 0)
@@ -1486,19 +1619,21 @@ export function createRail({ onNav } = {}) {
       // Distance along the ring from the current item, for the stagger: the
       // pair either side of the slot emerges first, the pair beyond it next.
       s.li.style.setProperty('--step', String(Math.abs(signedRing(k))));
-      // …and which side of its own mark this slot's name hangs on, which is a
-      // property of the RING POSITION and so is restated with the angle (see
-      // WHICH SIDE OF ITS OWN MARK). The switch is invisible: a slot only
-      // changes position by turning, and the names sit out the turn.
-      s.li.classList.toggle('j-pill-up', PILL_SIDE[k] === 'up');
-      s.li.classList.toggle('j-pill-dn', PILL_SIDE[k] === 'dn');
+      // The half moon hung each name off a SIDE of its mark (PILL_SIDE) and
+      // restated that side with the angle. The centred row seats every name
+      // BELOW its own circle, so the pill-side classes are retired — and must
+      // not be re-toggled here: the old side-fan label rules key on them at
+      // higher specificity than the row's, and a slot carrying one had its
+      // label silently hidden (measured 2026-08-26: Equip and Connect lost
+      // their Intro-chapter labels to exactly this).
+      s.li.classList.remove('j-pill-up', 'j-pill-dn');
     });
     if (atRest) {
       // Land the new values with the transition still off, then give it back
       // on the next frame — so the angle is simply true from here, and the
       // formation that opens next starts where it means to.
       void root.offsetWidth;
-      requestAnimationFrame(() => root.classList.remove('j-rail-recentre'));
+      owner.raf(() => root.classList.remove('j-rail-recentre'));
     }
 
     /* THE NAMES SIT OUT THE TURN. A pill names the mark it hangs off, and for
@@ -1519,12 +1654,26 @@ export function createRail({ onNav } = {}) {
        the moment they are allowed back. The 500ms is sized to outlast the
        460ms angle transition and nothing more. */
     if (live) {
-      root.classList.add('j-rail-turn');
+      /* THE ROW'S NAMES DO NOT SIT OUT THE TURN (2026-08-27; owner: the
+         bookend labels "just JUMP in" on nav clicks while scroll is
+         elegant). The moon added `j-rail-turn` here, whose rule blanks
+         every name with `transition: none` for the turn plus this 500ms —
+         honest for a ring where mid-turn nothing is anywhere in
+         particular, and MEASURED as the exact suppressor of the row's one
+         label envelope on the click path: the flip landed while the class
+         was up, computed transition-property `none`, and the label
+         stepped 0 -> 0.62 in a single frame in both directions. The row's
+         marks never leave their seats, so a name never stops being true
+         and the class is simply not applied any more; the 0.25s opacity
+         ease that already serves the scroll path now serves clicks, which
+         is the "one owner, one envelope, reached by every route" ask.
+         The pointer re-resolution KEEPS its beat: the row's state still
+         changes under a parked cursor on arrival, so syncAt() still runs
+         when the move has settled. */
       clearTimeout(turnTimer);
-      turnTimer = setTimeout(() => {
-        root.classList.remove('j-rail-turn');
-        // The marks have finished moving; the pointer has not. Re-read which
-        // one it is over before the names are allowed back on screen.
+      turnTimer = owner.timer(() => {
+        // The marks have finished changing state; the pointer has not.
+        // Re-read which one it is over.
         syncAt();
       }, 500);
     }
@@ -1543,23 +1692,93 @@ export function createRail({ onNav } = {}) {
     return RAIL_RESTS.length - 1;
   }
 
-  /** Paint the horizontal strip directly from real journey progress.
+  /* ---- THE ROW'S PIXEL FRAME --------------------------------------------
+     The retired strip was uniform — five 48px slots, one gap — so "chapter
+     coordinate x step" was its whole geometry. The centred row is not: two
+     circle sizes, and a placeholder standing between Inspire and Connect
+     with no p of its own. So the paint works in the row's own pixel frame,
+     published once per viewport by layout/rail-geometry.js (rowLayout —
+     the same numbers the dock consumers read):
+
+       · every ROW item has a fixed centre-x;
+       · every CHAPTER anchors at its own item's centre — and a chapter
+         with no item (Owned) anchors between its neighbours' centres, at
+         its index fraction, so the ring rides the Connect->Epilogue
+         connector while the visitor rides the Owned leg;
+       · the continuous chapter coordinate maps to px piecewise-linearly
+         between those anchors, so the ring crosses Equip's circle on the
+         Inspire->Connect leg without ever resting on it.
+
+     The same numbers are republished as custom properties on the root, so
+     the stylesheet lays the circles out in exactly the frame JS paints in
+     — one table, no drift. */
+  let rowPx = null;
+  function rowFrame() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (rowPx && rowPx.w === w && rowPx.h === h) return rowPx;
+    const L = rowLayout(w, h);
+    // Chapter anchors: centre-x and diameter per chapter index.
+    const chX = new Array(N);
+    const chD = new Array(N);
+    for (let ci = 0; ci < N; ci++) {
+      const ri = ROW_OF_CHAPTER[ci];
+      if (ri >= 0) { chX[ci] = L.centres[ri]; chD[ci] = L.dia[ri]; continue; }
+      let lo = ci - 1; while (lo >= 0 && ROW_OF_CHAPTER[lo] < 0) lo--;
+      let hi = ci + 1; while (hi < N && ROW_OF_CHAPTER[hi] < 0) hi++;
+      if (lo < 0 || hi >= N) {
+        // A rowless chapter at either end of the route has no pair to sit
+        // between; pin it on its one neighbour.
+        const near = lo >= 0 ? ROW_OF_CHAPTER[lo] : ROW_OF_CHAPTER[hi];
+        chX[ci] = L.centres[near]; chD[ci] = L.dia[near];
+        continue;
+      }
+      const f = (ci - lo) / (hi - lo);
+      const a = ROW_OF_CHAPTER[lo], b = ROW_OF_CHAPTER[hi];
+      chX[ci] = L.centres[a] + (L.centres[b] - L.centres[a]) * f;
+      chD[ci] = L.dia[a] + (L.dia[b] - L.dia[a]) * f;
+    }
+    rowPx = { w, h, L, chX, chD };
+    root.style.setProperty('--nav-major', `${L.major}px`);
+    root.style.setProperty('--nav-minor', `${L.minor}px`);
+    root.style.setProperty('--nav-gap', `${L.gap}px`);
+    root.style.setProperty('--nav-centre-bottom', `${h - L.centreY}px`);
+    root.style.setProperty('--nav-fit-major', String(L.majorFit));
+    root.style.setProperty('--nav-fit-minor', String(L.minorFit));
+    return rowPx;
+  }
+
+  /** A continuous chapter coordinate -> the row's px frame, piecewise
+   *  between the chapter anchors. Returns centre-x and the diameter the
+   *  travelling ring should carry there. */
+  function rowPoint(frame, q) {
+    const c = Math.max(0, Math.min(N - 1, q));
+    const i = Math.min(N - 2, Math.floor(c));
+    const f = Math.max(0, Math.min(1, c - i));
+    return {
+      x: frame.chX[i] + (frame.chX[i + 1] - frame.chX[i]) * f,
+      d: frame.chD[i] + (frame.chD[i + 1] - frame.chD[i]) * f,
+    };
+  }
+
+  /** Paint the row directly from real journey progress.
    *  No transition or timer sits between input and output: reverse scrolling
    *  reverses immediately, and a stopped scrub leaves every pixel frozen. */
   function paintHorizontalProgress(pos, wrap = null) {
+    const frame = rowFrame();
+    const { L } = frame;
     const phase = wrap
       ? Math.max(0, Math.min(1, Number(wrap.phase) || 0))
       : 0;
     horizontalPosition = wrap
       ? (wrap.dir > 0 ? (N - 1) * (1 - phase) : (N - 1) * phase)
       : Math.max(0, Math.min(N - 1, Number(pos) || 0));
-    const step = 48 + horizontalGap;
-    const connectorLength = Math.max(0, horizontalGap - 4);
-    let ringX = horizontalPosition * step;
+    const at = rowPoint(frame, horizontalPosition);
+    let ringX = at.x;
     let ringOpacity = 1;
     if (wrap) {
-      /* The linear map has a toroidal seam just beyond its two ends. A
-         forward Final -> Mission wrap exits to the RIGHT, resets while one
+      /* The row has a toroidal seam just beyond its two ends. A forward
+         Final -> Mission wrap exits to the RIGHT, resets while one
          ring-radius-plus-air beyond the visible row, then enters from the
          LEFT; reverse mirrors that exact path. Keeping the visible legs to
          the first/last fifth preserves the old travel speed without leaving
@@ -1570,8 +1789,9 @@ export function createRail({ onNav } = {}) {
          over the exit fifth and back in over the entry fifth, with no CSS
          clock left chasing a reversed scrub. Glyph and connector progress
          deliberately keep using horizontalPosition above. */
-      const span = (N - 1) * step;
-      const outside = 24 + Math.min(12, horizontalGap / 2);
+      const first = frame.chX[0];
+      const last = frame.chX[N - 1];
+      const outside = 24 + Math.min(12, L.gap / 2);
       const exitEnd = 0.2;
       const enterStart = 0.8;
       if (phase <= exitEnd) {
@@ -1579,46 +1799,62 @@ export function createRail({ onNav } = {}) {
         const eased = local * local * (3 - 2 * local);
         ringOpacity = 1 - eased;
         ringX = wrap.dir > 0
-          ? span + outside * local
-          : -outside * local;
+          ? last + outside * local
+          : first - outside * local;
       } else if (phase >= enterStart) {
         const local = (phase - enterStart) / (1 - enterStart);
         ringOpacity = local * local * (3 - 2 * local);
         ringX = wrap.dir > 0
-          ? -outside + outside * local
-          : span + outside * (1 - local);
+          ? first - outside + outside * local
+          : last + outside * (1 - local);
       } else {
         ringOpacity = 0;
         ringX = wrap.dir > 0
-          ? (phase < 0.5 ? span + outside : -outside)
-          : (phase < 0.5 ? -outside : span + outside);
+          ? (phase < 0.5 ? last + outside : first - outside)
+          : (phase < 0.5 ? first - outside : last + outside);
       }
     }
     activeRing.style.setProperty('--active-x', `${ringX.toFixed(3)}px`);
-    activeRing.style.setProperty('--active-y', '0px');
-    activeRing.style.opacity = ringOpacity.toFixed(6);
+    activeRing.style.setProperty('--ring-d', `${at.d.toFixed(2)}px`);
+    /* The node is CHROME, and chrome arrives with the detachment (owner,
+       fifth pass): embedded in the hero the instrument is scenery and
+       marks nothing, so the node's presence rides dockingU — the same
+       coordinate the scale, the drop and the scrim ride. dockingU is last
+       frame's value when the paint runs first in a frame; both are
+       continuous in p, so the seam is invisible. */
+    activeRing.style.opacity = (ringOpacity * dockingU).toFixed(6);
     root.style.setProperty('--nav-position', horizontalPosition.toFixed(4));
     root.classList.toggle('j-rail-wrap-progress', !!wrap);
 
     slots.forEach((s, i) => {
-      let proximity;
-      let wrapSource = false;
-      if (wrap) {
-        const source = wrap.dir > 0 ? N - 1 : 0;
-        const target = wrap.dir > 0 ? 0 : N - 1;
-        wrapSource = i === source;
-        proximity = i === source ? 1 - phase : i === target ? phase : 0;
-      } else {
-        proximity = Math.max(0, 1 - Math.abs(i - horizontalPosition));
+      const entry = ROW[i];
+      let proximity = 0;
+      let past = false;
+      if (entry.ci != null) {
+        if (wrap) {
+          const source = wrap.dir > 0 ? N - 1 : 0;
+          const target = wrap.dir > 0 ? 0 : N - 1;
+          proximity = entry.ci === source ? 1 - phase
+            : entry.ci === target ? phase : 0;
+          past = entry.ci === source;
+        } else {
+          proximity = Math.max(0, 1 - Math.abs(entry.ci - horizontalPosition));
+          past = entry.ci < horizontalPosition - 0.001;
+        }
       }
-      const past = wrap ? wrapSource : i < horizontalPosition - 0.001;
+      // The placeholder keeps proximity 0 by construction: it can be
+      // CROSSED (the ring rides over its circle mid-leg) but never lit —
+      // gold is the journey's own colour and Equip has no journey yet.
       const base = past ? GLYPH_COLOURS.past : GLYPH_COLOURS.future;
       const target = GLYPH_COLOURS.active;
       const rgb = base.rgb.map((channel, channelIndex) =>
         channel + (target.rgb[channelIndex] - channel) * proximity);
       const alpha = base.alpha + (target.alpha - base.alpha) * proximity;
+      // "+5% scale, no huge glow" — the owner's design review. The scale
+      // and glow are the ACTIVE statement now (with the halo); keep both
+      // small enough that the mark reads as a lit node, not a button.
       const scale = 1 + 0.05 * proximity;
-      const glow = 0.02 + 0.32 * proximity;
+      const glow = 0.02 + 0.26 * proximity;
       s.li.style.setProperty('--glyph-r', rgb[0].toFixed(2));
       s.li.style.setProperty('--glyph-g', rgb[1].toFixed(2));
       s.li.style.setProperty('--glyph-b', rgb[2].toFixed(2));
@@ -1626,12 +1862,16 @@ export function createRail({ onNav } = {}) {
       s.li.style.setProperty('--glyph-scale', scale.toFixed(4));
       s.li.style.setProperty('--glyph-glow', glow.toFixed(3));
 
-      if (i < N - 1) {
-        const completed = Math.max(0, Math.min(1, horizontalPosition - i));
-        s.li.style.setProperty(
-          '--connector-fill',
-          `${(connectorLength * completed).toFixed(3)}px`,
-        );
+      if (i < ROW_N - 1) {
+        // The connector runs between THIS circle's edge and the next one's.
+        // Its bright fill follows the ring's own pixel, so completion is
+        // continuous across Equip and across the itemless Owned leg alike.
+        // 6px of air either end — the same inset the stylesheet gives the
+        // dotted rules (`left: calc(100% + 6px)`, width gap - 12px).
+        const a = L.centres[i] + L.dia[i] / 2 + 6;
+        const b = L.centres[i + 1] - L.dia[i + 1] / 2 - 6;
+        const fill = Math.max(0, Math.min(b - a, ringX - a));
+        s.li.style.setProperty('--connector-fill', `${fill.toFixed(3)}px`);
       }
     });
   }
@@ -1645,33 +1885,21 @@ export function createRail({ onNav } = {}) {
     curIndex = nearest;
     prevCur = nearest;
     root.style.setProperty('--cur', pos.toFixed(4));
-    slots.forEach((s, i) => {
-      let d = i - pos;
-      while (d > N / 2) d -= N;
-      while (d <= -N / 2) d += N;
-      const edge = Math.abs(d);
-      const opacity = edge <= 2 ? 1 : Math.max(0, (N / 2 - edge) / 0.5);
-      /* THE RECYCLED MARK KEEPS ITS VERTICAL MOMENTUM. The polar path's
-         visible part moves only a couple of pixels vertically before the
-         hidden half takes over, which reads as one glyph vanishing and an
-         unrelated one popping in. Give only that edge handoff an extra drop:
-         the top copy falls as it fades, then the bottom copy begins slightly
-         above its tip and falls into place. Reverse travel mirrors naturally
-         — bottom rises out, top rises in. The mark is fully transparent at
-         the discontinuity, so there is still only one visible copy. */
-      const recycle = reduceMotion.matches
-        ? 0
-        : Math.max(0, Math.min(1, (edge - 2) / 0.5));
-      const recycleY = recycle > 0 ? -Math.sign(d) * recycle * 24 : 0;
-      angleOf[i] = d * STEP;
-      s.li.style.setProperty('--ang-to', angleOf[i].toFixed(3) + 'deg');
-      s.li.style.setProperty('--rail-follow-opacity', opacity.toFixed(3));
-      s.li.style.setProperty('--rail-recycle-y', recycleY.toFixed(2) + 'px');
-      s.li.classList.toggle('j-rail-recycle', recycle > 0);
-      const k = ((Math.round(d) % N) + N) % N;
-      s.li.classList.toggle('j-pill-up', PILL_SIDE[k] === 'up');
-      s.li.classList.toggle('j-pill-dn', PILL_SIDE[k] === 'dn');
-    });
+    /* THE MOON'S PER-SLOT FOLLOW WRITES ARE RETIRED (2026-08-26, owner:
+       "when I scroll between sections the labels disappear"). This loop
+       used to restate every slot's angle, its edge-fade opacity and the
+       recycle drop — the half moon's own choreography, where the mark
+       furthest round the ring fades through the hidden back. On the row
+       those writes were pure hazard: at the exact midpoint between two
+       rests the wrap arithmetic put one ROW item at opacity 0 through the
+       legacy `.j-rail-following` rule, and the `!important` between-rests
+       name-blanking rule (now deleted in site.css) hid every label with
+       it. The row's own follow paint is paintHorizontalProgress(), which
+       update() has already run this frame; nothing per-slot is left for
+       the follower to say. */
+    for (const slot of slots) {
+      slot.li.classList.remove('j-pill-up', 'j-pill-dn', 'j-rail-recycle');
+    }
     const between = Math.abs(pos - nearestStep) > 0.002;
     root.classList.toggle('j-rail-between', between);
     if (between !== wasBetweenRests) {
@@ -1698,11 +1926,9 @@ export function createRail({ onNav } = {}) {
     railFlight = null,
   } = {}) {
     let railP = p;
-    if (mobileRail.matches) {
-      horizontalFlight = null;
-      horizontalWrap = null;
-      dockingFlight = null;
-    } else if (railWrap) {
+    // Every tier paints the same row now — the phone no longer keeps a
+    // separate edge file, so it takes the same wrap/flight/position paths.
+    if (railWrap) {
       horizontalFlight = null;
       dockingFlight = null;
       const phase = Math.max(0, Math.min(1, Number(railWrap.phase) || 0));
@@ -1731,7 +1957,8 @@ export function createRail({ onNav } = {}) {
     }
     /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
 
-       The old SHOW_P latch was pose-aligned: it stayed visible almost all the
+       The old SHOW_P latch (p 0.004; the constant itself is gone, see
+       FIRST_OUTSIDE_P above) was pose-aligned: it stayed visible almost all the
        way home (until p 0.004), then appeared almost as soon as the camera left
        (at p 0.004). On a phone that put the journey control over nearly the
        whole hero transition in both directions — disappearing too late on the
@@ -1787,18 +2014,40 @@ export function createRail({ onNav } = {}) {
       wasOpen = openNow;
       clearTimeout(restTimer);
       if (openNow) atRest = false;
-      else restTimer = setTimeout(() => {
+      else restTimer = owner.timer(() => {
         atRest = true;
         writeAngles(curIndex);   // canonical, and with no transition to show
       }, FOLD_HOME_MS);
     }
 
-    // Which scene is on screen (the resting symbol, and the fan's anchor) and
-    // which nav entry reads current (the marked one). They differ only in a
-    // nav-less chapter.
-    const nowNext = chapterAt(railP).id;
-    if (nowNext !== nowId) {
-      nowId = nowNext;
+    /* TWO COORDINATES, TWO KINDS OF STATE — THE CONTRACT (2026-08-26,
+       refined 2026-08-27 after the owner's "Intro and Epilogue just JUMPS
+       in" on nav clicks).
+
+       `p` is the journey's TRUTH: a direct nav click places it at the
+       destination before the camera travels. `railP` is the PICTURE: it
+       rides the flight's own phase, which is the pace the visitor is
+       actually watching.
+
+       SEMANTICS follow p. aria-current — the rail's and the panel's — must
+       say where the journey IS, immediately; and under ?capture='s frozen
+       clock a flight phase never completes, so semantics keyed to railP
+       left aria-current on nothing after a landed navigation (measured
+       2026-08-26, browser-smoke live-journey: null !== 'true').
+
+       VISIBLE STAGING follows railP. The layout flag (which stages the
+       bookend labels), the `now`/`active` classes (ring brightening, gold
+       word, halo) flip as the FLIGHT crosses the chapter boundary — the
+       same moment a scroll crosses it — so every route into a chapter
+       reaches the one label envelope (the 0.25s opacity ease in site.css)
+       mid-picture rather than at click time. Keying these to p made the
+       bookend labels pop the moment a click was pressed, two seconds
+       before the picture arrived: one owner, one envelope, reached by
+       every route. */
+    const visNow = chapterAt(railP).id;
+    const nowNext = chapterAt(p).id;
+    if (visNow !== nowId) {
+      nowId = visNow;
       root.dataset.layout = nowId === 'mission' ? 'mission' : 'chapter';
       const cur = CHAPTERS.findIndex(c => c.id === nowId);
       // The fan is anchored on the current slot: --cur positions every other
@@ -1810,31 +2059,32 @@ export function createRail({ onNav } = {}) {
       });
       // ...and the same move stated as a rotation, for the cluster geometry.
       if (!following && !wroteJumpAngles) writeAngles(cur);
-      // The PANEL's list marks the chapter you are actually in — it follows
-      // `now`, not `active`, because it is the one surface that can name the
-      // epilogue, and Owned -> Final changes `now` without changing `active`.
-      for (const id in menuLinks) {
-        if (id === nowId) menuLinks[id].setAttribute('aria-current', 'true');
-        else menuLinks[id].removeAttribute('aria-current');
-      }
     }
     if (following) {
       if (railWrap && !isColumn) followWrapProgress(railWrap);
       else followProgress(p);
     }
-    // With all five slots linked (THE EPILOGUE), the marked entry and the
-    // scene on screen are the same statement: `aria-current` and the reticle
-    // follow chapterAt(p) — the rail itself can now say "you are in the
-    // epilogue", as the panel always could. (navChapterAt, which held the
-    // last NAV'D chapter current through the epilogue, served the four-link
-    // rail; nothing here needs it any more.)
-    if (nowNext !== activeId) {
-      activeId = nowNext;
+    // The visual current mark — ring, halo, gold word — arrives with the
+    // picture (visNow), exactly as the layout flag above does.
+    if (visNow !== activeId) {
+      activeId = visNow;
       for (const s of slots) {
-        const on = s.id === activeId;
-        s.li.classList.toggle('active', on);
-        if (on) s.item.setAttribute('aria-current', 'true');
+        s.li.classList.toggle('active', s.id === activeId);
+      }
+    }
+    // The SEMANTIC current mark arrives with the journey (nowNext): the
+    // rail's own aria-current and the panel's. The panel follows `now`'s
+    // truth, not `active`'s, because it is the one surface that can name
+    // the epilogue — Owned -> Final changes it without changing `active`.
+    if (nowNext !== semanticId) {
+      semanticId = nowNext;
+      for (const s of slots) {
+        if (s.id === semanticId) s.item.setAttribute('aria-current', 'true');
         else s.item.removeAttribute('aria-current');
+      }
+      for (const id in menuLinks) {
+        if (id === semanticId) menuLinks[id].setAttribute('aria-current', 'true');
+        else menuLinks[id].removeAttribute('aria-current');
       }
     }
 
@@ -1853,8 +2103,41 @@ export function createRail({ onNav } = {}) {
     }
   }
 
+  /* THE DETAIL'S SYNCHRONOUS RELEASE — the same courtesy the MENU has always
+     had. openMenu() and closeMenu() write `root.inert` themselves, on the tick
+     of the gesture, and let the next update() agree with them afterwards; the
+     detail card had no such writer, so its close completed with the rail still
+     inert and dimmed until the next RENDERED frame. Between those two moments
+     the application publicly reported the card closed (journey.js closeDetail
+     clears `detailNode` before ui.closeCard() returns) while the navigator it
+     was guarding still swallowed focus() silently — measured at 9.4 ms; see
+     the DEF-01 evidence.
+
+     RELEASE ONLY, never the claim. Opening a modal detail still makes the rail
+     inert exactly where it always did, inside update(). And the caller is
+     required to have already established that the next update() would compute
+     modalDetail === false, so this can only ever land on the state the frame
+     is about to reconcile to — never ahead of it, never against it. update()
+     then finds nothing to write and stays idempotent. */
+  function releaseModal() {
+    // The menu owns root.inert for its whole lifetime; the same guard update()
+    // uses. A detail cannot be up while the menu is, but say it once here too.
+    if (menuIsOpen) return;
+    if (root.inert) root.inert = false;
+    if (dimmed) { dimmed = false; root.classList.remove('dim'); }
+  }
+
+  /* THERE IS NO destroy() HERE. This rail lives as long as the document
+     does — on the shipped boot the PAGE owns it (main.js -> journey.js
+     prepareRail) — and the teardown that used to stand here had no caller on
+     either path. See docs/code-health/DISPOSAL-REMOVED.md.
+
+     Note for anyone tempted to add one: it must write no DOM and no
+     `root.inert`. DEF-01 gave `root.inert` exactly four writers and
+     tools/test-frame-order.mjs S4 pins that count. */
+
   return {
-    root, menu, update, reveal, setHeroEase,
+    root, menu, update, releaseModal, reveal, setHeroEase,
     setOnNav(fn) { navigate = typeof fn === 'function' ? fn : () => {}; },
     /** QA */
     get menuOpen() { return menuIsOpen; },

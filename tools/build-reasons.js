@@ -76,7 +76,7 @@ if (fs.existsSync(RESULTS)) {
     if (!/^batch-\d+\.json$/.test(f)) continue;
     let rows;
     try { rows = JSON.parse(fs.readFileSync(path.join(RESULTS, f), 'utf8')); }
-    catch { continue; }
+    catch { continue; } // malformed batch file: skip it, keep processing the rest
     if (!Array.isArray(rows)) continue;
     for (const r of rows) {
       if (!r || typeof r.username !== 'string') continue;
