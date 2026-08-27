@@ -21,6 +21,7 @@
 import {
   CHAPTER_IDS, chapterAt,
 } from './route.js';
+import { normaliseNode } from './navigation.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -30,16 +31,20 @@ export function createJourneyState({ onNavigate = null } = {}) {
   let suppressRoute = 0;
 
   /* ---------------- routing ---------------- */
+  // NODE ALIASES ARE NOT SPELLED OUT HERE. They are declared once, in
+  // structure.js's JOURNEY_SCHEMA.aliases, and applied once, by
+  // navigation.js's normaliseNode(). This door used to carry its own copy of
+  // two of those rules — `2rp` -> `tworp` and "final has no detail node" —
+  // so a rule added to the schema was honoured by the boot deep link and
+  // ignored by a hash that arrived later. Delegating keeps the two doors on
+  // the same table.
   function parseHash() {
     const h = (location.hash || '').replace(/^#\/?/, '');
-    let [chapter, node] = h.split('/').filter(Boolean);
-    chapter = chapter || null;
-    node = node || null;
+    const [rawChapter, rawNode] = h.split('/').filter(Boolean);
+    const chapter = rawChapter || null;
     // retired chapter -> normalise, never a dead route
     if (chapter && !CHAPTER_IDS.includes(chapter)) return { chapter: null, node: null, unknown: chapter };
-    if (node === '2rp') node = 'tworp';             // display name vs id
-    if (chapter === 'final') node = null;           // the epilogue has no detail state
-    return { chapter, node, unknown: null };
+    return { chapter, node: normaliseNode(chapter, rawNode || null), unknown: null };
   }
 
   /* THE ROUTE IS INBOUND ONLY (2026-08-11, Hannah: "when we go into a new

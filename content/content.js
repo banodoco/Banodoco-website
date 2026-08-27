@@ -404,8 +404,14 @@ export const CONTENT = {
     final: {
       // The route manifest still keeps this chapter's nav field null so it
       // retains its quieter, non-peer treatment. This content-level name is
-      // the visible label used by the side rail and site-map panel.
-      nav: 'Purpose',
+      // the visible label used by the navigator and site-map panel.
+      //
+      // RENAMED 2026-08-26 (owner's navigation restage): 'Purpose' ->
+      // 'Epilogue'. Same decision shape as NAV-01's 'Mission' -> 'Intro':
+      // this file is the sole owner of the visible chapter name, so the
+      // rename is this one word — the navigator, the panel and the static
+      // tier's binding all read through it.
+      nav: 'Epilogue',
       // Locked verbatim — 13-content-ops.md locked copy table, "Final H" / Final sub".
       // The SUB below is still that locked string. The HEADING is not:
       //
@@ -486,7 +492,79 @@ export const CONTENT = {
       // records the retired version; this replacement is supplied verbatim,
       // including American-spelled "maximize".
       sub: 'In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.',
+      // OWNERSHIP BECOMES A BUTTON HERE (owner's navigation restage,
+      // 2026-08-26): "Ownership should become a button in the Epilogue
+      // section." The Owned chapter keeps its route, its scene and its
+      // site-map entry; only its NAVIGATOR slot is retired (see `navigator`
+      // below), and this action is where that destination now lives — part
+      // of the Epilogue's own copy, built by the same `actions` machinery
+      // as Owned's "Learn more". The href is the chapter's own hash route;
+      // journey/ui.js routes in-journey '#/' actions through the live
+      // navigation handle instead of writing the URL.
+      // NOT A BUTTON (owner, 2026-08-27): "I'd get rid of the current pill
+      // button entirely... Ownership and Manifesto are not actions like
+      // 'Sign up'. They're deeper reading. They should feel more like
+      // editorial links than buttons." One quiet text door for now —
+      // designed so a Manifesto door can join beside it without rework
+      // (the row lays out inline; a second spec here is the whole edit).
+      // `weight: 'door'` selects the editorial treatment in ui/dom.js;
+      // `glyph` names the small mark it carries — the collective
+      // crown-and-colony symbol, which is Owned's own mark (and NOT the
+      // Epilogue bookend's field glyph, so the two do not read as
+      // duplicates in one view).
+      actions: [
+        {
+          id: 'final-ownership',
+          kind: 'link',
+          weight: 'door',
+          label: 'Ownership',
+          glyph: 'owned',
+          href: '#/owned',
+        },
+      ],
     },
+  },
+
+  /* =========================================================================
+     THE NAVIGATOR ROW — the item list of the journey navigator
+     =========================================================================
+     THE ROW IS NOT THE CHAPTER LIST, and this declaration is what makes that
+     an authored fact rather than a drift (owner, 2026-08-26: "In the middle,
+     we should have Inspire, Connect, and Equip with Equip showing Coming
+     Soon when you hover over it. Intro and Epilogue should be smaller.
+     Ownership should become a button in the Epilogue section.").
+
+     Until this pass the navigator derived its slots from route.js's CHAPTERS
+     one-for-one. Two of the owner's asks break that identity permanently:
+     `equip` is a row item with NO chapter behind it (its section is deferred
+     — see content-archive-deferred.js — so its slot is a promise, not a
+     destination), and `owned` is a chapter with NO row item (it is reached
+     from the Epilogue's Ownership action and the site-map panel instead).
+     So the row is declared HERE, in the file that owns every other word a
+     visitor reads:
+
+       chapter      the row item is that chapter's link; its visible name
+                    still comes from chapters.<id>.nav above, unduplicated.
+       placeholder  a non-navigating item; `label` is its visible name and
+                    `note` is its hover/tap answer. It never gains the
+                    active state and never joins the site-map panel.
+       size         'major' | 'minor' — the two circle sizes of the row
+                    ("Intro and Epilogue should be smaller"). Geometry is
+                    the navigator's (journey/layout/rail-geometry.js); this
+                    only says which of the two classes an item belongs to.
+
+     Route order is untouched by this list: chapters keep their p-ranges and
+     their cardinality guard, and a chapter absent from the row is still a
+     routable destination. journey/rail.js validates every `chapter` entry
+     against CHAPTERS at boot and throws on an unknown id. */
+  navigator: {
+    items: [
+      { chapter: 'mission', size: 'minor' },
+      { chapter: 'inspire', size: 'major' },
+      { placeholder: 'equip', label: 'Equip', note: 'Soon', size: 'major' },
+      { chapter: 'connect', size: 'major' },
+      { chapter: 'final', size: 'minor' },
+    ],
   },
 
   // Each node names its own chapter (`chapter:`). Added for the navigation

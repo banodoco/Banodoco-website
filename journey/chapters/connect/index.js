@@ -25,11 +25,17 @@
 //            down to it (the house precedent; the Final chapter's camera-pure
 //            uPull). Reverse scrubs mirror it exactly because the camera pose
 //            is itself a pure function of p.
-//   lit      PURE IN p (drive(p)): the light. THREE fronts now, one per route
-//            (2026-08-06), running base -> hub -> off-stage in sequence —
-//            Hivemind, then Discord, then ADOS (2026-08-11) — each lifting its
-//            own strands from their quiet level to their full one and kindling
-//            its own hub core as it lands. See THE ARRIVAL SCHEDULE below.
+//   lit      CONDUCTED IN p, PERFORMED IN SECONDS (drive(p) + the pace floor;
+//            see THE ARRIVAL IS PERFORMED at LIGHT_PACE_RATE). THREE fronts,
+//            one per route (2026-08-06), running base -> hub -> off-stage in
+//            sequence — Hivemind, then Discord, then ADOS (2026-08-11) — each
+//            lifting its own strands from their quiet level to their full one
+//            and kindling its own hub core as it lands. The SCHEDULE — where
+//            each front stands for a given p — is still pure in p, and the
+//            displayed fronts may only LAG it (a floor in seconds when the
+//            visitor outruns the show), never lead it. Reverse follows p
+//            exactly and dt = 0 snaps, so scrubs stay honest and frozen
+//            frames stay bit-identical. See THE ARRIVAL SCHEDULE below.
 //
 // THE D16 LAW IS KEPT, and kept the same way: nothing fades in over open
 // view. `resolve` is EXACTLY 0 at the hero pose and at the Inspire rest in
@@ -43,6 +49,13 @@ import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 import { applyPortrait } from '../../portrait.js';
 import { CAMERA as CONNECT_CAMERA } from './camera.js';
+import { createOwner } from '../../ui/owner.js';
+import { PARKED } from '../../journey-owner.js';
+import { railDock } from '../../layout/rail-geometry.js';
+/* FROM THE DOMAIN MODULE, NOT THE FACADE (the DEFECT-01 #3 rule): the chosen
+   beat tempo (`grand`, 2026-08-24) paces this chapter's whole arrival —
+   see THE ARRIVAL IS PERFORMED at LIGHT_PACE_RATE. */
+import { HOTSPOT_ARRIVAL } from '../../constants/copy.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -354,6 +367,93 @@ const frontEase = (x) => {
 };
 
 /* ================================================================
+   THE DEPARTURE IS PERFORMED TOO — on machine-owned falls only
+   (LIGHT-RETREAT, 2026-08-25)
+   ================================================================
+   The owner: "When I click from Connect backwards, the lit-up ground
+   network disappears really quickly. It should have a min speed that's
+   something like the speed that happens when I scroll backwards — for
+   disappearing."
+
+   The mechanism, measured (1440x900, evidence light-retreat/): a backward
+   nav click parks p at the destination in one tick (only the route-faithful
+   Mission<->Inspire flight presents a travelling p; every other jump is a
+   parked-state camera blend — journey.js directJumpTo), so the conducted
+   leg-t fell below LIGHT_LO in one frame and the instant-fall branch cut
+   every front from 1 to 0 on that frame — litSum 3.0 -> 0.0 in a single
+   ~45 ms frame, both adjacent (-> Inspire) and far (-> Mission) — while the
+   ground itself stayed on screen another ~585 ms (the camera still gazing
+   down as the blend departs; the seam disarm and the rising gaze then fade
+   the quiet web out). The owner's reference speeds, same rig: a deliberate
+   backward hand scrub crosses the light window (p 0.5201 -> 0.3860) in
+   1.17 s (0.115 p/s); the machine's own backward commit glide crosses it
+   in 0.57 s (0.235 p/s).
+
+   THE LAW, AND WHETHER IT EXTENDS. The arrival principle reads "a named
+   beat may arrive later than its scene event, never earlier", and this
+   chapter's amendment made the performance govern the drawn object whole.
+   Read as written it is about arrival only. The honest generalisation both
+   halves already obey is: THE PERFORMANCE MAY ONLY LAG THE CONDUCTED
+   POSITION — lag on the rise is arriving later; lag on the fall is leaving
+   later; LEADING is impossible in either direction (min on the way up, max
+   against the conducted target on the way down). So yes — the law extends
+   symmetrically, but the asymmetry the old wording protected is real and
+   is KEPT, because it was never between directions: it is between HANDS.
+   On a scrub the VISITOR owns p, the reveal is a position, and honesty
+   demands the light track their gesture frame-for-frame — the instant fall
+   below is that law and it is untouched, byte-identical (max(h.a −
+   sceneGate) = 0 is re-proved in the evidence). On a jump the MACHINE owns
+   p, there is no gesture for the light to be honest to, and the same
+   argument that gave the nav jump its own copy envelope ("a jump snaps
+   progress in a single dt = 0 tick, so scroll speed never rises") gives
+   the departure its floor: the retreat is timed against the camera actually
+   leaving, not against the click.
+
+   THE RATE IS AUTHORED FROM THE OWNER'S OWN REFERENCE, NOT FROM THE BEAT
+   TEMPO. LIGHT_PACE_RATE derives from HOTSPOT_ARRIVAL because the arrival
+   is the show and the show has one tempo; the scroll-backward speed is a
+   property of the scroll model and does not move when the owner re-tastes
+   the beat preset, so coupling the retreat to beatGapMs would silently
+   detune it from the thing it was asked to match. This also keeps
+   LABEL-EXIT's ruling intact (constants/copy.js: "departures do not read
+   this table — an arrival is a performance; a departure is a release"):
+   the chip layer stays a release under its scene ceiling, exactly as
+   ruled; what changes is that on a machine-owned fall the SCENE CEILING
+   ITSELF now descends at a floor, and the chips simply ride it — the same
+   one-object product as ever, no departure clock added to any marker.
+   1.2 s is the measured
+   deliberate backward scrub (1.17 s) — the gentler of the two references,
+   chosen over the 0.57 s glide because the visitor's own hand is the
+   conservative reading of "when I scroll backwards" and this chapter has a
+   five-request history of "slower". The floor therefore never disappears
+   the network faster than any backward scroll the owner can perform.
+
+   WHAT KEEPS THE LAWS. The floor engages ONLY between setBlending(true)
+   and setBlending(false) — the transition controller's own broadcast,
+   raised for every non-route-faithful jump (journey.js directJumpTo) and
+   lowered on every ending a blend can have (endCamBlend: landed,
+   cancelled, wrap-home). A visitor-owned fall is byte-identical to before.
+   dt = 0 still snaps unconditionally, so ?p= deep links, ?capture= freezes
+   and the goldens are settled by construction; snap() still settles
+   placements. beginEntry() now resets the performed position explicitly
+   (the nav replay INTO this chapter must open on a reset performance, not
+   inherit a floored, still-falling one — entryReveal is 0 there, so the
+   reset is invisible by the same argument as the reveal itself). A blend
+   CANCELLED by manual input clears the flag and the next tick snaps the
+   residue to the visitor's p — the same hard hand-back step every
+   cancelled jump on this site already makes (transition/controller.js §15
+   residual). A blend that lands before the retreat finishes leaves its
+   residue to the same clearing tick, which is invisible by construction:
+   the fall only has residue below the arm window, where amount is already
+   0 and the protected rests hold resolve at exactly 0. The forward jump
+   out of Connect was measured for the mirror fault and does not have it:
+   past the leg the conducted target clamps at LIGHT_HI, so a forward click
+   never falls at all — its departure is the seam disarm behind the Owned
+   murk, exactly as scrolled. */
+const LIGHT_RETREAT_WINDOW_S = 1.2;
+const LIGHT_RETREAT_RATE = (LIGHT_HI - LIGHT_LO) / LIGHT_RETREAT_WINDOW_S;
+
+/* ================================================================
    The camera-pure resolve (Change 1, 2026-08-05)
    ================================================================
    ONE quantity, read straight off the live camera — no p, no clock, no state:
@@ -404,16 +504,28 @@ export function createConnect(sceneApi) {
   const rnd = makeRng(41417);
   const group = new THREE.Group();
   group.visible = false;
+  /* THIS CHAPTER'S DISPOSABLE WORK, AND ITS OWNER (R05, 2026-08-22).
+     Everything Connect attaches OUTSIDE its own returned descriptor goes
+     through this owner and is drained, LIFO, by `dispose()` at the bottom of
+     the descriptor. Today that is two things: the scene-graph parenting on
+     the line below, and the 'journey-connect' animator registration.
+     `createOwner` runs one `try` per cleanup, so a throw in one does not
+     strand the other. Nothing calls `dispose()` in production —
+     journey/chapter-registry.js deliberately does not cascade it (C06). */
+  const owner = createOwner('chapter:connect');
+
   // NON-sway parent (doc §3): the network is rooted terrain — it must not
   // sway with the cap. Same parenting rule as the Final field (adr-d3).
   sceneApi.scene.add(group);
+  owner.own(() => { sceneApi.scene.remove(group); });
 
   /* ---- shared uniforms (one write per frame) ---- */
   const U = {
     uTime: { value: 0 },
     uAmount: { value: 0 },      // arm x camera resolve x navigation-entry reveal
-    // ONE FRONT PER ROUTE (2026-08-06): x ADOS, y Hivemind, z Discord. Each is
-    // 0..1 and pure in p, so reverse scrubs still mirror exactly and a pause
+    // ONE FRONT PER ROUTE (2026-08-06): x ADOS, y Hivemind, z Discord. Each
+    // is 0..1, conducted in p through the pace floor (THE ARRIVAL IS
+    // PERFORMED): reverse scrubs still mirror p exactly and a pause
     // mid-arrival holds a coherent partial network.
     uLit: { value: new THREE.Vector3(0, 0, 0) },
     uHead: { value: new THREE.Vector3(0, 0, 0) },   // arriving head, per route
@@ -461,7 +573,17 @@ export function createConnect(sceneApi) {
   };
 
   const net = buildTendrils(group, U);
-  U.uAdosHubAlong.value = net.hubMeta.find((h) => h.id === 'ados').along;
+  /* THE FOCAL NODE. Six sites below need to name one particular node of the
+     network: the one the lens focuses, the one the copy block and the
+     persistent-nav dodge are solved against, and the one this chapter
+     publishes as its `focus` capability. Which node that is is declared in
+     `content/connect-nodes.js` and carried out on the built network, so the
+     six sites ask the network rather than each repeating a string. The
+     `Ados`-spelled identifiers around them — `uAdosShift`, `_adosBase`,
+     `debugAdosAlignment` — are NAMES, not lookups, and are left alone: the
+     shader uniform and the QA surface are called that by their consumers. */
+  const FOCAL = net.focalId;
+  U.uAdosHubAlong.value = net.hubMeta.find((h) => h.id === FOCAL).along;
 
   /* ADOS / PERSISTENT-NAV EXCLUSION --------------------------------------
      ADOS is deliberately the nearest lower-left hub, which became the one
@@ -488,7 +610,7 @@ export function createConnect(sceneApi) {
   // The settled projection and DOM anchors use slightly different matrix
   // paths; allow their measured 8-12px delta.
   const PROJECTION_AIR = 12;
-  const _adosBase = net.hubMeta.find((h) => h.id === 'ados').pos.clone();
+  const _adosBase = net.hubMeta.find((h) => h.id === FOCAL).pos.clone();
   const _adosPlaced = _adosBase.clone();
   const _adosResolvedShift = new THREE.Vector3();
   const _placementCamera = new THREE.PerspectiveCamera();
@@ -502,8 +624,9 @@ export function createConnect(sceneApi) {
   const _probeZ = new THREE.Vector3();
   const _coreLift = new THREE.Vector3(0, 0.05, 0);
   const PROBE = 0.05;
-  const logoMark = document.querySelector('.logo .mark');
-  let placementKey = '';
+  /* The revision of the dock snapshot this placement was last solved against.
+     0 is "never solved": the owner's revisions start at 1. */
+  let placementRevision = 0;
 
   /** Placement is composition, not arrival choreography. Apply the resolved
    *  vector whole so the ambient ground, Connect routes, core and DOM anchor
@@ -511,7 +634,7 @@ export function createConnect(sceneApi) {
   function applyAdosPlacement() {
     U.uAdosShift.value.copy(_adosResolvedShift);
     _adosPlaced.copy(_adosBase).add(U.uAdosShift.value);
-    const core = net.cores.find((entry) => entry.id === 'ados');
+    const core = net.cores.find((entry) => entry.id === FOCAL);
     if (core) core.sprite.position.copy(_adosPlaced).add(_coreLift);
     sceneApi.setGroundAdosTarget?.(_adosPlaced);
   }
@@ -523,33 +646,28 @@ export function createConnect(sceneApi) {
     return out;
   }
 
-  /** The dock's settled rectangle, derived from the same responsive geometry
-   *  as rail.setHeroEase(). Reading the live rail would make placement follow
-   *  its Mission-to-dock animation—the exact scroll-time warp being removed. */
-  function dockedRailRect(logoRect) {
-    const w = innerWidth, h = innerHeight;
-    const portrait = h > w;
-    const phone = portrait && w <= 620;
-    const tablet = portrait && w <= 900;
-    const scale = phone ? 0.82 : tablet ? 0.84 : 0.86;
-    const fallbackTop = (phone ? 1.3 : tablet ? 1.6 : 2.1) * 16;
-    const fallbackLeft = (phone ? 1.3 : tablet ? 1.6 : 3.4) * 16;
-    const logoTop = logoRect ? logoRect.top : fallbackTop;
-    const logoLeft = logoRect ? logoRect.left : fallbackLeft;
-    const left = logoLeft - 24 * (1 - scale);
-    const top = h - logoTop - 24 * (1 + scale);
-    return { left, right: left + 5 * 48 + 4 * 16, top };
-  }
-
+  /** Re-solve the ADOS placement, but only when the geometry it is solved
+   *  against has actually moved.
+   *
+   *  `drive()` calls this EVERY FRAME. Before U05 that meant a
+   *  getBoundingClientRect() on the page logo every frame, plus this module's
+   *  own copy of the rail's responsive dock table to turn it into a rectangle.
+   *  Both belonged to one owner and now are: `railDock` measures once per
+   *  viewport and publishes a frozen snapshot, and the revision on it is the
+   *  exact signal "the dock moved, solve again". This function therefore reads
+   *  no DOM and takes no measurement during frame drive.
+   *
+   *  `force` is a deliberate re-solve. It drops the published dock first and
+   *  works from a fresh measurement, and CHAPTER BUILD IS ITS ONLY CALLER —
+   *  the one instant the page's chrome may have settled since the last
+   *  publication without the viewport having moved. `drive()`, `beginEntry()`,
+   *  `driveEntry()` and `snap()` all call this UNFORCED, exactly as they did
+   *  before U05, so the revision check is what decides whether they re-solve. */
   function updateAdosExclusion(force = false) {
-    const logoRect = logoMark && logoMark.getBoundingClientRect();
-    const key = [
-      innerWidth, innerHeight,
-      logoRect ? logoRect.left.toFixed(2) : '',
-      logoRect ? logoRect.top.toFixed(2) : '',
-    ].join('|');
-    if (!force && key === placementKey) return;
-    placementKey = key;
+    if (force) railDock.invalidate();
+    const dock = railDock.dock();
+    if (!force && dock.revision === placementRevision) return;
+    placementRevision = dock.revision;
 
     // Solve in the authored resting composition, never the travelling live
     // camera. This makes the world destination invariant across forward and
@@ -570,7 +688,7 @@ export function createConnect(sceneApi) {
 
     let tx = Math.max(ADOS_GLOW_RADIUS + RAIL_AIR, _screen0.x - ADOS_SCREEN_LEFT);
     let ty = _screen0.y - ADOS_SCREEN_UP_MIN;
-    const r = dockedRailRect(logoRect);
+    const r = dock.rect;
     const left = r.left - RAIL_AIR, right = r.right + RAIL_AIR;
     const top = r.top - RAIL_AIR;
     const overlapsX = tx + ADOS_GLOW_RADIUS > left && tx - ADOS_GLOW_RADIUS < right;
@@ -643,6 +761,93 @@ export function createConnect(sceneApi) {
   })();
 
   /* ================================================================
+     THE ARRIVAL IS PERFORMED — the pace floor (CONNECT-SYNC, 2026-08-23)
+     ================================================================
+     The owner, on this chapter: "the lines on the ground appear at a
+     different speed to when the items appear. When I navigate in, it's
+     perfectly aligned, but when I scroll in, it is misaligned."
+
+     The asymmetry was the diagnosis. A nav jump replays the whole
+     progression on driveEntry's 3.2 s clock, so lights and chips move
+     together; a scroll left the lights pure in p while the chips rode
+     hotspot-frame.js's seconds-denominated beat floor — so a fast pass
+     had the light land in ~130 ms per hub while its own label was still
+     forming 300-600 ms behind it, and the pairing this composition
+     depends on (the chip rides the EXACT product the hub core's opacity
+     rides — see nodeReveal) came apart.
+
+     THE PRINCIPLE, AMENDED. "The scene is conducted; the beats are
+     performed — a named beat may arrive later than its scene event,
+     never earlier" (DEFECT-01 #3 / ICON-ARRIVAL) still governs; what
+     this chapter adds is: WHERE THE BEAT'S MARKER AND ITS SCENE EVENT
+     ARE DRAWN AS ONE OBJECT, THE PERFORMANCE GOVERNS THE OBJECT WHOLE.
+     On Connect the label and its dot are one object by authored intent
+     (2026-08-16, "the labels should show up as soon as each light line
+     progresses"), so the tempo floor moves out of the chip layer and
+     into the light itself: when the visitor outruns the choreography,
+     the WHOLE arrival — strands, dots, labels — plays out at this floor,
+     and the pair can never separate because there is only one clock.
+     The chips' own beat envelope is retired for this chapter
+     (hotspot-frame.js, the revealScrub branch): they are pure in the
+     gate again, which is pure in the paced light.
+
+     This also closes the gap D175 named: "as gesture speed -> infinity
+     the experience should converge on the jump; instead it
+     discontinuously flips." The floor IS that convergence — a hard
+     flick now gets the show at a bounded tempo, the same law the nav
+     replay already enforces, instead of a compressed pop.
+
+     THE RATE IS DERIVED, NOT AUTHORED HERE. The owner chose the site's
+     beat tempo on 2026-08-24 — `grand`, now the one shipped value in
+     constants/copy.js HOTSPOT_ARRIVAL (the tasting flag is gone). One
+     number of that choice — beatGapMs, the minimum spacing of named
+     beats — paces this floor too: the floor rate is set so the CLOSEST
+     pair of hub landings in the authored schedule is exactly beatGapMs
+     (540 ms) apart when the floor is the conductor. So the two chapters
+     keep speaking at one tempo, from one constant. formMs does not
+     apply here: this chapter's formation is the kindle swell itself,
+     which the same floor paces. The window time that falls out of
+     540 ms is ~2.3 s on a hard pass — at the ~2.2 s the nav replay's
+     own clock gives the light window, so the scroll floor cannot make
+     the show meaningfully slower than navigating in (the min() below
+     keeps even that honest).
+
+     WHAT KEEPS THE LAWS. The floor can only LAG the pure-in-p schedule
+     (min with the conducted target), so at any deliberate speed the
+     scene is still the whole of the answer; REVERSE follows p exactly
+     on the same frame wherever the visitor owns p (a machine-owned nav
+     blend now performs its departure too — see THE DEPARTURE IS
+     PERFORMED TOO at LIGHT_RETREAT_RATE); dt = 0
+     snaps the performance to the conducted position, so ?p= deep
+     links, ?capture= freezes and every protected golden are settled by
+     construction (snap() jumps it; the animator's dt = 0 branch keeps
+     it). A pause mid-outrun lets the show finish catching up to where
+     the visitor already scrolled — the driveEntry philosophy: the show
+     is owed, not skipped. */
+  const LIGHT_PACE_RATE = (() => {
+    // frontEase is strictly monotone on [0,1]; invert by bisection.
+    const inv = (target) => {
+      let lo = 0, hi = 1;
+      for (let n = 0; n < 48; n++) {
+        const m = (lo + hi) / 2;
+        if (frontEase(m) < target) lo = m; else hi = m;
+      }
+      return (lo + hi) / 2;
+    };
+    // Each hub's dot completes when its route's head reaches along + 0.03
+    // (the same expression hubIgnite's window closes on).
+    const dots = net.hubMeta.map((hm) => {
+      const w = LIT_WIN[hm.route];
+      const litAtDot = Math.min(1,
+        (hm.along + 0.03) / U.uLitMax.value.getComponent(hm.route));
+      return w[0] + inv(litAtDot) * (w[1] - w[0]);
+    }).sort((a, b) => a - b);
+    const minGap = Math.min(dots[1] - dots[0], dots[2] - dots[1]);
+    // leg-t per second such that minGap plays in exactly beatGapMs.
+    return minGap / (HOTSPOT_ARRIVAL.beatGapMs / 1000);
+  })();
+
+  /* ================================================================
      Node anchors — the hub cores. The group parents to the scene root,
      so hub positions ARE world positions (no matrix walk needed; kept
      through a clone so callers can't mutate the anchors).
@@ -695,13 +900,21 @@ export function createConnect(sceneApi) {
   const NODE_IDS = [...HUB_IDS];          // narrative order = reveal order = tab order
   const _nw = new THREE.Vector3();
 
+  /** Per-node clocks, one entry per node the chapter actually has. Derived
+   *  from NODE_IDS rather than written out as three-key literals: a table
+   *  spelled `{ ados: …, hivemind: …, discord: … }` is a fourth, fifth and
+   *  sixth copy of the node list that cannot learn a node was added, and
+   *  `setHot`'s `if (!(id in hot)) return` guard turns a missing key into a
+   *  node that silently never lights rather than an error. */
+  const perNode = (init) => Object.fromEntries(NODE_IDS.map((id) => [id, init]));
+
   /* ================================================================
      State: hover + ambient pulse clocks (per route, own clocks,
      never synced — the ambRegions law)
      ================================================================ */
-  const hot = { ados: false, hivemind: false, discord: false };
-  const amt = { ados: 0, hivemind: 0, discord: 0 };
-  const refire = { ados: 0, hivemind: 0, discord: 0 };
+  const hot = perNode(false);
+  const amt = perNode(0);
+  const refire = perNode(0);
 
   // THE PULSE RUNS PAST THE HUB AND FADES (2026-08-17, with the tendrils.js
   // hub-convergence pulse gate — Hannah's "weird white flash in the right bg").
@@ -769,12 +982,26 @@ export function createConnect(sceneApi) {
      Per-frame
      ================================================================ */
   let amount = 0, amountTarget = 0;
-  // written by drive(p) — pure in p. litR/headR are per route; litMin is "the
-  // slowest route" (the honest test for FULLY ARRIVED, which gates the
-  // particles and the ambient pulses) and litAvg is the network's overall
-  // arrival, which the hero-web dim rides.
+  // litR/headR are per route; litMin is "the slowest route" (the honest test
+  // for FULLY ARRIVED, which gates the particles and the ambient pulses) and
+  // litAvg is the network's overall arrival, which the hero-web dim rides.
+  // All four are written by applyFronts, from the DISPLAYED leg-t below.
   const litR = [0, 0, 0], headR = [0, 0, 0];
   let litMin = 0, litAvg = 0;
+  // The conducted position: pure in p, written by driveAt on every drive/
+  // entry/snap path. The performed position may only lag it — see THE
+  // ARRIVAL IS PERFORMED above. Both are leg-t, clamped to the light window
+  // where it matters (outside it the fronts are pinned at 0 or 1 anyway).
+  let litPureT = -1e9;
+  // The performed position the fronts actually display. Animator-owned:
+  // follows litPureT down instantly on visitor-owned frames (reverse scrubs
+  // are honest), falls at most at LIGHT_RETREAT_RATE while a nav blend owns
+  // p (THE DEPARTURE IS PERFORMED TOO), rises toward it at most at
+  // LIGHT_PACE_RATE, and snaps to it on dt = 0 and in snap().
+  let litShownT = LIGHT_LO;
+  // True between setBlending(true) and setBlending(false): a nav blend owns
+  // p, so a fall in the conducted position is the machine's, not a gesture.
+  let blendGoverned = false;
   let resolve = 0;                        // written per frame from the camera
   // 1 during ordinary scroll/placements. A nav entry alone pulls this to zero
   // before its first rendered frame, so even a downward-looking SOURCE camera
@@ -791,6 +1018,26 @@ export function createConnect(sceneApi) {
   }
 
   sceneApi.addAnimator('journey-connect', (t, dt) => {
+    /* THE PACE FLOOR, applied where the frame clock lives. Down instantly
+       on visitor-owned frames (reverse scrubs mirror p exactly, same
+       frame), down at most at LIGHT_RETREAT_RATE while a nav blend owns p
+       (THE DEPARTURE IS PERFORMED TOO — the machine's parked p is not a
+       gesture for the light to be honest to), up at most at
+       LIGHT_PACE_RATE (the show keeps its tempo when the visitor outruns
+       it — and finishes catching up if they pause, the driveEntry
+       philosophy), dt = 0 snaps (frozen captures and ?p= placements are
+       settled by construction; snap() covers the placement's own tick).
+       This runs before the visibility gate on purpose: a hidden network
+       keeps performing, so scrubbing away and back cannot bank a stale
+       half-arrival against the pure schedule — and the tick after a blend
+       ends, an unfinished floored retreat settles here the same way. */
+    const tgtT = litTargetT();
+    if (dt === 0) litShownT = tgtT;
+    else if (tgtT >= litShownT) litShownT = Math.min(tgtT, litShownT + dt * LIGHT_PACE_RATE);
+    else if (blendGoverned) litShownT = Math.max(tgtT, litShownT - dt * LIGHT_RETREAT_RATE);
+    else litShownT = tgtT;
+    applyFronts(litShownT);
+
     const k = Math.min(1, dt * 3.0);
     amount += (amountTarget - amount) * k;
     if (amount < 0.004 && amountTarget === 0) amount = 0;
@@ -923,6 +1170,21 @@ export function createConnect(sceneApi) {
       core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a));
     }
   });
+  /* PARKED ON DISPOSAL, NEVER REMOVED — journey/journey-owner.js's rule,
+     applied to a chapter animator. `organism/animation.js` replaces a
+     same-name registration IN ITS ORIGINAL Map slot, so re-parking keeps this
+     chapter's frame-order position for whatever rebuilds into it; REMOVING
+     the registration would push a rebuilt Connect to the END of insertion
+     order, behind animators that must not precede it, with nothing failing.
+
+     THIS IS ALSO THE S-1 ANSWER. `organism/animation.js`'s frame loop catches
+     a throw from an animator by DELETING the registration and passing
+     silently forever after. Parking a no-op means the disposed chapter's body
+     is never entered again, so there is no disposed-state path inside an
+     animator that could throw and trigger that deletion. The alternative —
+     an `if (disposed) return;` guard inside the body — leaves the body
+     reachable and is strictly worse under S-1. */
+  owner.own(() => { sceneApi.addAnimator('journey-connect', PARKED); });
 
   /* ================================================================
      Public API — the chapter contract, verbatim, plus drive(p)/snap()
@@ -930,10 +1192,17 @@ export function createConnect(sceneApi) {
   const SPAN_LO = startOf('connect'), SPAN_HI = endOf('connect');
   const REST_P = restProgress('connect');
 
-  /** One writer for the route fronts. Scroll drive(p) and the navigation-only
-   *  entry replay below deliberately share these exact windows and easing. */
+  /** One writer for the CONDUCTED position. Scroll drive(p) and the
+   *  navigation-only entry replay below deliberately share this exact
+   *  mapping; the animator derives the displayed fronts from it through the
+   *  pace floor (THE ARRIVAL IS PERFORMED above). */
   function driveAt(p) {
-    const legT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
+    litPureT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
+  }
+
+  /** The front loop — the pre-pacing driveAt body verbatim, parameterised on
+   *  the leg-t the fronts actually display. */
+  function applyFronts(legT) {
     litMin = 1; litAvg = 0;
     for (let i = 0; i < 3; i++) {
       const L = frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
@@ -945,12 +1214,53 @@ export function createConnect(sceneApi) {
     }
   }
 
+  /** The conducted target, clamped to the light window (outside it every
+   *  front is pinned at 0 or 1, so the clamp loses nothing and keeps the
+   *  pace limiter from spending seconds on empty road). */
+  function litTargetT() {
+    return litPureT < LIGHT_LO ? LIGHT_LO
+      : litPureT > LIGHT_HI ? LIGHT_HI : litPureT;
+  }
+
   // The chapter is prepared before journey activation. Lock the responsive
   // placement now so entering Connect only reveals light over geometry that
   // has already occupied its final world position for the whole approach.
   updateAdosExclusion(true);
 
+  /* ---- descriptor members, hoisted (C05 slice B) ----------------------
+     These three were object-literal methods until the declared descriptor
+     needed to reference them from a capability as well as from the root.
+     Hoisting them keeps ONE body per behaviour: a capability method that
+     tried `this.nodeWorld(...)` would resolve `this` to the capability
+     object, which has no such member, so delegation has to go through a
+     lexical binding. Bodies are unchanged, character for character. */
+
+  function setHot(id, on) {
+    if (!(id in hot)) return;
+    hot[id] = !!on;
+  }
+
+  function nodeWorld(id) {
+    const n = NODES[id];
+    if (!n) return null;
+    return _nw.copy(id === FOCAL ? _adosPlaced : n).clone();
+  }
+
+  /** Per-node chip gate (2026-08-16 — see the CHIPS NOW DO FOLLOW note at
+   *  LIGHT_ORDER). The exact product the hub core's opacity rides
+   *  (animator, `core.mat.opacity`), minus the hover term: the label stands
+   *  up as its own dot kindles and never before the network is drawn at
+   *  all. hubIgnite is written by the animator only while the group is
+   *  visible, but the product is still safe on every hidden frame — a
+   *  frozen hubIgnite is multiplied by an amount/resolve pair that IS
+   *  current, and both are 0 exactly when the scene has nothing up. */
+  function nodeReveal(id) {
+    const i = HUB_IDS.indexOf(id);
+    return i < 0 ? 0 : amount * resolve * entryReveal * hubIgnite[i];
+  }
+
   return {
+    id: 'connect',
     group,
     counts,
     nodeIds: NODE_IDS,
@@ -973,20 +1283,13 @@ export function createConnect(sceneApi) {
       amountTarget = on ? 1 : 0;
     },
     get armed() { return amountTarget > 0; },
-    setHot(id, on) {
-      if (!(id in hot)) return;
-      hot[id] = !!on;
-    },
-    nodeWorld(id) {
-      const n = NODES[id];
-      if (!n) return null;
-      return _nw.copy(id === 'ados' ? _adosPlaced : n).clone();
-    },
+    setHot,
+    nodeWorld,
     /** QA: prove every rendered ADOS layer consumes this chapter's one
      *  resolved dodge vector. The returned arrays are copies; callers cannot
      *  mutate live uniforms or scene nodes. */
     debugAdosAlignment() {
-      const core = net.cores.find((entry) => entry.id === 'ados');
+      const core = net.cores.find((entry) => entry.id === FOCAL);
       const strandSpec = net.geometries.strands.getAttribute('aB');
       const strandLayout = net.geometries.strands.getAttribute('aA');
       const strandPosition = net.geometries.strands.getAttribute('position');
@@ -1038,26 +1341,21 @@ export function createConnect(sceneApi) {
           && strandLayout.getZ(i) < 0.5 && strandLayout.getW(i) < -0.5),
       };
     },
-    /** Per-node chip gate (2026-08-16 — see the CHIPS NOW DO FOLLOW note at
-     *  LIGHT_ORDER). The exact product the hub core's opacity rides
-     *  (animator, `core.mat.opacity`), minus the hover term: the label stands
-     *  up as its own dot kindles and never before the network is drawn at
-     *  all. hubIgnite is written by the animator only while the group is
-     *  visible, but the product is still safe on every hidden frame — a
-     *  frozen hubIgnite is multiplied by an amount/resolve pair that IS
-     *  current, and both are 0 exactly when the scene has nothing up. */
-    nodeReveal(id) {
-      const i = HUB_IDS.indexOf(id);
-      return i < 0 ? 0 : amount * resolve * entryReveal * hubIgnite[i];
-    },
-    /** The travelling light — pure in p, so scrubs reverse exactly.
+    nodeReveal,
+    /** The travelling light — conducted in p, performed in seconds (THE
+     *  ARRIVAL IS PERFORMED above; the schedule itself is still pure in p).
      *  Forward: light leaves the stipe base and runs out along paths that are
      *  already there, ONE ROUTE AT A TIME (Hivemind, then Discord, then ADOS,
-     *  windows overlapping by 0.30), kindling each hub as its own trail lands.
+     *  windows overlapping by 0.30), kindling each hub as its own trail lands
+     *  — never faster than the beat tempo, however hard the visitor scrolls.
      *  Reverse: each front withdraws into the base in the opposite order and
-     *  the routes go quiet again — they do not vanish. Nothing here reads a
-     *  clock or any state, so pausing mid-arrival holds a coherent partial
-     *  network and scrubbing back retraces it exactly.
+     *  the routes go quiet again — they do not vanish. The displayed arrival
+     *  may lag p, never lead it; a reverse SCRUB follows p on the same frame,
+     *  and a machine-owned reverse (a nav blend) withdraws at no more than
+     *  LIGHT_RETREAT_RATE (THE DEPARTURE IS PERFORMED TOO). So pausing
+     *  mid-arrival holds a coherent partial network (then finishes
+     *  the show it still owes) and scrubbing back retraces the schedule
+     *  exactly.
      *  Past the leg (the p-window holds to owned.start + 0.105) the network
      *  stays fully lit; retire happens behind the Owned soil-crossing murk
      *  exactly as shipped (M5 values). */
@@ -1077,6 +1375,13 @@ export function createConnect(sceneApi) {
     beginEntry() {
       entryReveal = 0;
       driveAt(SPAN_LO);
+      // The replay opens on a RESET performance. Before the departure floor
+      // this reset was implicit (the next tick's instant fall); with a
+      // machine-owned fall now floored, make it explicit so a backward jump
+      // INTO this chapter can never open on a stale, still-falling network.
+      // Invisible by the same argument as the reveal: entryReveal is 0 until
+      // driveEntry's own clock raises it.
+      litShownT = litTargetT();
       updateAdosExclusion();
     },
     entryReady() {
@@ -1092,11 +1397,125 @@ export function createConnect(sceneApi) {
      *  frame needs this (animators see dt = 0 under freezeTime). */
     snap() {
       amount = amountTarget;
+      // The performed arrival settles with everything else on a placement:
+      // the light stands exactly where the conducted schedule puts it, so a
+      // deep link or capture renders the finished (or exactly-partial) state.
+      litShownT = litTargetT();
       updateAdosExclusion();
       for (const id of NODE_IDS) amt[id] = hot[id] ? 1 : 0;
     },
     // A nav landing reconciles the eased seam arm only. The route fronts and
     // entryReveal belong to driveEntry and deliberately outlive the camera.
     snapLanding() { amount = amountTarget; },
+    /** The transition controller's blend broadcast (the Final chapter's
+     *  precedent; an optional contract member, chapter-contract.js). While a
+     *  blend is up the machine owns p, so a fall in the conducted light
+     *  position is a departure to PERFORM (the animator's retreat floor),
+     *  not a gesture to track. `dstCamX`/`durS` are deliberately unused:
+     *  the floor is a rate matched to the owner's scroll-backward reference
+     *  (see THE DEPARTURE IS PERFORMED TOO), not a schedule against the
+     *  move. The clearing call settles any downward residue SYNCHRONOUSLY
+     *  rather than leaving it to "the next tick": a blend can end on the
+     *  frame loop's last frame before it idles at the landed rest (measured:
+     *  the retreat froze mid-window at [0, 1, 0.49] across a 7 s park when
+     *  this was tick-deferred), and a banked half-arrival across that sleep
+     *  is exactly what the pace floor's own hidden-frames rule exists to
+     *  rule out. The settle is downward-only (Math.min), so a landing whose
+     *  entry replay is still legitimately rising is untouched; it is
+     *  invisible by construction below the arm window (amount 0, and the
+     *  protected rests hold resolve at exactly 0), and on a manual-claim
+     *  cancel it is the same hard hand-back step every cancelled jump on
+     *  this site already makes. */
+    setBlending(on) {
+      blendGoverned = !!on;
+      if (!blendGoverned) litShownT = Math.min(litShownT, litTargetT());
+    },
+    /** RETIRE THIS CHAPTER'S EXTERNAL ATTACHMENTS — and ONLY those (R05).
+     *
+     *  What it covers, both drained through one owner, LIFO, idempotently:
+     *    - the 'journey-connect' animator, RE-PARKED with a no-op rather than
+     *      removed (see the note at the registration for why, and for how
+     *      that answers S-1);
+     *    - this chapter's `group`, removed from `sceneApi.scene`.
+     *  After this call the chapter is unreachable from the frame loop and
+     *  absent from the scene graph, which is the pair of properties the
+     *  lifecycle contract asks R05 for.
+     *
+     *  WHAT IT DOES NOT COVER, SO THAT NOBODY READS THE NAME AS A PROMISE:
+     *  GPU resources. The geometries, materials and textures built by this
+     *  chapter and by `tendrils.js`/`tendrils-materials.js` are NOT disposed.
+     *  The partiality is deliberate — one live reason being that the baked
+     *  path may hand out SHARED geometry, so disposing here can free
+     *  something another chapter is still drawing. Why it was left open, and
+     *  what a later order needs to overturn it, are in
+     *  docs/code-health/evidence/2026-08-21-elegance-run-01/e01/relocated/journey-chapters-connect-index.md
+     *
+     *  This partiality is PINNED, not merely commented:
+     *  tools/test-r05-chapter-disposal.mjs `B4` fails if a geometry or
+     *  material disposal appears here without that suite's claim moving with
+     *  it. No caller may read this method as full teardown.
+     *
+     *  `dispose` is not a contract key. journey/chapter-contract.js declares
+     *  seven core keys and four capabilities and deliberately allows extra
+     *  root members, so this adds a member, not a capability. */
+    dispose() { owner.dispose(); },
+
+    /* ---- DECLARED DESCRIPTOR (journey/chapter-contract.js) --------------
+       Core: id/group/counts/setArmed/armed/snap/snapLanding, all above.
+
+       All three capabilities are live: chapter-interactions.js registers this
+       chapter from `visibility.nodeIds` and holds no chapter id of its own,
+       and journey.js's pickChapterFocus asks `focus.world()`.
+
+       Every member below is still a reference to the same hoisted body the
+       root member exposes, so the two spellings cannot drift apart — and the
+       root spellings STAY, because they ARE these functions and QA browser
+       scripts read them off the published `window.journey.chapters` handle.
+       How the capability migration was sliced:
+       docs/code-health/evidence/2026-08-21-elegance-run-01/e01/relocated/journey-chapters-connect-index.md */
+
+    /** The lens focal source for the Connect leg: the ADOS hub, in its
+     *  responsively-placed position (`_adosPlaced`, not `_adosBase`). This is
+     *  what journey.js used to spell `chapters.connect.nodeWorld('ados')`,
+     *  with the string moved into the chapter that owns it. */
+    focus: {
+      world() { return nodeWorld(FOCAL); },
+    },
+
+    /** Connect has a hover channel and no selection channel. `setSelected`
+     *  is declared null rather than omitted because the ABSENCE is the
+     *  statement: ui.js's notifySelect reads `selection.setSelected` and
+     *  no-ops on a null one. Omitting the key instead would make the absence
+     *  indistinguishable from an oversight. */
+    selection: {
+      setHot,
+      setSelected: null,
+    },
+
+    visibility: {
+      // Narrative order = reveal order = tab order. The SAME array object
+      // the root `nodeIds` publishes, so registration order is authored
+      // once (H3/H6).
+      nodeIds: NODE_IDS,
+      nodeWorld,
+      nodeReveal,
+      // No hit-radius model and no label policy: connect keeps ui.js's
+      // pill-only hit surface and its default chip. Declared null, not
+      // omitted — and they must reach addHotspot as `undefined`, never as
+      // a function, or the collision/dodge/hit-pad passes change (H4).
+      nodeRadius: null,
+      labelPolicy: null,
+      // The reveal-gate pair, one true at most. Connect scrubs: the UI
+      // keeps its 72% readiness floor but maps the remaining marker
+      // opacity straight off nodeReveal(), so reverse scroll cannot leave
+      // a time-eased label behind the placement. This is the flag that
+      // already lived at the root as `revealScrub: true`.
+      revealDirect: false,
+      revealScrub: true,
+      // Connect excludes no node from the rail and gates no chip on the
+      // chapter copy ease.
+      setExcludedNodes: null,
+      bindCopyEase: null,
+    },
   };
 }

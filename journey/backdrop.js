@@ -30,7 +30,7 @@ export function installBackdropDismiss(backdrop, panel, dismiss) {
       // initiating pointer explicitly so a release over the panel still
       // reaches onPointerUp and clears this gesture instead of leaving a stale
       // mouse pointerId that a later cross-boundary release could reuse.
-      try { backdrop.setPointerCapture(event.pointerId); } catch {}
+      try { backdrop.setPointerCapture(event.pointerId); } catch { /* window delivery remains available */ }
     }
   };
   const onPointerUp = (event) => {
@@ -39,6 +39,14 @@ export function installBackdropDismiss(backdrop, panel, dismiss) {
     if (isBackdropTap(start, event, panel.getBoundingClientRect())) dismiss(event);
   };
 
+  // NOT CONVERTED TO owner.listen, DELIBERATELY (J04b). lifecycle.md §6.3
+  // calls this file "already correct and the model: J04b adopts its shape
+  // rather than replacing it", and all four of its removeEventListener sites
+  // are pinned BY TEXT in tools/test-render-baseline.mjs's M7 manifest floor.
+  // Routing them through an owner would delete four pinned sites to add one
+  // shared one — a floor break in exchange for nothing. The caller
+  // (journey/rail.js) registers the returned uninstall with its menu owner
+  // instead, which is the only thing that was missing.
   backdrop.addEventListener('pointerdown', onPointerDown);
   backdrop.addEventListener('pointerup', onPointerUp);
   backdrop.addEventListener('pointercancel', clear);

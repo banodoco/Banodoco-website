@@ -17,12 +17,31 @@
 // linearly onto journey progress p through the per-chapter allocations in
 // constants.js. Every input is a delta on v; nothing is ever a discrete step
 // to a chapter, so the path is reversible at any point and at any speed.
+//
+// THE CLOCK THIS FILE READS IS SKEWED, and it never un-skews. Every
+// `performance.now()` below (`sinceInputMs`, the stall bank, `lastFrameAt`,
+// the boot replay's `bootNow`) runs on a clock that organism/intro.js's
+// fast-forward pushes forward by ~8.3 s in production and then deliberately
+// leaves there — its header says why un-skewing is worse. It stays monotonic, so
+// the DIFFERENCES this file takes are all sound. What breaks is mixing
+// sources: a `performance.now()` compared against an event's `timeStamp`, a
+// `Date.now()`, or any stamp minted before the intro finished is off by the
+// skew. main.js's boot input capture already had to route around this by
+// staying on `e.timeStamp`. Take differences on one clock; never compare two.
 
+// CHAPTERS and SEGMENTS are NO LONGER IMPORTED HERE. They were read by the
+// road and by nothing else in this file, so the whole route-array dependency
+// left with it (A05a) — which is the cleanest single piece of evidence that
+// the seam A05 measured is the real one. They are `journey/road.js`'s imports
+// now; `REST_STOPS` and `TERMINAL_P` are the anchors the policy still needs.
 import {
-  CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P,
+  REST_STOPS, TERMINAL_P,
   transitSeconds, desktopTransitCapSeconds, forwardBrakeTailSeconds,
 } from './route.js';
 import { NOSNAP } from '../flags.js';
+import { createRoad } from './road.js';
+import { createTransport } from './transport.js';
+import { ownerOf, modalLive, targetOwnsKey } from './ownership.js';
 import {
   SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_CARRY_PEAK_VH, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
@@ -30,6 +49,14 @@ import {
   COMMIT_GLIDE_MAX_S, COMMIT_BRAKE_TAIL_S, COMMIT_BACK_CAP_VH,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS,
 } from './constants.js';
+// The freshness half of the manual-input claim, named beside the thresholds
+// above rather than inlined, and carrying its own rationale (boundaries.md
+// §A.9). `journey/constants.js` would be its natural home; it belongs to a
+// concurrent lane, so the claim's type, threshold and port live together in
+// ./claim.js instead. Declared in the slice README.
+import {
+  MANUAL_CLAIM_FRESH_MS, manualClaim, publishInputPort,
+} from './claim.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -41,136 +68,42 @@ const DESKTOP_PACING = typeof matchMedia === 'function'
   : null;
 
 /* ==========================================================================
-   INPUT OWNERSHIP  (a11y debt #1 — root cause, replacing the guard stack)
-   --------------------------------------------------------------------------
-   The travel model listens at WINDOW CAPTURE and preventDefault()s wheel,
-   touchmove and a set of keys. That is correct for the journey surface and
-   wrong for anything on the page that owns its own input: a focused button
-   whose activation key is Space (WCAG 2.1.1), a dialog that must not be
-   scrubbed out from under the reader, a bottom sheet that has to scroll
-   internally.
+   INPUT OWNERSHIP lives in ./ownership.js — the registration policy
+   (`claimInput`/`releaseInput`/`ownerOf`/`modalLive`) and the controls-first
+   key semantics (`targetOwnsKey` and its helpers), along the seam that block
+   declared for itself: "Nothing below this block touches the snap/commit
+   model, the scroll->p spline, or any threshold. This is routing only."
 
-   Two things were bolted on top of this over time — a selector-list Space
-   guard registered ahead of scroll.attach() in core/ui.js, and the GB-3.6
-   "first scroll intent closes the detail" rule doubling as an arrow-key
-   handler. Both are symptom fixes: they encode a list of class names in one
-   module about elements built in another, and they only cover the cases
-   somebody remembered.
-
-   The root cause is that scroll.js claimed input UNCONDITIONALLY and then
-   subtracted exceptions. It now does the opposite:
-
-     1. REGISTRATION, not selectors. A DOM layer that owns its own input
-        registers the element (claimInput) and unregisters it (releaseInput).
-        Wheel and touch inside a registered region are never travel and are
-        never preventDefault()ed, so the region scrolls natively. A region
-        registered `modal: true` additionally takes every travel KEY off the
-        table for as long as it is live — an open dialog card cannot be
-        scrubbed past, and arrow keys no longer close it as a side effect of
-        the scroll-intent rule.
-
-     2. CONTROLS-FIRST key dispatch. Before a key becomes travel, we ask
-        whether the focused thing already means something by it, using
-        PLATFORM semantics (what the HTML/ARIA spec says that element does
-        with that key) rather than a list of journey class names. Space on a
-        focused <button> or role="button" activates it; the scrolling keys
-        belong to a scrollable ancestor; text entry keeps everything. The
-        answer is therefore right for the hero's controls, the navigator's
-        panel, a future drawer and anything else, not just the elements one
-        module happened to enumerate.
-
-   Nothing below this block touches the snap/commit model, the scroll->p
-   spline, or any threshold. This is routing only.
+   `claimInput` and `releaseInput` stay importable FROM THIS MODULE: two
+   production modules and three tool suites name `./scroll.js` for them, and
+   the public entry contract is this file's wherever the code sits.
    ========================================================================== */
-
-/** Elements that own their own input while registered. Element -> {modal}. */
-const inputOwners = new Map();
-
-/** Declare that `el` (and its subtree) handles its own wheel/touch — and,
- *  with `modal`, its own keys too. Idempotent. */
-export function claimInput(el, { modal = false } = {}) {
-  if (el) inputOwners.set(el, { modal: !!modal });
-}
-
-/** Hand input back to the journey. Safe to call when nothing is registered. */
-export function releaseInput(el) {
-  if (el) inputOwners.delete(el);
-}
-
-/** The owner record covering `node`, or null. Detached owners self-retire. */
-function ownerOf(node) {
-  if (!inputOwners.size || !node) return null;
-  for (const [el, opt] of inputOwners) {
-    if (!el.isConnected) { inputOwners.delete(el); continue; }
-    if (el === node || el.contains(node)) return opt;
-  }
-  return null;
-}
-
-/** True while any registered owner is modal (a dialog / bottom sheet). */
-function modalLive() {
-  for (const [el, opt] of inputOwners) {
-    if (!el.isConnected) { inputOwners.delete(el); continue; }
-    if (opt.modal) return true;
-  }
-  return false;
-}
-
-/* ---- platform key semantics (the "controls-first" half) ---- */
-
-// Keys whose default action is scrolling — a scrollable ancestor outranks the
-// journey for these, which is what makes a bottom sheet's internal scroll work
-// for the keyboard as well as for the finger.
-const SCROLLING_KEYS = new Set([
-  'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ', 'Spacebar',
-]);
-
-function isTextEntry(el) {
-  if (el.isContentEditable) return true;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'OPTION';
-}
-
-// Elements for which Space is the ACTIVATION key. Deliberately excludes
-// links: Space on an <a href> scrolls the page natively, so the journey is
-// the correct owner there (Enter activates a link, and Enter is not a travel
-// key). This is the spec's split, not a preference.
-function spaceActivates(el) {
-  const tag = el.tagName;
-  if (tag === 'BUTTON' || tag === 'SUMMARY') return true;
-  const r = el.getAttribute('role');
-  return r === 'button' || r === 'checkbox' || r === 'switch' || r === 'radio'
-      || r === 'menuitem' || r === 'menuitemcheckbox' || r === 'menuitemradio'
-      || r === 'tab' || r === 'option';
-}
-
-function scrollableAncestor(el) {
-  for (let n = el; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) {
-    if (n.scrollHeight - n.clientHeight > 1) {
-      const oy = getComputedStyle(n).overflowY;
-      if (oy === 'auto' || oy === 'scroll') return n;
-    }
-  }
-  return null;
-}
-
-/** Controls-first: does the thing this key was delivered to already mean
- *  something by it? Only a FOCUSED control can claim a key — a stray target
- *  (a keydown on <body> while a button is merely hovered) cannot. */
-function targetOwnsKey(e) {
-  const t = e.target;
-  if (!t || t.nodeType !== 1) return false;
-  if (isTextEntry(t)) return true;
-  if (t !== document.activeElement) return false;
-  const space = e.key === ' ' || e.key === 'Spacebar';
-  if (space && spaceActivates(t)) return true;
-  if (SCROLLING_KEYS.has(e.key) && scrollableAncestor(t)) return true;
-  return false;
-}
+export { claimInput, releaseInput } from './ownership.js';
 
 export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
-  let segLens = [];     // px allocated per route SEGMENT — the spline's knots
-  let total = 0;
+  /* ========================================================================
+     THE ROAD — the pure, clock-free pixel<->route mapping — is ./road.js.
+     `segLens`, `kx`, `ky`, `km`, `invX`, `invY` and the four functions over
+     them (`buildSpline`, `pAt`, `scrollFor`, `lengthAtP`) are all there.
+
+     `measure()` did NOT move — it writes `v` and `carry`, which are the
+     visitor's surface. Its middle is now `road.resize(h)`, and the height
+     stays a caller-side read (see `measure()` below).
+
+     WHY `total` IS STILL A BINDING HERE. It is a READ-ONLY MIRROR of
+     `road.total`, not a second source of truth: `measure()` copies it in the
+     one place that has ever assigned it, immediately after the one call that
+     can change it, and nothing else in this file writes it. Four sites read
+     it — `measure()`, `push()`, `slopeAtP()` and `update()`. One of those is
+     `push()`, which `tools/test-road.mjs` `E4` pins BYTE-IDENTICAL to base
+     commit 6967a36, so rewriting the reads to `road.total` reds a live pin
+     for a reason that has nothing to do with `push()`. `E1` pins the mirror's
+     single writer and `E2` that it equals `road.total` after every rebuild,
+     so it cannot silently drift.
+     ======================================================================== */
+  const road = createRoad();
+  const { pAt, scrollFor, lengthAtP } = road;
+  let total = 0;        // read-only mirror of road.total — see the note above
   let v = 0;            // virtual scroll position, px — the visitor's own
                         // surface: the exact running sum of their deltas.
   let lastInput = -1e9; // performance.now() of the last manual input
@@ -302,8 +235,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let bootGuardDir = 0;
   let bootGuardSerial = -1;
   let bootGuardReason = 'inactive';
-  let repeatAnchor = null; // target an older same-direction resolution is
-                           // already buying; a newer stream may depart from it
   let intent = null;    // the latched resolution:
                         // { target, lo, hi, dir, floor, cruise|null }
   let answeredP = null; // THE ANCHOR THIS GESTURE HAS ALREADY BEEN ANSWERED AT
@@ -364,138 +295,26 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   // W3-A soft snap) so ?p= deep-scrub QA can park at arbitrary positions.
   // (parsed once, in ../flags.js — THE flag registry)
 
-  // ---- scroll px -> p, as a MONOTONE C1 spline through the allocation knots.
-  //
-  // The obvious mapping is piecewise linear per chapter, and it is wrong: the
-  // p spans and the px allocations have different ratios, so every chapter
-  // boundary becomes a step change in scroll-to-motion gain. Measured, the
-  // Mission/Inspire boundary at p = 0.14 sat in the MIDDLE of the orbit and
-  // made its first third travel 2.2x faster than the rest - a velocity
-  // discontinuity mid-move, which is exactly the kind of thing this prototype
-  // exists to catch.
-  //
-  // PCHIP (Fritsch-Carlson) keeps the allocations honest (each chapter still
-  // costs its own scroll distance) while making the gain continuous, so no
-  // camera move ever changes speed because of where a chapter label starts.
-  //
-  // The knots are the ROUTE'S SEGMENTS (route.js SEGMENTS), not its chapters:
-  // a chapter that declares `segVh` puts a knot at each of its own rest stops
-  // too, which is how the Final end-hold can be given 0.6 vh while its arrival
-  // takes 17.0 (2026-08-11). A chapter that declares nothing is still exactly
-  // one segment, so this list is bit-identical to the old chapter list for
-  // every such chapter.
-  let kx = [], ky = [], km = [];
-  let invX = [], invY = [];   // sampled inverse, for p -> px
-
-  function buildSpline() {
-    kx = [0]; ky = [0];
-    for (let i = 0; i < SEGMENTS.length; i++) {
-      kx.push(kx[i] + segLens[i]);
-      ky.push(SEGMENTS[i].end);
-    }
-    const n = kx.length - 1;
-    const h = [], d = [];
-    for (let i = 0; i < n; i++) { h.push(kx[i + 1] - kx[i]); d.push((ky[i + 1] - ky[i]) / h[i]); }
-    km = new Array(n + 1);
-    km[0] = d[0];
-    km[n] = d[n - 1];
-    for (let i = 1; i < n; i++) {
-      if (d[i - 1] * d[i] <= 0) { km[i] = 0; continue; }
-      let m = (d[i - 1] + d[i]) / 2;
-      const lim = 3 * Math.min(Math.abs(d[i - 1]), Math.abs(d[i]));
-      km[i] = Math.sign(m) * Math.min(Math.abs(m), lim);
-    }
-    /* A DECLARED SHAPE OVERRIDES THE INFERRED TANGENTS (route.js `shape`).
-       Fritsch-Carlson derives a knot's tangent from its NEIGHBOURS' densities,
-       which is right when the allocations are comparable and wrong when the
-       route deliberately makes them differ by 10x: the Final arrival sits
-       between a chapter at 20 vh per unit p and a hold at 20, while itself
-       running at 142, so its own curve was being dictated from both ends by
-       roads it has nothing to do with. Re-imposing k0/k1 as multiples of the
-       SEGMENT'S OWN mean slope makes its normalised gain curve independent of
-       how much scroll it is given — so raising its allocation is a pure
-       stretch, and every p-interval inside it slows by the same factor
-       (measured: 0.2% spread across 72 bodies, 18-one-species.md §17).
-
-       Monotonicity is still enforced, and it still binds: a Hermite segment is
-       monotone while its end tangents stay within 3x its mean slope, so the
-       clamp below keeps a mis-typed k from minting a spline that runs
-       backwards. It is a guard, not a shaper — today's k values pass it
-       untouched. */
-    for (let i = 0; i < n; i++) {
-      const k = SEGMENTS[i].k;
-      if (!k) continue;
-      const lim = 3 * Math.abs(d[i]);
-      km[i] = Math.sign(d[i]) * Math.min(Math.abs(k[0] * d[i]), lim);
-      km[i + 1] = Math.sign(d[i]) * Math.min(Math.abs(k[1] * d[i]), lim);
-    }
-    // sampled inverse for scrollFor()
-    const S = 1024;
-    invX = new Array(S + 1); invY = new Array(S + 1);
-    for (let i = 0; i <= S; i++) {
-      const x = (i / S) * total;
-      invX[i] = x; invY[i] = pAt(x);
-    }
-  }
-
-  /** virtual px -> journey progress */
-  function pAt(px) {
-    const x = Math.max(0, Math.min(total, px));
-    let i = 0;
-    while (i < kx.length - 2 && x > kx[i + 1]) i++;
-    const h = kx[i + 1] - kx[i];
-    if (h <= 0) return clamp01(ky[i]);
-    const u = (x - kx[i]) / h, u2 = u * u, u3 = u2 * u;
-    return clamp01(
-      (2 * u3 - 3 * u2 + 1) * ky[i] + (u3 - 2 * u2 + u) * h * km[i]
-      + (-2 * u3 + 3 * u2) * ky[i + 1] + (u3 - u2) * h * km[i + 1]);
-  }
-
-  /** journey progress -> virtual px (inverse of the same monotone spline) */
-  function scrollFor(p) {
-    p = clamp01(p);
-    if (!invY.length) return 0;
-    let lo = 0, hi = invY.length - 1;
-    if (p <= invY[0]) return invX[0];
-    if (p >= invY[hi]) return invX[hi];
-    while (hi - lo > 1) {
-      const mid = (lo + hi) >> 1;
-      if (invY[mid] <= p) lo = mid; else hi = mid;
-    }
-    const span = invY[hi] - invY[lo];
-    const f = span > 1e-9 ? (p - invY[lo]) / span : 0;
-    return invX[lo] + (invX[hi] - invX[lo]) * f;
-  }
-
+  /** Re-lay the road for the current viewport and keep the visitor where
+   *  they were on it.
+   *
+   *  THE VIEWPORT READ STAYS HERE, deliberately (design.md §4.4, D9,
+   *  A05 D-A05-1). `road.resize()` takes the height as a parameter, so the
+   *  road module reads no viewport at all and J02/U05 have nothing in it to
+   *  unify into `frame.viewport`.
+   *
+   *  The order of these five statements is load-bearing: `keepP` must be
+   *  sampled off the OLD road, `carry` cleared because it has just been
+   *  folded into `keepP`, and `v` re-derived off the NEW one. That is why
+   *  `measure()` did not move — `v` and `carry` are the surface, not the
+   *  road, and A05 measured them as the only non-road state it writes. */
   function measure() {
     const h = Math.max(320, window.innerHeight);
     const keepP = total > 0 ? clamp01(pAt(v) + carry) : 0;
     carry = 0;
-    const lens = CHAPTERS.map(c => (c.scrollVh || 2) * h);   // px per chapter, only needed to size total — allocations live in route.js
-    // ...and the spline's own knots are the SUB-segment allocations, which for
-    // a chapter that declares no `segVh` is just that same one number.
-    segLens = SEGMENTS.map(s => (s.vh || 2) * h);
-    total = lens.reduce((a, b) => a + b, 0);
-    buildSpline();
+    road.resize(h);
+    total = road.total;
     v = scrollFor(keepP);
-  }
-
-  /** Scroll length (px) of the road at a given p — the ?nosnap=1 magnet band
-   *  scales with it, and nothing else reads it.
-   *
-   *  THE SEGMENT, not the chapter (2026-08-11). The band is meant to be "a
-   *  fraction of the road you are on", and while a chapter was one segment
-   *  those were the same sentence. They stopped being: with the Inspire tail
-   *  trimmed to 2.1 vh inside a 5.6 vh chapter, a chapter-wide band reached
-   *  most of the way across the tail and swallowed p = 0.36 — the deep-scrub
-   *  flag's own gate (scrollgates N1) parked at 0.2666 instead of 0.3600,
-   *  i.e. ?p= could no longer stop where it was told. Measuring the band
-   *  against the segment restores it and states the intent exactly. */
-  function lengthAtP(p) {
-    for (let i = 0; i < SEGMENTS.length; i++) {
-      if (p <= SEGMENTS[i].end || i === SEGMENTS.length - 1) return segLens[i];
-    }
-    return segLens[segLens.length - 1];
   }
 
   /* ---------------- input ---------------- */
@@ -537,6 +356,49 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  negative offset against v, so releasing the clamp moves nothing on its
    *  own — there is still nothing banked to jump. */
   function dropWall() { answeredP = null; answeredDir = 0; }
+
+  /** Milliseconds since the last manual input. THE ONE PLACE this subtraction
+   *  and its clock read exist: the `sinceInput` getter and claimNow() below
+   *  both call it, so the semantic question and the QA number can never come
+   *  to disagree about what "since" means — and design.md §12's clock-read
+   *  count for this file does not move, because nothing was added. */
+  function sinceInputMs() { return performance.now() - lastInput; }
+
+  /** IS THE VISITOR'S HAND ON THIS MOTION RIGHT NOW?  -> ManualClaim
+   *
+   *  THE DECISION PORT (boundaries.md §A.8/§A.9, J04a-3). This is the answer
+   *  journey.js's blendCancelled() has been assembling for itself out of two
+   *  raw diagnostic getters and a threshold that lived nowhere in this file:
+   *
+   *      scroll.sinceInput < 50 && scroll.answeredAt === null
+   *
+   *  Both halves are the model's own state, so the model is where the question
+   *  gets answered. A consumer asks; it never reads a clock, a wall, or a
+   *  direction to find out. `null` and `{dir}` are discriminated, so there is
+   *  no scalar to truthiness-test and `dir === 0` cannot be mistaken for "no
+   *  claim" (J-H2) the way `answeredAt === 0` — the Mission anchor — can be
+   *  mistaken for "no wall".
+   *
+   *  THE WALL HALF is dropWall()'s, above, and unchanged: input the model is
+   *  currently REFUSING is not the visitor taking control, it is the gesture
+   *  that asked for this move still finishing. THE FRESHNESS HALF is
+   *  MANUAL_CLAIM_FRESH_MS, relocated into ./claim.js with the whole of the
+   *  reasoning that bought it.
+   *
+   *  CALL IT WHERE THE QUESTION IS ASKED, ONCE PER SITE, AND NEVER HOIST IT.
+   *  The clock read is here, at the caller's instant, exactly as `sinceInput`
+   *  reads it today from blendCancelled()'s own two sites — of which at most
+   *  ONE runs on any frame (boundaries.md §A.8's five-row table; endCamBlend
+   *  nulls chapterEntry on the drop path). Evaluating this once at the top of
+   *  applyFrame and reusing it therefore MOVES the read on the camBlend-falsy
+   *  path, across the whole cancellation block. That is design.md §12's class
+   *  of change, and the frozen-clock harness cannot see it. */
+  function claimNow() {
+    const fresh = sinceInputMs() < MANUAL_CLAIM_FRESH_MS;
+    if (!fresh) return null;
+    if (answeredP !== null) return null;
+    return manualClaim(lastDir);
+  }
 
   function clearBootGuard(reason = 'cleared') {
     if (bootGuardDir) bootGuardReason = reason;
@@ -812,16 +674,27 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         if (inRate * dir > gPeak * dir) gPeak = inRate;
       }
       // CONTROL RETURNS WITHIN ONE FRAME. A delta against a latched resolution
-      // drops it on the spot. A NEWER gesture going the same way is different:
-      // remember the anchor the old resolution is already buying, then let the
-      // new stream earn departure from THAT anchor below. Re-bracketing from the
-      // current in-flight picture would merely choose the old target again.
-      if (intent && dir !== intent.dir) {
-        repeatAnchor = null;
+      // drops it on the spot. A NEWER gesture going the same way is NOT a
+      // second ask (owner report #26, 2026-08-26): it rides out the flight it
+      // arrived into and is spent at that landing, so there is nothing to
+      // remember here. This branch used to latch `repeatAnchor` for the queue;
+      // both are gone — see the resolution step and the arrival block.
+      //
+      // A CONTACT THAT HAS NOT TRAVELLED YET HAS NOT SAID WHICH WAY IT IS
+      // GOING (see contactSettling), AND THIS CONJUNCT IS DEFECT-02's FIX —
+      // still load-bearing, and the one "two flicks buy one section" case that
+      // is a genuine defect rather than the design. A finger settling onto the
+      // glass routinely gives a pixel or two the wrong way before it gives the
+      // flick, and read as a reversal that settle dropped the in-flight
+      // resolution and armed a BACKWARD return against the visitor's own
+      // forward flick — measured at 430x932: 2 px of settle, latched target
+      // 0.5230 -> 0.2600 for one frame, the second flick then spent re-arming
+      // the leg the first one had already bought, and two deliberate forward
+      // flicks delivered one section NET. Without the conjunct the settle
+      // still destroys the first flick's leg, which is why it stays: it
+      // protects a leg already bought, and buys no extra one.
+      if (intent && dir !== intent.dir && !contactSettling(kind)) {
         releaseIntent();
-      } else if (intent && intent.g !== gSerial
-          && !(bootGuardDir && dir === bootGuardDir)) {
-        repeatAnchor = intent.target;
       }
     }
   }
@@ -839,18 +712,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
 
   /** Drop the latched resolution and hand the surface back to the visitor. */
   function releaseIntent() { fold(); intent = null; }
-
-  function onWheel(e) {
-    if (!enabled) return;
-    // A registered owner (dialog card / bottom sheet) scrolls itself: no
-    // travel, and crucially no preventDefault, so the native scroll runs.
-    if (ownerOf(e.target)) return;
-    let d = e.deltaY;
-    if (e.deltaMode === 1) d *= WHEEL_LINE_PX;
-    else if (e.deltaMode === 2) d *= window.innerHeight;
-    if (e.cancelable) e.preventDefault();  // no rubber-band / back-swipe
-    push(d, 'wheel');
-  }
 
   let touchY = null;
   let touchOwned = false;   // this gesture began inside a registered owner
@@ -907,69 +768,51 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     return true;
   }
 
+  /** IS THIS CONTACT STILL LANDING RATHER THAN TRAVELLING? The model already
+   *  draws exactly this line, one function up and for exactly this reason:
+   *  KEY_STEP_PX is where moveTouchContact stops calling a contact "a
+   *  tap/jitter" and starts crediting it as a swipe. Nothing new is declared
+   *  here — the same threshold, the same meaning, now also answering the one
+   *  other question that must not be decided from a landing sample: which way
+   *  is this contact going. Below it, a contact may not reverse a resolution
+   *  it did not arm; at or above it, it reverses on that very delta, so a hard
+   *  backward flick (one 130 px sample is already past the gate) is answered
+   *  as immediately as it always was, and a slower one within a step's worth
+   *  of travel. Wheel and key input are not contacts and never settle. */
+  function contactSettling(kind) {
+    return kind === 'touch' && touchY !== null && touchTravel < KEY_STEP_PX;
+  }
+
   function endTouchContact() {
     touchY = null; touchOwned = false; touchPending = false;
     touchFresh = false; touchTravel = 0;
   }
 
-  function onTouchStart(e) {
-    // A second finger joining the surface is a pinch, not a scrub: touchstart
-    // fires once per new touch, so e.touches.length counts the whole gesture.
-    // Leave both ownership and touchY alone — the browser owns the zoom, and
-    // multi-finger deltas never feed the ride.
-    if (e.touches.length > 1) return;
-    const owned = !!ownerOf(e.target);
-    // Ownership is decided ONCE per gesture, at touchstart: a drag that began
-    // inside a sheet stays the sheet's for its whole life even if the finger
-    // leaves the element, which is how native scrolling and drag-to-dismiss
-    // behave. Re-testing per touchmove would hand the journey a half-gesture.
-    beginTouchContact(e.touches[0] ? e.touches[0].clientY : null,
-      performance.now(), owned);
+  /** Is a live touch contact the JOURNEY's to feed? The transport asks before
+   *  it preventDefault()s a touchmove, which is why this is a predicate on the
+   *  contact rather than a check inside moveTouchContact: a contact that began
+   *  inside a registered owner must scroll natively, so the event must reach
+   *  the browser untouched. Same three terms, same order, as the guard that
+   *  opened onTouchMove before J04a split the transport out. */
+  function touchContactLive() {
+    return enabled && !touchOwned && touchY !== null;
   }
-  function onTouchMove(e) {
-    if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
-    // Multi-finger = pinch-zoom. Return without preventDefault (the browser
-    // keeps the pinch) and without touching touchY, so the zoom never leaks
-    // a delta into the ride.
-    if (e.touches.length > 1) return;
-    const y = e.touches[0].clientY;
-    if (e.cancelable) e.preventDefault();
-    moveTouchContact(y);
-  }
-  function onTouchEnd() { endTouchContact(); }
 
-  const KEYS = {
-    ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1,
-    ' ': 1, Spacebar: 1, Home: 'home', End: 'end',
-  };
-  function onKey(e) {
-    if (!enabled) return;
-    const k = KEYS[e.key];
-    if (k === undefined) return;
-    if (e.defaultPrevented) return;
-    // 0. a MODIFIED key is a browser/OS shortcut, never travel: Cmd+ArrowDown
-    //    is End on macOS, Alt+Arrow is history in some browsers, Ctrl+Space is
-    //    an input-source switch. Claiming (and preventDefault-ing) those keys
-    //    would eat platform chords over the journey surface. Shift is exempt —
-    //    Shift+Space is the platform's own scroll-up idiom, which IS travel
-    //    intent; it maps to the same forward step as plain Space (deliberate:
-    //    the journey has one axis and PageUp/ArrowUp already travel back).
-    //    Keys delivered mid-IME-composition belong to the composer, not us.
-    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-    // 1. a modal owner is live: NONE of these are travel. This is what stops
-    //    an arrow press from scrubbing the journey behind an open card — and
-    //    from closing it, which used to happen because travel keys reached
-    //    push() and push() consumed the detail via onIntent (GB-3.6).
-    if (modalLive()) return;
-    // 2. controls-first: the focused control's own semantics win.
-    if (targetOwnsKey(e)) return;
-    if (k === 'home') { e.preventDefault(); jump(0, 'key'); return; }
-    if (k === 'end') { e.preventDefault(); jump(1, 'key'); return; }
-    const big = e.key === 'PageDown' || e.key === 'PageUp'
-      || e.key === ' ' || e.key === 'Spacebar';
-    e.preventDefault();
-    push(k * (big ? window.innerHeight * 0.78 : KEY_STEP_PX), 'key', e.repeat);
-  }
+  /* The DOM event handlers and their window listener registrations live in
+     journey/transport.js (J04a). It gets exactly these ten capabilities and no
+     other view of the model — see that file's header for the seam. */
+  const transport = createTransport({
+    enabled: () => enabled,
+    push,
+    jump,
+    beginTouchContact,
+    moveTouchContact,
+    endTouchContact,
+    touchContactLive,
+    ownerOf,
+    modalLive,
+    targetOwnsKey,
+  });
 
   /** Home / End: TRAVEL to a named anchor (not placement — the picture rides
    *  the whole way, at the scrub limiter, exactly as a very long scroll would).
@@ -989,7 +832,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     v = scrollFor(target);
     lastDir = v > from ? 1 : v < from ? -1 : lastDir;
     carry = 0;
-    repeatAnchor = null;
     clearBootGuard('jump');
     newGesture();
     const now = performance.now();
@@ -1161,10 +1003,26 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  spanSlope drive below) and nothing plays under the brake, so the creep's
    *  ~constant ln(engage/dead)/K duration is pure dead time — measured 2026-08-17,
    *  0.5-0.9 s of visually-stopped ride on the Connect -> Inspire leg. Solve K
-   *  so the tail fits COMMIT_BRAKE_TAIL_S instead: one fixed-point iteration
-   *  from SNAP_K (the log is flat, a second changes nothing), never softer
-   *  than SNAP_K, and still overshoot-free by the same construction — the rate
-   *  goes to zero at the anchor and the integrator is position-capped there. */
+   *  so the tail fits COMMIT_BRAKE_TAIL_S instead: ONE fixed-point iteration
+   *  from SNAP_K, never softer than SNAP_K, and still overshoot-free by the
+   *  same construction — the rate goes to zero at the anchor and the
+   *  integrator is position-capped there.
+   *
+   *  ONE ITERATION IS NOT CONVERGENCE, AND THE TAIL IS SHORT BECAUSE OF IT
+   *  (CONV-02, 2026-08-26, measured on a DOM-free fixed-step rig). This
+   *  comment used to say "the log is flat, a second changes nothing". It is
+   *  not flat: the engage point is taken at SNAP_K and the brake then runs at
+   *  the solved K, so the delivered tail is tailS - ln(K/SNAP_K)/K — ~30%
+   *  shorter than the budget on every leg that declares one (0.35 buys 242 ms
+   *  of its 350 on inspire>connect, 246 / 245 on the other two; route.js's own
+   *  estimator, which starts at the K_eff plateau, reads 183 ms). A second
+   *  iteration moves K by a third and OVERSHOOTS — 8.648 -> 5.981, a 412 ms
+   *  tail — and the raw iteration oscillates rather than converging; the true
+   *  fixed point is 6.707, at which the tail would be the declared 350 ms
+   *  exactly. The budget is a DIAL, not a delivered time: route.js's
+   *  FORWARD_BRAKE_TAIL_S comment is correct and this one was not. Pinned by
+   *  tools/test-declared-conversions.mjs, whose BR-REGIME reds if the solve is
+   *  ever converged. */
   function brakeK(band, lo, hi, dir) {
     const tailS = dir >= 0
       ? forwardBrakeTailSeconds(lo, hi, dir)
@@ -1323,6 +1181,39 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     if (answeredP !== null) {
       const w = answeredDir > 0 ? Math.min(surf, answeredP) : Math.max(surf, answeredP);
       if (w !== surf) { carry += w - surf; surf = w; }
+    } else if (intent && intent.g !== gSerial) {
+      /* THE PENDING ANCHOR IS A WALL FOR A GESTURE THAT DID NOT ARM THE
+         FLIGHT (DEF-SKIP, fixed 2026-08-23 — the second half of the fix; the
+         queue latch below is the first). A resolution folds its own surplus
+         into `carry` as it flies, so mid-flight the surface already holds
+         most of the transit's distance — and a NEWER gesture's deltas then
+         landed on top of that bank, letting an ordinary second scroll drag
+         the picture straight across the rest the flight was delivering.
+         That scrub-past-on-banked-distance was the larger share of the
+         measured 98.4% in-flight sweep rate; the retarget was the rest.
+
+         So a gesture that did not arm this flight may not carry the surface
+         past the flight's own anchor: the surplus folds into `carry`,
+         identically to the answered wall above — spent, never stored, so
+         nothing jumps when the flight lands. Its strength still registers
+         (gPeak reads the raw deltas in push()), which is what earns the
+         QUEUED leg, so the gesture still buys exactly one additional
+         section — delivered after the rest composes.
+
+         A reversal never reaches this line — push() releases the intent on
+         the turning delta. The one exception is a touch contact still inside
+         KEY_STEP_PX of travel (contactSettling): a pixel or two of
+         finger-settle arrives here against a forward intent, sits on the far
+         side of the anchor, and so is not clamped at all — it is ordinary
+         scrub the servo absorbs, and the contact reverses for real the moment
+         it has travelled a step's worth.
+
+         THE ARMING GESTURE IS EXEMPT, deliberately: a single continuous
+         drag keeps `intent.g === gSerial`, scrubs through its own
+         resolution's span freely, and "a long scroll crosses as many
+         transitions as it earns" is untouched. */
+      const w = intent.dir > 0 ? Math.min(surf, intent.target) : Math.max(surf, intent.target);
+      if (w !== surf) { carry += w - surf; surf = w; }
     }
     const servo = clampRate((surf - p) * Math.min(1, dt * SMOOTH_K) / dt);
 
@@ -1369,6 +1260,13 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
            240 px/frame stopped dead on the held frame. Nothing else is let
            through: a gesture that is not a stream still cannot wrap, so the
            notch reader keeps the end-hold exactly as before. */
+        // WHAT HOLDS THIS SEAM OFF A LANDING FRAME IS `answeredP === null`
+        // ABOVE, and nothing else. A second conjunct used to sit on the line
+        // below, refusing a wrap while the rest just landed on was inside a
+        // beat; measured on the wrap it bought nothing and cost the gesture,
+        // and it was retired with its constant on 2026-08-26. The arrival wall
+        // is set at EVERY delivering landing, so a fresh gesture is required
+        // and the shortest landing -> wrap measured anywhere was 363 ms.
         const free = !intent || (fwd && intent.target === term);
         if ((fwd || back) && free) {
           const [lo, hi] = fwd ? [lastRest, term] : [RESOLVE_P[0], RESOLVE_P[1]];
@@ -1434,46 +1332,29 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       // gesture that is genuinely still delivering deltas re-earns its strength
       // from them within a frame or two, so a long scroll is not slowed by
       // this — it only stops one finished gesture buying a second transition.
-      const beforeRepeatDeparture = intent && intent.depart !== undefined
-        && (intent.dir > 0 ? p < intent.depart : p > intent.depart);
-      if (intent && !beforeRepeatDeparture
-          && (p < intent.lo - 1e-9 || p > intent.hi + 1e-9)) {
+      if (intent && (p < intent.lo - 1e-9 || p > intent.hi + 1e-9)) {
         intent = null;
-        repeatAnchor = null;
         gPeak = 0;
       }
 
-      // A second same-direction gesture can begin while the first one's
-      // multi-second resolution is still flying. Once that NEW gesture has
-      // independently earned carry, extend the existing continuous motion from
-      // the old target to the following anchor. Waiting to land and bracketing
-      // from sampled p picks the old target again (often by ~3e-5) and consumes
-      // the repeat as a no-op; retargeting here is both immediate and keeps the
-      // one-gesture/one-additional-section rule.
-      if (intent && repeatAnchor !== null && intent.target === repeatAnchor
-          && intent.dir === lastDir) {
-        const i = RESOLVE_P.findIndex(a => Math.abs(a - repeatAnchor) < 1e-6);
-        const j = i + intent.dir;
-        if (i >= 0 && j >= 0 && j < RESOLVE_P.length) {
-          const lo = Math.min(RESOLVE_P[i], RESOLVE_P[j]);
-          const hi = Math.max(RESOLVE_P[i], RESOLVE_P[j]);
-          if (carrying(spanSlope(lo, hi))) {
-            const target = RESOLVE_P[j];
-            const band = glideBand(lo, hi, intent.dir);
-            // The new gesture extends a flight already in motion; its first
-            // few EMA samples are not permission to slow that flight down.
-            // Preserve the old floor and let the new peak raise it only after
-            // it has actually proved stronger. Replacing it outright produced
-            // Connect's repeatable stall-then-roll on a modest second nudge.
-            const previousFloorPx = intent.floorPx;
-            intent = { target, lo, hi, dir: intent.dir, from: repeatAnchor,
-              g: gSerial, band,
-              floorPx: Math.max(Math.abs(gPeak), previousFloorPx), cruisePx: null,
-              snapK: brakeK(band, lo, hi, intent.dir), depart: repeatAnchor };
-            repeatAnchor = null;
-          }
-        }
-      }
+      /* THE IN-FLIGHT REPEAT QUEUE IS GONE (owner report #26, 2026-08-26).
+         A second same-direction gesture arriving while the first one's
+         multi-second resolution was still flying used to latch
+         `intent.queuedNext` here, and the landing armed that leg and left the
+         rest by itself. Under the design's law — "one gesture, one leg, each
+         leg shown" — that was correct, and it is what DEF-SKIP built on
+         2026-08-23 to replace an outright retarget that was worse. The owner
+         has since ruled that a gesture which BEGAN MID-FLIGHT is not a
+         request for another section at all, so there is no ask to queue: its
+         deltas complete the arrival and the landing spends them. See the
+         arrival block in step 4.
+
+         What used to guard this state — `repeatAnchor` (set in push() when a
+         delta reached an intent it did not arm) and `intent.depart` (the
+         queued leg's own span exemption) — went with it; neither had another
+         reader. The exemption `beforeRepeatDeparture` above is likewise gone:
+         it existed only so a queued leg sitting exactly ON its departure
+         anchor was not immediately dropped for being outside its own span. */
       if (!intent) {
         const [lo, hi] = bracketAt(p);
         const target = pickTarget(p, lo, hi);
@@ -1643,19 +1524,79 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         // became unreachable. A real transition is at least 0.03 of p (the
         // shortest span on the route), so SNAP_DEAD_P separates the two by 20x
         // and the float artefact by 500x.
-        // ...and only the gesture that ARMED it is answered. A second flick
-        // delivered while this move was still flying is a separate ask that has
-        // not been paid yet: consuming it here would spend it on a destination
-        // it did not choose, and then the wall would hold it there. Measured
-        // before the serial: two deliberate flicks 300 ms apart bought ONE
-        // section, because the first transition took 3.4 s and swallowed the
-        // second flick whole.
-        if (intent.g === gSerial && Math.abs(intent.target - intent.from) > SNAP_DEAD_P) {
+        /* THE LANDING ABSORBS EVERY GESTURE ON THE BOOKS, NOT ONLY THE ONE
+           THAT ARMED THE FLIGHT (owner report #26, 2026-08-26 — "NOT auto
+           scroll to the next section would be nice when I haven't made any
+           gesture to do so", and, on being shown a longer beat: "So you
+           didn't fix it? This is when scrolling through").
+
+           This conjunct used to read `intent.g === gSerial &&`, exempting a
+           gesture that began WHILE THE RESOLUTION WAS FLYING so that its
+           strength could be spent on a leg of its own after the landing (the
+           queue latch, DEF-SKIP 2026-08-23). The design's law was "one
+           gesture, one leg, each leg shown", and by that law the exemption is
+           correct — which is why three rounds of measurement kept reporting
+           correct-by-design while the owner kept reporting a bug.
+
+           THE OWNER HAS OVERRULED THE LAW. A gesture that began mid-flight is
+           not a request for another section. On a trackpad a continuous
+           scroll is a STREAM of deltas and clampRate pins a transit at
+           1.3-1.8 s, so "a second gesture arrived mid-flight" is the ordinary
+           case, not an edge one: measured at quiet load, Connect departed its
+           rest unattended on 8 of 8 two-gesture rides, and lengthening the
+           beat 300 -> 900 only moved the departure later. A rest the visitor
+           is put at and then taken away from without asking is the defect,
+           at any delay.
+
+           So the discrimination is the serial itself, read the other way
+           round: at the landing frame the model already knows whether the
+           current gesture is the one that armed the flight, and if it is NOT
+           then that gesture necessarily began before this landing. Either
+           way its deltas have already done their work — they scrubbed the
+           surface and helped complete this arrival — and here they are
+           SPENT. Nothing is banked into a departure.
+
+           WHAT MAKES THIS NOT THE DUAL (DEFECT-02, "two flicks buy one
+           section"): this sets the ordinary arrival wall, the one a
+           single-gesture landing has always set, so a gesture that begins
+           AFTER the landing is released by exactly the paths that already
+           release it — push()'s ARRIVAL_HOLD_MS idle boundary, a reversal, a
+           fresh touch contact, or wheelPulseRestart's re-acceleration proof.
+           No new wall, no new constant, and no new latency. The wall-RELEASE
+           machinery — push()'s gapMs boundary, restartGesture(), newGesture()
+           and wheelPulseRestart() — is byte-identical to what shipped; this
+           change only widened which landings SET the wall, from "the arming
+           gesture's" to "every delivering landing", and a wall that was always
+           released by a fresh gesture is still released by one. Measured on
+           the pure rig at all eight boundaries in both directions and both
+           input kinds: a deliberate gesture 304 ms after the landing is
+           honoured in 144 ms on touch and 176 ms on wheel, identical figures
+           before and after this change. The dual would be a wall a fresh
+           gesture cannot open; this one opens on the same first delta as
+           before. tools/test-rest-authority.mjs pins both sides. */
+        if (Math.abs(intent.target - intent.from) > SNAP_DEAD_P) {
           gPeak = 0;
           answeredP = intent.target; answeredDir = intent.dir;
         }
         if (bootGuardDir && intent.g === bootGuardSerial) clearBootGuard('landing');
-        fold(); intent = null; repeatAnchor = null; vel = 0;
+        /* NOTHING DEPARTS FROM THIS LANDING (owner report #26, 2026-08-26).
+           A queued leg used to be armed here from `intent.queuedNext` and to
+           leave the rest by itself after a timed beat. That is the
+           unattended advance the owner is reporting, and the latch that fed
+           it is gone with it — see the wall above for why the mid-flight
+           gesture's strength is now spent at this arrival instead.
+
+           The journey now stands still until a gesture that BEGAN AFTER THIS
+           LANDING asks it to move, and that gesture departs through the
+           ordinary from-rest arming path with no delay of its own. */
+        // NOTHING IS STAMPED HERE EITHER (2026-08-26). This landing used to
+        // stamp a wrap beat — `restBeatUntil = nowF + COMMIT_REST_BEAT_MS` —
+        // and both are retired: the beat was re-derived to zero on the wrap's
+        // own arithmetic, and the guard it implemented is the arrival wall's,
+        // set immediately above at every delivering landing. The tombstone and
+        // the measurements are in constants/scroll.js; the retirement itself is
+        // pinned by tools/test-rest-composition.mjs.
+        fold(); intent = null; vel = 0;
       }
     } else {
       p = np;
@@ -1666,11 +1607,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   }
 
   function attach() {
-    window.addEventListener('wheel', onWheel, { capture: true, passive: false });
-    window.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
-    window.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
-    window.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
-    window.addEventListener('keydown', onKey, { capture: true });
+    // The five travel listeners, in their shipped order (journey/transport.js).
+    transport.attach();
     window.addEventListener('resize', measure);
     if (typeof document !== 'undefined' && document.addEventListener) {
       document.addEventListener('visibilitychange', () => {
@@ -1692,7 +1630,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     stallClaimed = 0;
   }
 
-  return {
+  const model = {
     attach,
     get enabled() { return enabled; },
     set enabled(on) { enabled = !!on; },
@@ -1707,11 +1645,13 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         themselves — deep links / ?p= / ?capture= are not disturbed). */
     setProgress(q) {
       p = clamp01(q); v = scrollFor(p); carry = 0;
-      vel = 0; intent = null; repeatAnchor = null; lastDir = 0;
+      vel = 0; intent = null; lastDir = 0;
       clearBootGuard('placement'); newGesture();
     },
-    /** Milliseconds since the last manual input (QA). */
-    get sinceInput() { return performance.now() - lastInput; },
+    /** Milliseconds since the last manual input (QA). The raw number behind
+        claimNow()'s freshness half; journey.js:1131 still reads it until J01
+        switches blendCancelled()'s two sites to the port. */
+    get sinceInput() { return sinceInputMs(); },
     /** QA: the rest idle would resolve to from here (null under ?nosnap=1). */
     get commitP() { return NOSNAP ? null : commitTarget(p); },
     /** QA: sign of the last manual delta. */
@@ -1879,4 +1819,14 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     scrollFor,
     get total() { return total; },
   };
+
+  /* THE DECISION PORT, published rather than mounted (./claim.js explains
+     why it is not a twenty-seventh member). `retire` is the model's own
+     function object, not a wrapper: its body touches no `this`, so calling it
+     through the port is the same call — the receiver hazard J04a's F5 named,
+     checked rather than assumed (tools/test-input-claim.mjs B4). J01 reaches
+     this with inputPortOf(scroll) and injects it as `input`; nothing under
+     journey/transition/** ever needs a `scroll` identifier. */
+  publishInputPort(model, { claimNow, retire: model.retire });
+  return model;
 }
