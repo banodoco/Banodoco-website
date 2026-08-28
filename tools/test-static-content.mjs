@@ -27,7 +27,11 @@ assert.match(html, /class="menu-no">2\.<\/span><span class="menu-name">By equipp
 assert.match(html, /class="menu-no">3\.<\/span><span class="menu-name">By connecting:<\/span>/);
 assert.match(html, /We’re working to help the open-source AI art ecosystem thrive<\/span>/);
 assert.match(html, /The open source ecosystem can accelerate a second renaissance<\/span>/);
-assert.match(html, /We’re creating a platform that help the community and agents accomplish together<span class="menu-badge">Soon<\/span><\/span>/);
+assert.doesNotMatch(html, /We’re creating a platform that help the community and agents accomplish together/);
+assert.equal((html.match(/class="menu-row-link menu-teaser" aria-label="Coming soon"/g) ?? []).length, 2,
+  'Equipping exposes exactly two concealed initiative teasers');
+assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 4,
+  '2RP, two Equipping teasers and Manifesto each have one Soon badge');
 assert.match(html, /class="menu-dot-disc"[\s\S]*>Manifesto<\/span><span class="menu-is">Action at a pivotal moment<\/span><span class="menu-badge">Soon<\/span>/);
 assert.match(html, />Ownership<\/span><span class="menu-is">equity rewards collaboration<\/span>/);
 assert.match(html, /href="https:\/\/arcagidan\.com\/"[\s\S]*?<span class="menu-ia" aria-hidden="true">↗<\/span>/);

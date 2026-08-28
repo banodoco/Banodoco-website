@@ -1317,7 +1317,12 @@ export function createInspire(sceneApi) {
     // like once the anchor clears admission: present, but eaten by the edge.)
     // So the bound this pull answers to is the pill's RECT with the nudge
     // NOT firing — tx must clear `lo` on its own. 0.67 does that; 2RP never
-    // needed more than the original 0.88 once the aim stayed at -0.05.
+    // needed more horizontal pull than 0.88 once the aim stayed at -0.05.
+    // Its vertical clearance is separate: Safari's 390x664 visible viewport
+    // seats the lower rim anchor inside the copy's 8px protection margin,
+    // suppressing the complete marker. Lift only this LABEL anchor by the
+    // ~31px needed to clear that protected block at the shortest supported
+    // phone viewport; ember, streak and plume remain at the true rim point.
     // Measured, unclamped, dots true, at the shipped rest:
     //     Arca Gidan  x  18.3..128.6   left margin  18.3
     //     ArtCompute  x 161.8..280.1
@@ -1326,7 +1331,7 @@ export function createInspire(sceneApi) {
     // against the ember's ~90 px bloom — still inside D22's "reads as on the
     // lit edge" tolerance, and confirmed by eye on the rendered frame.
       if (EXITS[i].id === 'arca') { p.x *= 0.67; p.z *= 0.67; p.y += 0.06; }
-      if (EXITS[i].id === '2rp') { p.x *= 0.88; p.z *= 0.88; p.y += 0.04; }
+      if (EXITS[i].id === '2rp') { p.x *= 0.88; p.z *= 0.88; p.y += 0.50; }
     }
     return p.applyMatrix4(mushroomRestMatrix());
 }

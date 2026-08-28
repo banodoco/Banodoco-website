@@ -22,6 +22,7 @@ import {
 import { rowLayout } from '../journey/layout/rail-geometry.js';
 import {
   PHONE_FINAL_COMPOSITION_LIFT_PX,
+  PHONE_FINAL_SCENE_LIFT_PX,
   PURPOSE_NAV_POCKET_STRENGTH,
   cameraWorldUnitsForPixels,
   purposeNavPocket,
@@ -129,7 +130,9 @@ for (const row of [desktopRow, phoneRow]) {
   }
 }
 assert.equal(PHONE_FINAL_COMPOSITION_LIFT_PX, 30,
-  'mobile Final uses one modest screen-space composition lift');
+  'mobile Final keeps the fixed copy/navigation lift modest');
+assert.equal(PHONE_FINAL_SCENE_LIFT_PX, 72,
+  'mobile Final gives its background camera a stronger independent lift');
 assert.equal(PURPOSE_NAV_POCKET_STRENGTH, 0.68,
   'the narrow Purpose pocket clears crossing linework without blacking out the scene');
 assert.deepEqual(
@@ -143,11 +146,11 @@ assert.deepEqual(
   'phone Purpose pocket scales narrowly around the centred child fork',
 );
 assert.ok(cameraWorldUnitsForPixels({
-  pixels: PHONE_FINAL_COMPOSITION_LIFT_PX,
+  pixels: PHONE_FINAL_SCENE_LIFT_PX,
   distance: 16,
   fov: 54,
   viewportHeight: 932,
-}) > 0, 'the shared mobile lift has a stable camera-world conversion');
+}) > 0, 'the mobile scene lift has a stable camera-world conversion');
 for (const phase of [0, 0.17, 0.5, 0.91, 1]) {
   const gathered = desktopRow.centres.map((centre) => centre + railGatherX({
     centre, width: desktopRow.width, phase,
@@ -520,9 +523,12 @@ assert.match(railSource,
 assert.match(railSource,
   /const manifestoBase = GLYPH_COLOURS\.future[\s\S]*?--glyph-r'[\s\S]*?--glyph-g'[\s\S]*?--glyph-b'[\s\S]*?--glyph-alpha'[\s\S]*?--glyph-glow'/,
   'Manifesto has explicit warm resting ink before hover');
-assert.match(railSource,
-  /Manifesto[\s\S]*?j-rail-soon-note', 'Soon'[\s\S]*?pointerType !== 'touch'[\s\S]*?1600/,
-  'Manifesto uses Equip\'s exact Soon swap and timed touch semantic');
+assert.doesNotMatch(railSource,
+  /manifestoItem[\s\S]*?pointerType !== 'touch'[\s\S]*?j-rail-note/,
+  'Manifesto never flashes the desktop hover answer on touch');
+assert.match(css,
+  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?j-rail-purpose-labels-above[\s\S]*?opacity: 0 !important;[\s\S]*?j-rail-purpose-manifesto \.j-rail-soon-note[\s\S]*?opacity: 0 !important;/,
+  'touch-only Purpose suppresses sticky top-row and Manifesto hover answers');
 assert.doesNotMatch(railSource, /manifestoItem\.href|navigate\('manifesto'\)/,
   'Manifesto cannot mint a route');
 assert.match(css,

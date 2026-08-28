@@ -41,7 +41,7 @@
 import { restProgress, startOf } from './route.js';
 import { smooth01 } from './lib/ease.js';
 import {
-  PHONE_FINAL_COMPOSITION_LIFT_PX,
+  PHONE_FINAL_SCENE_LIFT_PX,
   cameraWorldUnitsForPixels,
 } from './layout/final-composition.js';
 
@@ -654,16 +654,16 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     pose.pos.y += legacyTruck;
     pose.target.y += legacyTruck;
 
-    // Move the world picture upward by the same screen-space token consumed
-    // by Final's copy and Purpose navigation. Eye and target move together,
-    // preserving pitch, scale and all camera-pure reveal thresholds.
+    // Move the world picture upward independently of Final's fixed copy and
+    // Purpose navigation. Eye and target move together, preserving pitch,
+    // scale and every camera-pure reveal threshold; only scene framing moves.
     const distance = Math.hypot(
       pose.target.x - pose.pos.x,
       pose.target.y - pose.pos.y,
       pose.target.z - pose.pos.z,
     );
     const finalLiftWorld = cameraWorldUnitsForPixels({
-      pixels: PHONE_FINAL_COMPOSITION_LIFT_PX,
+      pixels: PHONE_FINAL_SCENE_LIFT_PX,
       distance,
       fov: pose.fov,
       viewportHeight: viewportWidth / aspect,

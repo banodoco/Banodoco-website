@@ -591,8 +591,8 @@
     transform: translateY(52px);
     transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .rail:has(:focus-visible) .rail-menu-wrap,
-  .rail-inner:has(.rail-list:hover) .rail-menu-wrap {
+  .rail:has(:focus-visible) .rail-menu-wrap:not([open]),
+  .rail-inner:has(.rail-list:hover) .rail-menu-wrap:not([open]) {
     transform: translateY(calc((var(--n) - 1 - var(--cur)) * 44px + 52px));
     /* pure-CSS hover intent (Tier 1 does this in rail.js, HOT_INTENT_MS): the
        menu mark holds its resting place for a beat, so a pointer merely
@@ -864,6 +864,37 @@
     margin-left: 0.42em;
     vertical-align: middle;
   }
+  .menu-teaser > :is(.menu-il, .menu-is) {
+    opacity: 0.42;
+    filter: blur(3.5px);
+    user-select: none;
+  }
+
+  /* Desktop keeps one quiet icon spine: initiative marks sit directly below
+     their chapter mark, while text continues in the shared content column. */
+  @media (min-width: 621px) {
+    .menu-list > li { padding-block: 0.18rem 0.48rem; }
+    .menu-sub { padding: 0 0.6rem 0.42rem 0.5rem; }
+    .menu-row-link { margin: 0; padding-inline: 0; }
+    .menu-il { gap: 1rem; }
+    .menu-pict {
+      width: 22px;
+      height: 13px;
+      flex-basis: 22px;
+      justify-content: center;
+    }
+    .menu-pict svg { width: 13px; }
+    .menu-pict-dots { height: 17px; }
+    .menu-pict-dots svg { width: 17px; }
+    .menu-teaser {
+      min-height: 28px;
+      white-space: nowrap;
+    }
+    .menu-teaser > :is(.menu-il, .menu-is) {
+      opacity: 0.36;
+      filter: blur(2.25px);
+    }
+  }
 
   .menu-owned {
     display: block;
@@ -915,6 +946,93 @@
     .menu-h { font-size: 0.66rem; letter-spacing: 0.18em; }
     .menu-links { gap: 0.25rem; }
     .menu-close-space { width: 53px; margin-left: 0.15rem; }
+  }
+
+  /* On a phone the open menu becomes a full-width reading surface. Initiative
+     links are generous cards, so title, description and action never collapse
+     into the compressed desktop outline. */
+  @media (max-width: 620px) and (orientation: portrait) {
+    .rail-menu-wrap[open] {
+      width: 100vw;
+      padding: 1rem 1.5rem 2rem;
+      border-left: 0;
+      box-shadow: none;
+    }
+    .rail-menu-wrap[open] .rail-menu {
+      position: fixed;
+      top: 1rem;
+      right: 1.5rem;
+      z-index: 9;
+    }
+    .menu-head {
+      position: sticky;
+      top: -1rem;
+      z-index: 3;
+      gap: 0.45rem;
+      margin: -1rem -1.5rem 1.15rem;
+      padding: 1rem 1.5rem 0.75rem;
+      background: #0b0702;
+      border-bottom: 1px solid rgba(217, 164, 65, 0.16);
+    }
+    .menu-h { font-size: 0.72rem; letter-spacing: 0.24em; }
+    .menu-list > li { padding: 0.35rem 0 0.9rem; }
+    .menu-list > li:first-child { padding-top: 0; border-top: 0; }
+    .menu-item { gap: 0.85rem; padding: 0.72rem 0; }
+    .menu-list > li:first-child .menu-item { padding: 0.65rem 0 1rem; }
+    .menu-list > li:first-child .menu-mark { width: 28px; height: 28px; }
+    .menu-thesis {
+      font-size: clamp(1.35rem, 6vw, 1.58rem);
+      line-height: 1.12;
+    }
+    .menu-no { font-size: 0.64rem; color: rgba(240, 200, 119, 0.76); }
+    .menu-name {
+      font-size: 0.72rem;
+      line-height: 1.25;
+      color: rgba(240, 200, 119, 0.9);
+    }
+    .menu-sub { padding: 0 0 0.15rem; }
+    .menu-row { margin: 0 0 0.3rem; font-size: 0.82rem; line-height: 1.32; }
+    .menu-row-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
+      align-items: center;
+      column-gap: 0.75rem;
+      row-gap: 0.14rem;
+      min-height: 64px;
+      margin: 0;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid rgba(217, 164, 65, 0.16);
+      border-radius: 6px;
+      background: rgba(217, 164, 65, 0.025);
+    }
+    .menu-il {
+      grid-column: 1;
+      grid-row: 1;
+      gap: 0.58rem;
+      font-size: 0.88rem;
+      line-height: 1.15;
+    }
+    .menu-il::after { content: none; }
+    .menu-pict { width: 18px; height: 18px; flex-basis: 18px; }
+    .menu-pict-dots { width: 20px; height: 20px; flex-basis: 20px; }
+    .menu-is {
+      grid-column: 1;
+      grid-row: 2;
+      padding-left: 1.6rem;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+    .menu-ia,
+    .menu-row-link > .menu-badge {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+      margin-left: 0;
+    }
+    .menu-ia { font-size: 1rem; }
+    .menu-badge { padding: 0.16em 0.65em; font-size: 0.58rem; }
+    .menu-legal { margin-top: 1.25rem; }
   }
 
   /* NO-JS: the honest fallback for a navigator that cannot know where you
@@ -1171,8 +1289,8 @@
     .rail-slot, .rail-menu-wrap { transition-delay: 0s; }
     /* the hover-intent delay outranks the blanket kill above — repeat it at
        the enter rule's own specificity */
-    .rail:has(:focus-visible) .rail-menu-wrap,
-    .rail-inner:has(.rail-list:hover) .rail-menu-wrap { transition-delay: 0s; }
+    .rail:has(:focus-visible) .rail-menu-wrap:not([open]),
+    .rail-inner:has(.rail-list:hover) .rail-menu-wrap:not([open]) { transition-delay: 0s; }
   }
 </style>
 </head>
@@ -1326,7 +1444,8 @@
             <span class="menu-txt"><span class="menu-no">2.</span><span class="menu-name">By equipping:</span></span>
           </span>
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-row-link"><span class="menu-is">We’re creating a platform that help the community and agents accomplish together<span class="menu-badge">Soon</span></span></span></li>
+            <li class="menu-row"><span class="menu-row-link menu-teaser" aria-label="Coming soon"><span class="menu-il" aria-hidden="true"><span class="menu-pict"><svg viewBox="0 0 22 22" focusable="false"><path d="M3.6 14.2 Q11 5.2 18.4 14.2"/><path d="M3.6 14.2 H18.4"/><path d="M5 16.4 Q11 11.2 17 16.4"/><path d="M5 16.4 H17"/></svg></span>Quark</span><span class="menu-is" aria-hidden="true">Creative tools for everyone</span><span class="menu-badge">Soon</span></span></li>
+            <li class="menu-row"><span class="menu-row-link menu-teaser" aria-label="Coming soon"><span class="menu-il" aria-hidden="true"><span class="menu-pict"><svg viewBox="0 0 22 22" focusable="false"><path d="M2.4 9.2 H7.2 L9.8 12.4 H12.2 L14.8 9.2 H19.6"/><circle cx="2.4" cy="9.2" r="1"/><circle cx="19.6" cy="9.2" r="1"/><path d="M9.8 12.4 V16.8 M12.2 12.4 V16.8"/></svg></span>Brötchen</span><span class="menu-is" aria-hidden="true">Shared workflows for agents</span><span class="menu-badge">Soon</span></span></li>
           </ul></li>
           <li><a class="menu-item" href="#/connect" data-menu="connect" data-menu-section="connect">
             <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6"/><path d="M15.8 14.8 L12.6 10.0"/><path d="M4.2 13.2 L6.8 9.6"/><circle cx="15.8" cy="14.8" r="1.2"/><circle cx="9.6" cy="17.2" r="1"/><circle cx="4.2" cy="13.2" r="1.15"/></svg></span>
