@@ -789,6 +789,11 @@ export function createRail({ onNav } = {}) {
   manifestoItem.appendChild(manifestoMark);
   manifestoItem.appendChild(el('span', 'j-rail-name', 'Manifesto'));
   manifestoItem.appendChild(el('span', 'j-rail-soon-note', 'Soon'));
+  itemsOwner.listen(manifestoItem, 'pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    manifestoSlot.classList.add('j-rail-note');
+    itemsOwner.timer(() => manifestoSlot.classList.remove('j-rail-note'), 1600);
+  });
   manifestoSlot.appendChild(manifestoItem);
   purposeChildren.appendChild(manifestoSlot);
   purposeTree.appendChild(purposeChildren);
@@ -913,12 +918,21 @@ export function createRail({ onNav } = {}) {
 
   /** A chapter's nodes, in content.js insertion (= narrative) order. */
   function itemsFor(chapterId) {
-    return Object.entries(CONTENT.nodes)
+    const items = Object.entries(CONTENT.nodes)
       .filter(([, n]) => n.chapter === chapterId)
       .map(([id, n]) => {
         const d = n.spotlight || n.card || {};
         return { id, label: n.label, short: n.short || '', badge: n.badge || '', link: d.link || null };
       });
+    // The Inspire menu reads from top to bottom as the initiatives become
+    // available: the forthcoming publication sits before the active grant
+    // programme. This is presentation order only; scene/node order remains
+    // owned by content.js.
+    if (chapterId === 'inspire') {
+      const byId = new Map(items.map(item => [item.id, item]));
+      return ['arca', 'tworp', 'artcompute'].map(id => byId.get(id)).filter(Boolean);
+    }
+    return items;
   }
 
   const menuNav = el('nav', 'j-menu-nav');
@@ -1471,10 +1485,16 @@ export function createRail({ onNav } = {}) {
      against running twice. */
   menuOwner.listen(menuBtn, 'pointerdown', (e) => {
     if (e.isPrimary === false || e.button !== 0) return;
+    e.stopPropagation();
+    if (e.pointerType !== 'mouse') return;
     e.preventDefault();
     openMenu(menuBtn, { keyboard: false });
   });
-  menuOwner.listen(menuBtn, 'click', (e) => openMenu(menuBtn, { keyboard: e.detail === 0 }));
+  menuOwner.listen(menuBtn, 'click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu(menuBtn, { keyboard: e.detail === 0 });
+  });
 
   /* ===================================================================== */
   /* THE BUTTON SAYS IT IS A BUTTON — immediate hover/focus gesture         */
@@ -1521,15 +1541,20 @@ export function createRail({ onNav } = {}) {
   menuOwner.listen(menuBtn, 'animationend', (e) => {
     if (e.animationName === 'j-menu-rewrite') menuBtn.classList.remove('j-rail-nudge');
   });
-  // Prevent pointer focus from landing on the close button before dismissal;
-  // keyboard/screen-reader activation still arrives as a click with detail 0
-  // and returns focus to the opener.
+  // Mouse dismissal happens on press so the close control never acquires a
+  // focus ring. Touch dismissal waits for click: hiding/inerting the panel on
+  // touch pointerdown exposes the Menu opener beneath the same fingertip, so
+  // the gesture's later click can reopen the panel immediately.
   menuOwner.listen(menuClose, 'pointerdown', (e) => {
     if (e.isPrimary === false || e.button !== 0) return;
+    e.stopPropagation();
+    if (e.pointerType !== 'mouse') return;
     e.preventDefault();
     closeMenu({ focusBack: false });
   });
   menuOwner.listen(menuClose, 'click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (menuIsOpen) closeMenu({ focusBack: e.detail === 0 });
   });
   // backdrop.js returns a matching uninstall for all four of its listeners.
@@ -2324,6 +2349,7 @@ export function createRail({ onNav } = {}) {
       '--purpose-peer-open-u',
       (1 - Math.min(1, ownershipU / 0.82)).toFixed(5),
     );
+    root.style.setProperty('--purpose-scrim-u', navPoseU.toFixed(5));
     root.style.setProperty('--purpose-rail-lift', `${(L.purposeLift * navPoseU).toFixed(3)}px`);
     root.style.setProperty('--purpose-tree-x', `${treeX.toFixed(3)}px`);
     root.style.setProperty('--purpose-junction-x', `${junctionX.toFixed(3)}px`);

@@ -91,6 +91,57 @@ import {
    navigation) to buy nothing. New constants belong to their domain module. */
 import { HOTSPOT_ARRIVAL } from '../constants/copy.js';
 
+/** Carry a visible initiative marker through a direct-navigation departure.
+ *
+ * A route click makes the destination semantic immediately, which retires the
+ * source chapter's scene reveal in the synchronous placement frame. Copy does
+ * not retire there: copy-arrival.js preserves its painted source snapshot and
+ * fades it over the opening camera-flight phase. Without this carry, the item
+ * heading follows the now-zero scene gate and disappears under the click.
+ *
+ * The snapshot is proportional rather than assumed to be one. Interrupting a
+ * half-arrived marker therefore starts its exit at the opacity actually on
+ * screen and can only decrease from there. Returning `null` means the ordinary
+ * scene/copy gate remains authoritative. */
+export function hotspotDepartureOpacity(h, {
+  currentChapterId, railFlight, copyGate,
+}) {
+  const continuing = !!railFlight && h.departureTicket === railFlight;
+  const starting = !!railFlight && h.iconTab
+    && h.chapter !== currentChapterId && h.a > 0.015;
+
+  if (!continuing && !starting) {
+    h.departureTicket = null;
+    h.departureA = 0;
+    h.departureCopy = 0;
+    return null;
+  }
+  if (!continuing) {
+    h.departureTicket = railFlight;
+    h.departureA = clamp01(h.a);
+    h.departureCopy = Math.max(1e-6, clamp01(copyGate));
+  }
+  const copyRatio = clamp01(copyGate / h.departureCopy);
+  return Math.min(h.departureA, h.departureA * copyRatio);
+}
+
+/** The initiative marker's three inner opacity channels.
+ *
+ * Arrival keeps the authored staged formation. During a direct departure the
+ * button itself is already fading on the source copy envelope, so applying
+ * these curves again would multiply one fade by another: the label reached
+ * effective zero while the chapter copy was still nearly half visible. Keep
+ * the inner pieces opaque on that path and let the same formation values keep
+ * driving their rise/scale in reverse underneath the one shared outer fade. */
+export function hotspotIconTabOpacity(u, departing = false) {
+  const icon = smoothA(clamp01(u / 0.62));
+  const shell = smoothA(clamp01((u - 0.10) / 0.62));
+  const label = smoothA(clamp01((u - 0.14) / 0.78));
+  return departing
+    ? { icon: 1, shell: 1, label: 1 }
+    : { icon, shell, label };
+}
+
 /**
  *  @param {object}   io
  *  @param {Array}    io.hotspots       the registry array, BY IDENTITY.
@@ -303,7 +354,17 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
     return smoothA(h.beatA);
   }
 
-  function advanceReveal(h, { want, gate, dt, now }) {
+  function advanceReveal(h, { want, gate, departureOpacity, dt, now }) {
+    /* A click departure has one opacity authority: the source copy that is
+       visibly fading beside it. Feeding that value through paintIconTab()
+       below plays the initiative's existing condense-in gesture backward —
+       name, housing, then pictograph — on the same complete flight interval
+       as the chapter heading and paragraph. */
+    if (departureOpacity !== null) {
+      h.armAt = null;
+      h.a = departureOpacity < 0.002 ? 0 : departureOpacity;
+      return;
+    }
     if (want) {
       if (h.revealDirect) {
         /* Inspire owns its per-item cadence (the landing cascade), and the
@@ -442,7 +503,8 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *    2. the HOUSING unfolds around it — the capsule and the tab backing
    *       scale out horizontally from the centre line ("the lines expand
    *       out"), completing at ~3/4 of the gesture.
-   *    3. the NAME settles in beneath, last, once there is a surface for it.
+   *    3. the NAME rises with the unfolding housing after a short icon lead,
+   *       then settles just before the pictograph finishes its breath.
    *
    *  Derived from `h.a` — whose pace is now the performed envelope, see
    *  beatEnvelope — rather than from a CSS animation or a timer started when
@@ -460,7 +522,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *  because dt = 0 snaps h.a to the settled gate and ten protected goldens
    *  freeze that frame. An overshoot term that does not vanish at u = 1, or
    *  a lead that leaves a ramp unfinished there, moves every capture. */
-  function paintIconTab(h) {
+  function paintIconTab(h, departing = false) {
     const u = h.a;
     // 1. the mark: opacity and rise finish at u = 0.62 …
     const iconIn = smoothA(clamp01(u / 0.62));
@@ -471,17 +533,24 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
     // 2. the housing: unfolds from the centre line, done by u = 0.80.
     const shellIn = smoothA(clamp01((u - 0.10) / 0.62));
     const shellSx = 0.24 + 0.76 * smoothA(clamp01((u - 0.10) / 0.70));
-    // 3. the name: the last 56% of the gesture, into a housing that is ready.
-    const labelIn = smoothA(clamp01((u - 0.44) / 0.56));
-    h.btn.style.setProperty('--j-hot-shell-in', shellIn.toFixed(3));
-    h.btn.style.setProperty('--j-hot-shell-y', `${((1 - shellIn) * 2).toFixed(2)}px`);
+    // 3. the name follows the housing after one short beat, rather than
+    // waiting until the icon is almost complete. The former 0.44 onset left
+    // it fully absent for 308 ms of this 700 ms formation, then double-eased
+    // its appearance through the parent opacity — an icon followed by a text
+    // pop instead of one joined marker assembling. 0.14 buys a ~98 ms lead
+    // for the pictograph and lets the name settle just before the final icon
+    // breath, so all three movements overlap without becoming simultaneous.
+    const labelIn = smoothA(clamp01((u - 0.14) / 0.78));
+    const opacity = hotspotIconTabOpacity(u, departing);
+    h.btn.style.setProperty('--j-hot-shell-in', opacity.shell.toFixed(3));
+    h.btn.style.setProperty('--j-hot-shell-y', `${((1 - shellIn) * 1.5).toFixed(2)}px`);
     h.btn.style.setProperty('--j-hot-shell-sx', shellSx.toFixed(3));
-    h.btn.style.setProperty('--j-hot-icon-in', iconIn.toFixed(3));
-    h.btn.style.setProperty('--j-hot-icon-y', `${((1 - iconIn) * 4).toFixed(2)}px`);
+    h.btn.style.setProperty('--j-hot-icon-in', opacity.icon.toFixed(3));
+    h.btn.style.setProperty('--j-hot-icon-y', `${((1 - iconIn) * 2.5).toFixed(2)}px`);
     h.btn.style.setProperty('--j-hot-icon-scale', (0.92 + iconIn * 0.08).toFixed(3));
     h.btn.style.setProperty('--j-hot-ico-s', markS.toFixed(3));
-    h.btn.style.setProperty('--j-hot-label-in', labelIn.toFixed(3));
-    h.btn.style.setProperty('--j-hot-label-y', `${((1 - labelIn) * 3).toFixed(2)}px`);
+    h.btn.style.setProperty('--j-hot-label-in', opacity.label.toFixed(3));
+    h.btn.style.setProperty('--j-hot-label-y', `${((1 - labelIn) * 2.5).toFixed(2)}px`);
   }
 
   /* PILL COLLISION DODGE (2026-08-10). With every anchor now a static world
@@ -570,7 +639,9 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *  whole-frame passes by necessity — a dodge needs every pill's rect and a
    *  pad cap needs every other pad's centre — which is exactly why they are
    *  named functions here rather than trailing blocks of a long body. */
-  function place({ p, dt, detail, copyEase, excluded, geom, now }) {
+  function place({
+    p, dt, detail, chapterId, railFlight, copyEase, excluded, geom, now,
+  }) {
     const { viewDepth, tanHalf } = geom;
 
     /* Reserve collision space for a chapter's full scene-timed label set
@@ -601,12 +672,22 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
          chips' byte for byte. travelHold is deliberately absent from this
          path — a label that waits for the wheel to stop has already missed
          its light. */
+      const copyGate = copyEase(h.chapter);
       const gate = h.reveal
         ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
-        : copyEase(h.chapter);
+        : copyGate;
+      const departureOpacity = hotspotDepartureOpacity(h, {
+        currentChapterId: chapterId, railFlight, copyGate,
+      });
+      // A carried marker keeps its last truthful world anchor until the copy
+      // fade completes. Connect's normal 72% arrival floor must not truncate
+      // this exit; departureOpacity itself is the visibility clock here.
+      const placementGate = departureOpacity !== null
+        ? (departureOpacity > 0.002 ? 1 : 0)
+        : gate;
       const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
       const { want, w, sx, sy } = resolvePlacement(h, {
-        geom, dt, gate, detail, reserveLayout, excluded,
+        geom, dt, gate: placementGate, detail, reserveLayout, excluded,
       });
 
       // What the FRAME can place, cached for the index's reachability rule.
@@ -617,7 +698,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       h.placeable = want;
       h.layoutPlaceable = (want || reserveLayout) && !!w;
 
-      advanceReveal(h, { want, gate, dt, now });
+      advanceReveal(h, { want, gate, departureOpacity, dt, now });
 
       if (h.layoutPlaceable) {
         const tx = resolveX(h, sx);
@@ -638,17 +719,19 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
         }
         h.sx = sx; h.sy = sy;
       }
-      const vis = h.a > 0.015;
-      if (h.iconTab) paintIconTab(h);
+      const vis = departureOpacity !== null ? h.a > 0 : h.a > 0.015;
+      if (h.iconTab) paintIconTab(h, departureOpacity !== null);
       h.btn.style.opacity = h.a;
+      h.btn.style.pointerEvents = departureOpacity !== null ? 'none' : '';
       h.btn.classList.toggle('vis', vis);
       // Roving tab order: exactly the hotspots of the chapter at rest, in
       // narrative registration order, are tabbable. Off-chapter, suppressed
       // (behind copy), off-frame, mid-fade or detail-open hotspots all leave.
       // tabIndex is the live half; `.j-hot:not(.vis)` is visibility:hidden, so
       // a faded hotspot is out of the a11y tree as well as out of Tab.
-      h.btn.tabIndex = want && vis ? 0 : -1;
-      if (want && vis) h.btn.removeAttribute('aria-hidden');
+      const interactive = departureOpacity === null && want && vis;
+      h.btn.tabIndex = interactive ? 0 : -1;
+      if (interactive) h.btn.removeAttribute('aria-hidden');
       else h.btn.setAttribute('aria-hidden', 'true');
     }
 

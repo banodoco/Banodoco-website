@@ -36,6 +36,13 @@ assert.match(html, /class="menu-dot-disc"[\s\S]*>Manifesto<\/span><span class="m
 assert.match(html, />Ownership<\/span><span class="menu-is">equity rewards collaboration<\/span>/);
 assert.match(html, /href="https:\/\/arcagidan\.com\/"[\s\S]*?<span class="menu-ia" aria-hidden="true">↗<\/span>/);
 assert.match(html, /href="#\/owned"[\s\S]*?<span class="menu-ia" aria-hidden="true">→<\/span>/);
+const inspireMenu = html.match(/data-menu-section="inspire"[\s\S]*?<ul class="menu-sub">([\s\S]*?)<\/ul>/)?.[1];
+assert.ok(inspireMenu, 'the static Inspire menu exists');
+assert.ok(
+  inspireMenu.indexOf('nodes.arca.label') < inspireMenu.indexOf('nodes.tworp.label')
+    && inspireMenu.indexOf('nodes.tworp.label') < inspireMenu.indexOf('nodes.artcompute.label'),
+  'the static Inspire menu reads Arca Gidan, 2RP, ArtCompute',
+);
 assert.doesNotMatch(html, />Epilogue<\//);
 assert.doesNotMatch(html, />Outro<\//);
 assert.deepEqual(

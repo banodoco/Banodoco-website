@@ -413,7 +413,7 @@ export function boot(opts = {}) {
   // and still drives the tab order. WHEN each chip stands up moved to the
   // chapter's landing cascade (2026-08-16, the Connect precedent): nodeReveal
   // ties each label to its own lip ember, so the three arrive one at a time
-  // in SCREEN order (Arca left, ArtCompute centre, 2RP right) as the embers
+  // in SCREEN order (Arca left, 2RP centre, ArtCompute right) as the embers
   // ignite — chapters/inspire/index.js 5c. The gate bound below is ui's eased
   // copy value, so ember + label land timed with the intro.
   const NODE_CHAPTER = registerChapterInteractions(ui, chapters);

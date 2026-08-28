@@ -104,7 +104,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // bottom of the frame — the horizon runs from 633 to 463. That is the trade,
 // and it is the smallest of the three on offer. The braids are barely touched:
 // luminance-weighted centroid separation 214 px -> 206 px, and 2.8% of
-// ArtCompute's light (0% of Arca's, 0.2% of 2RP's) passes off the top edge.
+// 2RP's light (0% of Arca's, 0.2% of ArtCompute's) passes off the top edge.
 // All three release lips stay in frame with their facing unchanged at
 // 1.00 / 0.21 / 0.19.
 //

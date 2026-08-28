@@ -65,8 +65,8 @@
 //     * it said `selection.setHot` "closes over EXITS and the chapter's
 //       `active` variable, so reconstituting it would mean rebuilding the
 //       chapter's state". Neither free name is chapter state.
-//       `journey/chapters/inspire/anatomy.js` imports NOTHING, so the REAL
-//       EXITS is importable under plain node; and a mutable closure variable
+//       the root contract has no browser dependency, so the REAL EXITS is
+//       importable under plain node; and a mutable closure variable
 //       is what a PARAMETER is when the body's last act is to return it.
 //     * I5 remains the program's ONLY guard on the DI-1 release semantics —
 //       golden captures run at dt = 0 with no hover, so no capture can see it
@@ -148,11 +148,8 @@
 // three ui.js closures that CALL into them are run over doubles (MUTD). The
 // other seventeen are read, never run.
 //
-// Slice E also imports `journey/chapters/inspire/anatomy.js` — the first
-// chapter-directory SOURCE VALUE any suite in the tree has loaded. It is a
-// leaf data module with no imports, NOT a chapter module, and it does not
-// close F-3: it makes I5's fixture real, nothing more. Do not read the import
-// line as "a chapter is loaded now".
+// Slice E imports the dependency-free root-level Inspire exit contract, NOT a
+// chapter module. It makes I5's fixture real and does not close F-3.
 
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -175,13 +172,12 @@ import { CONTENT } from '../content/content.js';
 // lets I3(b) drive the materialised focal pick over shipped route data rather
 // than over a synthetic ladder.
 import { startOf } from '../journey/route.js';
-// The REAL inspire exits. journey/chapters/inspire/anatomy.js imports NOTHING
-// — it is pure authored data, and the chapter's own index.js is the only thing
-// that pulls `three` — so unlike the chapter module it can be imported here.
+// The REAL inspire exits. The dependency-free root contract can be imported
+// under plain node; the chapter's own index.js is the only thing that pulls `three`.
 // This is what lets slice E's I5 drive inspire's SHIPPED `setHot` bytes over
 // the SHIPPED exit list instead of over a hand-transcribed stand-in. It is NOT
 // a chapter descriptor and it does not close S-2/F-3: see the header note.
-import { EXITS } from '../journey/chapters/inspire/anatomy.js';
+import { EXITS, EXIT_SLOT, exitIndexOf } from '../inspire-exits.js';
 import { parse } from 'espree';
 
 import { stripComments } from './strip-comments.mjs';
@@ -816,9 +812,9 @@ check('I4 [executed] hotspots register in declaration order, and every zone regi
  * THAT IS FALSE, and slice E measured it rather than repeating it.   *
  * The two free names are not chapter state:                          *
  *                                                                    *
- *   * `EXITS` is journey/chapters/inspire/anatomy.js's exported      *
- *     array. anatomy.js imports NOTHING — it is pure authored data — *
- *     so the REAL array is importable under plain node. It does not  *
+ *   * `EXITS` is the root-level contract. It has no browser          *
+ *     dependency, so the REAL array                                 *
+ *     is importable under plain node. It does not                    *
  *     have to be rebuilt; it has to be imported.                     *
  *   * `active` is a mutable closure variable, and a mutable closure  *
  *     variable is exactly what a PARAMETER is when the body's last   *
@@ -859,8 +855,8 @@ const SET_HOT_ANCHOR = '\n      setHot(id, on) {';
  *  so an unsupplied free name that IS reached throws ReferenceError rather
  *  than reading undefined. */
 function materialiseSetHot(body) {
-  const fn = new Function('id', 'on', 'EXITS', 'active', `${body}\n  return active;`);
-  return (active, id, on) => fn(id, on, EXITS, active);
+  const fn = new Function('id', 'on', 'exitIndexOf', 'active', `${body}\n  return active;`);
+  return (active, id, on) => fn(id, on, exitIndexOf, active);
 }
 
 /** The hover sequence both forms are driven over. Steps 5 and 7 are the two
@@ -889,32 +885,35 @@ check('I5 [materialised] inspire\'s SHIPPED setHot over the REAL EXITS, and D58\
   // (0a) THE FREE-NAME PIN, per slice D's I3(b). The extracted body's
   //      identifier set is an exact literal list, so a body that grows a free
   //      name `new Function` does not supply fails on EVERY run rather than on
-  //      the one fixture that happens to reach it. Strings are emptied first —
-  //      `'tworp'` and `'2rp'` are DATA, not names.
+  //      the one fixture that happens to reach it.
   const idents = [...new Set(codeEmptyStrings(body).match(/[A-Za-z_$][A-Za-z0-9_$]*/g) || [])].sort();
-  assert.deepEqual(A(idents), ['EXITS', 'active', 'const', 'e', 'findIndex', 'i', 'id', 'on'],
-    'the shipped body closes over exactly EXITS and active; every other name is its own');
+  assert.deepEqual(A(idents), ['active', 'const', 'exitIndexOf', 'i', 'id', 'on'],
+    'the shipped body closes over exactly exitIndexOf and active; every other name is its own');
 
   // (0b) THE IMPORT PRODUCED SOMETHING (D45). EXITS is the real array, not a
-  //      transcription of it — and pinning its ids here is also where DEF-06's
-  //      coupling is legible: FIXED_HOTSPOTS.inspire says 'tworp' where EXITS
-  //      says '2rp', which is precisely why the body carries an alias.
-  assert.deepEqual(A(EXITS.map((e) => e.id)), ['artcompute', 'arca', '2rp'],
-    'the REAL anatomy.js EXITS, in order — imported, not transcribed');
+  //      transcription of it. Geometry and schema now share canonical ids;
+  //      legacy route aliases are normalized before reaching the chapter.
+  assert.deepEqual(A(EXITS.map((e) => e.id)), ['tworp', 'arca', 'artcompute'],
+    'the REAL root EXITS, in physical-slot order — imported, not transcribed');
+  assert.deepEqual(A(EXITS.map((e) => e.slot)),
+    [EXIT_SLOT.CENTER, EXIT_SLOT.LEFT, EXIT_SLOT.RIGHT],
+    'every exit declares the physical slot where the shared contract placed it');
+  assert.deepEqual(A(['tworp', 'arca', 'artcompute', '2rp'].map(exitIndexOf)),
+    [EXIT_SLOT.CENTER, EXIT_SLOT.LEFT, EXIT_SLOT.RIGHT, -1],
+    'identity resolves through explicit slots; the route layer owns the legacy alias');
   assert.deepEqual(A([...FIXED_HOTSPOTS.inspire]), ['artcompute', 'arca', 'tworp'],
-    'and the registration list it is index-parallel to, whose third id DIFFERS (DEF-06)');
+    'and the independent registration order, whose alias and ordering differ');
 
   // (1) THE NULL-MUTANT CONTROL, and it runs FIRST. Without it a death below
   //     proves the harness broke rather than the mutation being caught.
   const shipped = driveSetHot(materialiseSetHot(body));
-  assert.deepEqual(A(shipped), [0, 2, 1, 0, 1, -1, 1, -1, -1],
+  assert.deepEqual(A(shipped), [2, 0, 1, 2, 1, -1, 1, -1, -1],
     'the null mutant — shipped bytes, unmodified — reproduces the shipped trace');
 
-  // (a) the lookup is id-based and carries the 'tworp' -> '2rp' alias that
-  //     inspire's nodeWorld/nodeReveal/setSelected already perform. Two
-  //     different ids select two different targets, not one shared slot.
-  assert.deepEqual(A(shipped.slice(0, 3)), [0, 2, 1],
-    "id-based lookup: 'tworp' resolves to EXITS' '2rp' at index 2");
+  // (a) the canonical lookup is id-based. Two different ids select two
+  //     different targets, not one shared slot.
+  assert.deepEqual(A(shipped.slice(0, 3)), [2, 0, 1],
+    "id-based lookup: 'tworp' resolves to EXITS' canonical id at index 0");
 
   // (b) THE RELEASE. A -> B -> release(A) must leave NOTHING active. Under the
   //     guarded form step 5 would read 1. An unknown id clears on the OFF path
@@ -943,9 +942,9 @@ check('I5 [materialised] inspire\'s SHIPPED setHot over the REAL EXITS, and D58\
       diverges: [5, 7],
     },
     {
-      name: 'm2 the alias deleted',
-      from: "(id === 'tworp' && e.id === '2rp')",
-      to: '(false)',
+      name: 'm2 the canonical tworp lookup deleted',
+      from: 'const i = exitIndexOf(id);',
+      to: "const i = id === 'tworp' ? -1 : exitIndexOf(id);",
       moves: "the index 'tworp' resolves to",
       killer: 'I5(a)',
       diverges: [1],
@@ -965,7 +964,7 @@ check('I5 [materialised] inspire\'s SHIPPED setHot over the REAL EXITS, and D58\
   // reading. A mutant that changed a step it does not claim would fail here.
   assert.deepEqual(A(divergenceMap), {
     'm1 guarded release (DI-1 itself)': [5, 7],
-    'm2 the alias deleted': [1],
+    'm2 the canonical tworp lookup deleted': [1],
   }, 'every mutant moves exactly the trace steps its row declares, and no others');
 
   // D58's loop shut: the survivor set must be EXACTLY the set declaring an
@@ -3491,7 +3490,7 @@ check('LPS1 [instrument] this suite contains no assertion the failability sweep 
   // --prove-failure never enumerates it. Pinned as an EXACT VALUE rather than
   // an assert-zero — one site is legitimately unwrapped and is named here.
   const actuals = assertActuals(src);
-  assert.equal(A(actuals.length), 178, 'every assert site was located — cardinality pinned (D45; 175 before DIET-02 restated C06-B4 as I11 — three sites: the slice anchor\'s uniqueness refusal, its rotted-tail refusal, and the two-registry claim itself; 101 before slice D, 122 before the C05C R1 repairs, 138 before slice E, 166 before QA-05 added five rows, 171 before PIN-01 added T3\'s cardinality and distinctness pins, 173 before the M14 onHot pin was converted from a three-line text site set to a parse-based statement-position census, which is ONE assertion replaced by TWO — the census and its non-empty-corpus control; 174 before U04 separated T2\'s delete-direction control from its claim, adding the fixture\'s own non-vacuity assertion)');
+  assert.equal(A(actuals.length), 180, 'every assert site was located — cardinality pinned (D45; 178 before the Inspire exit contract added two explicit physical-slot assertions; 175 before DIET-02 restated C06-B4 as I11 — three sites: the slice anchor\'s uniqueness refusal, its rotted-tail refusal, and the two-registry claim itself; 101 before slice D, 122 before the C05C R1 repairs, 138 before slice E, 166 before QA-05 added five rows, 171 before PIN-01 added T3\'s cardinality and distinctness pins, 173 before the M14 onHot pin was converted from a three-line text site set to a parse-based statement-position census, which is ONE assertion replaced by TWO — the census and its non-empty-corpus control; 174 before U04 separated T2\'s delete-direction control from its claim, adding the fixture\'s own non-vacuity assertion)');
   const unwrapped = actuals.filter((a) => !a.actual.includes('A(') && !a.actual.includes('F('));
   assert.deepEqual(A(unwrapped.map((a) => a.actual)), ['runtimeIds'],
     'the one unwrapped actual is I9\'s, and it was wrapped by A() on the line that built it');

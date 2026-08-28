@@ -476,6 +476,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
       // clock. Reverse scrubs therefore withdraw the marker in the same frame
       // as its core instead of leaving a fading pill behind a moving node.
       revealScrub: !!revealScrub,
+      // A direct navigation retires the source scene synchronously, but its
+      // copy remains on the camera-flight crossfade. The hotspot frame uses
+      // these three fields to carry an already-visible initiative marker on
+      // that exact outgoing copy envelope instead of losing it on the click.
+      departureTicket: null, departureA: 0, departureCopy: 0,
       // ...and the band that close edge is read from, built once — the
       // placement loop runs per frame and COPY_BANDS never moves after load.
       revealBand: COPY_BANDS[chapter]
@@ -1018,7 +1023,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     const geom = projection.publish(camera);
     const excluded = railMask.refresh({ geom });
 
-    chips.place({ p, dt, detail, copyEase: copy.ease, excluded, geom, now: performance.now() });
+    chips.place({
+      p, dt, detail, chapterId, railFlight,
+      copyEase: copy.ease, excluded, geom, now: performance.now(),
+    });
     zones.frame({ detail, copyEase: copy.ease, geom });
 
     popover.frame();

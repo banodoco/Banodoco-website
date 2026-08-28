@@ -115,8 +115,19 @@ for (const row of [desktopRow, phoneRow]) {
       + row.ringDia[index] / 2 + row.connectorAir;
     const segmentEnd = row.centres[index + 1]
       - row.ringDia[index + 1] / 2 - row.connectorAir;
+    const slotLeft = row.centres[index] - row.dia[index] / 2;
+    const prebootLeft = row.dia[index] / 2
+      + row.ringDia[index] / 2 + row.connectorAir;
+    const prebootWidth = row.dia[index] / 2 + row.gap
+      + row.dia[index + 1] / 2
+      - row.ringDia[index] / 2 - row.ringDia[index + 1] / 2
+      - 2 * row.connectorAir;
     assert.ok(segmentEnd > segmentStart,
       `responsive row connector ${index} retains a visible positive segment`);
+    assert.equal(prebootLeft, segmentStart - slotLeft,
+      `preboot connector ${index} starts at the settled source-ring edge`);
+    assert.equal(prebootWidth, segmentEnd - segmentStart,
+      `preboot connector ${index} has the settled width before JS starts`);
     assert.equal(
       segmentStart - (row.centres[index] + row.ringDia[index] / 2),
       row.connectorAir,
@@ -523,12 +534,33 @@ assert.match(railSource,
 assert.match(railSource,
   /const manifestoBase = GLYPH_COLOURS\.future[\s\S]*?--glyph-r'[\s\S]*?--glyph-g'[\s\S]*?--glyph-b'[\s\S]*?--glyph-alpha'[\s\S]*?--glyph-glow'/,
   'Manifesto has explicit warm resting ink before hover');
-assert.doesNotMatch(railSource,
-  /manifestoItem[\s\S]*?pointerType !== 'touch'[\s\S]*?j-rail-note/,
-  'Manifesto never flashes the desktop hover answer on touch');
+assert.match(railSource,
+  /manifestoItem[\s\S]*?pointerType !== 'touch'[\s\S]*?manifestoSlot\.classList\.add\('j-rail-note'\)[\s\S]*?1600/,
+  'Manifesto exposes its Soon answer briefly after a deliberate touch');
 assert.match(css,
-  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?j-rail-purpose-labels-above[\s\S]*?opacity: 0 !important;[\s\S]*?j-rail-purpose-manifesto \.j-rail-soon-note[\s\S]*?opacity: 0 !important;/,
-  'touch-only Purpose suppresses sticky top-row and Manifesto hover answers');
+  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?j-rail-purpose-labels-above[\s\S]*?opacity: 0 !important;[\s\S]*?j-rail-purpose-manifesto\.j-rail-note \.j-rail-soon-note[\s\S]*?opacity: 1 !important;[\s\S]*?j-rail-purpose-manifesto\.j-rail-note \.j-rail-name[\s\S]*?opacity: 0 !important;/,
+  'touch-only Purpose suppresses sticky top-row labels but lets Manifesto answer Soon');
+assert.match(css,
+  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?data-layout="mission"[\s\S]*?data-chapter="mission"[\s\S]*?\.j-rail-name[\s\S]*?opacity: 0 !important;/,
+  'touch-only Intro cannot retain a synthetic hover label after arrival');
+assert.match(railSource,
+  /if \(chapterId === 'inspire'\)[\s\S]*?\['arca', 'tworp', 'artcompute'\]/,
+  'the live Inspire menu reads Arca Gidan, 2RP, ArtCompute');
+assert.match(railSource,
+  /menuClose, 'pointerdown'[\s\S]*?e\.stopPropagation\(\)[\s\S]*?if \(e\.pointerType !== 'mouse'\) return;[\s\S]*?menuClose, 'click'[\s\S]*?e\.preventDefault\(\)[\s\S]*?e\.stopPropagation\(\)[\s\S]*?closeMenu/,
+  'touch dismissal keeps the close control mounted through click and cannot fall through to the opener');
+assert.match(railSource,
+  /menuBtn, 'pointerdown'[\s\S]*?e\.stopPropagation\(\)[\s\S]*?if \(e\.pointerType !== 'mouse'\) return;[\s\S]*?menuBtn, 'click'[\s\S]*?e\.preventDefault\(\)[\s\S]*?e\.stopPropagation\(\)[\s\S]*?openMenu/,
+  'touch opening likewise waits for click so the new close control cannot capture the same tap');
+assert.match(css,
+  /--connector-next-item-d: var\(--nav-major\)[\s\S]*?:nth-last-child\(2\)[\s\S]*?--connector-next-item-d: var\(--nav-minor\)[\s\S]*?left: var\(--connector-left,[\s\S]*?var\(--slot-ring-d\) \/ 2[\s\S]*?width: var\(--connector-width,[\s\S]*?var\(--connector-next-ring-d\) \/ 2/,
+  'preboot connectors use the same current/next ring-edge geometry as rowFrame');
+assert.match(railSource,
+  /--purpose-scrim-u', navPoseU\.toFixed\(5\)[\s\S]*?--purpose-rail-lift', `\$\{\(L\.purposeLift \* navPoseU\)\.toFixed\(3\)\}px`/,
+  'Purpose publishes one continuous composition clock for scrim density and rail lift');
+assert.match(css,
+  /opacity: calc\(0\.72[\s\S]*?- 0\.16 \* var\(--purpose-scrim-u, 0\)\)[\s\S]*?transform: translate\(-50%,[\s\S]*?var\(--purpose-rail-lift, 0px\)[\s\S]*?rgba\(12, 8, 3, calc\(0\.7 - 0\.08 \* var\(--purpose-scrim-u, 0\)\)\)/,
+  'Purpose scrim stays bottom-anchored and fades continuously as its raised tree forms');
 assert.doesNotMatch(railSource, /manifestoItem\.href|navigate\('manifesto'\)/,
   'Manifesto cannot mint a route');
 assert.match(css,
