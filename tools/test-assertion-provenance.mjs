@@ -731,7 +731,7 @@ pin('AP4', 'D94 — the INVENTORY: literally-closed assertions with no census cl
        that fixture's closed symmetric complement. It is intentionally
        literal test data, not a census or coverage claim, so DB3 is the honest
        classification and the row belongs in the recorded inventory. */
-    'tools/test-rail-handoff.mjs :: assert.deepEqual@321 :: DB3',
+  'tools/test-rail-handoff.mjs :: assert.deepEqual@404 :: DB3',
     'tools/test-render-baseline.mjs :: M9.demo :: DB3',
     /* connect-skip second pass, 2026-08-25 — the SIXTH row. tools/test-rest-composition.mjs's
        C4, the vacuity pin: `assert.ok(DECLARED_DEFICIT_MS > 0, ...)`. It compares

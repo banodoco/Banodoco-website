@@ -21,10 +21,11 @@
  *               the scroll rule catches the carried floor, or the visitor
  *               travels away from the landing coordinate
  *
- *    `flying` holds the ticket, the chapter it is flying to, and the opacity
- *    that chapter already had when the click happened. `carrying` holds the
- *    partial-opacity floor the landing left behind, and the coordinate it is
- *    only valid at. THE TWO ARE ONE MODE, NOT TWO VARIABLES: this shipped as
+ *    `flying` holds the ticket, the chapter it is flying to, the visual
+ *    departure snapshot and its slower chapter-owned landing gate.
+ *    `carrying` holds the completed visual floor while that gate catches up,
+ *    at the coordinate where both are valid. THE TWO ARE ONE MODE, NOT TWO
+ *    VARIABLES: this shipped as
  *    four correlated bindings (`directCopyFlight`, `directCopyId`,
  *    `directCopyFrom`, `directCopyCarry`) that were written together in every
  *    arm and read as a unit, which is the `card-tier.js` correlated-boolean
@@ -35,15 +36,17 @@
  *
  * 2. THE JUMP-ENTRY ENVELOPE.  Mode binding: `arrive`.
  *
- *      states   null  ->  { own: true }  ->  { own: false }  ->  null
- *      events   arm(id, blendDur)          — journey.js starts a camera blend
- *               step(dt)                   — the envelope's own clock
- *               cancel()                   — the visitor took the wheel
- *               setPlay(±1)                — a steered wrap reverses it
- *               end                        — spent, abandoned or overtaken
+ *      states   null -> preparing -> flight -> null
+ *                              \-> { own: false } -> null
+ *      events   prepare/arm(id, blendDur) — a cyclic wrap starts
+ *               live wrap ticket gone     — the reached endpoint has settled
+ *               cancel()                  — another authority took over
+ *               setPlay(±1)               — direction changes without repaint
+ *               end                       — spent, abandoned or overtaken
  *
- *    `arrive` has exactly two write sites (`armCopyEntry`, `endArrive`) and
- *    needs no transition clause to pass. `own` is the opacity authority: an
+ *    `phase` is the state, and `own` is the opacity authority. During
+ *    `flight`, all chapter copy converges to zero and direction changes do
+ *    crossfades the two real endpoints directly from camera phase. An
  *    envelope that has been disowned still exists (its inner keyframes are
  *    left to finish) but no longer drives `eased`.
  *
@@ -116,11 +119,16 @@ if (DEFERRED_IDS.length !== 1 || DEFERRED_IDS[0] !== HERO_CHAPTER_ID) {
     + `chapter; found [${DEFERRED_IDS.join(', ')}] against hero '${HERO_CHAPTER_ID}'`);
 }
 
-/** The authored entry curves for a DIRECT navigation, by the chapter's
- *  declared `flightLead`. Ordinary click arrivals begin quietly over the final
- *  quarter of the camera's PRESENTED path, then hand to the normal
- *  speed/settle breathe; a return to the hero leads earlier and lands
- *  brighter. Both numbers are spatial-phase values, not wall-clock timing. */
+/* Every button-led camera move uses one balanced crossfade: departure over
+   the opening third, arrival over the closing third. Because both sides read
+   the same presented camera phase, a slower route automatically gives both
+   sides the same slower breath instead of keeping a short wall-clock pop. */
+const NAV_COPY_FADE_PHASE = 0.32;
+
+/* Visual copy may complete with the camera without forcing chapter-owned
+   landing cascades to complete in flight. This is the chapter gate's ceiling;
+   after landing it keeps breathing to one on COPY_IN_K while the already-
+   visible words remain steady. */
 const FLIGHT_ENVELOPES = {
   standard: { onset: 0.76, land: 0.38 },
   hero: { onset: 0.64, land: 0.74 },
@@ -144,36 +152,37 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
      Route progress still snaps in one dt = 0 tick, but journey.js now passes
      the camera flight's continuously presented progress as `travelP`, so the
      ordinary scroll speed/settle rule below sees the flight. The dedicated
-     arrival envelope remains responsible for the destination copy's authored
-     lead and handoff; it is not a substitute travel clock.
+     arrival envelope remains responsible for the cyclic wrap, whose hidden
+     seam has no honest continuous `travelP`. The wrap ticket's camera phase
+     is its clock: source and destination use equal opening/closing thirds.
 
      The fix is NOT a second opacity channel laid over the first. Two writers
      on one style is exactly how a jump ends up leaving a block half-faded by
      the scroll rule, so the envelope below drives `eased` ITSELF and is
      defined to finish at the same value the scroll rule was heading for. When
-     it lets go, `eased[id] === target` already, so the scroll rule resumes on
-     the next frame with nothing to correct and nothing to re-animate.
+     it lets go, `eased[id]` has met its resting target, so the scroll rule
+     resumes on the next frame with nothing to correct or re-animate.
 
      `easedPrev` is what makes the OUTGOING copy behave too. placeAt() runs a
      dt = 0 frame before journey.js can tell us anything, and dt = 0 means
      "snap" — correctly, for a deep link or a capture. arm() undoes that one
      snap by restoring the last TRAVELLED frame's values, which leaves the
-     chapter we are leaving at the opacity it actually had. It then releases on
-     the ordinary COPY_OUT_K rule (~0.15 s), the same release a scrub gives it.
-
-     See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
+     chapter we are leaving at the opacity it actually had. Once armed, every
+     button-led narrative surfaces now read the camera-phase crossfade, so the
+     source and destination spend equal portions of the same journey. */
   const easedPrev = { ...eased };
   // A wrap's duration is known only after its synchronous placeAt(), but its
   // transition must own those dt=0 frames too. This is the prepared state:
   // the visible departure snapshot plus an unpriced envelope installed before
   // placement. armCopyEntry() prices that same envelope afterwards.
   let preparedEntry = null;
-  let arrive = null;   // { id, t, lead, dur, own, started, motions }
+  let arrive = null;   // { id, phase, t, lead, dur, own, holdSnaps, motions }
   const arrivalMotion = createArrivalMotion({ blocks, reduceMotion });
 
-  /** The direct-navigation ticket. `null`, or `{ kind: 'flying', ticket, id,
-   *  from }`, or `{ kind: 'carrying', id, floor, atP }`. See the machine note
-   *  at the top of the file; `advanceNavTicket` owns every write. */
+  /** The direct-navigation ticket. `null`, or a `flying` visual crossfade with
+   *  its independent chapter gate, or a `carrying` landing floor while that
+   *  gate catches up. See the machine note at the top of the file;
+   *  `advanceNavTicket` owns every write. */
   let nav = null;
   let copyFrameDebug = null;
   let heroGatePrev = null;
@@ -186,6 +195,10 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
   /** The ticket only while it is in the air. Reads as `directCopyFlight` did:
    *  null whenever a flight is not the current mode. */
   const flying = () => (nav && nav.kind === 'flying' ? nav : null);
+  const gateEase = (id) => {
+    const value = eased[id] || 0;
+    return nav && nav.id === id && Number.isFinite(nav.gate) ? nav.gate : value;
+  };
 
   /** Is an owned entry envelope the authority on the HERO's copy this frame?
    *  Both of report #31's rules turn on this one question and each asks it at
@@ -306,13 +319,12 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     // Those frames now see one transition owner and therefore preserve the
     // departure copy instead of painting destination state and undoing it.
     arrive = { id, t: 0, lead: 1, dur: 1, own: true, from, play: 1,
-      started: false, hold: 0, motions: [] };
+      phase: 'preparing', started: false, hold: 0, holdSnaps: 0, motions: [] };
     preparedEntry = { id, departure };
   }
 
   /** Copy entry for a chapter the camera is currently blending onto.
-   *  `blendDur` is journey.js's live camera-blend duration in seconds — the
-   *  envelope is defined against the move, not against a fixed timing. */
+   *  `blendDur` prices the prepared flight ticket and its child motion. */
   function armCopyEntry(id, blendDur) {
     if (!(id in eased)) {
       preparedEntry = null;
@@ -329,19 +341,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
       for (const k in departure) eased[k] = departure[k];
       eased[id] = 0;
     }
-    // THE DEPARTURE IS TIMED AGAINST THE MOVE TOO (2026-08-13 — the loop's
-    // seam). The arrival has been placed inside the blend since d1ecc23; the
-    // release was left on the ordinary COPY_OUT_K scrub rate, which is
-    // proportionate to an ordinary 1.2 s jump and is not proportionate to the
-    // wrap's 4.00 s lap: measured, the Final block was at 0 by 530 ms, with
-    // the camera 0.3 units into a 68-unit move — the words evaporated off a
-    // frame that had not moved, and 2.1 s of empty copy layer followed before
-    // the hero's arrived. `from` is the last TRAVELLED frame's opacity, and
-    // the block now releases across `lead` — the same window the incoming one
-    // spends waiting — so the two are one handover rather than two animations
-    // with a hole between them. It ends at 0, which is the value the scroll
-    // rule is already heading for, so the hand-back is a no-op exactly as the
-    // entry's is.
+    // Capture the last TRAVELLED frame for the transition owner. Flight does
+    // not advance this envelope; chooseEase releases all narrative surfaces
+    // toward the same hidden state while the live wrap ticket exists.
     const from = {};
     for (const k in departure) if (k !== id) from[k] = departure[k];
     // `hold`: seconds this entrance has waited at its lead for the hero's gate
@@ -349,9 +351,10 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     if (prepared && arrive && arrive.id === id) {
       arrive.lead = lead;
       arrive.dur = dur;
+      arrive.phase = 'flight';
     } else {
       arrive = { id, t: 0, lead, dur, own: true, from, play: 1, started: false,
-        hold: 0, motions: [] };
+        phase: 'flight', hold: 0, holdSnaps: 0, motions: [] };
     }
     const b = blocks[id];
     if (b) {
@@ -375,19 +378,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
    *  and cutting them short is the only way to make them visible as a cut. */
   function cancelCopyEntry() { if (arrive) arrive.own = false; }
 
-  /** The wrap's lap has been steered (journey.js steerWrapBlend): the entry
-   *  runs on the same clock as the lap — armed on its frame, stepped by its
-   *  same dt — so it REVERSES with it rather than being dropped. Backwards,
-   *  the one envelope plays the whole handover in reverse: the arriving
-   *  block backs out along its own curve, the departed blocks rise home
-   *  along theirs, and both reach exactly the pre-wrap frame as the rewound
-   *  lap lands (the two clocks hit zero together, so the landing snap is a
-   *  no-op). Dropping it instead (cancelCopyEntry) hands opacity to the
-   *  scroll rule, and the scroll rule reads p — which a wrap parks at the
-   *  DESTINATION for the whole lap — so it painted the copy of the section
-   *  the camera was flying AWAY from and held it up through the entire
-   *  retrace (Hannah, 2026-08-16: "the text shows up even before I've
-   *  actually scrolled to that section, and then it stays"). */
+  /** Steering changes the camera/rail ticket, never copy on the input event.
+   *  The wrap's phase-derived crossfade is naturally reversible; the value is
+   *  still retained as part of the controller's one direction contract. */
   function setCopyEntryPlay(play) { if (arrive) arrive.play = play < 0 ? -1 : 1; }
 
   /** The entry is over — spent, abandoned, or overtaken. Drops the class as
@@ -421,7 +414,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
    *  the scroll target by up to the 0.001 tolerance, so that final frame is a
    *  real 0.001 of opacity and the retirement must not run before it.
    */
-  function advanceNavTicket({ chapterId, railWrap, railFlight, travelP, travelHold }) {
+  function advanceNavTicket({
+    chapterId, railWrap, railFlight, travelP, travelHold, dt, settled,
+  }) {
     const inAir = flying();
     if (railWrap) {
       // The cyclic seam has its own reversible copy ticket. A carried floor
@@ -434,6 +429,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
         ticket: railFlight,
         id: chapterId,
         from: chapterId ? eased[chapterId] || 0 : 0,
+        gateFrom: chapterId ? gateEase(chapterId) : 0,
+        gate: chapterId ? gateEase(chapterId) : 0,
+        departure: { ...eased },
       };
     } else if (!railFlight && inAir) {
       /* The last presented flight sample can land a few 1e-5 short of the
@@ -446,6 +444,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
         kind: 'carrying',
         id: inAir.id,
         floor: eased[inAir.id] || 0,
+        gate: Number.isFinite(inAir.gate) ? inAir.gate : eased[inAir.id] || 0,
         atP: Number.isFinite(inAir.ticket.targetP) ? inAir.ticket.targetP : travelP,
       } : null;
     }
@@ -456,8 +455,10 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     // into another chapter.
     const bandTarget = bandOpacity(travelP, COPY_BANDS[nav.id]);
     if (Math.abs(travelP - nav.atP) > 1e-4 || bandTarget < 0.995) { nav = null; return null; }
+    nav.gate += (nav.floor - nav.gate) * Math.min(1, dt * COPY_IN_K * settled);
     const carried = { id: nav.id, floor: nav.floor };
-    if (bandTarget * travelHold >= nav.floor - 0.001) nav = null;
+    if (bandTarget * travelHold >= nav.floor - 0.001
+        && nav.gate >= nav.floor - 0.001) nav = null;
     return carried;
   }
 
@@ -592,14 +593,36 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
    *  mutable `s` through seven assignments. The arms are in their original
    *  order and that order is the priority: a live flight outranks the jump
    *  envelope, which outranks the snap, which outranks the scroll rule. */
-  function chooseEase(id, prev, target, { dt, railFlight, arriveE, leaveE, settled }) {
+  function chooseEase(id, prev, target,
+      { dt, railWrap, railFlight, arriveE, leaveE, settled }) {
     const inAir = flying();
-    if (railFlight && inAir && inAir.id === id) {
+    if (railFlight && inAir) {
       const phase = Math.max(0, Math.min(1, Number(inAir.ticket.phase) || 0));
-      const env = FLIGHT_ENVELOPES[COPY_SURFACES[id].flightLead];
-      const lead = smoothA((phase - env.onset) / (1 - env.onset));
-      const landing = Math.max(inAir.from, env.land);
-      return inAir.from + (landing - inAir.from) * lead;
+      if (inAir.id === id) {
+        const arrival = smoothA((phase - (1 - NAV_COPY_FADE_PHASE))
+          / NAV_COPY_FADE_PHASE);
+        const env = FLIGHT_ENVELOPES[COPY_SURFACES[id].flightLead];
+        const gateLead = smoothA((phase - env.onset) / (1 - env.onset));
+        const gateLanding = Math.max(inAir.gateFrom, env.land);
+        inAir.gate = inAir.gateFrom + (gateLanding - inAir.gateFrom) * gateLead;
+        return inAir.from + (1 - inAir.from) * arrival;
+      }
+      const departure = Number(inAir.departure[id]) || 0;
+      return departure * (1 - smoothA(phase / NAV_COPY_FADE_PHASE));
+    }
+    /* A cyclic wrap has no meaningful intermediate section coordinate. Keep
+       every narrative surface on one camera-phase answer while its ticket is
+       live: the departure fades across the opening third of the lap and the
+       destination rises across the closing third. Reversing the same phase
+       retraces that crossfade, so neither endpoint can flash in the middle. */
+    if (arrive && arrive.own && arrive.phase === 'flight') {
+      if (dt === 0) return prev;
+      const phase = clamp01(Number(railWrap && railWrap.phase) || 0);
+      if (id === arrive.id) {
+        return smoothA((phase - (1 - NAV_COPY_FADE_PHASE)) / NAV_COPY_FADE_PHASE);
+      }
+      const departure = id === arrive.id ? 0 : Number(arrive.from[id]) || 0;
+      return departure * (1 - smoothA(phase / NAV_COPY_FADE_PHASE));
     }
     if (arrive && arrive.own && id === arrive.id) return target * arriveE;
     // a block the jump is LEAVING: released on the move's clock, but only
@@ -613,7 +636,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     // passes, but railFlight means the visible coordinate has not moved;
     // preserve the opacity/transform already on screen through that task.
     if (dt === 0 && !railFlight) return target;
-    if (target < prev) return prev + (target - prev) * Math.min(1, dt * COPY_OUT_K);
+    if (target < prev) {
+      return prev + (target - prev) * Math.min(1, dt * COPY_OUT_K);
+    }
     return prev + (target - prev) * Math.min(1, dt * COPY_IN_K * settled);
   }
 
@@ -666,61 +691,36 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
     const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
 
-    const carried = advanceNavTicket({ chapterId, railWrap, railFlight, travelP, travelHold });
+    const carried = advanceNavTicket({
+      chapterId, railWrap, railFlight, travelP, travelHold, dt, settled,
+    });
+
+    /* The wrap ticket is the camera/section agreement signal and the copy
+       clock. Its opening and closing thirds crossfade the two real endpoints;
+       retirement therefore hands off at exactly the opacity the resting rule
+       expects. A replacement ordinary flight is an abandonment, not a
+       landing, and receives its own railFlight authority instead. */
+    if (arrive && arrive.own && arrive.phase === 'flight' && !railWrap) {
+      if (railFlight) endArrive();
+      else endArrive();
+    }
 
     // Advance the jump entry before the loop reads it. It dies on a placement
     // frame (a capture or deep link must still snap), and when the visitor has
     // scrolled somewhere else entirely — the arrival it was timed against is
     // then over in both cases.
-    /* AN ENTRANCE MAY NOT BE SPENT BEHIND A CLOSED GATE (report #31,
-       2026-08-26 — Hannah: "when I do a loop from the end to the beginning,
-       the hero text at the beginning shows up REALLY quickly too — no entry
-       animation").
-
-       The hero is the one DEFERRED copy surface: the rail holds a gate of
-       its own shut until the section strip is making its final approach
-       ("Mission copy may arrive only with the strip's final approach", the
-       docking coordinate in rail.setHeroEase). The envelope, meanwhile, runs
-       on the lap's own wall clock from the wrap frame, so it began its ramp
-       at 2.24 s while the surface it paints stayed invisible until 2.47 s of
-       a 3.87 s lap — the entrance was 3% spent before anyone could see it,
-       and the shelf above then swept the rest in 185 ms. An entrance
-       choreography must be scheduled from the moment its surface can be
-       seen.
-
-       So the hero's clock HOLDS AT ITS LEAD until the gate is open, and the
-       authored 2.35 s then plays from the first visible frame, finishing
-       past the landing — which the arrival side is expressly allowed to do
-       (COPY_JUMP_COPY_TAIL_S is that permission). The DEPARTURE is untouched:
-       the clock still runs freely up to `lead`, which is the whole window
-       `leaveE` spends releasing the chapter the lap is leaving.
-
-       THE GATE IS READ, NOT RESTATED. `heroGatePrev` is the value
-       rail.setHeroEase returned on the last painted frame; the docking
-       arithmetic keeps its single owner and this module cannot drift from
-       it (a gate-open phase copied into this file would be the second copy
-       CONTRIBUTING.md §5 names as the defect, pre-fault). One frame of lag
-       on a 2.35 s entrance is not a beat. `null` means the rail is not the
-       hero's gate at all (phone widths): nothing to wait for, so nothing is
-       held. Hero + wrap only.
-
-       AND THE WAIT IS A DEBT, REPAID TO A REWIND. This module's other
-       contract is that a steered wrap's copy runs on the lap's own clock, so
-       "the two clocks hit zero together and the landing snap is a no-op"
-       (setCopyEntryPlay). A hold spent going out and not given back would
-       break exactly that: the entrance would reach 0 while the lap still had
-       the held interval left to retrace, retiring the envelope mid-flight and
-       handing the departing chapter's copy back to a scroll rule reading a p
-       the wrap parks at the DESTINATION — the 2026-08-16 fault, in a new
-       coat. So the unspent time is banked in `arrive.hold` and a rewind pays
-       it off BEFORE the clock moves: held out, held back, and the lap and the
-       envelope still reach zero on the same frame. */
+    /* The cyclic entrance begins only after the camera ticket has retired.
+       Mission remains the one DEFERRED surface: even after settlement, its
+       clock holds at zero until the rail's own docking gate opens. The gate is
+       read through `heroGatePrev`, never re-authored here. */
     const heroHeld = heroEnvelopeLive()
       && heroGatePrev !== null && heroGatePrev <= 0;
     if (arrive) {
-      if ((dt === 0 && !preparedEntry)
+      if ((dt === 0 && !preparedEntry
+            && !(arrive.phase === 'settling' && arrive.holdSnaps > 0))
           || (chapterId !== arrive.id && arrive.own)) endArrive();
-      else {
+      else if (arrive.phase !== 'flight') {
+        if (dt === 0 && arrive.holdSnaps > 0) arrive.holdSnaps--;
         const advance = dt * (arrive.play || 1);
         if (advance >= 0) {
           // forward: spend what the gate allows, bank the rest
@@ -774,7 +774,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
       const target = carried && carried.id === id
         ? Math.max(scrollTarget, carried.floor) : scrollTarget;
       const s = nextEase(id, eased[id], target,
-        { dt, railFlight, arriveE, leaveE, settled });
+        { dt, railWrap, railFlight, arriveE, leaveE, settled });
       eased[id] = s;
       copyBandsDebug[id] = { bandTarget, scrollTarget, target, eased: s };
       // The snapshot the next arm() restores from is the last frame that
@@ -826,8 +826,8 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     armCopyEntry,
     cancelCopyEntry,
     setCopyEntryPlay,
-    /** A chapter's live eased copy opacity (0..1). */
-    ease: (id) => eased[id] || 0,
+    /** A chapter's live landing gate (0..1); visual copy may lead it in flight. */
+    ease: gateEase,
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },
     /** QA: the existing scroll-style smoothed |dp/dt| travel signal. */

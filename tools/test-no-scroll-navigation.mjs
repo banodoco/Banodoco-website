@@ -6,6 +6,7 @@ import { azTurn } from '../journey/camera-path.js';
 import * as navigationModule from '../journey/navigation.js';
 import {
   DEFAULT_NAVIGATION_SPEED,
+  NAVIGATION_DIRECTION_SPEED,
   NAVIGATION_SPEED,
   navigationDurationSeconds,
   navigationSpeed,
@@ -14,7 +15,7 @@ import { createTransport } from '../journey/transport.js';
 import { createCopyArrival } from '../journey/ui/copy-arrival.js';
 import { createTransitionController } from '../journey/transition/controller.js';
 import { createHeroGroundDimClaim } from '../journey/chapters/hero-ground-dim.js';
-import { railPurposeWrapPresence } from '../journey/ui/rail-handoff.js';
+import { railWrapNavigationProgress } from '../journey/ui/rail-handoff.js';
 
 const { controlWrapDirection } = navigationModule;
 const ids = ['mission', 'inspire', 'connect', 'owned', 'final'];
@@ -44,13 +45,11 @@ for (const [pair, wrap] of wrappedPairs) {
     `${pair} must visibly orbit the long way (got ${(sweep * 180 / Math.PI).toFixed(1)}deg)`);
 }
 
-// One button-selected route owns one speed factor, symmetrically. Values are
-// speed multipliers, so the flight duration is the authored base divided by
-// the multiplier; non-adjacent flights never compound the legs they cross.
+// A route owns its shared character, while explicitly reviewed one-way
+// refinements can adjust one direction without changing the return journey.
+// Non-adjacent flights never compound the legs they cross.
 for (const [from, to, speed] of [
-  ['mission', 'inspire', 0.60],       // Intro <-> Inspire
-  ['inspire', 'connect', 0.80],       // Inspire <-> Connect
-  ['connect', 'final', 0.70],         // Connect <-> Purpose (direct)
+  ['mission', 'inspire', 0.60],       // Intro <-> Inspire remains symmetric
 ]) {
   assert.equal(navigationSpeed(from, to), speed, `${from} -> ${to} speed`);
   assert.equal(navigationSpeed(to, from), speed, `${to} -> ${from} reverse speed`);
@@ -60,11 +59,24 @@ for (const [from, to, speed] of [
     `${to} -> ${from} converts reverse speed to duration once`);
 }
 
+for (const [from, to, speed, reverseSpeed] of [
+  ['inspire', 'connect', 0.80, 0.72], // Connect -> Inspire is 90% of prior speed
+  ['connect', 'final', 0.70, 0.49],   // Purpose -> Connect is 70% of prior speed
+  ['owned', 'final', 0.75, 0.45],     // Purpose -> Ownership is 60% of prior speed
+]) {
+  assert.equal(navigationSpeed(from, to), speed, `${from} -> ${to} retains its speed`);
+  assert.equal(navigationSpeed(to, from), reverseSpeed,
+    `${to} -> ${from} owns its directional refinement`);
+  assert.equal(navigationDurationSeconds(1.2, from, to), 1.2 / speed,
+    `${from} -> ${to} retains its duration`);
+  assert.equal(navigationDurationSeconds(1.2, to, from), 1.2 / reverseSpeed,
+    `${to} -> ${from} converts its refined speed once`);
+}
+
 assert.equal(DEFAULT_NAVIGATION_SPEED, 0.75);
 for (const [from, to] of [
   ['mission', 'connect'],             // generic non-adjacent direct flight
   ['inspire', 'final'],
-  ['final', 'owned'],                 // Purpose <-> Ownership subtree
   ['mission', 'final'],               // special Intro <-> Purpose wrap orbit
 ]) {
   assert.equal(navigationSpeed(from, to), 0.75, `${from} -> ${to} fallback speed`);
@@ -80,6 +92,8 @@ assert.notEqual(connectPurposeDuration,
 assert.throws(() => navigationDurationSeconds(0, 'mission', 'inspire'), /positive finite/);
 assert.throws(() => navigationDurationSeconds(Number.NaN, 'mission', 'inspire'), /positive finite/);
 assert.ok(Object.isFrozen(NAVIGATION_SPEED), 'the route policy must be immutable');
+assert.ok(Object.isFrozen(NAVIGATION_DIRECTION_SPEED),
+  'the directional refinement policy must be immutable');
 
 function rig({ blocked = true } = {}) {
   const handlers = new Map();
@@ -236,13 +250,14 @@ const fakeNode = () => ({
   querySelectorAll() { return []; },
 });
 const copyBlocks = ['inspire', 'connect', 'owned', 'final'];
-const makeCopyArrival = () => createCopyArrival({
-  blocks: Object.fromEntries(copyBlocks.map(id => [id, fakeNode()])),
-  actionRows: {},
-  heroBlock: fakeNode(),
-  rail: { setHeroEase() {} },
-  reduceMotion: { matches: false },
-});
+const makeCopyArrival = (nodes = Object.fromEntries(copyBlocks.map(id => [id, fakeNode()]))) =>
+  createCopyArrival({
+    blocks: nodes,
+    actionRows: {},
+    heroBlock: fakeNode(),
+    rail: { setHeroEase() {} },
+    reduceMotion: { matches: false },
+  });
 
 // Execute the production click authority, camera clock, copy envelope and
 // rail projection together. The old source-only pin proved the steering law
@@ -308,7 +323,7 @@ const makeCopyArrival = () => createCopyArrival({
   copy.step({ chapterId: 'final', dt: 0.4, travelP: 0.97, railWrap: ticket });
   const phaseBefore = ticket.phase;
   const heroBefore = copy.ease('mission');
-  const contentBefore = 1 - railPurposeWrapPresence({
+  const contentBefore = 1 - railWrapNavigationProgress({
     targetChapterId: 'final', phase: ticket.phase,
   });
 
@@ -318,7 +333,7 @@ const makeCopyArrival = () => createCopyArrival({
     'click reversal retains the exact rail ticket instead of installing a new one');
   assert.equal(ticket.phase, phaseBefore,
     'the steering click preserves the painted rail phase');
-  assert.equal(1 - railPurposeWrapPresence({
+  assert.equal(1 - railWrapNavigationProgress({
     targetChapterId: 'final', phase: ticket.phase,
   }), contentBefore, 'the steering click preserves --nav-content-u');
   assert.deepEqual(copyPlay, [-1], 'the click reverses the hero copy envelope');
@@ -327,15 +342,16 @@ const makeCopyArrival = () => createCopyArrival({
 
   controller.stepCamBlend(0.1);
   copy.step({ chapterId: 'final', dt: 0.1, travelP: 0.97, railWrap: ticket });
-  const contentAfter = 1 - railPurposeWrapPresence({
+  const contentAfter = 1 - railWrapNavigationProgress({
     targetChapterId: 'final', phase: ticket.phase,
   });
   assert.ok(ticket.phase < phaseBefore,
     'the next frame retraces the same rail phase');
   assert.ok(Math.abs(contentAfter - contentBefore) < 0.02,
     'the reversed navigation scale advances continuously, not endpoint-to-endpoint');
-  assert.ok(copy.ease('mission') >= heroBefore,
-    'the next frame restores Intro opacity instead of fading it to zero first');
+  assert.ok(copy.ease('mission') >= heroBefore
+      && Math.abs(copy.ease('mission') - heroBefore) < 0.02,
+    'the next reversed frame retraces Intro gradually without a steering-frame jump');
 
   assert.equal(controller.steerWrapTo(0.97), true,
     'reselecting Purpose resumes that same live wrap');
@@ -364,18 +380,77 @@ function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP
   copy.armCopyEntry(destinationId, 4);
   assert.equal(copy.ease(sourceId), 1, `${label}: source is preserved on arm`);
   assert.equal(copy.ease(destinationId), 0, `${label}: destination starts hidden`);
+  const ticket = { dir, phase: 0.025 };
   copy.step({
     chapterId: destinationId,
-    dt: 0.5,
+    dt: 0.1,
     travelP: destinationP,
-    railWrap: { dir, phase: 0.125 },
+    railWrap: ticket,
   });
   assert.ok(copy.ease(sourceId) > 0 && copy.ease(sourceId) < 1,
     `${label}: source fades during the flight`);
+  assert.ok(copy.ease(sourceId) >= 0.95,
+    `${label}: the opening phase retains the source instead of dropping it on click`);
   assert.equal(copy.ease(destinationId), 0, `${label}: destination waits for its lead`);
+  ticket.phase = 0.16;
+  copy.step({ chapterId: destinationId, dt: 0.1, travelP: destinationP,
+    railWrap: ticket });
+  assert.ok(copy.ease(sourceId) > 0.45 && copy.ease(sourceId) < 0.55,
+    `${label}: departure spends its fade across the opening third of camera travel`);
+  for (let i = 0; i < 22; i++) {
+    ticket.phase = 0.16 + (i + 1) * 0.02;
+    copy.step({ chapterId: destinationId, dt: 0.1, travelP: destinationP,
+      railWrap: ticket });
+  }
+  assert.equal(copy.ease(sourceId), 0,
+    `${label}: source remains suppressed through the long middle of the wrap`);
+  assert.equal(copy.ease(destinationId), 0,
+    `${label}: destination waits until the closing third of camera travel`);
+  ticket.phase = 0.84;
+  copy.step({ chapterId: destinationId, dt: 0.1, travelP: destinationP,
+    railWrap: ticket });
+  assert.ok(copy.ease(destinationId) > 0.45 && copy.ease(destinationId) < 0.55,
+    `${label}: arrival mirrors the departure at the matching camera phase`);
+  ticket.phase = 1;
+  copy.step({ chapterId: destinationId, dt: 0.1, travelP: destinationP,
+    railWrap: ticket });
+  assert.equal(copy.ease(destinationId), 1,
+    `${label}: destination reaches rest with the camera, not after it`);
+  copy.step({ chapterId: destinationId, dt: 1 / 60, travelP: destinationP });
+  assert.equal(copy.ease(sourceId), 0, `${label}: landing does not restore the source`);
+  assert.equal(copy.ease(destinationId), 1,
+    `${label}: landing preserves the completed camera-phase arrival`);
 }
 assertBookendFade('Intro -> Purpose', 'mission', 0, 'final', 0.97, -1);
 assertBookendFade('Purpose -> Intro', 'final', 0.97, 'mission', 0, 1);
+
+// Ordinary button journeys use the same balanced opening/closing thirds.
+// This is deliberately phase-based: slowing one camera route must slow both
+// sides of its copy handoff by the same proportion.
+{
+  const nodes = Object.fromEntries(copyBlocks.map(id => [id, fakeNode()]));
+  const copy = makeCopyArrival(nodes);
+  copy.step({ chapterId: 'mission', dt: 0, travelP: 0 });
+  const ticket = { fromP: 0, targetP: 0.26, phase: 0 };
+  copy.step({ chapterId: 'inspire', dt: 0, travelP: 0, railFlight: ticket });
+  ticket.phase = 0.16;
+  copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.08, railFlight: ticket });
+  const departureHalf = copy.ease('mission');
+  assert.ok(departureHalf > 0.45 && departureHalf < 0.55,
+    'ordinary departure is halfway faded at the midpoint of its opening third');
+  assert.equal(copy.ease('inspire'), 0,
+    'ordinary destination waits through the camera middle');
+  ticket.phase = 0.84;
+  copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.22, railFlight: ticket });
+  assert.ok(Math.abs(Number(nodes.inspire.style.opacity) - departureHalf) < 0.001,
+    'ordinary visible arrival mirrors departure on the same camera-phase duration');
+  ticket.phase = 1;
+  copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.26, railFlight: ticket });
+  assert.equal(Number(nodes.inspire.style.opacity), 1,
+    'ordinary visible destination and camera land together');
+  assert.equal(copy.ease('inspire'), 0.38,
+    'chapter-owned landing cascades retain their declared in-flight ceiling');
+}
 
 // Reversing uses the same ticket and therefore the same painted phase. Copy
 // opacity and the content-sized navigation scale cannot jump on the steering
@@ -392,20 +467,30 @@ assertBookendFade('Purpose -> Intro', 'final', 0.97, 'mission', 0, 1);
   const ticket = { dir: -1, phase: 0.35 };
   copy.step({ chapterId: 'final', dt: 0.8, travelP: 0.97, railWrap: ticket });
   const beforeCopy = copy.ease('mission');
-  const beforeDock = railPurposeWrapPresence({ targetChapterId: 'final', phase: ticket.phase });
+  const beforeDock = railWrapNavigationProgress({ targetChapterId: 'final', phase: ticket.phase });
   copy.setCopyEntryPlay(-1);
   const steeringCopy = copy.ease('mission');
-  const steeringDock = railPurposeWrapPresence({ targetChapterId: 'final', phase: ticket.phase });
+  const steeringDock = railWrapNavigationProgress({ targetChapterId: 'final', phase: ticket.phase });
   assert.equal(steeringCopy, beforeCopy,
     'the steering event itself does not repaint the Intro copy');
   assert.equal(steeringDock, beforeDock,
     'the steering event itself does not change navigation scale');
   ticket.phase = 0.34;
   copy.step({ chapterId: 'final', dt: 1 / 60, travelP: 0.97, railWrap: ticket });
-  assert.ok(copy.ease('mission') >= beforeCopy,
-    'the next reversed frame retraces Intro opacity instead of dipping');
-  assert.ok(railPurposeWrapPresence({ targetChapterId: 'final', phase: ticket.phase }) <= beforeDock,
+  assert.ok(copy.ease('mission') <= beforeCopy,
+    'the next reversed frame does not reintroduce Intro while the lap is airborne');
+  assert.ok(railWrapNavigationProgress({ targetChapterId: 'final', phase: ticket.phase }) <= beforeDock,
     'the next reversed frame retraces navigation scale toward the Intro size');
+  ticket.phase = 0;
+  copy.step({ chapterId: 'mission', dt: 0, travelP: 0 });
+  assert.equal(copy.ease('mission'), 1,
+    'the rewound landing restores Intro exactly when the camera reaches home');
+  copy.step({ chapterId: 'mission', dt: 0, travelP: 0 });
+  assert.equal(copy.ease('mission'), 1,
+    'the second rewound landing placement preserves the completed crossfade');
+  copy.step({ chapterId: 'mission', dt: 1 / 60, travelP: 0 });
+  assert.equal(copy.ease('mission'), 1,
+    'Intro stays fully arrived after the reversed camera has settled');
 }
 
 // Connect and Purpose share the organism's seven ground materials. Their dim
