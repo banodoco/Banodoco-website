@@ -1,10 +1,10 @@
 {
-  "generated": "2026-08-27T01:24:49",
-  "commit": "d39db4a0ea78080f9547fb034d66474938545159",
+  "generated": "2026-08-28T18:44:03",
+  "commit": "eea041c623d826763cef925cd905bad36f1e3496",
   "environment": {
     "chrome": "Chrome/151.0.7922.174",
-    "webglRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)",
-    "platform": "macOS-15.6.1-arm64-arm-64bit arm64",
+    "webglRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
+    "platform": "macOS-15.4-arm64-arm-64bit-Mach-O arm64",
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
   },
   "reason": "pre-restage goldens retired; frozen-capture era begins (M6) \u2014 shot through ?capture= at the merged, Hannah-era-approved tip",
@@ -20,13 +20,109 @@
       "chapter": "mission",
       "label": "Mission",
       "sizes": {
+        "desktop": {
+          "src": "captures/mission@1440x900.png",
+          "w": 1440,
+          "h": 900,
+          "bytes": 1998524,
+          "mean": 25.34,
+          "poseConfirmed": true
+        },
         "mobile": {
           "src": "captures/mission@430x932.png",
           "w": 430,
           "h": 932,
-          "bytes": 619466,
-          "mean": 30.93,
-          "poseConfirmed": false
+          "bytes": 620781,
+          "mean": 31.46,
+          "poseConfirmed": true
+        }
+      }
+    },
+    "inspire": {
+      "chapter": "inspire",
+      "label": "Inspire",
+      "sizes": {
+        "desktop": {
+          "src": "captures/inspire@1440x900.png",
+          "w": 1440,
+          "h": 900,
+          "bytes": 2048221,
+          "mean": 25.08,
+          "poseConfirmed": true
+        },
+        "mobile": {
+          "src": "captures/inspire@430x932.png",
+          "w": 430,
+          "h": 932,
+          "bytes": 684456,
+          "mean": 49.28,
+          "poseConfirmed": true
+        }
+      }
+    },
+    "connect": {
+      "chapter": "connect",
+      "label": "Connect",
+      "sizes": {
+        "desktop": {
+          "src": "captures/connect@1440x900.png",
+          "w": 1440,
+          "h": 900,
+          "bytes": 2126983,
+          "mean": 35.57,
+          "poseConfirmed": true
+        },
+        "mobile": {
+          "src": "captures/connect@430x932.png",
+          "w": 430,
+          "h": 932,
+          "bytes": 634229,
+          "mean": 24.42,
+          "poseConfirmed": true
+        }
+      }
+    },
+    "owned": {
+      "chapter": "owned",
+      "label": "Owned",
+      "sizes": {
+        "desktop": {
+          "src": "captures/owned@1440x900.png",
+          "w": 1440,
+          "h": 900,
+          "bytes": 2407545,
+          "mean": 26.91,
+          "poseConfirmed": true
+        },
+        "mobile": {
+          "src": "captures/owned@430x932.png",
+          "w": 430,
+          "h": 932,
+          "bytes": 767347,
+          "mean": 51.13,
+          "poseConfirmed": true
+        }
+      }
+    },
+    "final": {
+      "chapter": "final",
+      "label": "Final pullback",
+      "sizes": {
+        "desktop": {
+          "src": "captures/final@1440x900.png",
+          "w": 1440,
+          "h": 900,
+          "bytes": 2206851,
+          "mean": 37.34,
+          "poseConfirmed": true
+        },
+        "mobile": {
+          "src": "captures/final@430x932.png",
+          "w": 430,
+          "h": 932,
+          "bytes": 668530,
+          "mean": 31.25,
+          "poseConfirmed": true
         }
       }
     }

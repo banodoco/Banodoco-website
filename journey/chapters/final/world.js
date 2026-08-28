@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import { makeRng, gaussOf, heat, groundY } from '../../anatomy.js';
 import { CAP_R_OVER_H } from './species.js';
+import { PURPOSE_NAV_POCKET_STRENGTH } from '../../layout/final-composition.js';
 
 export const TAU = Math.PI * 2;
 export { makeRng, gaussOf, heat, groundY };
@@ -542,6 +543,7 @@ const STRAND_VERT = /* glsl */ `
   }
 `;
 
+const NAV_POCKET_STRENGTH_GLSL = PURPOSE_NAV_POCKET_STRENGTH.toFixed(2);
 const STRAND_FRAG = /* glsl */ `
   uniform float uOpacity, uAmount, uFogNear, uFogFar;
   uniform vec4 uNavPocketPx;
@@ -552,7 +554,8 @@ const STRAND_FRAG = /* glsl */ `
     float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
     vec2 pocketD = (gl_FragCoord.xy - uNavPocketPx.xy)
       / max(uNavPocketPx.zw, vec2(1.0));
-    float navPocket = smoothstep(0.68, 1.08, length(pocketD));
+    float navPocketMask = smoothstep(0.68, 1.08, length(pocketD));
+    float navPocket = mix(1.0, navPocketMask, ${NAV_POCKET_STRENGTH_GLSL});
     gl_FragColor = vec4(vColor * vB * uOpacity * uAmount * fogF * navPocket, 1.0);
   }
 `;

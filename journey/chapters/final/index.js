@@ -44,7 +44,10 @@ import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
-import { purposeNavPocket } from '../../layout/final-composition.js';
+import {
+  PURPOSE_NAV_POCKET_STRENGTH,
+  purposeNavPocket,
+} from '../../layout/final-composition.js';
 
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
@@ -961,7 +964,7 @@ export function createFinal(sceneApi) {
         y: pocket.y * dpr,
         halfWidth: pocket.halfWidth * dpr,
         halfHeight: pocket.halfHeight * dpr,
-        amount: reach,
+        amount: reach * PURPOSE_NAV_POCKET_STRENGTH,
       });
     }
     for (const d of heroDim) {

@@ -11,14 +11,20 @@ import {
   railHandoffVisual,
   railHandoffWrapVisual,
   railHandoffWrapPhase,
-  railPurposeWrapPresence,
+  railOwnershipIndicatorVisibility,
+  railPurposeWrapPresence, railWrapNavigationProgress,
+  railWrapCoreLabelPresence,
+  railWrapVisualChapter,
   railPurposeLabelStage,
   PURPOSE_LABEL_TOP_AT,
+  OWNERSHIP_INDICATOR_OCCLUSION_FLOOR,
 } from '../journey/ui/rail-handoff.js';
 import { rowLayout } from '../journey/layout/rail-geometry.js';
 import {
   PHONE_FINAL_COMPOSITION_LIFT_PX,
+  PURPOSE_NAV_POCKET_STRENGTH,
   cameraWorldUnitsForPixels,
+  purposeNavPocket,
 } from '../journey/layout/final-composition.js';
 
 const state = (selectedChapterId, cameraStateDisagree, flightFromId = null, flightTargetId = null) =>
@@ -58,14 +64,84 @@ assert.deepEqual(railHandoffRest('final'), { tree: 1, ownership: 0 });
 assert.deepEqual(railHandoffRest('owned'), { tree: 1, ownership: 1 });
 assert.deepEqual(railHandoffRest('connect'), { tree: 0, ownership: 0 });
 assert.deepEqual(
+  [0, 0.2, 0.49, 0.5, 0.8, 1].map(phase => railWrapVisualChapter({
+    homeChapterId: 'final', targetChapterId: 'mission', phase,
+  })),
+  ['final', 'final', 'final', 'mission', 'mission', 'mission'],
+  'a Purpose/Intro orbit stages only its two real endpoints',
+);
+assert.deepEqual(
+  [0, 0.11, 0.22, 0.5, 0.78, 0.89, 1].map(phase =>
+    +railWrapCoreLabelPresence({ targetChapterId: 'final', phase }).toFixed(3)),
+  [1, 0.5, 0, 0, 0, 0, 0],
+  'Intro core labels fade only on the early departure toward Purpose',
+);
+assert.deepEqual(
+  [0, 0.11, 0.22, 0.5, 0.78, 0.89, 1].map(phase =>
+    +railWrapCoreLabelPresence({ targetChapterId: 'mission', phase }).toFixed(3)),
+  [0, 0, 0, 0, 0, 0.5, 1],
+  'Intro core labels return only on the final approach from Purpose',
+);
+assert.deepEqual(
   railHandoffVisual({ from: { tree: 1, ownership: 0 }, targetChapterId: 'owned', phase: 0.4 }),
   { tree: 1, ownership: 0.4 },
   'Purpose -> Ownership continuously follows the supplied camera phase',
 );
+assert.deepEqual(
+  [
+    railOwnershipIndicatorVisibility({ diagonal: 0.72, vertical: 0 }),
+    railOwnershipIndicatorVisibility({ diagonal: 1, vertical: 0 }),
+    railOwnershipIndicatorVisibility({ diagonal: 1, vertical: 0.62 }),
+    railOwnershipIndicatorVisibility({ diagonal: 1, vertical: 0.81 }),
+    railOwnershipIndicatorVisibility({ diagonal: 1, vertical: 1 }),
+  ].map(value => +value.toFixed(3)),
+  [1, OWNERSHIP_INDICATOR_OCCLUSION_FLOOR, OWNERSHIP_INDICATOR_OCCLUSION_FLOOR,
+    +((1 + OWNERSHIP_INDICATOR_OCCLUSION_FLOOR) / 2).toFixed(3), 1],
+  'the travelling dot dims behind the Ownership icon/text without vanishing, then eases out',
+);
 
 const desktopRow = rowLayout(1440, 900);
+const phoneRow = rowLayout(390, 844);
+assert.equal(desktopRow.connectorAir, 6,
+  'desktop connectors share a six-pixel optical clearance');
+assert.equal(phoneRow.connectorAir, 5,
+  'phone connectors retain the responsive five-pixel optical clearance');
+assert.deepEqual(desktopRow.ringDia, [28, 36, 36, 36, 28],
+  'row geometry owns each visible ring diameter as well as its hit box');
+for (const row of [desktopRow, phoneRow]) {
+  for (let index = 0; index < row.centres.length - 1; index++) {
+    const segmentStart = row.centres[index]
+      + row.ringDia[index] / 2 + row.connectorAir;
+    const segmentEnd = row.centres[index + 1]
+      - row.ringDia[index + 1] / 2 - row.connectorAir;
+    assert.ok(segmentEnd > segmentStart,
+      `responsive row connector ${index} retains a visible positive segment`);
+    assert.equal(
+      segmentStart - (row.centres[index] + row.ringDia[index] / 2),
+      row.connectorAir,
+      `connector ${index} leaves shared air after its source ring`,
+    );
+    assert.equal(
+      (row.centres[index + 1] - row.ringDia[index + 1] / 2) - segmentEnd,
+      row.connectorAir,
+      `connector ${index} leaves shared air before its destination ring`,
+    );
+  }
+}
 assert.equal(PHONE_FINAL_COMPOSITION_LIFT_PX, 30,
   'mobile Final uses one modest screen-space composition lift');
+assert.equal(PURPOSE_NAV_POCKET_STRENGTH, 0.68,
+  'the narrow Purpose pocket clears crossing linework without blacking out the scene');
+assert.deepEqual(
+  purposeNavPocket({ width: 1440, height: 900 }),
+  { x: 720, y: 118, halfWidth: 170, halfHeight: 72 },
+  'desktop Purpose pocket stays compact around the centred child fork',
+);
+assert.deepEqual(
+  purposeNavPocket({ width: 390, height: 844 }),
+  { x: 195, y: 118, halfWidth: 136.5, halfHeight: 72 },
+  'phone Purpose pocket scales narrowly around the centred child fork',
+);
 assert.ok(cameraWorldUnitsForPixels({
   pixels: PHONE_FINAL_COMPOSITION_LIFT_PX,
   distance: 16,
@@ -155,10 +231,10 @@ for (const phase of [0, 0.1, 0.4, 0.6, 0.8, 1]) {
   const leaving = railPurposeWrapPresence({ targetChapterId: 'mission', phase: 1 - phase });
   assert.equal(arriving, leaving,
     `wrap Purpose presence is reversible at camera phase ${phase}`);
-  assert.equal(
-    railHandoffWrapPhase({ targetChapterId: 'final', phase }),
-    arriving,
-    'Final approach tree/lift/scale consume one envelope',
+  assert.deepEqual(
+    [railHandoffWrapPhase({ targetChapterId: 'final', phase }), railWrapNavigationProgress({ targetChapterId: 'final', phase }), railWrapNavigationProgress({ targetChapterId: 'mission', phase: 1 - phase })].map(value => value.toFixed(5)),
+    [arriving, phase, phase].map(value => value.toFixed(5)),
+    'Purpose keeps its approach envelope while the nav pose spans and reverses across the full wrap',
   );
 }
 
@@ -226,6 +302,7 @@ const railSource = readFileSync(new URL('../journey/rail.js', import.meta.url), 
 const geometrySource = readFileSync(new URL('../journey/layout/rail-geometry.js', import.meta.url), 'utf8');
 const canopySource = readFileSync(new URL('../journey/chapters/final/canopy.js', import.meta.url), 'utf8');
 const finalWorldSource = readFileSync(new URL('../journey/chapters/final/world.js', import.meta.url), 'utf8');
+const finalIndexSource = readFileSync(new URL('../journey/chapters/final/index.js', import.meta.url), 'utf8');
 const handoffCss = css.slice(
   css.indexOf('/* THE PURPOSE -> OWNERSHIP SUBTREE'),
   css.indexOf('/* ---- the items', css.indexOf('/* THE PURPOSE -> OWNERSHIP SUBTREE')),
@@ -246,8 +323,8 @@ assert.match(handoffCss,
   /\.j-rail-purpose-tree::before[\s\S]*?purpose-trunk-length[\s\S]*?scaleY\(var\(--purpose-trunk-u[\s\S]*?transform-origin: 50% 0/,
   'the connector first grows vertically down from Purpose');
 assert.match(handoffCss,
-  /\.j-rail-purpose-tree::after[\s\S]*?purpose-junction-x[\s\S]*?purpose-reach-length[\s\S]*?scaleX\(var\(--purpose-reach-u[\s\S]*?transform-origin: 100% 50%/,
-  'the connector then grows left into the viewport-centred junction');
+  /\.j-rail-purpose-tree::after[\s\S]*?purpose-reach-start-x[\s\S]*?purpose-reach-length[\s\S]*?scaleX\(var\(--purpose-reach-u[\s\S]*?transform-origin: 100% 50%/,
+  'the connector grows left while stopping short of the viewport-centred split');
 assert.match(handoffCss,
   /\.j-rail-purpose-children \{[\s\S]*?left: var\(--purpose-junction-x[\s\S]*?translateX\(-50%\)/,
   'the child pair is anchored symmetrically on the viewport-centred junction');
@@ -255,11 +332,11 @@ assert.match(handoffCss,
   /\.j-rail-purpose-tree::after[\s\S]*?top: var\(--purpose-split-y[\s\S]*?\.j-rail-purpose-children \{[\s\S]*?top: var\(--purpose-child-top-y/,
   'the horizontal elbow and compact child pair share one projected vertical frame');
 assert.match(handoffCss,
-  /\.j-rail-purpose-children::before[\s\S]*?purpose-branch-length[\s\S]*?180deg - var\(--purpose-branch-angle[\s\S]*?scaleX\(var\(--purpose-fork-u/,
-  'the left branch grows diagonally from the centred split');
+  /\.j-rail-purpose-children::before[\s\S]*?purpose-branch-length[\s\S]*?180deg - var\(--purpose-branch-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
+  'the left branch grows diagonally after shared air around the centred split');
 assert.match(handoffCss,
-  /\.j-rail-purpose-children::after[\s\S]*?purpose-branch-length[\s\S]*?rotate\(var\(--purpose-branch-angle[\s\S]*?scaleX\(var\(--purpose-fork-u/,
-  'the right branch mirrors the left from the same split');
+  /\.j-rail-purpose-children::after[\s\S]*?purpose-branch-length[\s\S]*?rotate\(var\(--purpose-branch-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
+  'the right branch mirrors the left after shared air around the split');
 assert.match(handoffCss,
   /\.j-rail-purpose-child::before \{ content: none !important; \}/,
   'no stepped child stems remain in the clean angular split');
@@ -291,32 +368,38 @@ assert.match(railSource,
   /const trunkU =[\s\S]*?const reachU =[\s\S]*?const forkU =[\s\S]*?const childU =[\s\S]*?--purpose-child-scale/,
   'vertical, horizontal, fork and child growth are staged from the same live camera projection');
 assert.match(railSource,
-  /const treeX = purposeX \* \(1 - ownershipU\)[\s\S]*?const junctionX = -treeX \/ treeScale[\s\S]*?--purpose-junction-x/,
-  'the Purpose root follows its row slot while the scaled child junction stays viewport-centred');
+  /const horizontalGatherU =[\s\S]*?ownershipU \/ indicatorJunctionAt[\s\S]*?const treeX = purposeX \* \(1 - horizontalGatherU\)[\s\S]*?const junctionX = -treeX \/ treeScale[\s\S]*?--purpose-junction-x/,
+  'one path-length-paced horizontal front moves Purpose while the scaled child junction stays viewport-centred');
 assert.doesNotMatch(railSource, /--purpose-row-(?:clip|blur|opacity)/,
   'the camera projector never mutates the shared row surface');
 assert.match(railSource,
-  /--purpose-rail-lift'[\s\S]*?L\.purposeLift \* treeU/,
-  'the Purpose seat lift is continuously projected from the same camera phase as its tree');
+  /--purpose-rail-lift'[\s\S]*?L\.purposeLift \* navPoseU/,
+  'the Purpose seat lift is continuously projected from the full navigation-pose phase');
 assert.doesNotMatch(railSource, /--purpose-row-top/,
   'the camera projector never switches the row to a second top coordinate');
 assert.match(railSource,
   /handoffFlight !== ticket[\s\S]*?handoffFrom = \{ \.\.\.handoffVisual \}/,
   'an interrupted or reversed flight captures the currently painted values');
 assert.match(railSource,
-  /slots\.forEach\(\(slot, index\)[\s\S]*?railGatherX\(\{[\s\S]*?centre: L\.centres\[index\][\s\S]*?slot\.li\.style\.setProperty\('--purpose-gather-x'/,
-  'all row slots converge horizontally while retaining their authored size');
+  /slots\.forEach\(\(slot, index\)[\s\S]*?railGatherX\(\{[\s\S]*?centre: L\.centres\[index\][\s\S]*?phase: horizontalGatherU[\s\S]*?slot\.li\.style\.setProperty\('--purpose-gather-x'/,
+  'all row slots converge on the same horizontal front as the indicator');
 assert.doesNotMatch(railSource, /purpose-gather-scale|targetScale = slot\.id === 'final'/,
   'Ownership packing has no shrink/fade scale path');
 assert.match(railSource,
-  /--purpose-gather-open-u.*1 - ownershipU/,
-  'Ownership packing publishes a camera-driven open fraction for connectors and peers');
+  /--purpose-gather-open-u.*1 - horizontalGatherU/,
+  'Ownership packing publishes the indicator-paced open fraction for connectors');
+assert.match(railSource,
+  /--purpose-peer-open-u'[^\n]*\n[\s\S]*?ownershipU \/ 0\.82/,
+  'non-Purpose peers use an earlier camera-paced fade envelope');
 assert.match(css,
   /\.j-rail\.j-rail-purpose-gathering \.j-rail-list > \.j-rail-slot::after[\s\S]*?scaleX\(var\(--purpose-gather-open-u, 1\)\)/,
   'top-row connectors continuously retract with the inward gather');
 assert.match(css,
-  /\.j-rail\.j-rail-purpose-gathering \.j-rail-list > \.j-rail-slot:not\(\[data-chapter="final"\]\) \.j-rail-item[\s\S]*?opacity: calc\(var\(--purpose-peer-base-opacity, 1\) \* var\(--purpose-gather-open-u, 1\)\) !important;/,
-  'non-Purpose peers fade by camera phase while retaining their authored size');
+  /\.j-rail\.j-rail-purpose-gathering \.j-rail-list > \.j-rail-slot:not\(\[data-chapter="final"\]\) \.j-rail-item[\s\S]*?opacity: calc\(var\(--purpose-peer-base-opacity, 1\) \* var\(--purpose-peer-open-u, 1\)\) !important;/,
+  'non-Purpose peers fade slightly early while retaining their authored size');
+assert.match(css,
+  /\.j-rail\.j-rail-purpose-gathering[\s\S]*?\[data-chapter="final"\] \.j-rail-item \{[\s\S]*?color: rgba\(246, 208, 126, 1\) !important;[\s\S]*?opacity: 1 !important;[\s\S]*?\[data-chapter="final"\] \.j-rail-mark::after \{[\s\S]*?rgba\(248, 208, 112, 0\.95\)/,
+  'Purpose keeps its amber ink and ring throughout the gather');
 const ownershipTrace = [0, 0.35, 0.7, 1, 0.7, 0.35, 0];
 assert.deepEqual(
   ownershipTrace.map(ownership => +(1 - ownership).toFixed(2)),
@@ -336,8 +419,8 @@ assert.match(railSource,
   /gatheredAway = slot\.id !== 'final' && ownershipU >= 0\.9999[\s\S]*?slot\.item\.inert = gatheredAway/,
   'fully absorbed non-Purpose controls leave interaction and accessibility surfaces');
 assert.match(geometrySource,
-  /centreFromBottom: phone \? 70 : tablet \? 84 : 92,[\s\S]*?purposeLift: phone \? 50 \+ PHONE_FINAL_COMPOSITION_LIFT_PX : tablet \? 52 : 66/,
-  'ordinary chapters keep their established seat while mobile Purpose adds the shared Final composition lift');
+  /centreFromBottom: phone \? 70 : tablet \? 84 : 92,[\s\S]*?purposeLift: phone \? 45 \+ PHONE_FINAL_COMPOSITION_LIFT_PX : tablet \? 52 : 66/,
+  'ordinary chapters keep their established seat while mobile Purpose adds the shared Final composition lift and 5px lower nudge');
 assert.match(geometrySource,
   /return Object\.freeze\(\{[\s\S]*?purposeLift: m\.purposeLift/,
   'rowLayout forwards the Purpose lift consumed by the live rail frame');
@@ -348,14 +431,14 @@ assert.match(css,
   /\.j-rail-purpose-tree \{[\s\S]*?transform: translateY\(calc\(-1 \* var\(--purpose-rail-lift, 0px\)\)\)/,
   'the subtree follows the exact same lifted baseline as its Purpose parent');
 assert.match(railSource,
-  /if \(horizontalWrap\)[\s\S]*?u = railPurposeWrapPresence\(horizontalWrap\)/,
-  'cyclic nav scale uses the exact same endpoint presence as Purpose lift/tree');
+  /if \(horizontalWrap\)[\s\S]*?u = railWrapNavigationProgress\(horizontalWrap\)/,
+  'cyclic nav scale consumes the entire reversible camera lap');
 assert.match(handoffCss,
   /j-rail-handoff-ownership-transit \.j-rail-active-ring,[\s\S]*?opacity: 0 !important/,
   'the ordinary indicator yields immediately while the dedicated Ownership indicator owns transit');
 assert.match(railSource,
-  /connectorStartY = L\.minorRingD \/ 2[\s\S]*?ELBOW_LIFT_PX = 8[\s\S]*?splitY = L\.major \/ 2 \+ 26 - ELBOW_LIFT_PX[\s\S]*?childLift = 6[\s\S]*?childTopY = splitY - childLift[\s\S]*?branchDrop = L\.major \/ 2 - childLift[\s\S]*?branchLength = Math\.hypot\(childOffset, branchDrop\)[\s\S]*?indicatorSplitAt = 0\.70[\s\S]*?indicatorReachU[\s\S]*?indicatorBranchU[\s\S]*?indicatorEndY = childTopY \+ L\.major \/ 2 \+ \(L\.major \/ 2 \+ 26\) \/ treeScale[\s\S]*?indicatorX[\s\S]*?indicatorY[\s\S]*?--purpose-indicator-x/,
-  'the lifted elbow and child pair preserve connected branch endpoints while the dedicated dot still finishes at Ownership\'s standard below-icon seat');
+  /connectorAir = L\.connectorAir[\s\S]*?dotRadius = 2\.5[\s\S]*?connectorStartY = L\.minorRingD \/ 2 \+ connectorAir[\s\S]*?ELBOW_LIFT_PX = 8[\s\S]*?splitY = L\.major \/ 2 \+ 26 - ELBOW_LIFT_PX[\s\S]*?dotClearance = dotRadius \+ connectorAir[\s\S]*?trunkLength = Math\.max\(0, splitY - dotClearance - connectorStartY\)[\s\S]*?childDrop = 10[\s\S]*?childTopY = splitY \+ childDrop[\s\S]*?branchDrop = L\.major \/ 2 \+ childDrop[\s\S]*?branchCentreLength = Math\.hypot\(childOffset, branchDrop\)[\s\S]*?childEndClearance = L\.minorRingD \/ 2 \+ connectorAir[\s\S]*?branchLength = Math\.max\([\s\S]*?branchCentreLength - connectorAir - childEndClearance[\s\S]*?indicatorHorizontalLength = Math\.abs\(purposeX\)[\s\S]*?indicatorJunctionAt[\s\S]*?horizontalGatherU[\s\S]*?indicatorDiagonalU[\s\S]*?indicatorVerticalU[\s\S]*?reachStartX = junctionX[\s\S]*?Math\.abs\(junctionX\) - dotClearance[\s\S]*?ownershipIconY = childTopY \+ L\.major \/ 2[\s\S]*?indicatorX = ownershipU <= indicatorJunctionAt[\s\S]*?\? 0[\s\S]*?indicatorY[\s\S]*?--purpose-indicator-x/,
+  'every subtree stroke leaves shared air while the selected dot keeps its continuous travel path');
 assert.match(railSource,
   /--purpose-active-node-lift'[\s\S]*?ELBOW_LIFT_PX \* treeU/,
   'the ordinary Purpose dot rises reversibly to the lifted elbow on the same tree coordinate');
@@ -363,11 +446,11 @@ assert.match(css,
   /\.j-rail \.j-rail-active-ring \{[\s\S]*?top: calc\(50% \+ var\(--nav-major\) \/ 2 \+ 26px[\s\S]*?- var\(--purpose-active-node-lift, 0px\)\)/,
   'the ordinary active dot consumes the projected elbow lift instead of jumping at Ownership handoff');
 assert.doesNotMatch(railSource,
-  /indicatorVerticalU|indicatorTurnAt/,
-  'the first dedicated-dot frame cannot jump upward along Purpose\'s vertical trunk');
+  /indicatorSplitAt|indicatorBranchU|indicatorTurnAt/,
+  'the dedicated dot has no shortcut or legacy elbow jump path');
 assert.match(geometrySource,
-  /minorRingD: phone \? 24 : tablet \? 26 : 28[\s\S]*?minorRingD: m\.minorRingD/,
-  'the trunk begins at the responsive Purpose ring edge from shared geometry');
+  /majorRingD: phone \? 30 : tablet \? 34 : 36[\s\S]*?minorRingD: phone \? 24 : tablet \? 26 : 28[\s\S]*?connectorAir: phone \? 5 : tablet \? 5 : 6[\s\S]*?ringDia: Object\.freeze\(ringDia\)/,
+  'visible ring diameters and connector air share one responsive geometry owner');
 assert.match(railSource,
   /ownershipSlot\.classList\.toggle\([\s\S]*?'active'[\s\S]*?selectedChapterId === 'owned' && ownershipU >= 0\.9999/,
   'settled Ownership reuses the standard selected class at its exact endpoint');
@@ -384,11 +467,20 @@ assert.match(css,
   /\.j-rail \.j-rail-slot\.j-rail-purpose-child \.j-rail-name \{[\s\S]*?color: var\(--parchment\);[\s\S]*?opacity: 1;/,
   'both child labels remain fully legible at rest before Ownership selection');
 assert.match(finalWorldSource,
-  /uNavPocketPx[\s\S]*?gl_FragCoord\.xy[\s\S]*?navPocket[\s\S]*?makeStrandMat/,
-  'every Final bed-line material removes strokes behind the shared subtree pocket');
+  /uNavPocketPx[\s\S]*?gl_FragCoord\.xy[\s\S]*?navPocketMask[\s\S]*?mix\(1\.0, navPocketMask, \$\{NAV_POCKET_STRENGTH_GLSL\}\)[\s\S]*?makeStrandMat/,
+  'every Final bed-line material softly quiets strokes behind the shared subtree pocket');
+assert.match(finalIndexSource,
+  /amount: reach \* PURPOSE_NAV_POCKET_STRENGTH/,
+  'the hero-ground pocket uses the same restrained strength as Final bed lines');
 assert.match(canopySource,
-  /uniforms\.uNavPocketPx\.value\.set\([\s\S]*?width \* 0\.5 \* dpr/,
+  /uniforms\.uNavPocketPx\.value\.set\([\s\S]*?pocket\.x \* dpr/,
   'the shared Final line pocket follows responsive viewport and device pixel ratio');
+assert.match(railSource,
+  /--nav-scrim-extra'[\s\S]*?340 \* \(1 - ownershipU\)[\s\S]*?--nav-scrim-height'[\s\S]*?260 - 20 \* ownershipU/,
+  'the broad row scrim gathers camera-synchronously to the compact Ownership subtree');
+assert.match(css,
+  /width: calc\(100% \+ var\(--nav-scrim-extra, 340px\)\);[\s\S]*?height: var\(--nav-scrim-height, 260px\);/,
+  'the row scrim consumes the ownership-sized geometry with safe resting fallbacks');
 assert.doesNotMatch(handoffCss, /background: radial-gradient|backdrop-filter/,
   'the subtree pocket cannot regress into a visible DOM scrim');
 assert.match(css,
@@ -397,6 +489,21 @@ assert.match(css,
 assert.match(css,
   /\.j-rail\.j-rail-purpose-labels-above \.j-rail-list > \.j-rail-slot[\s\S]*?> \.j-rail-item:is\(:hover, :focus-visible\) > \.j-rail-name[\s\S]*?opacity: 1;/,
   'top-row labels reveal individually for pointer and keyboard focus');
+assert.match(railSource,
+  /j-rail-purpose-arriving'[\s\S]*?!!ticket && selectedChapterId === 'final'/,
+  'only an explicit in-flight Purpose arrival raises the transient label guard');
+assert.match(css,
+  /\.j-rail\.j-rail-purpose-arriving \.j-rail-list > \.j-rail-slot[\s\S]*?> \.j-rail-item > :is\(\.j-rail-name, \.j-rail-soon-note\)[\s\S]*?opacity: 0 !important;[\s\S]*?transition: none;/,
+  'moving marks cannot turn an incidental pointer crossing into a Purpose hover label');
+assert.match(css,
+  /\.j-rail\.j-rail-wrap-progress \.j-rail-list > \.j-rail-slot[\s\S]*?> \.j-rail-item > :is\(\.j-rail-name, \.j-rail-soon-note\)[\s\S]*?opacity: 0 !important;/,
+  'a cyclic bookend lap suppresses every intermediate top-row label seat');
+assert.match(css,
+  /\.j-rail\.j-rail-wrap-progress \.j-rail-list > \.j-rail-slot\.j-rail-major[\s\S]*?> \.j-rail-item > \.j-rail-name[\s\S]*?--wrap-core-label-u/,
+  'only the hero core-three names may consume the camera-paced wrap label envelope');
+assert.match(railSource,
+  /const visNow = railWrap[\s\S]*?railWrapVisualChapter\(\{[\s\S]*?homeChapterId: chapterAt\(railWrap\.homeP\)\.id,[\s\S]*?targetChapterId: chapterAt\(railWrap\.targetP\)\.id/,
+  'wrap visual staging derives from semantic endpoints rather than crossed route coordinates');
 assert.doesNotMatch(css,
   /@media \(max-width: 360px\)[\s\S]*?\.j-rail-purpose-child \.j-rail-name/,
   'the centred child pair keeps the same symmetric label seat at the 320px floor');
@@ -410,6 +517,9 @@ assert.match(railSource,
 assert.match(railSource,
   /const manifestoItem = el\('span', 'j-rail-item j-rail-soon-item'\)/,
   'Manifesto is an unavailable span, not a link');
+assert.match(railSource,
+  /const manifestoBase = GLYPH_COLOURS\.future[\s\S]*?--glyph-r'[\s\S]*?--glyph-g'[\s\S]*?--glyph-b'[\s\S]*?--glyph-alpha'[\s\S]*?--glyph-glow'/,
+  'Manifesto has explicit warm resting ink before hover');
 assert.match(railSource,
   /Manifesto[\s\S]*?j-rail-soon-note', 'Soon'[\s\S]*?pointerType !== 'touch'[\s\S]*?1600/,
   'Manifesto uses Equip\'s exact Soon swap and timed touch semantic');

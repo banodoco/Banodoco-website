@@ -755,14 +755,17 @@
   .menu-list > li:last-child { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .menu-item {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     padding: 0.62rem 0.6rem 0.55rem 0.5rem;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
   }
-  .menu-mark { flex: 0 0 auto; margin-top: 0.15rem; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
+  .menu-mark { flex: 0 0 auto; margin-top: 0; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
+  .menu-item[data-menu-section="equip"] .menu-mark { transform: translateY(5px); }
+  .menu-item[data-menu-section="connect"] .menu-mark { transform: translateY(-1px); }
+  .menu-item[data-menu-section="final"] .menu-mark { transform: translateY(-2px); }
   .menu-no { display: inline-block; margin-right: 0.6em; font-size: 0.58rem; font-weight: 500; letter-spacing: 0.14em; color: rgba(217, 164, 65, 0.5); }
   .menu-name { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; }
   .menu-line {
@@ -773,10 +776,11 @@
     line-height: 1.32;
     color: var(--muted);
   }
+  .menu-thesis { margin-top: 0; font-size: 1.08rem; color: var(--parchment); }
   .menu-item:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
   .menu-item:is(:hover, :focus-visible) .menu-mark { color: var(--gold-bright); }
   .menu-item[aria-current="true"],
-  .menu-item[aria-current="true"] .menu-mark,
+  .menu-item[aria-current="true"] .menu-mark { color: var(--gold-bright); }
   .menu-item[aria-current="true"] .menu-no { color: var(--gold-bright); }
 
   /* a section's contents: item — one sentence → primary link */
@@ -784,7 +788,8 @@
   .menu-row { margin: 0 0 0.32rem; font-size: 0.8rem; line-height: 1.55; color: var(--muted); }
   .menu-row:last-child { margin-bottom: 0; }
   .menu-row-link {
-    display: block;
+    display: flex;
+    align-items: center;
     margin: 0 -0.35rem;
     padding: 0.1rem 0.35rem;
     color: inherit;
@@ -795,17 +800,23 @@
   .menu-row-link:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
   .menu-row-link:is(:hover, :focus-visible) .menu-il { color: var(--gold-bright); }
   @keyframes menu-arrow-nudge {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(2px); }
+    from { transform: translateX(0); }
+    to { transform: translateX(2px); }
+  }
+  @keyframes menu-arrow-nudge-external {
+    from { transform: translate(0, 0); }
+    to { transform: translate(2px, -2px); }
   }
   .menu-row-link:is(:hover, :focus-visible) .menu-ia,
-  .menu-owned:is(:hover, :focus-visible) .menu-ia { animation: menu-arrow-nudge 1.2s ease-in-out infinite; }
+  .menu-owned:is(:hover, :focus-visible) .menu-ia { animation: menu-arrow-nudge 800ms ease-in-out infinite alternate; }
+  .menu-row-link[target="_blank"]:is(:hover, :focus-visible) .menu-ia { animation: menu-arrow-nudge-external 800ms ease-in-out infinite alternate; }
   @keyframes menu-badge-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
   }
   .menu-row-link:is(:hover, :focus-visible) .menu-badge { animation: menu-badge-pulse 5s ease-in-out infinite; }
   .menu-il { display: inline-flex; align-items: center; gap: 0.42rem; color: var(--parchment); font-weight: 600; }
+  .menu-is { min-width: 0; }
   .menu-pict {
     display: inline-flex;
     width: 13px;
@@ -814,6 +825,7 @@
     color: rgba(240, 200, 119, 0.78);
     filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.35));
   }
+  .menu-pict-dots { width: 17px; height: 17px; flex-basis: 17px; }
   .menu-pict svg {
     display: block;
     width: 100%;
@@ -824,9 +836,11 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .menu-pict .menu-dot-disc { fill: currentColor; stroke: none; }
   .menu-il::after { content: " \2014"; margin-right: 0.6em; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .menu-ia {
     display: inline-block;   /* transform (the hover nudge) needs a box */
+    flex: 0 0 auto;
     margin-left: 0.65em;
     color: var(--gold-bright);
     text-decoration: none;
@@ -834,13 +848,13 @@
   }
   .menu-badge {
     display: inline-block;
-    margin-left: 0.5em;
-    padding: 0.1em 0.55em;
-    font-size: 0.62rem;
+    flex: 0 0 auto;
+    margin-left: 0.65em;
+    padding: 0.07em 0.46em;
+    font-size: 0.54rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    vertical-align: 0.1em;
     color: rgba(240, 200, 119, 0.65);
     border: 1px solid rgba(217, 164, 65, 0.28);
     border-radius: 999px;
@@ -1287,44 +1301,46 @@
       </div>
       <nav class="menu-nav" aria-label="All sections">
         <ol class="menu-list">
-          <li><a class="menu-item" href="#/mission" data-menu="mission">
+          <li><a class="menu-item" href="#/mission" data-menu="mission" data-menu-section="mission">
             <span class="menu-mark"><svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">01</span><span class="menu-name" data-src="chapters.mission.nav">Intro</span><span class="menu-line" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</span></span>
+            <span class="menu-txt"><span class="menu-line menu-thesis">We’re working to help the open-source AI art ecosystem thrive</span></span>
           </a></li>
-          <li><a class="menu-item" href="#/inspire" data-menu="inspire">
+          <li><a class="menu-item" href="#/inspire" data-menu="inspire" data-menu-section="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="15.4" cy="10.4" r="0.95"/><circle cx="17.2" cy="8.8" r="0.82"/><circle cx="15.4" cy="7.4" r="0.68"/><circle cx="18" cy="6" r="0.7"/><circle cx="16.2" cy="4.2" r="0.58"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span></span>
+            <span class="menu-txt"><span class="menu-no">1.</span><span class="menu-name">By inspiring:</span></span>
           </a>
           <!-- The section's contents: item — one sentence → primary link.
                Same derivation as Tier 1 (nodes grouped by their `chapter`
                field, insertion order); every string is data-src'd. -->
           <ul class="menu-sub">
-            <li class="menu-row"><a class="menu-row-link" href="https://arcagidan.com/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1c.95 1.25 1.4 2.25 1.4 3.05a1.4 1.4 0 0 1-2.8 0C4.6 3.25 5.05 2.25 6 1Z"/><path d="M4.55 6.2h2.9M6 6.2v4.3"/></svg></span><span data-src="nodes.arca.label">Arca Gidan</span></span><span class="menu-is" data-src="nodes.arca.short">Open-source AI art competition</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
-            <li class="menu-row"><a class="menu-row-link" href="https://artcompute.org/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.8"/><path d="M5 3.4V1.8M7 3.4V1.8M5 10.2V8.6M7 10.2V8.6M3.4 5H1.8M3.4 7H1.8M10.2 5H8.6M10.2 7H8.6"/></svg></span><span data-src="nodes.artcompute.label">ArtCompute</span></span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for open research</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://arcagidan.com/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1c.95 1.25 1.4 2.25 1.4 3.05a1.4 1.4 0 0 1-2.8 0C4.6 3.25 5.05 2.25 6 1Z"/><path d="M4.55 6.2h2.9M6 6.2v4.3"/></svg></span><span data-src="nodes.arca.label">Arca Gidan</span></span><span class="menu-is" data-src="nodes.arca.short">Open-source AI art competition</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://artcompute.org/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.8"/><path d="M5 3.4V1.8M7 3.4V1.8M5 10.2V8.6M7 10.2V8.6M3.4 5H1.8M3.4 7H1.8M10.2 5H8.6M10.2 7H8.6"/></svg></span><span data-src="nodes.artcompute.label">ArtCompute</span></span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for open research</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
             <li class="menu-row"><span class="menu-row-link"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 3.1C5.05 2.25 3.75 1.95 2.3 2.05v7.1c1.45-.1 2.75.2 3.7 1.05.95-.85 2.25-1.15 3.7-1.05v-7.1C8.25 1.95 6.95 2.25 6 3.1Z"/><path d="M6 3.1v7.1"/></svg></span><span data-src="nodes.tworp.label">2RP</span></span><span class="menu-is" data-src="nodes.tworp.short">An art and tech publication</span><span class="menu-badge" data-src="nodes.tworp.badge">Soon</span></span></li>
           </ul></li>
-          <li><a class="menu-item" href="#/connect" data-menu="connect">
+          <li><span class="menu-item" data-menu-section="equip">
+            <span class="menu-mark"><svg class="sym" data-sym="equip" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M2.4 8.4 Q11 2.2 19.6 8.4"/><path d="M2.4 8.4 Q11 14.6 19.6 8.4"/><path d="M5.2 6.7 Q11 11.4 16.8 6.7"/><path d="M5.2 10.1 Q11 5.4 16.8 10.1"/></svg></span>
+            <span class="menu-txt"><span class="menu-no">2.</span><span class="menu-name">By equipping:</span></span>
+          </span>
+          <ul class="menu-sub">
+            <li class="menu-row"><span class="menu-row-link"><span class="menu-is">We’re creating a platform that help the community and agents accomplish together</span><span class="menu-badge">Soon</span></span></li>
+          </ul></li>
+          <li><a class="menu-item" href="#/connect" data-menu="connect" data-menu-section="connect">
             <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6"/><path d="M15.8 14.8 L12.6 10.0"/><path d="M4.2 13.2 L6.8 9.6"/><circle cx="15.8" cy="14.8" r="1.2"/><circle cx="9.6" cy="17.2" r="1"/><circle cx="4.2" cy="13.2" r="1.15"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">03</span><span class="menu-name">Connect</span></span>
+            <span class="menu-txt"><span class="menu-no">3.</span><span class="menu-name">By connecting:</span></span>
           </a>
           <ul class="menu-sub">
-            <li class="menu-row"><a class="menu-row-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">Where we build &amp; create together</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
-            <li class="menu-row"><a class="menu-row-link" href="https://ados.events/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
-            <li class="menu-row"><a class="menu-row-link" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">Community’s collective intelligence</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">Where we build &amp; create together</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://ados.events/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">Community’s collective intelligence</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
           </ul></li>
-          <li><a class="menu-item" href="#/owned" data-menu="owned">
-            <span class="menu-mark"><svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Ownership</span></span>
-          </a>
-          <a class="menu-owned" href="../ownership/">
-            <p class="menu-owned-copy">100% shared, granted 1% per month. <span class="menu-ia" aria-hidden="true">→</span></p>
-          </a></li>
-          <!-- The final route remains structurally non-peer (`route.js` keeps
-               its nav field null), while CONTENT supplies its visible name. -->
-          <li><a class="menu-item" href="#/final" data-menu="final">
+          <li><a class="menu-item" href="#/final" data-menu="final" data-menu-section="final">
             <span class="menu-mark"><svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">05</span><span class="menu-name" data-src="chapters.final.nav">Purpose</span><span class="menu-line" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</span></span>
-          </a></li>
+            <span class="menu-txt"><span class="menu-line menu-thesis">The open source ecosystem can accelerate a second renaissance</span></span>
+          </a>
+          <ul class="menu-sub">
+            <li class="menu-row"><span class="menu-row-link"><span class="menu-il"><span class="menu-pict menu-pict-dots" aria-hidden="true"><svg class="menu-dot-disc" viewBox="0 0 16 16" focusable="false"><circle cx="8" cy="2.1" r=".72"/><circle cx="4.7" cy="4" r=".72"/><circle cx="8" cy="4" r=".72"/><circle cx="11.3" cy="4" r=".72"/><circle cx="2.6" cy="6.7" r=".72"/><circle cx="5.3" cy="6.7" r=".72"/><circle cx="8" cy="6.7" r=".72"/><circle cx="10.7" cy="6.7" r=".72"/><circle cx="13.4" cy="6.7" r=".72"/><circle cx="2.6" cy="9.3" r=".72"/><circle cx="5.3" cy="9.3" r=".72"/><circle cx="8" cy="9.3" r=".72"/><circle cx="10.7" cy="9.3" r=".72"/><circle cx="13.4" cy="9.3" r=".72"/><circle cx="4.7" cy="12" r=".72"/><circle cx="8" cy="12" r=".72"/><circle cx="11.3" cy="12" r=".72"/><circle cx="8" cy="13.9" r=".72"/></svg></span>Manifesto</span><span class="menu-is">Action at a pivotal moment</span><span class="menu-badge">Soon</span></span></li>
+            <li class="menu-row"><a class="menu-row-link" href="#/owned"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 22 22" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>Ownership</span><span class="menu-is">equity rewards collaboration</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+          </ul></li>
         </ol>
       </nav>
       <p class="menu-legal" data-src="site.legal">© 2026 Banodoco</p>

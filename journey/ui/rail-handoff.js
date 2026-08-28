@@ -36,6 +36,29 @@ export function railHandoffState({
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
+export const OWNERSHIP_INDICATOR_OCCLUSION_FLOOR = 0.35;
+const smooth01 = value => {
+  const u = clamp01(value);
+  return u * u * (3 - 2 * u);
+};
+
+/** The Ownership indicator is one physical point travelling behind the child
+ * specimen. It dims only while entering the ring and crossing the icon/label,
+ * never vanishes, then reappears after clearing the text. Because this is a
+ * pure projection of path position, reversal retraces the exact same opacity
+ * instead of starting a second animation clock. */
+export function railOwnershipIndicatorVisibility({ diagonal = 0, vertical = 0 } = {}) {
+  const d = clamp01(diagonal);
+  const v = clamp01(vertical);
+  if (v > 0) {
+    const emergence = smooth01((v - 0.62) / 0.38);
+    return OWNERSHIP_INDICATOR_OCCLUSION_FLOOR
+      + (1 - OWNERSHIP_INDICATOR_OCCLUSION_FLOOR) * emergence;
+  }
+  const entry = smooth01((d - 0.72) / 0.28);
+  return 1 - (1 - OWNERSHIP_INDICATOR_OCCLUSION_FLOOR) * entry;
+}
+
 export const PURPOSE_WRAP_APPROACH_START = 0.60;
 
 /** Purpose's presence during the cyclic Mission/Final camera lap. The same
@@ -51,12 +74,45 @@ export function railPurposeWrapPresence({ targetChapterId = 'mission', phase }) 
     : endpoint(1 - p);
 }
 
+/** The persistent navigation's hero-sized pose belongs to the whole cyclic
+ * camera lap, rather than Purpose's deliberately late subtree reveal. Keep
+ * this endpoint-oriented so a reversed lap retraces the same pixels. */
+export function railWrapNavigationProgress({ targetChapterId = 'mission', phase }) {
+  const p = clamp01(phase);
+  return targetChapterId === 'final' || targetChapterId === 'owned' ? p : 1 - p;
+}
+
 /** Camera-ticket progress toward the requested cyclic endpoint. */
 export function railHandoffWrapPhase({ targetChapterId = 'mission', phase }) {
   const presence = railPurposeWrapPresence({ targetChapterId, phase });
   return targetChapterId === 'final' || targetChapterId === 'owned'
     ? presence
     : 1 - presence;
+}
+
+/** A cyclic bookend lap has two semantic pictures and no intermediate
+ * chapters. The camera may orbit past route coordinates that belong to other
+ * sections, but navigation staging holds the source until the hidden midpoint
+ * and then stages only the destination. */
+export function railWrapVisualChapter({ homeChapterId, targetChapterId, phase }) {
+  return clamp01(phase) < 0.5 ? homeChapterId : targetChapterId;
+}
+
+export const WRAP_CORE_LABEL_EDGE = 0.22;
+
+/** Only the hero's core-three labels participate in a wrap. They fade away
+ * near a Mission departure and return only on Mission's final approach;
+ * Purpose's child labels keep using the tree envelope. Bookend names and Soon
+ * never consume this value. */
+export function railWrapCoreLabelPresence({ targetChapterId = 'mission', phase }) {
+  const p = clamp01(phase);
+  const smooth = value => {
+    const x = clamp01(value);
+    return x * x * (3 - 2 * x);
+  };
+  return targetChapterId === 'mission'
+    ? smooth((p - (1 - WRAP_CORE_LABEL_EDGE)) / WRAP_CORE_LABEL_EDGE)
+    : 1 - smooth(p / WRAP_CORE_LABEL_EDGE);
 }
 
 /* The row labels have two physical seats in Purpose: their normal seat below

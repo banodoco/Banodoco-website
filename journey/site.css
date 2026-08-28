@@ -635,14 +635,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-list > li:last-child { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .j-menu-item {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     padding: 0.62rem 0.6rem 0.55rem 0.5rem;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
   }
-  .j-menu-mark { flex: 0 0 auto; margin-top: 0.15rem; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
+  .j-menu-mark { flex: 0 0 auto; margin-top: 0; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
+  .j-menu-item[data-menu-section="equip"] .j-menu-mark { transform: translateY(5px); }
+  .j-menu-item[data-menu-section="connect"] .j-menu-mark { transform: translateY(-1px); }
+  .j-menu-item[data-menu-section="final"] .j-menu-mark { transform: translateY(-2px); }
   .j-menu-txt { display: block; }
   .j-menu-no {
     display: inline-block;
@@ -666,6 +669,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     line-height: 1.32;
     color: var(--muted);
   }
+  .j-menu-thesis { margin-top: 0; font-size: 1.08rem; color: var(--parchment); }
   .j-menu-item:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
   .j-menu-item:is(:hover, :focus-visible) .j-menu-mark { color: var(--gold-bright); }
   .j-menu-item[aria-current="true"] { color: var(--gold-bright); }
@@ -694,7 +698,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      hover treatment mirrors the section headers' — gold text over the same
      warm tint. */
   .j-menu-row-link {
-    display: block;
+    display: flex;
+    align-items: center;
     margin: 0 -0.35rem;
     padding: 0.1rem 0.35rem;
     color: inherit;
@@ -708,11 +713,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-menu-row-link:is(:hover, :focus-visible) .j-menu-il { color: var(--gold-bright); }
   @keyframes j-arrow-nudge {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(2px); }
+    from { transform: translateX(0); }
+    to { transform: translateX(2px); }
+  }
+  @keyframes j-arrow-nudge-external {
+    from { transform: translate(0, 0); }
+    to { transform: translate(2px, -2px); }
   }
   .j-menu-row-link:is(:hover, :focus-visible) .j-menu-ia,
-  .j-menu-owned:is(:hover, :focus-visible) .j-menu-ia { animation: j-arrow-nudge 1.2s ease-in-out infinite; }
+  .j-menu-owned:is(:hover, :focus-visible) .j-menu-ia {
+    animation: j-arrow-nudge 800ms ease-in-out infinite alternate;
+  }
+  .j-menu-row-link[target="_blank"]:is(:hover, :focus-visible) .j-menu-ia {
+    animation: j-arrow-nudge-external 800ms ease-in-out infinite alternate;
+  }
   /* the SOON badge breathes very gently while its row is hovered */
   @keyframes j-badge-pulse {
     0%, 100% { opacity: 1; }
@@ -726,6 +740,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     color: var(--parchment);
     font-weight: 600;
   }
+  .j-menu-is { min-width: 0; }
   .j-menu-pict {
     display: inline-flex;
     width: 13px;
@@ -734,6 +749,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     color: rgba(240, 200, 119, 0.78);
     filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.35));
   }
+  .j-menu-pict-dots { width: 17px; height: 17px; flex-basis: 17px; }
   .j-menu-pict svg {
     display: block;
     width: 100%;
@@ -744,9 +760,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .j-menu-pict .j-menu-dot-disc { fill: currentColor; stroke: none; }
   .j-menu-il::after { content: " \2014"; margin-right: 0.6em; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .j-menu-ia {
     display: inline-block;   /* transform (the hover nudge) needs a box */
+    flex: 0 0 auto;
     margin-left: 0.65em;
     color: var(--gold-bright);
     text-decoration: none;
@@ -757,13 +775,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      colour accent/60 — in the site gold, sized for a 0.8rem row. */
   .j-menu-badge {
     display: inline-block;
-    margin-left: 0.5em;
-    padding: 0.1em 0.55em;
-    font-size: 0.62rem;
+    flex: 0 0 auto;
+    margin-left: 0.65em;
+    padding: 0.07em 0.46em;
+    font-size: 0.54rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    vertical-align: 0.1em;
     color: rgba(240, 200, 119, 0.65);
     border: 1px solid rgba(217, 164, 65, 0.28);
     border-radius: 999px;
@@ -3453,6 +3471,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   --nav-fit-minor: 0.83;   /* ~20px bookend glyphs */
   --nav-ring-d: 36px;      /* the core three's fine circles ("34-38px") */
   --nav-minor-ring-d: 28px; /* quieter bookend circles */
+  --nav-connector-air: 6px; /* shared clearance around rings, dots and splits */
   /* CONTENT POSE (owner, fourth pass): at the hero the whole instrument is
      this much larger — part of the content, "the three things we're
      doing" — and it eases back to 1 as the visitor scrolls out of the
@@ -3484,6 +3503,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     --purpose-rail-lift-max: 52px;
     --nav-ring-d: 34px;
     --nav-minor-ring-d: 26px;
+    --nav-connector-air: 5px;
     --nav-content-max: 1.22;
   }
 }
@@ -3493,13 +3513,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     --nav-minor: 34px;
     --nav-gap: 20px;
     --nav-centre-bottom: 70px;
-    --purpose-rail-lift-max: 80px;
+    /* Keep the preboot twin aligned with rowMetrics(): Purpose's complete
+       navigation composition is nudged five pixels lower on phones. */
+    --purpose-rail-lift-max: 75px;
     --final-composition-lift: 30px;
     --final-copy-nav-air: 12px;
     --nav-fit-major: 0.85;
     --nav-fit-minor: 0.72;
     --nav-ring-d: 30px;
     --nav-minor-ring-d: 24px;
+    --nav-connector-air: 5px;
     --nav-content-max: 1.15;
   }
   .j-rail .j-rail-name,
@@ -3594,8 +3617,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   right: auto;
   bottom: auto;
   z-index: -1;
-  width: calc(100% + 340px);
-  height: 260px;
+  width: calc(100% + var(--nav-scrim-extra, 340px));
+  height: var(--nav-scrim-height, 260px);
   /* THE HERO FLOOR IS 0.72, NOT 0.55, AND THE REASON IS A MEASUREMENT
      (2026-08-27, NAV-2). The ramp was authored on the idea that the hero
      "sits in the scene's quieter ground" and so needs less. The hero's
@@ -3724,20 +3747,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 }
 .j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active) { opacity: 1; }
 
-/* ---- ONE CONTINUOUS HAIRLINE (owner, 2026-08-26, third pass: "Use one
-   continuous hairline through the navigation rather than the dotted
-   line"). A single 1px rule runs through the gaps between neighbours —
-   solid, quiet, unlit: the thread the marks are strung on, not a progress
-   bar. (::before, the old dotted FILL layer, stays retired: progress is
-   not this line's job.) */
+/* ---- SEGMENTED HAIRLINE. Every rule stops the same optical distance from
+   the neighbouring drawn rings. The shared clearance keeps the row airy and
+   makes each destination read as a node rather than a bead pierced by a bar.
+   (::before, the old dotted FILL layer, stays retired.) */
 .j-rail .j-rail-slot::before { content: none !important; }
 .j-rail .j-rail-slot::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: calc(100% - 1px);
+  left: var(--connector-left, calc(100% + var(--nav-connector-air)));
   z-index: 0;
-  width: calc(var(--nav-gap) + 2px);
+  width: var(--connector-width,
+             calc(var(--nav-gap) - 2 * var(--nav-connector-air)));
   height: 1px;
   margin-top: -0.5px;
   background: rgba(220, 170, 76, 0.3);
@@ -3813,8 +3835,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   transform-origin: left center;
 }
 .j-rail.j-rail-purpose-gathering .j-rail-list > .j-rail-slot:not([data-chapter="final"]) .j-rail-item {
-  /* Fade peer ink without changing its authored size or lateral motion. */
-  opacity: calc(var(--purpose-peer-base-opacity, 1) * var(--purpose-gather-open-u, 1)) !important;
+  /* Fade peer ink a little ahead of connector retraction, without changing
+     its authored size or lateral pack motion. */
+  opacity: calc(var(--purpose-peer-base-opacity, 1) * var(--purpose-peer-open-u, 1)) !important;
 }
 .j-rail .j-rail-slot.j-rail-major { --purpose-peer-base-opacity: 1; }
 .j-rail .j-rail-slot.j-rail-minor { --purpose-peer-base-opacity: 0.68; }
@@ -3825,6 +3848,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   z-index: 4;
   transform: translateX(var(--purpose-gather-x, 0px))
              scale(var(--purpose-parent-scale, 1)) !important;
+}
+.j-rail.j-rail-purpose-gathering
+  .j-rail-list > .j-rail-slot[data-chapter="final"] .j-rail-item {
+  color: rgba(246, 208, 126, 1) !important;
+  opacity: 1 !important;
+}
+.j-rail.j-rail-purpose-gathering
+  .j-rail-list > .j-rail-slot[data-chapter="final"] .j-rail-mark::after {
+  border-color: rgba(248, 208, 112, 0.95);
 }
 .j-rail.j-rail-handoff-ownership-tree
   .j-rail-list > .j-rail-slot:not([data-chapter="final"]) .j-rail-item {
@@ -3864,8 +3896,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
 /* Purpose remains the real top-row parent while its two children occupy a
    viewport-centred subtree. A simple L-pipe runs down and then left into the
-   central junction; from there, two short equal diagonals run directly to the
-   child centres. There is no extra junction stem or orthogonal child stem.
+   exact midpoint between the children; from there, two short equal diagonals
+   aim at the children. The parent reach owns that neutral midpoint while each
+   diagonal begins after the shared optical clearance, so neither child is
+   visually preferred. There is no extra junction stem or orthogonal child stem.
    These dedicated strokes and children may morph; the shared row never clips
    or filters. */
 .j-rail .j-rail-purpose-tree::before {
@@ -3883,7 +3917,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 .j-rail .j-rail-purpose-tree::after {
   content: "";
   position: absolute;
-  left: var(--purpose-junction-x, 0px);
+  left: var(--purpose-reach-start-x, var(--purpose-junction-x, 0px));
   top: var(--purpose-split-y, 48px);
   width: var(--purpose-reach-length, 0px);
   height: 1px;
@@ -3906,11 +3940,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   content: "";
   position: absolute;
   left: 50%;
-  top: var(--purpose-branch-origin-y, 6px);
+  top: var(--purpose-branch-origin-y, -10px);
   width: var(--purpose-branch-length, 0px);
   height: 1px;
   background: rgba(220, 170, 76, 0.3);
   transform: rotate(calc(180deg - var(--purpose-branch-angle, 0deg)))
+             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
              scaleX(var(--purpose-fork-u, 0));
   transform-origin: 0 50%;
   pointer-events: none;
@@ -3919,11 +3954,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   content: "";
   position: absolute;
   left: 50%;
-  top: var(--purpose-branch-origin-y, 6px);
+  top: var(--purpose-branch-origin-y, -10px);
   width: var(--purpose-branch-length, 0px);
   height: 1px;
   background: rgba(220, 170, 76, 0.3);
   transform: rotate(var(--purpose-branch-angle, 0deg))
+             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
              scaleX(var(--purpose-fork-u, 0));
   transform-origin: 0 50%;
   pointer-events: none;
@@ -4309,7 +4345,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   text-shadow: 0 1px 6px rgba(5, 3, 1, 0.9);
   opacity: 0;
   white-space: nowrap;
-  transition: opacity 0.25s ease, color 0.25s ease;
+  transition: opacity 0.45s ease, color 0.35s ease;
   pointer-events: none;
 }
 /* Core labels are always visible; active or pointed-at lifts one to full.
@@ -4406,7 +4442,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   text-shadow: 0 1px 6px rgba(5, 3, 1, 0.9);
   opacity: 0;
   white-space: nowrap;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.45s ease;
   pointer-events: none;
 }
 .j-rail .j-rail-slot .j-rail-soon-item:is(:hover, :focus-visible) .j-rail-soon-note,
@@ -4432,7 +4468,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   bottom: auto;
   opacity: var(--purpose-label-fade, 0) !important;
   transform: translateX(-50%);
-  transition: opacity 0.22s ease, color 0.22s ease;
+  transition: opacity 0.40s ease, color 0.30s ease;
 }
 .j-rail:is(.j-rail-purpose-labels-above, .j-rail-purpose-labels-gathering)
   .j-rail-list > .j-rail-slot > .j-rail-item > :is(.j-rail-name, .j-rail-soon-note) {
@@ -4440,8 +4476,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   bottom: calc(50% + var(--item-d) / 2 + 5px);
   opacity: 0;
   transform: translate(-50%, 4px);
-  transition: opacity 0.22s ease, color 0.22s ease,
-              transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.40s ease, color 0.30s ease,
+              transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .j-rail.j-rail-purpose-labels-above .j-rail-list > .j-rail-slot
   > .j-rail-item:is(:hover, :focus-visible) > .j-rail-name,
@@ -4458,6 +4494,32 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   > .j-rail-soon-item > .j-rail-soon-note {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* A direct Inspire/Connect -> Purpose flight can carry a stationary pointer
+   across a moving mark. That crossing is not an intentional hover: keep the
+   top-row labels quiet until the camera ticket retires. Child subtree labels
+   are outside this direct-child selector. */
+.j-rail.j-rail-purpose-arriving .j-rail-list > .j-rail-slot
+  > .j-rail-item > :is(.j-rail-name, .j-rail-soon-note) {
+  opacity: 0 !important;
+  transition: none;
+}
+
+/* A bookend orbit is one route with two endpoints, not a tour of the chapter
+   coordinates it crosses numerically. Quiet the complete top-row label layer
+   for the lap; source subtree labels continue fading with their camera-paced
+   tree, and the destination's legitimate label state breathes in only after
+   the wrap ticket retires. Direct-child selectors keep Ownership/Manifesto
+   outside this rule. */
+.j-rail.j-rail-wrap-progress .j-rail-list > .j-rail-slot
+  > .j-rail-item > :is(.j-rail-name, .j-rail-soon-note) {
+  opacity: 0 !important;
+  transition: none;
+}
+.j-rail.j-rail-wrap-progress .j-rail-list > .j-rail-slot.j-rail-major
+  > .j-rail-item > .j-rail-name {
+  opacity: calc(0.72 * var(--wrap-core-label-u, 0)) !important;
 }
 
 /* (The underline/dot active marker is gone — owner's design review,
@@ -4579,6 +4641,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    class no longer means occlusion — at any width. */
 body.j-rail-on .j-copy,
 body.j-rail-on .j-hotspots { opacity: 1; }
+
+/* Mobile final copy must stay above the centred navigator's broad legibility
+   scrim.  The rail's list is an isolated z-index-4 surface, so its soft bed
+   can otherwise darken the bottom of the Purpose copy even though the copy
+   itself is already visible.  Keep the copy above that bed while leaving the
+   menu/card overlays (z-index 6/7 and 5) in their existing tiers. */
+@media (max-width: 900px) {
+  .j-copy { z-index: 5; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .j-rail,

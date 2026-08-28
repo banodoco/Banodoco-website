@@ -20,13 +20,26 @@ export const NAVIGATION_SPEED = Object.freeze({
   'connect|final': 0.70,
 });
 
+/* Directional refinements sit above the symmetric route character. These are
+ * relative judgements made against the already-authored speeds: Purpose ->
+ * Connect is 70% of 0.70, Connect -> Inspire is 90% of 0.80, and Purpose ->
+ * Ownership is 60% of the 0.75 default. Their reverse journeys deliberately
+ * retain the established timing. */
+export const NAVIGATION_DIRECTION_SPEED = Object.freeze({
+  'final>connect': 0.49,
+  'connect>inspire': 0.72,
+  'final>owned': 0.45,
+});
+
 function routeKey(fromId, toId) {
   return [fromId, toId].sort().join('|');
 }
 
-/** Symmetric speed policy for one selected origin/destination pair. */
+/** Resolve one selected direction: one-way refinement, route character, fallback. */
 export function navigationSpeed(fromId, toId) {
-  return NAVIGATION_SPEED[routeKey(fromId, toId)] || DEFAULT_NAVIGATION_SPEED;
+  return NAVIGATION_DIRECTION_SPEED[`${fromId}>${toId}`]
+    || NAVIGATION_SPEED[routeKey(fromId, toId)]
+    || DEFAULT_NAVIGATION_SPEED;
 }
 
 /** Convert one already-authored camera duration exactly once. */

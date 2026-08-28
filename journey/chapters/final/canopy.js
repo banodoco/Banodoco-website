@@ -708,7 +708,7 @@ export function createFinalCanopy(uniforms, seats) {
     const height = window.innerHeight;
     const pocket = purposeNavPocket({ width, height });
     uniforms.uNavPocketPx.value.set(
-      width * 0.5 * dpr,
+      pocket.x * dpr,
       pocket.y * dpr,
       pocket.halfWidth * dpr,
       pocket.halfHeight * dpr,
