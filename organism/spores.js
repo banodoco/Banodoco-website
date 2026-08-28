@@ -4,6 +4,7 @@
 // formerly-closure state arrives through `ctx` (built in organism.js).
 import * as THREE from 'three';
 import { TKDBG } from '../flags.js';
+import { EXITS as INSPIRE_EXITS, EXIT_SLOT } from '../inspire-exits.js';
 
 // =====================================================================
 // 10. SPORE CLOUD — shed from the gill surface across the cap's back side
@@ -39,7 +40,7 @@ export function createSpores(ctx) {
   // section — so the shed's stationary density genuinely carries three
   // soft streams for the chapter's lighting to pick out, and crossing a
   // boundary still moves nothing (positions stay a pure function of time
-  // and wind). The azimuths are the wind's own: ArtCompute's 5.83 was
+  // and wind). The azimuths are the wind's own: the source slot's 5.83 was
   // back-projected FROM the hero's visible stream (D16), and the flanks
   // sit ±1.15 rad along the rim (D18); the chapter's exit anatomy is
   // authored AT these filaments — if one ever moves, both files move
@@ -58,8 +59,8 @@ export function createSpores(ctx) {
   // GAIN_BODY/GAIN_KNOT below) while the far view reads as one irregular
   // wind. Same law everywhere, at every scroll position — the softening
   // is global, so positions remain scroll-independent by construction.
-  const FIL_AZ = [5.83, 6.98, 4.68];
-  const FIL_RISEMAX = [2.35, 1.32, 2.10]; // = EXITS riseMax (anatomy.js)
+  const FIL_AZ = INSPIRE_EXITS.map(exit => exit.az);
+  const FIL_RISEMAX = INSPIRE_EXITS.map(exit => exit.riseMax);
   const FIL_LAM = 0.060, FIL_SIG2 = 0.81, FIL_R2 = 2.25;
   // ---- D29 (2026-08-10, Hannah's Epilogue report: "three lines of glowing
   // spores coming from the main mushroom" at the Final pullback). Measured
@@ -111,7 +112,10 @@ export function createSpores(ctx) {
                                           // hugs the braid while the D30
                                           // cohort carries the far strays)
   const DISP_Y0 = 4.2, DISP_Y1 = 5.6;       // world-y gate (above the lit lanes)
-  const FIL_SEED_T = [0.75, 0.55, 1.60]; // per-filament seed-transit scale, re-calibrated to the D29 live equilibrium (see D27/D29)
+  const FIL_SEED_T = [];
+  FIL_SEED_T[EXIT_SLOT.CENTER] = 0.75;
+  FIL_SEED_T[EXIT_SLOT.LEFT] = 0.55;
+  FIL_SEED_T[EXIT_SLOT.RIGHT] = 1.60;
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
   let dispDir;                             // D29 per-dot decoherence directions
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
@@ -218,13 +222,13 @@ export function createSpores(ctx) {
     // leave the wind, so a stream can only be lit out of dust the wind
     // actually carries — and the old release arc [pi, 1.98pi], biased hard
     // toward the lee, never fed two of the three exit sectors (measured:
-    // 2,422 / 24 / 429 dots within 0.55 u of the ArtCompute / Arca / 2RP
+    // 2,422 / 24 / 429 dots within 0.55 u of the 2RP / Arca / ArtCompute
     // rise spines). The exits' rise corridors ARE wind streamlines seeded at
     // their rim lips (rise advance = DRIFT_RX/RZ, the breeze's own ratios),
     // so the honest reshape is at the SOURCE: the hymenium sheds around a
     // wider sweep of the margin, one smooth single-peaked density — densest
-    // at the lee (az ~5.9, ArtCompute's side, keeping it the primary
-    // stream), tapering through both flank sectors (2RP az 4.68, Arca az
+    // at the lee (az ~5.9, 2RP's side, keeping it the primary
+    // stream), tapering through both flank sectors (ArtCompute az 4.68, Arca az
     // 6.98) to near-zero tails, so the landing reads as ONE wind wrapping
     // the cap, not three pre-drawn plumes. The BREEZE vector, the
     // integrator, and the age-scatter law are untouched — each birth still
@@ -702,9 +706,9 @@ export function createSpores(ctx) {
   const R0_WLK = 0.20, R1_WLK = 0.45;   // migrant rim-walk chord
   // Rise tubes are PER EXIT: the ambient flux through each exit's rise
   // corridor differs by two orders (measured at the rest: dots within
-  // 0.55 u of the rise spines — ArtCompute 2,422 / Arca 24 / 2RP 429),
-  // because the wind carries the shed past ArtCompute's sector, brushes
-  // 2RP's, and barely reaches Arca's front-left lip. A lane can only light
+  // 0.55 u of the rise spines — 2RP 2,422 / Arca 24 / ArtCompute 429),
+  // because the wind carries the shed past 2RP's sector, brushes
+  // ArtCompute's, and barely reaches Arca's front-left lip. A lane can only light
   // the dust that is actually there, so the starved exits get wider,
   // softer catchments and the source exit a tight one.
   // D27: the release-arc reshape feeds all three corridors honestly
@@ -840,7 +844,7 @@ export function createSpores(ctx) {
   }
 
   function buildRoutes(tNow, leanScale, mEl) {
-    const srcAz = exits[0].az;
+    const srcAz = exits[EXIT_SLOT.CENTER].az;
     const A = [seg.axA, seg.ayA, seg.azA], B = [seg.bxA, seg.byA, seg.bzA];
     const BA = [seg.bAx, seg.bAy, seg.bAz], BB = [seg.bBx, seg.bBy, seg.bBz];
     // shared source geometry (all three chains are born in the source wedge —
@@ -850,7 +854,7 @@ export function createSpores(ctx) {
     const srcLipX = Math.cos(srcAz) * srcR, srcLipZ = Math.sin(srcAz) * srcR;
     for (let e = 0; e < 3; e++) {
       const spec = exits[e];
-      const a = spec.az, migF = e > 0;
+      const a = spec.az, migF = e !== EXIT_SLOT.CENTER;
       const rimR = rimRad(a) + 0.05, rimY = rimYof(a);
       const lipX = Math.cos(a) * rimR, lipY = rimY + 0.10, lipZ = Math.sin(a) * rimR;
       const sSrc1 = migF ? 0.15 : 0.22;   // arc where the source stage ends
@@ -971,7 +975,7 @@ export function createSpores(ctx) {
       const rev = eff[e];
       let f;
       if (rev <= 0) f = 0;
-      else if (e === 0) {
+      else if (e === EXIT_SLOT.CENTER) {
         // resident: source saturates by rev 0.2, the rise rides the rest
         f = rev < 0.2 ? (rev / 0.2) * 0.22
                       : 0.22 + ((rev - 0.2) / 0.8) * 0.78;
@@ -983,7 +987,7 @@ export function createSpores(ctx) {
       }
       fronts[e] = f * (1 + FRONT_W);
     }
-    const knotG = [exits[0].knot, exits[1].knot, exits[2].knot];
+    const knotG = exits.map((exit) => exit.knot);
 
     let anyOn = false;
     // ?tkdbg=1 — per-exit lane occupancy probe (QA): how many dots each

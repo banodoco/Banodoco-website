@@ -38,8 +38,8 @@
 //      through the driver seat (see the seat claim below).
 //
 // D16 RESTAGE (Hannah, 2026-08-03, after six rejected fixes): the exits now
-// CLUSTER at the hero's one visible stream (anatomy.js EXITS — ArtCompute IS
-// the stream at cap az ~5.83; Arca ~31 deg rearward, 2RP ~24 deg frontward
+// CLUSTER at the hero's one visible stream (the root exit contract — 2RP IS
+// the stream at cap az ~5.83; Arca ~31 deg rearward, ArtCompute ~24 deg frontward
 // along the rim), and the orbit is a short swing TOWARD that stream
 // (director.js). The unified no-self-ignition principle is binding: during
 // the whole Mission->Inspire leg nothing may go invisible -> visible unless
@@ -54,10 +54,10 @@
 //
 // RIVER DELTA (Hannah, 2026-08-02, third note — the definitive fix): the hero
 // shows exactly ONE visible stream, the shed spilling from under the
-// back-right rim (ArtCompute's sector). So nothing may ever be BORN in the
-// Arca or 2RP sectors — however gently it fades in, a population appearing
+// back-right rim (2RP's source sector). So nothing may ever be BORN in the
+// Arca or ArtCompute sectors — however gently it fades in, a population appearing
 // away from the stream reads as a newcomer. Instead the one stream SPLITS:
-//   - every Arca and 2RP particle is born in the SOURCE sector (same under-rim
+//   - every Arca and ArtCompute particle is born in the SOURCE sector (same under-rim
 //     wedge the visitor has been watching) and, as its plume's reveal rises, a
 //     visible current of them peels off and WALKS THE RIM — hugging the real
 //     rim anatomy (rimRadG/rimYG in-shader) — to its release sector, arriving,
@@ -75,7 +75,7 @@ import {
   makeRng, gaussOf, heat, capUnderPt, rimRad,
   makeGlowTexture, makeStreakTexture,
 } from '../../anatomy.js';
-import { EXITS } from './anatomy.js';
+import { EXITS, EXIT_SLOT, exitIndexOf } from '../../../inspire-exits.js';
 import { endOf } from '../../route.js';
 // Registration order for the three plumes, authored once in the schema.
 // structure.js imports nothing, so this adds no cycle.
@@ -414,7 +414,7 @@ export function createInspire(sceneApi) {
     // spreads upstream from where the rim current physically arrives. The
     // source exit keeps inner->lip (its wedge underlies the already-visible
     // stream; either way it is a brightening of what the visitor sees).
-    if (ex !== exits[0]) mat.uniforms.uFrom.value = 1;
+    if (ex !== exits[EXIT_SLOT.CENTER]) mat.uniforms.uFrom.value = 1;
     ex.mats.push(mat);
     ex.srcMat = mat;                     // trace-back target (rim -> inner gills)
     const filGeo = baked ? baked.g.srcFil[i] : strandGeo(lp, lc, lg);
@@ -503,8 +503,8 @@ export function createInspire(sceneApi) {
   for (let i = 0; i < exits.length; i++) {
     const ex = exits[i];
     const { az, riseMin, riseMax } = ex.spec;   // spec.lean retired by D17
-    const isMig = ex !== exits[0];
-    const azSrcBase = EXITS[0].az;
+    const isMig = ex !== exits[EXIT_SLOT.CENTER];
+    const azSrcBase = EXITS[EXIT_SLOT.CENTER].az;
     const lp = [], lc = [], lg = [];
     const N_WISP = 4;
     for (let w = 0; !baked && w < N_WISP; w++) {
@@ -633,7 +633,7 @@ export function createInspire(sceneApi) {
   /* ================================================================
      2b. RIM DELTA CURRENTS (Hannah's river-delta redesign) — faint
          authored strands ALONG the rim, linking the shared under-rim
-         source to the Arca and 2RP release sectors. They draw on with
+         source to the Arca and ArtCompute release sectors. They draw on with
          the walking spore front (fade driven per-frame from the same
          mig() curve the shader uses), and they PERSIST at rest at low
          opacity, so the one-source truth stays legible in a still
@@ -644,11 +644,11 @@ export function createInspire(sceneApi) {
   {
     const SEGL = 34, N_LINE = 3;
     // D16: the cluster straddles the source, so the delta BRANCHES — one
-    // short current rearward to Arca, one frontward to 2RP. (The old chain
-    // source -> Arca -> 2RP assumed all three lay one way around the rim.)
+    // short current rearward to Arca, one frontward to ArtCompute. (The old
+    // chain source -> Arca -> right assumed all three lay one way around the rim.)
     const linkSpecs = [
-      { from: EXITS[0].az, to: EXITS[1].az },   // source -> Arca (rearward)
-      { from: EXITS[0].az, to: EXITS[2].az },   // source -> 2RP (frontward)
+      { from: EXITS[EXIT_SLOT.CENTER].az, to: EXITS[EXIT_SLOT.LEFT].az },
+      { from: EXITS[EXIT_SLOT.CENTER].az, to: EXITS[EXIT_SLOT.RIGHT].az },
     ];
     for (let i = 0; i < linkSpecs.length; i++) {
       const lk = linkSpecs[i];
@@ -847,7 +847,7 @@ export function createInspire(sceneApi) {
          WHAT: once the streams have landed AND the chapter's copy is
          re-anchoring (the intro), the three lip embers ignite one at
          a time in SCREEN order at the rest — Arca (left rim), then
-         ArtCompute (centre), then 2RP (right rim) — and each label
+         2RP (centre), then ArtCompute (right rim) — and each label
          stands up with its own ember via nodeReveal below, exactly
          the architecture Connect's chips got the same day ("the
          labels should show up as soon as each light line
@@ -871,9 +871,10 @@ export function createInspire(sceneApi) {
          same gate walks backward — while dt = 0 placements remain settled
          because their copy gate is settled.
      ================================================================ */
-  const LAND_ORDER = [1, 0, 2];      // screen left -> right at the rest:
-                                     // Arca 6.98 (left rim), ArtCompute 5.83,
-                                     // 2RP 4.68 (right rim) — anatomy.js
+  const LAND_ORDER = [EXIT_SLOT.LEFT, EXIT_SLOT.CENTER, EXIT_SLOT.RIGHT];
+                                     // screen left -> right at the rest:
+                                     // Arca 6.98 (left rim), 2RP 5.83,
+                                     // ArtCompute 4.68 (right rim) — root exit contract
   /* THE BEAT BETWEEN THEM (TIMING-01, 2026-08-23 — "they just pop one, two,
      three really quick, whereas there should be a beat between each of them";
      widened again by ICON-ARRIVAL the same day — the owner: still "way
@@ -1038,7 +1039,10 @@ export function createInspire(sceneApi) {
   const _grad = { sx: 0, sy: 0, sz: 0, d0: 1, d1: 3, k: 0 };
   const shedRegions = (() => {
     const list = [];
-    const driftLen = [4.8, 3.2, 2.6];   // ArtCompute rides the hero's full carry
+    const driftLen = [];
+    driftLen[EXIT_SLOT.CENTER] = 4.8; // the source rides the hero's full carry
+    driftLen[EXIT_SLOT.LEFT] = 3.2;
+    driftLen[EXIT_SLOT.RIGHT] = 2.6;
     // Delta re-anchor: the migrating plumes' populations are BORN in the
     // source sector and walk the rim out, so their origin-wedge and downwind
     // capsules sit at the SOURCE (overlaps max-combine, never stack), their
@@ -1048,7 +1052,7 @@ export function createInspire(sceneApi) {
       Math.cos(az) * (rimRad(az) + 0.08),
       capUnderPt(1.0, az).y - 0.15,
       Math.sin(az) * (rimRad(az) + 0.08));
-    const srcAz = EXITS[0].az;
+    const srcAz = EXITS[EXIT_SLOT.CENTER].az;
     for (let i = 0; i < 3; i++) {
       const spec = EXITS[i];
       const rise = (spec.riseMin + spec.riseMax) / 2;
@@ -1062,8 +1066,9 @@ export function createInspire(sceneApi) {
         rim.y + 0.10 + rise,
         Math.sin(spec.az) * (rimR + 0.19) + rise * DRIFT_RZ,
       );
-      const homeAz = i === 0 ? spec.az : srcAz;   // where this plume is BORN
-      const srcLip = i === 0 ? lip.clone() : lipAt(srcAz);
+      const isSource = i === EXIT_SLOT.CENTER;
+      const homeAz = isSource ? spec.az : srcAz;   // where this plume is BORN
+      const srcLip = isSource ? lip.clone() : lipAt(srcAz);
       const inner = capUnderPt(0.52, homeAz);
       inner.y -= 0.12;
       const tail = srcLip.clone().addScaledVector(BREEZE, driftLen[i]);
@@ -1075,10 +1080,10 @@ export function createInspire(sceneApi) {
       // the gap can carve the three-stream read out of one continuous field.
       list.push({ exit: i, role: 0, la: lip,             lb: top,  r0: 0.72, r1: 2.05, gain: 0.78 });
       list.push({ exit: i, role: 1, la: inner,           lb: srcLip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
-      list.push({ exit: i, role: 2, la: srcLip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
+      list.push({ exit: i, role: 2, la: srcLip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: isSource ? 0.52 : 0.40 });
       // migration corridor: source lip -> release lip (rim arc sagitta stays
       // inside r1 for both spans)
-      if (i > 0) list.push({ exit: i, role: 3, la: srcLip.clone(), lb: lip.clone(), r0: 0.50, r1: 1.35, gain: 0.35 });
+      if (i !== EXIT_SLOT.CENTER) list.push({ exit: i, role: 3, la: srcLip.clone(), lb: lip.clone(), r0: 0.50, r1: 1.35, gain: 0.35 });
     }
     for (const rg of list) { rg.a = new THREE.Vector3(); rg.b = new THREE.Vector3(); rg.k = 0; }
     return list;
@@ -1090,7 +1095,7 @@ export function createInspire(sceneApi) {
   // effective reveal is continuous in scroll position (snap/?p= included),
   // grows only as the camera actually travels toward the stream, and plays
   // backward identically. Sequence: the stream itself organizes first
-  // (ArtCompute), then the Arca current peels off along the rim, then 2RP.
+  // (2RP), then the Arca current peels off along the rim, then ArtCompute.
   //
   // WHY THEY ALL FINISH BY az ~74 NOW. These bounds are absolute camera
   // azimuth, and D18 made azimuth non-monotone across the leg: the arrival
@@ -1131,7 +1136,7 @@ export function createInspire(sceneApi) {
   // So every ramp now runs to the ceiling and the sequence is carried by the
   // ONSETS alone. That is the whole change: the three streams still enter in
   // the authored order (the visible stream gathers first, the Arca current
-  // peels off along the rim, 2RP last) and are always visibly at different
+  // peels off along the rim, ArtCompute last) and are always visibly at different
   // stages — at az 40 they stand at 0.47 / 0.32 / 0.13 — but each one now
   // spends every remaining degree of the swing growing instead of stopping.
   // The resident's window goes 30 -> 73 deg, Δp 0.044 -> 0.101 (measured).
@@ -1149,7 +1154,7 @@ export function createInspire(sceneApi) {
   // frames carrying 80% of that cohort's amplitude, at MAX_SCRUB_RATE),
   // widening the spacing costs the tail and buys nothing:
   //
-  //     spacing      ArtCompute   Arca   2RP     conservation drawdown
+  //     spacing          2RP      Arca   ArtCompute  conservation drawdown
   //     12 (this)         7         5     3            -1.97%
   //     18                7         4     3            -1.50%
   //     21                7         4     2            -0.84%
@@ -1161,11 +1166,10 @@ export function createInspire(sceneApi) {
   //
   // CEILING 78, unchanged and still the binding constraint — it is the number
   // D18 chose for the reversal rule above, kept to the digit.
-  const ARR = [
-    { a0: 5,  a1: 78 },   // ArtCompute — the visible stream, gathered first
-    { a0: 17, a1: 78 },   // Arca — its current peels off along the rim
-    { a0: 29, a1: 78 },   // 2RP — the far branch, last
-  ];
+  const ARR = [];
+  ARR[EXIT_SLOT.CENTER] = { a0: 5,  a1: 78 }; // 2RP — visible stream, gathered first
+  ARR[EXIT_SLOT.LEFT] = { a0: 17, a1: 78 }; // Arca — current peels off along rim
+  ARR[EXIT_SLOT.RIGHT] = { a0: 29, a1: 78 }; // ArtCompute — far branch, last
   const RAD2DEG = 180 / Math.PI;
   function camAzDeg() {
     const c = sceneApi.camera.position;
@@ -1181,19 +1185,19 @@ export function createInspire(sceneApi) {
   const eff = [0, 0, 0];                   // per-exit effective reveal, per frame
   function computeEff() {
     const azDeg = camAzDeg();
-    for (let i = 0; i < 3; i++) eff[i] = exits[i].fade * arrOf(azDeg, ARR[i]);
+    for (let i = 0; i < exits.length; i++) eff[i] = exits[i].fade * arrOf(azDeg, ARR[i]);
   }
   // Delta retime for the DESTINATION furniture (under-rim filaments, beads,
   // streak) of the migrating exits: it ignites only as their rim current
   // actually arrives (rev's second half — the front completes at rev 0.55),
   // never before, so no local structure suggests a local birth — and it draws
-  // on lip-first (uFrom), spreading upstream from the arrival point. Exit 0
-  // is the source itself and keeps its full-reveal drive. All three read
+  // on lip-first (uFrom), spreading upstream from the arrival point. The
+  // centre slot is the source itself and keeps its full-reveal drive. All three read
   // exactly 1 at eff = 1. (Wisps are NOT furnOf-driven any more: their fade
   // is eff itself, so their drawn tip tracks the live walking current out of
   // the stream — see the animator.)
   function furnOf(i) {
-    if (i === 0) return eff[0];
+    if (i === EXIT_SLOT.CENTER) return eff[EXIT_SLOT.CENTER];
     let x = (eff[i] - 0.55) / 0.45; x = x < 0 ? 0 : x > 1 ? 1 : x;
     return x * x * (3 - 2 * x);
   }
@@ -1217,8 +1221,8 @@ export function createInspire(sceneApi) {
   // the label names.
   //
   // WHY THE REST POSE and not the live lip: the ember is a child of the
-  // swaying cap, and at the Inspire rest it wanders 14.5x20.7 / 18.8x18.4 /
-  // 7.7x4.7 px (ArtCompute/Arca/2RP, 12 s trace) — the exact motion Hannah
+  // swaying cap, and at the Inspire rest its three slots wander 14.5x20.7 /
+  // 18.8x18.4 / 7.7x4.7 px (centre/left/right, 12 s trace) — the exact motion Hannah
   // wants gone. The hero's EQUIP callout answered this in e20f7ff: anchor to
   // the sway PIVOT, not the swaying tip. Here that means the lip's world
   // position with both wind rotations zeroed — swayGroup (organism.js
@@ -1267,14 +1271,14 @@ export function createInspire(sceneApi) {
    *  seam-gate contract is unchanged: setArmed(false) zeroes everything. */
   function setReveal(a, b, c, band = 0) {
     const m = Math.max(a, b, c, band);
-    exits[0].target = m; exits[1].target = m; exits[2].target = m;
+    for (const exit of exits) exit.target = m;
 }
 
   /** Node id -> world position of its label anchor: the lit release lip
    *  (the ce91bc2 ember), at its REST pose so the chip never rides the
    *  wind — see the mushroomRestMatrix block above.
    *
-   *  D22 CONSTELLATION NUDGE (2026-08-17, Hannah): 2RP's chip sat at the
+   *  D22 CONSTELLATION NUDGE (2026-08-17, Hannah): the right-hand chip sat at the
    *  outermost rim point, at the same screen height as the rail glyph —
    *  it read as drifting toward the navigation rather than riding the
    *  cap. Its LABEL anchor (chip + dot only — the ember, the streak and
@@ -1286,10 +1290,10 @@ export function createInspire(sceneApi) {
    *  chips are untouched: the constellation stays an organic arc, not a
    *  re-arranged line. */
   function nodeWorld(id) {
-    const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+    const i = exitIndexOf(id);
     if (i < 0) return null;
     const p = streaks[i].localPos.clone();
-    if (EXITS[i].id === '2rp') { p.x *= 0.90; p.z *= 0.90; p.y += 0.10; }
+    if (i === EXIT_SLOT.RIGHT) { p.x *= 0.90; p.z *= 0.90; p.y += 0.10; }
     // PHONE-PORTRAIT ANCHOR PULL (2026-08-27, the mobile close-up rest).
     // The phone Inspire pose (portrait.js PHONE_KEYS) dollies toward the cap,
     // which projects the two flanking lips against hotspot-frame's own
@@ -1316,22 +1320,22 @@ export function createInspire(sceneApi) {
     // the bezel. (That is what the owner's "the 3 items don't appear" looks
     // like once the anchor clears admission: present, but eaten by the edge.)
     // So the bound this pull answers to is the pill's RECT with the nudge
-    // NOT firing — tx must clear `lo` on its own. 0.67 does that; 2RP never
-    // needed more horizontal pull than 0.88 once the aim stayed at -0.05.
+    // NOT firing — tx must clear `lo` on its own. 0.67 does that; the right
+    // slot uses its own pull once the aim stays at -0.05.
     // Its vertical clearance is separate: Safari's 390x664 visible viewport
     // seats the lower rim anchor inside the copy's 8px protection margin,
     // suppressing the complete marker. Lift only this LABEL anchor by the
     // ~31px needed to clear that protected block at the shortest supported
     // phone viewport; ember, streak and plume remain at the true rim point.
     // Measured, unclamped, dots true, at the shipped rest:
-    //     Arca Gidan  x  18.3..128.6   left margin  18.3
-    //     ArtCompute  x 161.8..280.1
-    //     2RP         x 363.2..413.8   right margin 16.2
+    //     left slot   x  18.3..128.6   left margin  18.3
+    //     centre slot x 161.8..280.1
+    //     right slot  x 363.2..413.8   right margin 16.2
     // Arca's total displacement from its true lip is ~40 px on screen,
     // against the ember's ~90 px bloom — still inside D22's "reads as on the
     // lit edge" tolerance, and confirmed by eye on the rendered frame.
       if (EXITS[i].id === 'arca') { p.x *= 0.67; p.z *= 0.67; p.y += 0.06; }
-      if (EXITS[i].id === '2rp') { p.x *= 0.88; p.z *= 0.88; p.y += 0.50; }
+      if (i === EXIT_SLOT.RIGHT) { p.x *= 0.88; p.z *= 0.88; p.y += 0.50; }
     }
     return p.applyMatrix4(mushroomRestMatrix());
 }
@@ -1345,7 +1349,7 @@ export function createInspire(sceneApi) {
    *  rides (land x furnOf, both 0..1), so the UI has no second threshold or
    *  easing clock to drift behind the lit edge it names. */
   function nodeReveal(id) {
-    const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+    const i = exitIndexOf(id);
     return i < 0 ? 0 : landingReveal(i);
 }
 
@@ -1364,10 +1368,10 @@ export function createInspire(sceneApi) {
    *  band stays hover-only: it is a repeating arrival gesture, not a state
    *  to sit in behind an open card.
    *
-   *  Ids arrive journey-side ('tworp'), the geometry spells it '2rp' — the
-   *  same aliasing nodeWorld does. */
+   *  Ids arrive canonical from the journey schema; geometry resolves them
+   *  through the root contract's single id-to-slot table. */
   function setSelected(id, on) {
-    const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+    const i = exitIndexOf(id);
     if (i < 0) return;
     // Guarded release: a stale close arriving after a retarget must not
     // drop the plume that is now selected.
@@ -1733,9 +1737,9 @@ export function createInspire(sceneApi) {
       // are exactly 1 at the rest and through p 0.35 (the approved framing
       // never dims), and exactly 0 by 0.430 — inside T1's re-arm edge at
       // p 0.44 and its release at 0.46, so the seam derivation stands.
-      const out0 = 1 - smz((p - (end - 0.028)) / 0.078);   // ArtCompute 0.352 -> 0.430
-      const out1 = 1 - smz((p - (end - 0.022)) / 0.060);   // Arca       0.358 -> 0.418
-      const out2 = 1 - smz((p - (end - 0.015)) / 0.040);   // 2RP        0.365 -> 0.405
+      const outCenter = 1 - smz((p - (end - 0.028)) / 0.078); // 2RP 0.352 -> 0.430
+      const outLeft = 1 - smz((p - (end - 0.022)) / 0.060); // Arca 0.358 -> 0.418
+      const outRight = 1 - smz((p - (end - 0.015)) / 0.040); // ArtCompute 0.365 -> 0.405
       if (!armed) { setReveal(0, 0, 0, 0); return; }
       // D17 locus law (Hannah, round 8): the braid rises along the stream's
       // own drift axis and must OVERLAY the drift envelope at every camera
@@ -1747,7 +1751,7 @@ export function createInspire(sceneApi) {
       // re-uprighting geometry.
       setLeanScale(1);
       const sm = (a, b) => { const x = (azDeg - a) / (b - a); return x < 0 ? 0 : x > 1 ? 1 : x; };
-      // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest.
+      // gill band -> 2RP -> Arca Gidan -> ArtCompute, then a hold through the rest.
       // D18: pulled in from (36,72)/(76,112)/(104,142) to finish by az 78. The
       // old top bounds were authored when the rest was az 78, which left Arca
       // at 0.06 and 2RP at 0.00 reveal AT the rest — two of the three plumes
@@ -1802,9 +1806,9 @@ export function createInspire(sceneApi) {
       // direction, instead of igniting it.
       const far = 1 - sm(150, 220);
       const m = Math.max(a, b, c, band) * far;
-      exits[0].target = m * out0;
-      exits[1].target = m * out1;
-      exits[2].target = m * out2;
+      exits[EXIT_SLOT.CENTER].target = m * outCenter;
+      exits[EXIT_SLOT.LEFT].target = m * outLeft;
+      exits[EXIT_SLOT.RIGHT].target = m * outRight;
     },
     nodeWorld,
     bindLandingGate,
@@ -1874,14 +1878,11 @@ export function createInspire(sceneApi) {
        *
        *  CHANGED — the lookup is by id, not by position. The shim indexed
        *  FIXED_HOTSPOTS.inspire (structure.js: artcompute, arca, tworp)
-       *  and fed that number to setActive, which indexes EXITS
-       *  (anatomy.js: artcompute, arca, '2rp'). The two arrays are
-       *  index-parallel today and nothing checks that they stay so — the
-       *  ids do not even match. This body uses the SAME findIndex the
-       *  chapter's own nodeWorld/nodeReveal/setSelected already use, so it
-       *  is correct whatever order EXITS is later given. That does not
-       *  CLOSE the coupling (registration still reads FIXED_HOTSPOTS): it
-       *  is recorded as DEF-06, design.md §8.5, and is not this order's.
+       *  and fed that number to setActive, which indexes the geometry slots.
+       *  Registration and screen geometry deliberately have different
+       *  orders; the root contract's exitIndexOf is their one canonical join, shared
+       *  with nodeWorld/nodeReveal/setSelected so neither array position nor
+       *  a local alias can silently change initiative identity.
        *
        *  UNCHANGED — THE RELEASE IS UNCONDITIONAL. `active = on ? i : -1`,
        *  exactly as the shim was: any OFF clears, including an OFF for an
@@ -1896,7 +1897,7 @@ export function createInspire(sceneApi) {
        *  improvement DI-1 (design.md §5.1, §12); the contract suite's I5
        *  is the only guard on it. */
       setHot(id, on) {
-        const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+        const i = exitIndexOf(id);
         active = on ? i : -1;
       },
       setSelected,

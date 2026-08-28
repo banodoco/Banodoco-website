@@ -3760,11 +3760,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      headroom the working items have (110 - 100a ~ 38 at a = 0.72). It
      stays a ramp — 0.72 embedded, 1.0 as navigation — so the detachment
      still strengthens the ground, which was the point of having one. */
-  opacity: calc(0.72 + 0.28 * (1 - var(--nav-content-u)));
-  transform: translate(-50%, calc(-50% + 18px));
+  /* Purpose lifts the icons to clear its copy, but lifting this whole ellipse
+     exposed its lower boundary as a visible dark patch. Cancel that lift for
+     the scrim itself so it continues to rise softly from below the viewport;
+     ease its density down as the Purpose/Ownership composition forms. */
+  opacity: calc(0.72 + 0.28 * (1 - var(--nav-content-u))
+                - 0.16 * var(--purpose-scrim-u, 0));
+  transform: translate(-50%,
+             calc(-50% + 18px + var(--purpose-rail-lift, 0px)));
   background: radial-gradient(ellipse 58% 62% at 50% 50%,
-    rgba(12, 8, 3, 0.7),
-    rgba(10, 7, 2, 0.42) 52%,
+    rgba(12, 8, 3, calc(0.7 - 0.08 * var(--purpose-scrim-u, 0))),
+    rgba(10, 7, 2, calc(0.42 - 0.07 * var(--purpose-scrim-u, 0))) 52%,
     rgba(9, 6, 2, 0) 74%);
   -webkit-mask-image: none;
   mask-image: none;
@@ -3862,6 +3868,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   --glyph-fit: var(--nav-fit-minor);
   --slot-ring-d: var(--nav-minor-ring-d);
 }
+/* The preboot connector must use the same ring-edge geometry rowFrame()
+   publishes once JS starts. The old fallback covered only `gap - air`, then
+   gained 8–10px when the inline measurement arrived, producing a visible
+   load-time stretch. The final slot has no segment; the penultimate slot is
+   the only one whose next neighbour is minor. */
+.j-rail .j-rail-slot {
+  --connector-next-item-d: var(--nav-major);
+  --connector-next-ring-d: var(--nav-ring-d);
+}
+.j-rail .j-rail-slot:nth-last-child(2) {
+  --connector-next-item-d: var(--nav-minor);
+  --connector-next-ring-d: var(--nav-minor-ring-d);
+}
 .j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active) { opacity: 1; }
 
 /* ---- SEGMENTED HAIRLINE. Every rule stops the same optical distance from
@@ -3873,10 +3892,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   content: "";
   position: absolute;
   top: 50%;
-  left: var(--connector-left, calc(100% + var(--nav-connector-air)));
+  left: var(--connector-left,
+            calc(var(--item-d) / 2 + var(--slot-ring-d) / 2
+                 + var(--nav-connector-air)));
   z-index: 0;
   width: var(--connector-width,
-             calc(var(--nav-gap) - 2 * var(--nav-connector-air)));
+             calc(var(--item-d) / 2 + var(--nav-gap)
+                  + var(--connector-next-item-d) / 2
+                  - var(--slot-ring-d) / 2
+                  - var(--connector-next-ring-d) / 2
+                  - var(--nav-connector-air)
+                  - var(--nav-connector-air)));
   height: 1px;
   margin-top: -0.5px;
   background: rgba(220, 170, 76, 0.3);
@@ -4639,10 +4665,18 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   opacity: calc(0.72 * var(--wrap-core-label-u, 0)) !important;
 }
 
-/* Touch has no temporary hover answer inside Purpose. Mobile taps navigate
-   directly; sticky synthetic :hover must not leave a top-row name above the
-   rail, and Manifesto keeps its resting name rather than flashing Soon. */
+/* Touch has no synthetic hover answer inside Purpose's navigable top row.
+   Manifesto is the exception: it has no destination, so a deliberate tap
+   briefly swaps its resting name to the useful availability answer. */
 @media (hover: none), (pointer: coarse) {
+  /* A touch release may leave the link in the browser's synthetic :hover
+     state. Intro is a silent bookend on phones, so that emulated hover must
+     not make its label linger after the return journey lands. */
+  .j-rail[data-layout="mission"] .j-rail-list
+    > .j-rail-slot[data-chapter="mission"] > .j-rail-item > .j-rail-name {
+    opacity: 0 !important;
+    transition: none !important;
+  }
   .j-rail.j-rail-purpose-labels-above .j-rail-list > .j-rail-slot
     > .j-rail-item > :is(.j-rail-name, .j-rail-soon-note) {
     opacity: 0 !important;
@@ -4654,6 +4688,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-rail .j-rail-purpose-manifesto .j-rail-name {
     opacity: 1 !important;
+  }
+  .j-rail .j-rail-purpose-manifesto.j-rail-note .j-rail-soon-note {
+    opacity: 1 !important;
+    transition: opacity 0.2s ease !important;
+  }
+  .j-rail .j-rail-purpose-manifesto.j-rail-note .j-rail-name {
+    opacity: 0 !important;
   }
 }
 
