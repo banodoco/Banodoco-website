@@ -2,6 +2,10 @@
  * for copy/navigation; the camera converts the same value into world units. */
 export const PHONE_FINAL_COMPOSITION_LIFT_PX = 30;
 
+/** The phone scene needs a stronger camera truck than its fixed overlays.
+ * 72 CSS px is roughly 216 device pixels on a normal 3x iPhone screenshot. */
+export const PHONE_FINAL_SCENE_LIFT_PX = 72;
+
 /* The pocket affects luminous line fragments only, not the scene's colour.
  * Keep just 32% of a crossing stroke at its centre: a weaker absence left a
  * seeded floor line visibly running behind the Ownership/Manifesto fork. */

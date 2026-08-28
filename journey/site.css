@@ -791,6 +791,38 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     margin-left: 0.42em;
     vertical-align: middle;
   }
+  .j-menu-teaser > :is(.j-menu-il, .j-menu-is) {
+    opacity: 0.42;
+    filter: blur(3.5px);
+    user-select: none;
+  }
+
+  /* Desktop reads as a quiet hierarchy rather than a stack of cards: every
+     initiative glyph occupies the same left column as its chapter glyph, so
+     the smaller marks visibly descend from the larger one above. */
+  @media (min-width: 621px) {
+    .j-menu-list > li { padding-block: 0.18rem 0.48rem; }
+    .j-menu-sub { padding: 0 0.6rem 0.42rem 0.5rem; }
+    .j-menu-row-link { margin: 0; padding-inline: 0; }
+    .j-menu-il { gap: 1rem; }
+    .j-menu-pict {
+      width: 22px;
+      height: 13px;
+      flex-basis: 22px;
+      justify-content: center;
+    }
+    .j-menu-pict svg { width: 13px; }
+    .j-menu-pict-dots { height: 17px; }
+    .j-menu-pict-dots svg { width: 17px; }
+    .j-menu-teaser {
+      min-height: 28px;
+      white-space: nowrap;
+    }
+    .j-menu-teaser > :is(.j-menu-il, .j-menu-is) {
+      opacity: 0.36;
+      filter: blur(2.25px);
+    }
+  }
 
   .j-menu-owned {
     display: block;
@@ -853,6 +885,87 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-menu-h { font-size: 0.66rem; letter-spacing: 0.18em; }
     .j-menu-links { gap: 0.25rem; }
     .j-menu-close-zone { margin-left: 0.15rem; padding-left: 0.55rem; }
+  }
+
+  /* The phone panel is a reading surface, not the desktop outline squeezed
+     into a narrow column. Each initiative gets one full-width card and its
+     supporting sentence stacks beneath the title. */
+  @media (max-width: 620px) and (orientation: portrait) {
+    .j-menu {
+      width: 100vw;
+      padding: 1rem 1.5rem 2rem;
+      border-left: 0;
+      box-shadow: none;
+    }
+    .j-menu-head {
+      position: sticky;
+      top: -1rem;
+      z-index: 3;
+      gap: 0.45rem;
+      margin: -1rem -1.5rem 1.15rem;
+      padding: 1rem 1.5rem 0.75rem;
+      background: #0b0702;
+      border-bottom: 1px solid rgba(217, 164, 65, 0.16);
+    }
+    .j-menu-h { font-size: 0.72rem; letter-spacing: 0.24em; }
+    .j-menu-list > li { padding: 0.35rem 0 0.9rem; }
+    .j-menu-list > li:first-child { padding-top: 0; border-top: 0; }
+    .j-menu-item { gap: 0.85rem; padding: 0.72rem 0; }
+    .j-menu-list > li:first-child .j-menu-item { padding: 0.65rem 0 1rem; }
+    .j-menu-list > li:first-child .j-menu-mark { width: 28px; height: 28px; }
+    .j-menu-thesis {
+      font-size: clamp(1.35rem, 6vw, 1.58rem);
+      line-height: 1.12;
+    }
+    .j-menu-no { font-size: 0.64rem; color: rgba(240, 200, 119, 0.76); }
+    .j-menu-name {
+      font-size: 0.72rem;
+      line-height: 1.25;
+      color: rgba(240, 200, 119, 0.9);
+    }
+    .j-menu-sub { padding: 0 0 0.15rem; }
+    .j-menu-row { margin: 0 0 0.3rem; font-size: 0.82rem; line-height: 1.32; }
+    .j-menu-row-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
+      align-items: center;
+      column-gap: 0.75rem;
+      row-gap: 0.14rem;
+      min-height: 64px;
+      margin: 0;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid rgba(217, 164, 65, 0.16);
+      border-radius: 6px;
+      background: rgba(217, 164, 65, 0.025);
+    }
+    .j-menu-il {
+      grid-column: 1;
+      grid-row: 1;
+      gap: 0.58rem;
+      font-size: 0.88rem;
+      line-height: 1.15;
+    }
+    .j-menu-il::after { content: none; }
+    .j-menu-pict { width: 18px; height: 18px; flex-basis: 18px; }
+    .j-menu-pict-dots { width: 20px; height: 20px; flex-basis: 20px; }
+    .j-menu-is {
+      grid-column: 1;
+      grid-row: 2;
+      padding-left: 1.6rem;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+    .j-menu-ia,
+    .j-menu-row-link > .j-menu-badge {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+      margin-left: 0;
+    }
+    .j-menu-ia { font-size: 1rem; }
+    .j-menu-badge { padding: 0.16em 0.65em; font-size: 0.58rem; }
+    .j-menu-legal { margin-top: 1.25rem; }
   }
 
   /* --- chapter copy: stable at rests, released during major travel --- */
@@ -4526,6 +4639,24 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   opacity: calc(0.72 * var(--wrap-core-label-u, 0)) !important;
 }
 
+/* Touch has no temporary hover answer inside Purpose. Mobile taps navigate
+   directly; sticky synthetic :hover must not leave a top-row name above the
+   rail, and Manifesto keeps its resting name rather than flashing Soon. */
+@media (hover: none), (pointer: coarse) {
+  .j-rail.j-rail-purpose-labels-above .j-rail-list > .j-rail-slot
+    > .j-rail-item > :is(.j-rail-name, .j-rail-soon-note) {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+  .j-rail .j-rail-purpose-manifesto .j-rail-soon-note {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+  .j-rail .j-rail-purpose-manifesto .j-rail-name {
+    opacity: 1 !important;
+  }
+}
+
 /* (The underline/dot active marker is gone — owner's design review,
    2026-08-26: "No huge glow and no underline." The active statement is the
    glyph's own brightness, the fine halo, and the gathered light.) */
@@ -4646,14 +4777,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 body.j-rail-on .j-copy,
 body.j-rail-on .j-hotspots { opacity: 1; }
 
-/* Mobile final copy must stay above the centred navigator's broad legibility
-   scrim.  The rail's list is an isolated z-index-4 surface, so its soft bed
-   can otherwise darken the bottom of the Purpose copy even though the copy
-   itself is already visible.  Keep the copy above that bed while leaving the
-   menu/card overlays (z-index 6/7 and 5) in their existing tiers. */
-@media (max-width: 900px) {
-  .j-copy { z-index: 5; }
-}
+/* Final's rail scrim must sit behind the chapter copy at every viewport.
+   Keeping this stacking order consistent is harmless for the other chapters
+   and preserves menu/card overlays at their higher committed tiers. */
+.j-copy { z-index: 5; }
 
 @media (prefers-reduced-motion: reduce) {
   .j-rail,

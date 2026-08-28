@@ -789,11 +789,6 @@ export function createRail({ onNav } = {}) {
   manifestoItem.appendChild(manifestoMark);
   manifestoItem.appendChild(el('span', 'j-rail-name', 'Manifesto'));
   manifestoItem.appendChild(el('span', 'j-rail-soon-note', 'Soon'));
-  itemsOwner.listen(manifestoItem, 'pointerdown', (e) => {
-    if (e.pointerType !== 'touch') return;
-    manifestoSlot.classList.add('j-rail-note');
-    itemsOwner.timer(() => manifestoSlot.classList.remove('j-rail-note'), 1600);
-  });
   manifestoSlot.appendChild(manifestoItem);
   purposeChildren.appendChild(manifestoSlot);
   purposeTree.appendChild(purposeChildren);
@@ -941,11 +936,18 @@ export function createRail({ onNav } = {}) {
     },
     {
       id: 'equip', symbol: 'equip', number: 2, heading: 'By equipping:',
-      items: [{
-        id: 'equip-soon',
-        short: 'We’re creating a platform that help the community and agents accomplish together',
-        badge: 'Soon',
-      }],
+      items: [
+        {
+          id: 'equip-teaser-one', label: 'Quark',
+          short: 'Creative tools for everyone',
+          symbol: 'equip', badge: 'Soon', teaser: true,
+        },
+        {
+          id: 'equip-teaser-two', label: 'Brötchen',
+          short: 'Shared workflows for agents',
+          symbol: 'connect', badge: 'Soon', teaser: true,
+        },
+      ],
     },
     {
       id: 'connect', route: 'connect', symbol: 'connect', number: 3, heading: 'By connecting:',
@@ -1037,16 +1039,20 @@ export function createRail({ onNav } = {}) {
           row.appendChild(link);
         } else {
           const surface = el('span', 'j-menu-row-link');
+          if (it.teaser) {
+            surface.classList.add('j-menu-teaser');
+            surface.setAttribute('aria-label', 'Coming soon');
+          }
           if (label) surface.appendChild(label);
           const short = it.short ? el('span', 'j-menu-is', it.short) : null;
           if (short) surface.appendChild(short);
+          if (it.teaser) {
+            if (label) label.setAttribute('aria-hidden', 'true');
+            if (short) short.setAttribute('aria-hidden', 'true');
+          }
           if (it.badge) {
             const badge = el('span', 'j-menu-badge', it.badge);
-            /* Equipping has no leading item label, so a separate flex item
-               consumes the row's remaining width and strands Soon at the
-               panel edge. Keep that status in the sentence's inline flow. */
-            if (it.id === 'equip-soon' && short) short.appendChild(badge);
-            else surface.appendChild(badge);
+            surface.appendChild(badge);
           }
           row.appendChild(surface);
         }
