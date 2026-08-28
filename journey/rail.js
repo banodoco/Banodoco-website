@@ -1038,8 +1038,16 @@ export function createRail({ onNav } = {}) {
         } else {
           const surface = el('span', 'j-menu-row-link');
           if (label) surface.appendChild(label);
-          if (it.short) surface.appendChild(el('span', 'j-menu-is', it.short));
-          if (it.badge) surface.appendChild(el('span', 'j-menu-badge', it.badge));
+          const short = it.short ? el('span', 'j-menu-is', it.short) : null;
+          if (short) surface.appendChild(short);
+          if (it.badge) {
+            const badge = el('span', 'j-menu-badge', it.badge);
+            /* Equipping has no leading item label, so a separate flex item
+               consumes the row's remaining width and strands Soon at the
+               panel edge. Keep that status in the sentence's inline flow. */
+            if (it.id === 'equip-soon' && short) short.appendChild(badge);
+            else surface.appendChild(badge);
+          }
           row.appendChild(surface);
         }
         sub.appendChild(row);
