@@ -5,6 +5,7 @@
     "flags.js",
     "hero.css",
     "index.html",
+    "inspire-exits.js",
     "main.js",
     "robots.txt",
     "serve.py",
@@ -49,6 +50,7 @@
   ],
   "required": [
     "index.html",
+    "inspire-exits.js",
     "404.html",
     "main.js",
     "release-revision.txt",

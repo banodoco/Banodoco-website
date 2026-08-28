@@ -9,7 +9,7 @@
 // file merely wires its trigger events. Styles moved to hero.css +
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
-import { createScene } from './organism/organism.js?v=1785427900';
+import { createScene } from './organism/organism.js';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF } from './flags.js';
 // The journey's film grade, created at scene init rather than at journey boot
 // — see THE GRADE IS ON FROM THE FIRST FRAME below. Static import: the module
@@ -80,9 +80,8 @@ const entryQueue = createEntryQueue();
                document does, and is never taken back off. Legitimate. The
                property that matters is ONE INSTALL PER PAGE MODULE, which
                ESM's module cache delivers as long as no importer names a
-               module under a second specifier form — see the note on the
-               `?v=` import at the head of this file, and area D of the
-               suite, which is the row that would notice.
+               module under a second specifier form — area D of the suite is
+               the row that would notice.
      GATED     PAGE, but behind a QA flag, so an ordinary visitor installs
                nothing. `?introat` is the only one.
      BOUNDED   installed and later taken back off by the module that owns
