@@ -746,13 +746,13 @@ function pageSources() {
   };
   walk(join(REPO, 'journey'));
   walk(join(REPO, 'organism'));
-  for (const e of ['main.js', 'flags.js']) out.push(join(REPO, e));
+  for (const e of ['main.js', 'flags.js', 'inspire-exits.js']) out.push(join(REPO, e));
   return out.sort();
 }
 
 const SPECIFIER_RE = /(?:from|import)\s*\(?\s*'(\.[^']+)'/g;
 
-pin('D1', 'THE ANTECEDENT: no module in the shipped graph is named under two specifier forms, so ESM\'s per-specifier cache really does mean one evaluation per page — and the ONE cache-busted specifier that exists is named rather than counted',
+pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specifier form, so ESM\'s per-specifier cache really does mean one evaluation per page',
   (i) => {
     const groups = new Map();
     for (const [rel, src] of i.files) {
@@ -974,14 +974,17 @@ pin('D1', 'THE ANTECEDENT: no module in the shipped graph is named under two spe
        one distinct resolved target, so both cardinalities move together by
        exactly two.
 
-       THE INVARIANT HALVES ARE UNCHANGED: `multiForm` remains empty and
-       `cacheBusted` still names organism/organism.js alone. This is the narrow
-       disk-derived census update for those two named modules, not a relaxation
-       of either page-singleton check. */
+       The root-level Inspire exit contract adds one scanned file; its direct
+       imports replace the old chapter-local wrapper, so referenced stays 137
+       while scanned moves 135 -> 136.
+
+       THE INVARIANT HALVES ARE UNCHANGED: `multiForm` remains empty. The old
+       fixed query suffix on organism/organism.js is gone too, so `cacheBusted`
+       is now empty rather than preserving a permanently stale pseudo-version. */
     referenced: 137,
     multiForm: [],
-    cacheBusted: ['organism/organism.js :: query:v=1785427900'],
-    scanned: 135,
+    cacheBusted: [],
+    scanned: 136,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 
