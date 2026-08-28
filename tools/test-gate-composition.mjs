@@ -546,6 +546,9 @@ const NOT_IN_CHAIN = {
   'tools/test-c01-harness.mjs': 'a harness imported by other suites, not a standalone suite',
   'tools/test-portrait-harness.mjs': 'a harness imported by other suites, not a standalone suite',
   'tools/test-static-content.mjs': 'wired into the `test:static` script, which `check` also runs',
+  'tools/test-no-scroll-navigation.mjs': 'wired into the `test:unit` script, which `check` also runs',
+  'tools/test-rail-handoff.mjs': 'wired into the `test:unit` script, which `check` also runs',
+  'tools/test-director-resize.mjs': 'executed by `tools/test-transition.mjs` inside the contracts chain',
   /* epilogue-race, 2026-08-26: a LIVE-BROWSER gate (real wheel-driven wrap,
      headless Chrome + serve.py), so it runs where the other live-page gates
      run — `test:browser`, under `check:browser` — not in the Node-only

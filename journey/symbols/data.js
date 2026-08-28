@@ -102,17 +102,17 @@ const SYMBOL_DEFINITIONS = {
       // reads as a hill.
       { p: 'M3.6 16.4 Q11 1.8 18.4 16.4' },            // cap
       { p: 'M3.6 16.4 H18.4' },                        // gill rim
-      // The plume, thinning as it climbs off the left shoulder — placed just
+      // The plume, thinning as it climbs off the right shoulder — placed just
       // clear of the dome's own curve so the spores read as having LEFT the
       // cap rather than lying on it. Radii are floored near 0.6 for a reason:
       // the mark is DRAWN at 24px, so a unit here is about a pixel, and
       // anything under ~0.55 is a sub-pixel dot the rasteriser turns into a
       // smudge or into nothing. Five carrying dots beat eight that vanish.
-      { c: [6.6, 10.4, 0.95] },
-      { c: [4.8, 8.8, 0.82] },
-      { c: [6.6, 7.4, 0.68] },
-      { c: [4.0, 6.0, 0.7] },
-      { c: [5.8, 4.2, 0.58] },
+      { c: [15.4, 10.4, 0.95] },
+      { c: [17.2, 8.8, 0.82] },
+      { c: [15.4, 7.4, 0.68] },
+      { c: [18.0, 6.0, 0.7] },
+      { c: [16.2, 4.2, 0.58] },
     ],
   },
   connect: {

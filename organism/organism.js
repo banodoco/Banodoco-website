@@ -435,6 +435,11 @@ const pulseP = { value: new THREE.Vector3(2.6, 0.33, 1.4) };
 // exactly the same frame. Geometries outside the ground group have no
 // aGroundAdosW attribute, so WebGL's default attribute value leaves them put.
 const groundAdosDelta = { value: new THREE.Vector3() };
+// Final/Purpose can ask the hero's own floor strokes for the same soft
+// screen-space absence as its chapter bed. Only ground line/ribbon carriers
+// opt in below; points and body geometry never see these uniforms.
+const groundNavPocketPx = { value: new THREE.Vector4(0, 0, 1, 1) };
+const groundNavPocketAmount = { value: 0 };
 // Handle for setting an object's draw window whether its material is a
 // ShaderMaterial (uniforms live on the material) or a built-in one (uniforms
 // are grafted at compile time, so the shared object lives in userData).
@@ -445,7 +450,7 @@ function drawWin(obj) {
 
 // Built-in materials (the plain-line webs, the glowing root ribbons) get the
 // same stroke-in fade injected into their stock shaders.
-function injectDraw(mat) {
+function injectDraw(mat, navPocket = false) {
   const uWin = { value: new THREE.Vector2(-2, -1) };
   mat.userData.uWin = uWin;
   mat.onBeforeCompile = (sh) => {
@@ -455,6 +460,10 @@ function injectDraw(mat) {
     sh.uniforms.uPulseT = pulseT;
     sh.uniforms.uPulseP = pulseP;
     sh.uniforms.uGroundAdosDelta = groundAdosDelta;
+    if (navPocket) {
+      sh.uniforms.uGroundNavPocketPx = groundNavPocketPx;
+      sh.uniforms.uGroundNavPocketAmount = groundNavPocketAmount;
+    }
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>',
         '#include <common>\n' +
@@ -470,12 +479,22 @@ function injectDraw(mat) {
         '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
         '  vDraw = head + tip * 1.7;\n' +
         '  vPulse = pulseAt((modelMatrix * vec4(transformed, 1.0)).xyz); }');
+    const pocketDecl = navPocket
+      ? '\nuniform vec4 uGroundNavPocketPx;\nuniform float uGroundNavPocketAmount;'
+      : '';
+    const pocketPaint = navPocket
+      ? '\nvec2 navD = (gl_FragCoord.xy - uGroundNavPocketPx.xy) / max(uGroundNavPocketPx.zw, vec2(1.0));\n' +
+        'float navPocket = mix(1.0, smoothstep(0.68, 1.08, length(navD)), uGroundNavPocketAmount);\n' +
+        'diffuseColor.rgb *= navPocket;'
+      : '';
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vDraw;\nvarying float vPulse;')
+      .replace('#include <common>', '#include <common>\nvarying float vDraw;\nvarying float vPulse;' + pocketDecl)
       .replace('#include <color_fragment>',
-        '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;');
+        '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;' + pocketPaint);
   };
-  mat.customProgramCacheKey = () => 'draw-injected-ground-ados';
+  mat.customProgramCacheKey = () => navPocket
+    ? 'draw-injected-ground-ados-nav-pocket'
+    : 'draw-injected-ground-ados';
 }
 
 // ---------- point cloud builder (per-point size + color, additive) ----------
@@ -573,7 +592,7 @@ function makePoints(positions, colors, sizes, opacity = 1.0, dists = null) {
 }
 
 // ---------- line builder ----------
-function makeLines(positions, colors, opacity = 1.0) {
+function makeLines(positions, colors, opacity = 1.0, navPocket = false) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -585,7 +604,7 @@ function makeLines(positions, colors, opacity = 1.0) {
     opacity,
     depthWrite: false,
   });
-  injectDraw(mat);
+  injectDraw(mat, navPocket);
   return new THREE.LineSegments(geo, mat);
 }
 
@@ -1420,7 +1439,7 @@ ctx.groundGroup = groundGroup;
       p = q; h *= 0.82;
     }
   }
-  groundGroup.add(makeLines(lp, lc, 0.36));
+  groundGroup.add(makeLines(lp, lc, 0.36, true));
 
   // "moss": very short fine segments carpeting the dense patches
   const mlp = [], mlc = [];
@@ -1438,7 +1457,7 @@ ctx.groundGroup = groundGroup;
       pushC(mlc, b); pushC(mlc, b * 0.7);
     }
   }
-  groundGroup.add(makeLines(mlp, mlc, 0.35));
+  groundGroup.add(makeLines(mlp, mlc, 0.35, true));
 
   // hub node points
   const pp = [], pc = [], ps = [];
@@ -1513,7 +1532,7 @@ ctx.groundGroup = groundGroup;
       }
     }
   }
-  groundGroup.add(makeLines(rlp, rlc, 0.42));
+  groundGroup.add(makeLines(rlp, rlc, 0.42, true));
 
   // ---- thick tapered strands: WebGL lines can't vary width, so weight
   // comes from real geometry — flat ribbons on the ground that taper from
@@ -1601,7 +1620,7 @@ ctx.groundGroup = groundGroup;
       side: THREE.DoubleSide,
     });
     drawAttr(geo, rpos.length / 3); // ribbons stroke in along their length too
-    injectDraw(mat);
+    injectDraw(mat, true);
     groundGroup.add(new THREE.Mesh(geo, mat));
   }
 
@@ -2019,6 +2038,15 @@ function setInputPolicy(mode) {
 // ---- easing used by the view tween below ----
 function _cubicInOut(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
 
+/** Stop the responsive camera ease without changing the camera's current
+ *  pose. The journey uses this when a navigation flight takes ownership in
+ *  the middle of a resize: the flight has already banked the visible pose as
+ *  its origin, so snapping the resize to either endpoint here would create a
+ *  discontinuity. Returns whether there was an ease to stop. */
+function cancelViewTransition() {
+  return animators.delete('view-tween');
+}
+
 /** Recompose the camera for a different viewport regime (responsive
  *  breakpoints), or as the starting point for any future scripted camera
  *  move. `seconds = 0` (default) snaps immediately, exactly as before.
@@ -2028,7 +2056,7 @@ function _cubicInOut(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x +
  *  Calling setView again — snap or tween — always cancels a tween already
  *  in flight, so the last call wins. */
 function setView({ panX: p = 0, camY: cy = 2.05, camZ: cz = 8.8, targetY: ty = 2.5, fov: f = 38 } = {}, seconds = 0) {
-  animators.delete('view-tween'); // a fresh call always supersedes an in-flight tween
+  cancelViewTransition(); // a fresh call always supersedes an in-flight tween
 
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -2104,6 +2132,12 @@ return {
       world.z - ctx.groundAdosNexus.z,
     );
   },
+  /** Quiet only the hero floor's line/ribbon carriers behind Purpose chrome.
+   * Coordinates use drawing-buffer pixels, matching gl_FragCoord. */
+  setGroundNavPocket({ x = 0, y = 0, halfWidth = 1, halfHeight = 1, amount = 0 } = {}) {
+    groundNavPocketPx.value.set(x, y, halfWidth, halfHeight);
+    groundNavPocketAmount.value = Math.max(0, Math.min(1, Number(amount) || 0));
+  },
   /** Read-only copy used by visual regression probes. */
   groundAdosPlacement() {
     const source = ctx.groundAdosNexus;
@@ -2117,6 +2151,9 @@ return {
   /** Recompose the camera (panX/camY/camZ/targetY/fov). seconds=0 snaps; seconds>0 eases via a
    *  cancellable 'view-tween' animator — see the setView JSDoc above for full behavior. */
   setView,
+  /** Cancel a live responsive camera ease at its currently presented pose.
+   *  Kept separate from setView(), whose zero-duration form snaps to a target. */
+  cancelViewTransition,
   /** Register a per-frame callback `fn(t, dt)` run every frame before the composer renders;
    *  returns an unregister function. This is the hook a scroll-driven camera dive should use. */
   addAnimator,

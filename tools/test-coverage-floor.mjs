@@ -744,6 +744,7 @@ try {
       'tools/test-input-claim.mjs',
       'tools/test-instrument-layer.mjs',
       'tools/test-intro-lifecycle.mjs',
+      'tools/test-no-scroll-navigation.mjs',
       /* `tools/test-journey-lifecycle.mjs` stood here and was removed by the
          DISPOSAL REMOVAL, 2026-08-25, with five others below. PC-3f is
          name-keyed exactly so a RETIREMENT is a visible row deletion rather
@@ -761,6 +762,7 @@ try {
       'tools/test-portrait-perturbation.mjs',
       'tools/test-portrait-textures.mjs',
       'tools/test-pose-oracle.mjs',
+      'tools/test-rail-handoff.mjs',
       /* Five more retirements by the DISPOSAL REMOVAL, 2026-08-25, in this
          position: test-preparation-lifecycle, test-r05-chapter-disposal,
          test-r06-owned-disposal, test-r07-final-disposal and

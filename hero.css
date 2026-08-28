@@ -1117,25 +1117,3 @@ body.intro-fast .co { animation-duration: 0.16s !important; }
 body.intro-fast #co-inspire { --d: 0.30s; }
 body.intro-fast #co-equip   { --d: 0.44s; }
 body.intro-fast #co-connect { --d: 0.58s; }
-
-/* A direct CTA/callout entry can arrive while journey.js is still being
-   prepared. This short-lived class acknowledges that navigation immediately;
-   early wheel/touch/key gestures deliberately do NOT receive it, because the
-   journey's p-driven Mission envelope must fade those with actual travel. */
-body.intro-depart .ui .hero,
-body.intro-depart .callouts {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.18s ease-out;
-}
-body.intro-depart .ui .hero {
-  transform: translateY(-0.3rem);
-  transition: opacity 0.18s ease-out, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-}
-body.intro-depart.intro-restore .ui .hero,
-body.intro-depart.intro-restore .callouts {
-  opacity: 1 !important;
-}
-body.intro-depart.intro-restore .ui .hero {
-  transform: translateY(0);
-}

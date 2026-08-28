@@ -94,6 +94,11 @@
     -webkit-font-smoothing: antialiased;
     line-height: 1.6;
   }
+  /* With scripting available the static tier is a button-switched journey,
+     not a tall document. The active chapter owns any overflow needed for its
+     long-form content; changing chapters never moves the page itself. */
+  html.static-js,
+  html.static-js body { height: 100%; overflow: hidden; }
 
   /* ---------- skip link ---------- */
   .skip {
@@ -468,6 +473,16 @@
     transition: color 0.3s;
   }
   a.rail-item, .rail-menu { pointer-events: auto; }
+
+  @keyframes static-rail-navigation-wave {
+    0%, 100% { transform: translateY(0) scale(1); }
+    38% { transform: translateY(-7px) scale(1.035); }
+    68% { transform: translateY(1px) scale(1); }
+  }
+  .rail.rail-wave .rail-slot .rail-mark {
+    animation: static-rail-navigation-wave 0.68s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i) * 65ms);
+  }
   /* At rest only the CURRENT tile is live in the stack — the collapse rules
      are body:not(.no-js)-guarded so a scripting-disabled visitor can click
      everything the always-expanded rail shows. */
@@ -922,6 +937,15 @@
     border: 1px solid var(--panel-edge);
     border-radius: 3px;
   }
+  html.static-js main { height: 100%; }
+  html.static-js .chapter {
+    display: none;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  html.static-js .chapter.is-current { display: flex; }
   #ch-owned > .inner, #ch-final > .inner { width: min(58rem, 100%); }
   .eyebrow {
     margin: 0 0 0.9rem;
@@ -1098,6 +1122,8 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .still { transition: none; }
+    .rail.rail-wave .rail-slot .rail-mark { animation: none; }
+    .rail.rail-wave .rail-slot .rail-ret { opacity: 1; }
     /* The side navigator: every rule in it is a transition ENDING at the
        element's expanded resting style, so switching them all off leaves the
        three states intact and instant — one symbol at rest, all of them under
@@ -1187,6 +1213,7 @@
      you are in the epilogue, matching the live journey.
      ============================================================== -->
 <nav class="rail" aria-label="Journey sections">
+  <p class="menu-vh" id="static-nav-cue" aria-live="polite" aria-atomic="true"></p>
   <div class="rail-inner">
     <ul class="rail-list">
       <!-- Intro is authored as `now` so the resting symbol is correct on the
@@ -1204,7 +1231,7 @@
       <li class="rail-slot" data-chapter="inspire" style="--i:1">
         <a class="rail-item" href="#/inspire" data-nav="inspire">
           <span class="rail-mark">
-            <svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg>
+            <svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="15.4" cy="10.4" r="0.95"/><circle cx="17.2" cy="8.8" r="0.82"/><circle cx="15.4" cy="7.4" r="0.68"/><circle cx="18" cy="6" r="0.7"/><circle cx="16.2" cy="4.2" r="0.58"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
           <span class="rail-name" data-src="chapters.inspire.nav">Inspire</span>
@@ -1234,7 +1261,7 @@
             <svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
-          <span class="rail-name" data-src="chapters.final.nav">Epilogue</span>
+          <span class="rail-name" data-src="chapters.final.nav">Purpose</span>
         </a>
       </li>
     </ul>
@@ -1265,7 +1292,7 @@
             <span class="menu-txt"><span class="menu-no">01</span><span class="menu-name" data-src="chapters.mission.nav">Intro</span><span class="menu-line" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</span></span>
           </a></li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire">
-            <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg></span>
+            <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="15.4" cy="10.4" r="0.95"/><circle cx="17.2" cy="8.8" r="0.82"/><circle cx="15.4" cy="7.4" r="0.68"/><circle cx="18" cy="6" r="0.7"/><circle cx="16.2" cy="4.2" r="0.58"/></svg></span>
             <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span></span>
           </a>
           <!-- The section's contents: item — one sentence → primary link.
@@ -1296,7 +1323,7 @@
                its nav field null), while CONTENT supplies its visible name. -->
           <li><a class="menu-item" href="#/final" data-menu="final">
             <span class="menu-mark"><svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">05</span><span class="menu-name" data-src="chapters.final.nav">Epilogue</span><span class="menu-line" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</span></span>
+            <span class="menu-txt"><span class="menu-no">05</span><span class="menu-name" data-src="chapters.final.nav">Purpose</span><span class="menu-line" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</span></span>
           </a></li>
         </ol>
       </nav>
@@ -1529,7 +1556,7 @@
        no detail states. Owned stays the current nav entry here. -->
   <section class="chapter" id="ch-final" data-chapter="final" aria-labelledby="h-final" tabindex="-1">
     <div class="inner">
-      <p class="eyebrow">Epilogue</p>
+      <p class="eyebrow">Purpose</p>
       <h2 id="h-final" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</h2>
       <p class="sub" data-src="chapters.final.sub">In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.</p>
     </div>
@@ -1553,6 +1580,8 @@
 (function () {
   'use strict';
   document.body.classList.remove('no-js');
+  document.documentElement.classList.add('static-js');
+  document.body.classList.add('static-js');
 
   var CHAPTERS = ['mission', 'inspire', 'connect', 'owned', 'final'];
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1582,6 +1611,11 @@
     CHAPTERS.forEach(function (c, i) {
       if (railSlots[c]) railSlots[c].style.setProperty('--d', String(Math.abs(i - cur)));
       if (stills[c]) stills[c].classList.toggle('on', c === id);
+      if (sections[c]) {
+        sections[c].classList.toggle('is-current', c === id);
+        sections[c].setAttribute('aria-hidden', c === id ? 'false' : 'true');
+        if (c === id) sections[c].scrollTop = 0;
+      }
       // The rail's RESTING symbol is the section on screen — including the
       // epilogue, which has no nav entry but does have a scene. Same split the
       // live rail makes (journey/rail.js: `now` vs `active`).
@@ -1629,7 +1663,6 @@
     if (!panelFor(nodeId)) {
       if (row) {
         openNode = null;
-        row.scrollIntoView({ block: 'center' });
         row.focus();
         return true;
       }
@@ -1716,26 +1749,14 @@
     applyingRoute = true;
     var sec = sections[r.chapter];
     if (sec) {
-      // initial load: jump. Later navigations honour the CSS scroll-behavior,
-      // which reduced-motion has already switched to `auto`.
-      if (initial) {
-        var prev = document.documentElement.style.scrollBehavior;
-        document.documentElement.style.scrollBehavior = 'auto';
-        sec.scrollIntoView();
-        document.documentElement.style.scrollBehavior = prev;
-      } else {
-        sec.scrollIntoView();
-      }
       setChapter(r.chapter, false);
     }
     if (r.node) {
       openDetail(r.node, { replace: true, focus: true });
     } else {
       if (openNode) { var o = openNode; openNode = null; setPanel(o, false, false); }
-      // A chapter route is a destination too: move focus to the section so a
-      // keyboard or screen-reader visitor arrives WHERE the page scrolled,
-      // instead of continuing to tab from wherever focus happened to be
-      // (PL-2.2 — keyboard order follows the narrative).
+      // A chapter route is a destination too: move focus to the newly shown
+      // section so keyboard and screen-reader order follows the narrative.
       if (sec && !initial) sec.focus({ preventScroll: true });
     }
     setTimeout(function () { applyingRoute = false; }, 400);
@@ -1743,49 +1764,104 @@
 
   window.addEventListener('hashchange', function () { applyRoute(false); });
 
-  // Nav clicks: let the hash change, then applyRoute handles scroll + state.
+  // Nav clicks: let the hash change, then applyRoute switches chapter state.
   // Every chapter link on the page — the rail's four, the menu's five
   // (including the epilogue) and the logo mark.
+  function activateChapterLink(a) {
+    var id = (a.getAttribute('href') || '').replace('#/', '');
+    if (CHAPTERS.indexOf(id) < 0) return false;
+    if (openNode) { var o = openNode; openNode = null; setPanel(o, false, false); }
+    if (location.hash === '#/' + id) applyRoute(false);
+    else location.hash = '#/' + id;
+    return true;
+  }
+
+  var pressedNav = null;
+  var pressedNavAt = 0;
   Array.prototype.forEach.call(document.querySelectorAll('.rail-item[href], .menu-item, .logo'), function (a) {
+    // The compact rail fans out on focus/hover. Resolve a primary pointer
+    // press against the icon that was actually pressed, before that fan can
+    // move another link under the release point.
+    if (a.classList.contains('rail-item')) {
+      a.addEventListener('pointerdown', function (e) {
+        if (e.isPrimary === false || e.button !== 0) return;
+        if (!activateChapterLink(a)) return;
+        e.preventDefault();
+        pressedNav = a;
+        pressedNavAt = Date.now();
+      });
+    }
     a.addEventListener('click', function (e) {
-      var id = (a.getAttribute('href') || '').replace('#/', '');
-      if (CHAPTERS.indexOf(id) < 0) return;
-      e.preventDefault();
-      if (openNode) { var o = openNode; openNode = null; setPanel(o, false, false); }
-      if (location.hash === '#/' + id) applyRoute(false);
-      else location.hash = '#/' + id;
+      if (pressedNav === a && Date.now() - pressedNavAt < 600) {
+        e.preventDefault();
+        pressedNav = null;
+        pressedNavAt = 0;
+        return;
+      }
+      if (activateChapterLink(a)) e.preventDefault();
     });
   });
 
-  /* ---------------- scroll -> chapter (crossfade) ---------------- */
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (entries) {
-      if (applyingRoute) {
-        // still track the still/nav, just do not fight the route for the hash
-        entries.forEach(function (en) {
-          if (en.isIntersecting) setChapter(en.target.dataset.chapter, false);
-        });
-        return;
-      }
-      entries.forEach(function (en) {
-        if (en.isIntersecting) setChapter(en.target.dataset.chapter, true);
-      });
-    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
-    CHAPTERS.forEach(function (id) { if (sections[id]) io.observe(sections[id]); });
-  } else {
-    // no IntersectionObserver: fall back to a cheap scroll probe
-    var onScroll = function () {
-      var mid = window.innerHeight / 2, best = null;
-      CHAPTERS.forEach(function (id) {
-        var s = sections[id]; if (!s) return;
-        var r = s.getBoundingClientRect();
-        if (r.top <= mid && r.bottom >= mid) best = id;
-      });
-      if (best) setChapter(best, !applyingRoute);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+  /* ---------------- scroll attempts -> navigation cue ---------------- */
+  var cueTimer = 0;
+  var cueLast = 0;
+  var cueStatus = document.getElementById('static-nav-cue');
+  function cueNavigation() {
+    var now = Date.now();
+    if (now - cueLast < 1000) return false;
+    cueLast = now;
+    if (railEl) {
+      railEl.classList.remove('rail-wave');
+      void railEl.offsetWidth;
+      railEl.classList.add('rail-wave');
+      clearTimeout(cueTimer);
+      cueTimer = setTimeout(function () { railEl.classList.remove('rail-wave'); }, 980);
+    }
+    if (cueStatus) cueStatus.textContent = 'Use the navigation buttons to move between sections.';
+    return true;
   }
+
+  function scrollOwner(target, delta) {
+    var el = target && target.nodeType === 1 ? target : target && target.parentElement;
+    var owner = el && el.closest('.rail-menu-wrap[open], .chapter.is-current');
+    if (!owner || owner.scrollHeight <= owner.clientHeight + 1) return null;
+    if (delta > 0 && owner.scrollTop >= owner.scrollHeight - owner.clientHeight - 1) return null;
+    if (delta < 0 && owner.scrollTop <= 1) return null;
+    return owner;
+  }
+
+  window.addEventListener('wheel', function (e) {
+    if (scrollOwner(e.target, e.deltaY)) return;
+    if (e.cancelable) e.preventDefault();
+    cueNavigation();
+  }, { passive: false, capture: true });
+
+  var touchY = null;
+  window.addEventListener('touchstart', function (e) {
+    touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+  }, { passive: true, capture: true });
+  window.addEventListener('touchmove', function (e) {
+    if (touchY == null || e.touches.length !== 1) return;
+    var nextY = e.touches[0].clientY;
+    var delta = touchY - nextY;
+    touchY = nextY;
+    if (Math.abs(delta) < 8 || scrollOwner(e.target, delta)) return;
+    if (e.cancelable) e.preventDefault();
+    cueNavigation();
+  }, { passive: false, capture: true });
+  window.addEventListener('touchend', function () { touchY = null; }, { passive: true, capture: true });
+  window.addEventListener('touchcancel', function () { touchY = null; }, { passive: true, capture: true });
+
+  var SCROLL_KEYS = { ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1, ' ': 1, Spacebar: 1, Home: -1, End: 1 };
+  window.addEventListener('keydown', function (e) {
+    var dir = SCROLL_KEYS[e.key];
+    if (!dir || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    var tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target && e.target.isContentEditable) return;
+    if (scrollOwner(e.target, dir)) return;
+    e.preventDefault();
+    cueNavigation();
+  }, true);
 
   /* ---------------- the side menu: progressive enhancement ----------------
      The <details>/<summary> above is already a complete, keyboard-operable

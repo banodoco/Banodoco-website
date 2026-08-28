@@ -259,12 +259,20 @@ export const SCENARIOS = [
     run: async browser => {
       const page = await browser.newPage();
       await page.goto(`${base}/static/`, { waitUntil: 'domcontentloaded' });
+      await page.mouse.wheel(0, 420);
+      await page.waitForTimeout(80);
+      assert.equal(await page.evaluate(() => window.scrollY), 0);
+      assert.equal(await page.evaluate(() => window.staticJourney?.chapter), 'mission');
+      assert.equal(await page.locator('.rail').evaluate(el => el.classList.contains('rail-wave')), true);
+      await page.keyboard.press('PageDown');
+      assert.equal(await page.evaluate(() => window.staticJourney?.chapter), 'mission');
       const nav = page.locator('.rail-item[data-nav="connect"]');
       await nav.focus();
       await page.keyboard.press('Enter');
       await page.waitForFunction(() => window.staticJourney?.chapter === 'connect');
       assert.equal(await page.locator('.rail-item[data-nav="connect"]').getAttribute('aria-current'), 'true');
       assert.equal(await page.locator('.still[data-chapter="connect"]').evaluate(el => el.classList.contains('on')), true);
+      assert.equal(await page.evaluate(() => window.scrollY), 0);
       await page.close();
     },
   },
@@ -358,6 +366,19 @@ export const SCENARIOS = [
         assert.equal(await page.locator('.static-door').isVisible(), true);
         assert.equal(new URL(page.url()).hash, '');
 
+        const chapterBeforeScrollAttempts = await page.evaluate(() => window.journey?.chapter);
+        await page.mouse.wheel(0, 520);
+        await page.waitForTimeout(80);
+        assert.equal(await page.evaluate(() => window.journey?.chapter), chapterBeforeScrollAttempts,
+          'wheel changed the live journey chapter');
+        assert.equal(await page.evaluate(() => window.scrollY), 0,
+          'wheel moved the live document');
+        assert.equal(await page.locator('.j-rail').evaluate(el => el.classList.contains('j-rail-wave')), true,
+          'wheel did not cue the live journey rail');
+        await page.keyboard.press('PageDown');
+        assert.equal(await page.evaluate(() => window.journey?.chapter), chapterBeforeScrollAttempts,
+          'PageDown changed the live journey chapter');
+
         // Owned's authored button is a zero-box wrapper around its face-sized
         // hit disc, so Playwright's `:visible` heuristic cannot target the
         // semantic control itself. Exercise its native keyboard activation;
@@ -369,6 +390,19 @@ export const SCENARIOS = [
         assert.equal(await page.locator('.j-card.open.sheet').isVisible(), true);
         await page.locator('.j-card-x').tap();
         await awaitInteraction(() => page.waitForFunction(() => window.journey?.detail === null, null, { timeout: LIVE_INTERACTION_TIMEOUT_MS }));
+
+        // Settled Ownership intentionally hides/inerts the five-item row.
+        // Return through the centred Purpose parent before exercising another
+        // top-level destination; this also proves the subtree can jump back
+        // out without reaching through its hidden sibling surface.
+        const purposeParent = page.locator('.j-rail-purpose-parent');
+        await purposeParent.evaluate(el => el.focus());
+        await page.keyboard.press('Enter');
+        await awaitInteraction(() => page.waitForFunction(
+          () => window.journey?.chapter === 'final',
+          null,
+          { timeout: LIVE_INTERACTION_TIMEOUT_MS },
+        ));
 
         const nav = page.locator('.j-rail-item[data-chapter="connect"]');
         await nav.evaluate(el => el.focus());

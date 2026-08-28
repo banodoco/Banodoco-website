@@ -617,8 +617,12 @@ pin('UIL-T1', 'the UI surface: zero raw addEventListener sites, 30 owner.listen;
    (2026-08-26). The added pair is the Equip placeholder's touch answer: a
    `pointerdown` listener on the one non-navigating row item and the timed
    removal of its "Coming soon" flash. Both funnelled; both zeros hold. */
-pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 21 owner.listen; zero raw setTimeout, 7 owner.timer',
-  readSiteCensus, { src: SRC.rail }, [0, 21, 0, 7]);
+/* 22 -> 24 owner.listen and 8 -> 9 owner.timer, Purpose subtree
+   (2026-08-27). The single Return control became Purpose + Ownership links
+   and Manifesto's Equip-matched touch answer: net two listeners and one timed
+   note removal, all still funnelled through the rail owner. */
+pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 24 owner.listen; zero raw setTimeout, 9 owner.timer (including both Purpose subtree routes and Manifesto touch Soon)',
+  readSiteCensus, { src: SRC.rail }, [0, 24, 0, 9]);
 
 pin('UIL-T3', 'journey/rail.js: both requestAnimationFrame sites went through owner.raf',
   readRailRaf, { src: SRC.rail }, [0, 2]);

@@ -96,7 +96,7 @@ export function createTransitionController({
   // A wrap parks p at its destination before the four-second lap begins, so
   // p cannot tell the rail where that visible move is. This small ticket is
   // created before placeAt's synchronous frames and follows the camera clock.
-  let railWrap = null;          // { dir, homeP, phase } while a wrap is flying
+  let railWrap = null;          // { dir, homeP, targetP, phase } while a wrap flies
   // Ordinary clicks have the same destination-progress disagreement. Carry
   // their visible origin and destination separately so the horizontal rail
   // can scrub between them on the camera blend's exact eased phase.
@@ -197,6 +197,25 @@ export function createTransitionController({
       Math.max(0.05, play > 0 ? camBlend.dur - camBlend.t : camBlend.t));
   }
 
+  /** Route a bookend control through the wrap ticket that is already visible.
+   * The controller owns both endpoints and the playback direction, so this is
+   * the only layer that can answer atomically: true means the click changed
+   * (or confirmed) this exact lap; false means it names some other chapter
+   * and the caller may begin a replacement flight. Keeping the decision here
+   * prevents a control reversal from dropping through to directJumpTo() and
+   * replacing a non-zero rail phase with a new opposite ticket at phase 0. */
+  function steerWrapTo(targetP) {
+    if (!camBlend || !railWrap || !camBlend.wrapDir || !Number.isFinite(targetP))
+      return false;
+    const at = (a, b) => Number.isFinite(a) && Math.abs(a - b) < 1e-4;
+    let dir = 0;
+    if (at(targetP, railWrap.homeP)) dir = -camBlend.wrapDir;
+    else if (at(targetP, railWrap.targetP)) dir = camBlend.wrapDir;
+    else return false;
+    steerWrapBlend(dir);
+    return true;
+  }
+
   /** A rewound lap has reached its own first frame: the camera stands where
    *  the wrap departed, so place the journey back on that rest and the two
    *  agree again — the same contract endCamBlend keeps for a landing, at the
@@ -212,6 +231,7 @@ export function createTransitionController({
     railFlight = null;
     chapterEntry = null;
     cameraStateDisagree = false;
+    director.setTransitioning(false);
     guarded('lens', () => lens.setLookOverride(null));
     setBlending(false);
     /* Capture hygiene, same invariant restoreHero() guards for endCamBlend:
@@ -244,6 +264,7 @@ export function createTransitionController({
     railFlight = null;
     if (!keepEntry) chapterEntry = null;
     cameraStateDisagree = false;
+    director.setTransitioning(false);
     /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
        "halfway through the loop I stop the scroll, the hero mushroom can end
        up displaced... and it stays permanently stuck").
@@ -448,6 +469,11 @@ export function createTransitionController({
    *  dt = 0 passes: they must see the beginning of the entry, not one
    *  transient fully-arrived drive(p) state. */
   function beginFlight({ railWrap: wrapTicket, railFlight: flightTicket, chapterEntry: entry }) {
+    // Destination state is placed synchronously below, so a flight into
+    // Mission makes director.owned false before the camera has arrived. The
+    // flight is still the camera authority: bracket it explicitly so a resize
+    // cannot install the hero's later-running view tween over the compositor.
+    director.setTransitioning(true);
     cameraStateDisagree = true;
     railWrap = wrapTicket;
     railFlight = flightTicket;
@@ -504,6 +530,7 @@ export function createTransitionController({
     blendCancelled,
     dropCamBlend,
     steerWrapBlend,
+    steerWrapTo,
     landWrapHome,
     endCamBlend,
     setBlending,

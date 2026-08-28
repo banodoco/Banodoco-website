@@ -198,8 +198,8 @@ export function railGateLiterals(src) {
   if (typeof src !== 'string') fault('railGateLiterals needs journey/rail.js source text');
   const follow = /followReadyAt\s*=\s*reduceMotion\.matches\s*\?\s*Date\.now\(\)\s*:\s*Date\.now\(\)\s*\+\s*(\d+)\s*;/.exec(src);
   if (!follow) fault('journey/rail.js: the followReadyAt deadline could not be read');
-  const turnAt = src.indexOf("root.classList.add('j-rail-turn');");
-  if (turnAt === -1) fault("journey/rail.js: the j-rail-turn anchor is absent");
+  const turnAt = src.indexOf('clearTimeout(turnTimer);');
+  if (turnAt === -1) fault('journey/rail.js: the turnTimer anchor is absent');
   const turn = /\}\s*,\s*(\d+)\s*\)\s*;/.exec(src.slice(turnAt, turnAt + 900));
   if (!turn) fault('journey/rail.js: the j-rail-turn timer duration could not be read');
   return { followReadyMs: Number(follow[1]), turnTimerMs: Number(turn[1]) };

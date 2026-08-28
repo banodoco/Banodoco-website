@@ -201,19 +201,28 @@ export function createDirector(sceneApi, { steady = false } = {}) {
 
   // The hero's own responsive setView() would fight the director on a
   // breakpoint change (its 'view-tween' animator is registered AFTER ours and
-  // would win for 0.6s). Once the journey owns the camera we hold that call
-  // and replay it when the camera is handed back at p = 0.
+  // would win for 0.6s). Once the journey owns the camera — including the
+  // interval in which a flight owns it but destination state is already p=0 —
+  // we hold that call and replay it when the camera is handed back.
   let owned = false;
+  let transitioning = false;
+  let preserveDepartureHero = false;
   const rawSetView = sceneApi.setView;
   let pendingView = null;
   sceneApi.setView = (v, secs) => {
-    if (owned) {
+    if (owned || transitioning) {
       // A deferred view kept the stale aspect: the skipped rawSetView is what
       // refreshed it (camera.aspect = innerWidth/innerHeight). Replay exactly that.
       camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
       pendingView = v; captureHero(v); return;
     }
+    // While the hero is live, remember the responsive TARGET as well as
+    // running its visual ease. If navigation begins during those 0.6 seconds,
+    // the live camera is only an intermediate sample and must not become the
+    // permanent p=0 boundary condition.
+    pendingView = secs > 0 ? v : null;
+    captureHero(v);
     return rawSetView(v, secs);
   };
 
@@ -374,9 +383,49 @@ export function createDirector(sceneApi, { steady = false } = {}) {
    *  longer at. */
   function restoreHero() {
     // Hand back exactly what the hero had: no tween, no re-frame, no drift.
-    if (pendingView) { rawSetView(pendingView, 0); pendingView = null; }
+    if (pendingView) {
+      const view = pendingView;
+      pendingView = null;
+      captureHero(view);
+      rawSetView(view, 0);
+    }
     else applyHeroPose();
     if (scene.fog) { scene.fog.near = baseFogNear; scene.fog.far = baseFogFar; }
+  }
+
+  /** A camera flight owns the composition even when its destination state is
+   *  already Mission and `owned` is false. Bracketing that interval prevents
+   *  a debounced resize from installing the hero's later-running view tween
+   *  on top of the flight.
+   *
+   *  The opposite race starts at Mission: resize is already easing when a
+   *  flight begins. directJumpTo has banked the visible camera before this
+   *  call, so stop the ease at that exact pose and use it for the outbound
+   *  first leg. The final responsive target remains pending and is committed
+   *  when the flight settles, making the later return land on the resized
+   *  composition rather than this mid-ease sample. */
+  function setTransitioning(on) {
+    on = !!on;
+    if (on === transitioning) return;
+    transitioning = on;
+    if (on && !owned && pendingView) {
+      const interrupted = !!(sceneApi.cancelViewTransition
+        && sceneApi.cancelViewTransition());
+      if (interrupted) {
+        captureHero(null);
+        preserveDepartureHero = true;
+      } else {
+        // The ease already finished. Trust the live pose so ?free=1 orbiting
+        // after a resize remains an authored departure, not a discarded one.
+        pendingView = null;
+        captureHero(null);
+      }
+    } else if (!on) {
+      preserveDepartureHero = false;
+      // Away from Mission this changes only the saved boundary condition;
+      // the director's current chapter pose remains the sole camera writer.
+      if (owned && pendingView) captureHero(pendingView);
+    }
   }
 
   function setOwned(on) {
@@ -394,7 +443,14 @@ export function createDirector(sceneApi, { steady = false } = {}) {
        endCamBlend. The cure is upstream — nothing may leave the camera off
        the hero pose while un-owned — which is what restoreHero() exists to
        guarantee. */
-    if (on) captureHero(pendingView);          // freeze the composition we start from
+    if (on) {
+      // A resize tween interrupted by this same flight already captured its
+      // visible intermediate pose in setTransitioning(true). Keep that origin
+      // for continuity; every other ownership handoff still trusts the live
+      // hero (or the deferred responsive target) exactly as before.
+      if (!preserveDepartureHero) captureHero(pendingView);
+      preserveDepartureHero = false;
+    }
     owned = on;
     controls.enabled = !on;
     if (!on) restoreHero();
@@ -403,8 +459,9 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   captureHero(null);
 
   return {
-    apply, setOwned, applyHeroPose, restoreHero,
+    apply, setOwned, setTransitioning, applyHeroPose, restoreHero,
     get owned() { return owned; },
+    get transitioning() { return transitioning; },
     get heroPose() { return hero; },
   };
 }

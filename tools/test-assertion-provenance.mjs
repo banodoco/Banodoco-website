@@ -350,6 +350,17 @@ const RECEIVERS = {
     check: CHECK4, wave: CHECK4, waveManifest: CHECK4, manifestFloor: CHECK4, ceiling: CHECK4,
   },
   'tools/test-static-content.mjs': { 'assert.equal': A2, 'assert.deepEqual': A2 },
+  'tools/test-no-scroll-navigation.mjs': { 'assert.equal': A2, 'assert.deepEqual': A2 },
+  /* Purpose/Ownership's handoff contract uses only node:assert receivers.
+     Regex matches and throws have the same observed/expected/message shape
+     as equality for this provenance scan. */
+  'tools/test-rail-handoff.mjs': {
+    'assert.equal': A2,
+    'assert.deepEqual': A2,
+    'assert.match': A2,
+    'assert.doesNotMatch': A2,
+    'assert.throws': A2,
+  },
   'journey/structure.test.mjs': { 'assert.equal': A2, 'assert.deepEqual': A2, 'assert.ok': AOK },
   [SELF]: { 'L.same': SAME, pin: PIN },
 };
@@ -677,7 +688,11 @@ L.same('AP1b', 'D45 — the gated set this sweep derived from package.json, as a
      a suite — which is why the -1 is written out as one suite rather than
      deduced: a shrink is the direction in which a silent arithmetic slip looks
      like housekeeping. */
-  [GATED.length, SUBJECTS.length, Object.keys(UNSCANNABLE).length], [51, 50, 1],
+  /* RE-BASELINED 2026-08-27 for the production no-scroll transport contract,
+     which is wired through test:unit and uses ordinary node:assert receivers. */
+  /* RE-BASELINED 2026-08-27 for the Purpose/Ownership rail handoff contract,
+     also wired through test:unit and declared above. */
+  [GATED.length, SUBJECTS.length, Object.keys(UNSCANNABLE).length], [53, 52, 1],
   'derived by reading test:unit + test:contracts + test:static, not hand-listed');
 pin('AP2', 'D46 — every scanned suite reached at least one assertion call site (a ZERO is a rotted receiver declaration, and zero is also the passing answer)',
   (i) => Object.keys(i.sources).filter((f) => sitesOf({ src: i.sources[f], recv: i.recv[f] }) === 0),
@@ -710,6 +725,13 @@ pin('AP4', 'D94 — the INVENTORY: literally-closed assertions with no census cl
     'tools/test-coverage-floor.mjs :: PC-3e2 :: DB3',
     'tools/test-coverage-floor.mjs :: PC-6b :: DB3',
     'tools/test-instrument-layer.mjs :: COV-3 :: DB3',
+    /* Purpose/Ownership handoff, 2026-08-28. This is the fixed
+       forward-and-reverse fixture for the gather projector: the assertion
+       executes `1 - ownership` over the declared trace and compares it with
+       that fixture's closed symmetric complement. It is intentionally
+       literal test data, not a census or coverage claim, so DB3 is the honest
+       classification and the row belongs in the recorded inventory. */
+    'tools/test-rail-handoff.mjs :: assert.deepEqual@321 :: DB3',
     'tools/test-render-baseline.mjs :: M9.demo :: DB3',
     /* connect-skip second pass, 2026-08-25 — the SIXTH row. tools/test-rest-composition.mjs's
        C4, the vacuity pin: `assert.ok(DECLARED_DEFICIT_MS > 0, ...)`. It compares
@@ -1175,11 +1197,24 @@ pin('AP16', 'D46 — THE STATED LIMIT AS DATA: the declared receivers this deriv
     'tools/test-intro-lifecycle.mjs :: L.check',
     'tools/test-intro-lifecycle.mjs :: L.same',
     'tools/test-intro-lifecycle.mjs :: pin',
+    /* no-scroll navigation, 2026-08-27 — the focused transport checks use
+       top-level node:assert calls whose descriptions live in the message
+       argument, so this derivation deliberately cannot recover their ids. */
+    'tools/test-no-scroll-navigation.mjs :: assert.deepEqual',
+    'tools/test-no-scroll-navigation.mjs :: assert.equal',
     'tools/test-portrait-lifecycle.mjs :: L.same',
     'tools/test-portrait-paint.mjs :: L.check',
     'tools/test-portrait-paint.mjs :: prove',
     'tools/test-portrait-perturbation.mjs :: L.same',
     'tools/test-portrait-textures.mjs :: L.same',
+    /* Purpose/Ownership handoff, 2026-08-27 — the focused assertions carry
+       their descriptions in node:assert's message argument, so the receiver
+       derivation cannot recover a label from any of these five callees. */
+    'tools/test-rail-handoff.mjs :: assert.deepEqual',
+    'tools/test-rail-handoff.mjs :: assert.doesNotMatch',
+    'tools/test-rail-handoff.mjs :: assert.equal',
+    'tools/test-rail-handoff.mjs :: assert.match',
+    'tools/test-rail-handoff.mjs :: assert.throws',
     'tools/test-renderer-resources.mjs :: L.check',
     'tools/test-renderer-resources.mjs :: L.same',
     'tools/test-renderer-resources.mjs :: prove',

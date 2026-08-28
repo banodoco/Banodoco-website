@@ -11,6 +11,13 @@ flag was never created. The Tier-3 page sections below remain accurate;
 the wiring sections are kept as design history only. File references to
 `mushroom-scene.js` and `core/` predate the M2/M4 renames.
 
+**Current navigation note (2026-08-27):** with JavaScript available, Tier 3
+shows one chapter at a time and switches it only through its chapter links;
+wheel, vertical touch and scroll keys cue that navigator instead of changing
+chapters. Its menu and long active chapter retain internal overflow so content
+stays reachable. With JavaScript disabled, the five authored sections remain a
+normally scrollable document as the accessibility-safe recovery baseline.
+
 **Capture pipeline sections (§2 and §4) are ALSO now historical, not current
 behavior — flagged here rather than rewritten.** They describe the pre-freeze
 state: `?capture=` as a proposal rather than shipped (§2, "the hard

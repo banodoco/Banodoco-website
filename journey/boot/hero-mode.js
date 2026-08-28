@@ -176,10 +176,10 @@ function viewFor(mode) {
     // base 4.75 -> 4.50 (2026-08-17, Hannah's vertical rebalance: "too much
     // deadspace between the mushroom and text") — LOWERING the look-at
     // lifts the specimen on screen (measured ~55px per unit, and the sign
-    // is the trap: a higher target renders the scene lower). ~25px of lift
-    // meets the copy's ~16px drop (hero.css mobile padding-top), splitting
-    // the frame's air roughly evenly above and below the text block.
-    v.targetY = 3.85 + 1.2 * t;
+    // is the trap: a higher target renders the scene lower). The further
+    // 0.40 drop (2026-08-27) lifts the phone specimen about 22px so its body
+    // reads centrally while the stalk remains aligned with the Equip control.
+    v.targetY = 3.45 + 1.2 * t;
     v.camZ = 11.5 + 1.3 * t;
   }
   /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
@@ -200,7 +200,18 @@ function viewFor(mode) {
      journey director. Consequently scroll and the route-faithful direct-click
      compositor depart from (and return to) this exact shifted pose, while the
      analytic Inspire arrival still lands bit-exactly on its existing rest. */
-  const missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
+  let missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
+  if (mode === 'mobile') {
+    /* The reviewed 63px shift aligns the stalk with Equip on tall phones
+       (430x932 / 375x812). Shorter browser viewports project the fixed panX
+       through a much wider world-per-pixel field, which pushed the stalk
+       right of Equip at 337x601. Ease 28px out by aspect (21px measured in
+       the owner capture plus the 7px residual in the exact-size re-shot) so
+       tall phones keep their exact pose and short phones regain the centre. */
+    const shortPhoneMix = Math.min(1, Math.max(0,
+      (innerWidth / innerHeight - 0.47) / 0.09));
+    missionShiftPx -= 28 * shortPhoneMix;
+  }
   const missionWorldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360)
     / innerHeight;
   v.panX -= missionShiftPx * missionWorldPerPixel;

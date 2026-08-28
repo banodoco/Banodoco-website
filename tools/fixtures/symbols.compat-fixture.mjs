@@ -87,8 +87,8 @@ const EXPECTED = [
     "svgAriaHidden": "true",
     "svgFocusable": "false",
     "childCount": 7,
-    "signature": "p:M3.6 16.4 Q11 1.8 18.4 16.4|p:M3.6 16.4 H18.4|c:6.6,10.4,0.95|c:4.8,8.8,0.82|c:6.6,7.4,0.68|c:4,6,0.7|c:5.8,4.2,0.58",
-    "signatureSha256": "200dfaaa278011a7ba19c40a9b4d33008e4d04aa46364b191785e49db6e36d6e"
+    "signature": "p:M3.6 16.4 Q11 1.8 18.4 16.4|p:M3.6 16.4 H18.4|c:15.4,10.4,0.95|c:17.2,8.8,0.82|c:15.4,7.4,0.68|c:18,6,0.7|c:16.2,4.2,0.58",
+    "signatureSha256": "2be0501b220d204db4dd696cf38b439f6bcb31eb6f812f42e6ef7dfc53909167"
   },
   {
     "id": "connect",

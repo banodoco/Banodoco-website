@@ -163,6 +163,11 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
 
      See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
   const easedPrev = { ...eased };
+  // A wrap's duration is known only after its synchronous placeAt(), but its
+  // transition must own those dt=0 frames too. This is the prepared state:
+  // the visible departure snapshot plus an unpriced envelope installed before
+  // placement. armCopyEntry() prices that same envelope afterwards.
+  let preparedEntry = null;
   let arrive = null;   // { id, t, lead, dur, own, started, motions }
   const arrivalMotion = createArrivalMotion({ blocks, reduceMotion });
 
@@ -288,23 +293,42 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
 
   /* ---------------- the jump entry ---------------- */
 
+  function prepareCopyEntry(id) {
+    if (!(id in eased)) {
+      preparedEntry = null;
+      return;
+    }
+    const departure = { ...eased };
+    endArrive();
+    const from = {};
+    for (const k in departure) if (k !== id) from[k] = departure[k];
+    // Install the envelope before placeAt() runs its synchronous dt=0 frames.
+    // Those frames now see one transition owner and therefore preserve the
+    // departure copy instead of painting destination state and undoing it.
+    arrive = { id, t: 0, lead: 1, dur: 1, own: true, from, play: 1,
+      started: false, hold: 0, motions: [] };
+    preparedEntry = { id, departure };
+  }
+
   /** Copy entry for a chapter the camera is currently blending onto.
    *  `blendDur` is journey.js's live camera-blend duration in seconds — the
    *  envelope is defined against the move, not against a fixed timing. */
   function armCopyEntry(id, blendDur) {
-    if (!(id in eased)) return;
-    for (const k in easedPrev) eased[k] = easedPrev[k];   // undo placeAt's snap
-    eased[id] = 0;
-    // …and undo it on screen too, in this same task. placeAt() has ALREADY
-    // painted the destination at full opacity by the time journey.js can call
-    // us, so leaving the correction to the next animator frame ships one
-    // rendered frame of exactly the pop this exists to remove. Measured: a
-    // 16 ms flash of the whole block at opacity 1 before the envelope took it
-    // back to 0.
-    for (const k in eased) paintCopy(k, eased[k]);
+    if (!(id in eased)) {
+      preparedEntry = null;
+      return;
+    }
+    const prepared = preparedEntry && preparedEntry.id === id
+      ? preparedEntry : null;
+    const departure = prepared ? prepared.departure : easedPrev;
+    preparedEntry = null;
     const lead = blendDur * COPY_JUMP_LEAD;
     const dur = blendDur + COPY_JUMP_COPY_TAIL_S - lead;
-    endArrive();                                   // a jump can overtake a jump
+    if (!prepared) {
+      endArrive();                                 // a jump can overtake a jump
+      for (const k in departure) eased[k] = departure[k];
+      eased[id] = 0;
+    }
     // THE DEPARTURE IS TIMED AGAINST THE MOVE TOO (2026-08-13 — the loop's
     // seam). The arrival has been placed inside the blend since d1ecc23; the
     // release was left on the ordinary COPY_OUT_K scrub rate, which is
@@ -319,11 +343,16 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     // rule is already heading for, so the hand-back is a no-op exactly as the
     // entry's is.
     const from = {};
-    for (const k in easedPrev) if (k !== id) from[k] = easedPrev[k];
+    for (const k in departure) if (k !== id) from[k] = departure[k];
     // `hold`: seconds this entrance has waited at its lead for the hero's gate
     // to open, and owed back to a rewind. See the hold block in step().
-    arrive = { id, t: 0, lead, dur, own: true, from, play: 1, started: false,
-      hold: 0, motions: [] };
+    if (prepared && arrive && arrive.id === id) {
+      arrive.lead = lead;
+      arrive.dur = dur;
+    } else {
+      arrive = { id, t: 0, lead, dur, own: true, from, play: 1, started: false,
+        hold: 0, motions: [] };
+    }
     const b = blocks[id];
     if (b) {
       /* The child choreography must not start on CSS wall time while the
@@ -689,7 +718,8 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     const heroHeld = heroEnvelopeLive()
       && heroGatePrev !== null && heroGatePrev <= 0;
     if (arrive) {
-      if (dt === 0 || (chapterId !== arrive.id && arrive.own)) endArrive();
+      if ((dt === 0 && !preparedEntry)
+          || (chapterId !== arrive.id && arrive.own)) endArrive();
       else {
         const advance = dt * (arrive.play || 1);
         if (advance >= 0) {
@@ -708,7 +738,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
         // ...or rewound past its own start (a steered wrap): the handover has
         // fully unwound and the from-state is back on screen, so it retires
         // there exactly as it retires at the other end.
-        else if (arrive.t <= 0) endArrive();
+        else if (arrive.play < 0 && arrive.t <= 0) endArrive();
       }
     }
     // ...and the child rise starts with the envelope it is phase-locked to,
@@ -792,6 +822,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
 
   return {
     step,
+    prepareCopyEntry,
     armCopyEntry,
     cancelCopyEntry,
     setCopyEntryPlay,
