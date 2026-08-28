@@ -216,7 +216,7 @@ const L = createLedger('portrait perturbation proof');
   /* P6a — THE BAND CROSSING, 1.6000 -> 0.4614. */
   p6('MUTATED (no recompose — the shipped defect): a landscape-built field judged through the '
     + '430x932 lens frames only a fraction of its sixteen faces',
-    staleAt.phoneFramed === 4,
+    staleAt.phoneFramed === 3,
     { framed: staleAt.phoneFramed, of: crossed.api.nodes.length, freshLoadFrames: framedCount(freshPhone, aspectOf(PHONE)) });
   p6('MUTATED (no recompose): that stale composition is NOT the one a fresh 430x932 load builds',
     maxNodeDelta(staleAt.placement, placementOf(freshPhone)) > 1,

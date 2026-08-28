@@ -133,6 +133,7 @@ import {
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
+import { purposeNavPocket } from '../../layout/final-composition.js';
 // The committed-bytes read (canopy-baked.js) sits in the import slot
 // ../../lib/baked.js used to occupy, and the authoring law (canopy-levels.js)
 // in ./camera.js's, so the first evaluation of both is where it was.
@@ -702,6 +703,16 @@ export function createFinalCanopy(uniforms, seats) {
    *  see this value. At v = 1 both materials hold the authored constants
    *  above, so the resting composition is the shipped one exactly. */
   function setPresence(v) {
+    const dpr = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const pocket = purposeNavPocket({ width, height });
+    uniforms.uNavPocketPx.value.set(
+      width * 0.5 * dpr,
+      pocket.y * dpr,
+      pocket.halfWidth * dpr,
+      pocket.halfHeight * dpr,
+    );
     strandMat.uniforms.uOpacity.value = STRAND_OP * v;
     glowMat.uniforms.uOpacity.value = GLOW_OP * v;
   }

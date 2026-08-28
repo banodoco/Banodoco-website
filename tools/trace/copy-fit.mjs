@@ -36,7 +36,7 @@ const BUDGET = {
   'owned.heading':   [1, 1, 2], // content.js: "Rendered 2 / 1 / 2 lines -> 1 / 1 / 2"
   'owned.sub':       [4, 4, 5], // content.js: "Rendered 3 / 3 / 5 -> 4 / 4 / 5" (recorded, not asked for)
   'final.heading':   [2, 2, 4], // FINAL HEADING MEASURE + "four balanced lines" below 480px
-  'final.sub':       [2, 2, 4], // content.js: "needs 448px of column to break in two"; four at phone
+  'final.sub':       [3, 3, 4], // Purpose desktop stanza: three balanced lines; natural four at phone
 };
 const VIEWPORTS = [['1440x900', 1440, 900, 2], ['1280x800', 1280, 800, 2], ['375x812', 375, 812, 3]];
 const MUTANT = { id: 'inspire.sub', add: ' and to build the tools that movement needs.' };

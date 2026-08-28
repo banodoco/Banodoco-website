@@ -361,7 +361,7 @@ pin('PV-RAIL-GATES', 'EXACT over live production source — journey/rail.js\'s t
   };
   L.same('PV-RAIL-R1', 'D63 — a rail source whose gates cannot be read yields a typed refusal, never a default',
     [refuses('nothing here', 'followReadyAt deadline'),
-      refuses("followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;", 'j-rail-turn anchor'),
+      refuses("followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;", 'turnTimer anchor'),
       refuses(42, 'needs journey/rail.js source text')],
     ['HarnessFault', 'HarnessFault', 'HarnessFault']);
   L.same('PV-RAIL-R2', 'D46 — the reader really read journey/rail.js (a 0 here would mean it read the wrong bytes)',

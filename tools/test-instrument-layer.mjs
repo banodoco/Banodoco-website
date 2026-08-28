@@ -754,8 +754,8 @@ const PROBES = {
       try { f(); return 'no refusal'; } catch (e) { return e.message.includes(needle) ? 'refused' : `other: ${e.message.slice(0, 30)}`; }
     };
     const RAIL = '  followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;\n'
-      + "      root.classList.add('j-rail-turn');\n      turnTimer = owner.timer(() => {\n"
-      + "        root.classList.remove('j-rail-turn');\n        syncAt();\n      }, 500);\n";
+      + "      clearTimeout(turnTimer);\n      turnTimer = owner.timer(() => {\n"
+      + "        syncAt();\n      }, 500);\n";
     const live = m.maskExclusions(ROWS, [{ path: 'nav.j-rail/0', field: 'transform', why: 'x' }]);
     const stale = m.maskExclusions(ROWS, [{ path: 'nav.j-nope', field: 'rect', why: 'x' }]);
     const one = ROWS.map((r, n) => (n === 1 ? r.replace('|visible|', '|hidden|') : r));

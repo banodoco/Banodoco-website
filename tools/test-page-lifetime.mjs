@@ -571,7 +571,7 @@ pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code t
       "main.js :: addEventListener('load', () => {",
       "main.js :: addEventListener('resize', () => {",
       "main.js :: addEventListener('unhandledrejection', (e) => {",
-      'journey/boot/handoff.js :: addEventListener(type, onIntroInput, { capture: true, passive: true });',
+      'journey/boot/handoff.js :: addEventListener(type, onIntroInput, { capture: true, passive });',
       "main.js :: canvas.addEventListener('webglcontextlost', (e) => {",
       "main.js :: canvas.addEventListener('webglcontextrestored', () => {",
       "main.js :: el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));",
@@ -616,7 +616,7 @@ pin('B3', 'THE FINDING, PINNED SO IT CANNOT DRIFT SILENTLY: the serif A/B keydow
  * ------------------------------------------------------------------ */
 console.log('\nC — executed: the one bounded pair, the ungated key, and the wheel guard');
 
-pin('C1', 'the intro input capture attaches six capture-phase listeners and takes all six back off — with the registration\'s `{ capture: true, passive: true }` matched by the removal\'s BARE `true`, which is the option-shape asymmetry lifecycle.md section 5.2 warns about, here benign and here executed',
+pin('C1', 'the intro input capture attaches six capture-phase listeners and takes all six back off — wheel, touchmove and keydown are non-passive so blocked navigation attempts can be cancelled, while the removal\'s BARE `true` still matches capture identity',
   (i) => {
     const dom = makeDom();
     const h = compileIntroCapture(i.events, i.register, i.stop, dom);
@@ -631,12 +631,12 @@ pin('C1', 'the intro input capture attaches six capture-phase listeners and take
   { events: SLICE.events, register: SLICE.register, stop: SLICE.stop },
   {
     afterRegister: {
-      ops: ['+window:wheel:cap:{"capture":true,"passive":true}',
+      ops: ['+window:wheel:cap:{"capture":true,"passive":false}',
         '+window:touchstart:cap:{"capture":true,"passive":true}',
-        '+window:touchmove:cap:{"capture":true,"passive":true}',
+        '+window:touchmove:cap:{"capture":true,"passive":false}',
         '+window:touchend:cap:{"capture":true,"passive":true}',
         '+window:touchcancel:cap:{"capture":true,"passive":true}',
-        '+window:keydown:cap:{"capture":true,"passive":true}'],
+        '+window:keydown:cap:{"capture":true,"passive":false}'],
       live: ['window|keydown|cap', 'window|touchcancel|cap', 'window|touchend|cap',
         'window|touchmove|cap', 'window|touchstart|cap', 'window|wheel|cap'],
     },
@@ -962,10 +962,26 @@ pin('D1', 'THE ANTECEDENT: no module in the shipped graph is named under two spe
        THE INVARIANT HALVES ARE UNCHANGED: `multiForm` is still empty and
        `cacheBusted` still names organism/organism.js alone. Evidence:
        docs/code-health/evidence/2026-08-21-elegance-run-01/b01/d1-scanned-delta.txt */
-    referenced: 133,
+    /* hero-ground-dim.js is one new real graph member and one new resolved key.
+
+       RE-BASELINED referenced 135 -> 137 and scanned 133 -> 135 at the
+       2026-08-28 release wave, on the same protocol. The exact two accepted
+       graph members are journey/layout/final-composition.js and
+       journey/navigation-timing.js. The former is shared by portrait,
+       rail-geometry and Final's Purpose-pocket owners but resolves to one
+       target key; the latter is imported once by journey.js at the existing
+       route-duration seam. Each therefore contributes one scanned file and
+       one distinct resolved target, so both cardinalities move together by
+       exactly two.
+
+       THE INVARIANT HALVES ARE UNCHANGED: `multiForm` remains empty and
+       `cacheBusted` still names organism/organism.js alone. This is the narrow
+       disk-derived census update for those two named modules, not a relaxation
+       of either page-singleton check. */
+    referenced: 137,
     multiForm: [],
     cacheBusted: ['organism/organism.js :: query:v=1785427900'],
-    scanned: 131,
+    scanned: 135,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 

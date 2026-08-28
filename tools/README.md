@@ -183,6 +183,17 @@ withholds one contributor face across part of the Owned leg (`faces.mjs` F2
 prints the placements). That is OWNED-PASS's unfixed finding; the fix is a
 taste call the owner has not made, and both files it would touch are held.
 
+## Re-baselining log
+
+Wave-gate baselines are changed only after their exact added/removed entries
+have been attributed to accepted production work. Monotonic-floor additions
+and ceiling improvements are folded in at the same wave seam so their ratchets
+do not retain avoidable slack.
+
+| Date | Accepted wave | Exact baseline movement |
+|---|---|---|
+| 2026-08-28 | Release visual/navigation fixes | S12 declared uniforms 135 → 136 and S13 bound uniforms 132 → 133: `uNavPocketPx`, Final strand clearance behind the Purpose navigator. M8 `journey/boot/handoff.js` rAF sites x8 → x6: removal of the parallel `intro-depart` opacity polling. X3 source manifest 133 → 135: `journey/layout/final-composition.js` and `journey/navigation-timing.js`. Wave-seam ratchets: M7 recorded teardown sites 5 → 8 (the matchMedia fallback and two spores listener removals), M19 request/cancel ceiling 10 → 7, and M16 recorded disposal sites 7 → 8 (`portraits.js` outgoing strand geometry). |
+
 ## Shipping
 
 `DEPLOY.md` — the tree deploys as-is. It lists what MUST ship, what MUST NOT,

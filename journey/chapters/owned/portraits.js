@@ -225,7 +225,7 @@ export function buildPortraitField({
     [-0.05, -0.50, 8.0, 0.43],
     [-0.86, -0.52, 7.0, 0.45], // was [-0.84,-0.68,6.2,0.46]; lifted clear of the navigator dock (2026-08-23) — evidence/2026-08-21-elegance-run-01/owned-pass/
     [0.82, -0.64, 6.0, 0.46],
-    [0.28, -0.76, 5.6, 0.47],
+    [0.40, -0.76, 5.6, 0.39], // shifted clear of the return CTA; peer-sized at its nearer authored depth
   ];
 
   /* PORTRAIT ARC (2026-08-17; revised the same day). The table above is the

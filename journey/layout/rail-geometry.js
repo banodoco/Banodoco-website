@@ -47,6 +47,7 @@
 // `getBoundingClientRect()` on the same element.
 
 import { CONTENT } from '../../content/content.js';
+import { PHONE_FINAL_COMPOSITION_LIFT_PX } from './final-composition.js';
 
 /** The active chapter marker paints a 22 px shadow OUTSIDE its DOM box. A
  *  measurement that stops at the box is not the painted silhouette, so this
@@ -95,10 +96,16 @@ export function rowMetrics(w, h) {
   return {
     major: phone ? 40 : tablet ? 42 : 44,   // the three core hit boxes
     minor: phone ? 34 : tablet ? 36 : 40,   // the two bookend hit boxes
+    minorRingD: phone ? 24 : tablet ? 26 : 28,
     gap: phone ? 20 : tablet ? 28 : 36,     // air between hit boxes
-    // The glyphs' shared centre line, up from the viewport bottom. The
-    // phone value leaves the label seat clear of the home indicator.
+    // The ordinary journey seat. Purpose adds its own camera-projected lift;
+    // keeping that delta separate prevents the subtree's clearance from
+    // silently moving the hero and every other chapter.
     centreFromBottom: phone ? 70 : tablet ? 84 : 92,
+    // Purpose's lower-left copy now carries a third desktop sub-line. Lift
+    // the complete Purpose row/tree clear of that fixed copy seat while the
+    // ordinary journey row keeps its established baseline.
+    purposeLift: phone ? 50 + PHONE_FINAL_COMPOSITION_LIFT_PX : tablet ? 52 : 66,
     // Ink scale per tier, as a multiple of the authored ~24px symbol
     // boxes: ~21.5px of core ink inside the 36px drawn circles, ~20px
     // bookend glyphs. THE LIVE HALF OF A TWIN — site.css's preboot
@@ -126,7 +133,8 @@ export function rowLayout(w, h) {
     x += d + (i < dia.length - 1 ? m.gap : 0);
   });
   return Object.freeze({
-    major: m.major, minor: m.minor, gap: m.gap,
+    major: m.major, minor: m.minor, minorRingD: m.minorRingD, gap: m.gap,
+    purposeLift: m.purposeLift,
     majorFit: m.majorFit, minorFit: m.minorFit,
     dia: Object.freeze(dia),
     centres: Object.freeze(centres),

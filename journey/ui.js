@@ -941,7 +941,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
      (D159). Each of those bindings now has a named transition of its own,
      or two writes. */
   const copy = createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceMotion });
-  const { armCopyEntry, cancelCopyEntry, setCopyEntryPlay } = copy;
+  const { prepareCopyEntry, armCopyEntry, cancelCopyEntry, setCopyEntryPlay } = copy;
 
   /* ==========================================================================
      update() — THE FIXED-ORDER COMPOSITION (order U06)
@@ -1029,8 +1029,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
 
 
   return {
-    update, addHotspot, addHoverZone, openCard, closeCard, rail,
-    armCopyEntry, cancelCopyEntry, setCopyEntryPlay,
+    update, addHotspot, addHoverZone, openCard, closeCard, rail, announce,
+    prepareCopyEntry, armCopyEntry, cancelCopyEntry, setCopyEntryPlay,
     /** A chapter's live eased copy opacity (0..1) — the one signal that
      *  means "the intro is playing": settle-gated on a scroll arrival, the
      *  armCopyEntry envelope on a nav jump, fast release when travel

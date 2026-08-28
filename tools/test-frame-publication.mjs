@@ -834,8 +834,20 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
        `jsFilesUnder(CAMERA_ROOTS)`: 122 with the four, 118 without, and the
        naming set 13 either way. Evidence:
        docs/code-health/evidence/2026-08-21-elegance-run-01/b01/
-       c5-scanned-delta.txt. */
-    13, 122, false, false],
+       c5-scanned-delta.txt.
+
+       RE-BASELINED 124 -> 126 at the 2026-08-28 release wave, on the same
+       protocol and for the same reason. X3 names the exact two new modules:
+       journey/layout/final-composition.js, the shared pixel/world geometry
+       policy for Final and its Purpose navigator, and
+       journey/navigation-timing.js, the button-route duration policy consumed
+       at journey.js's existing camera-flight seam. Neither names `camera` in
+       CODE: final-composition's exported identifier `cameraWorldUnitsForPixels`
+       contains no standalone word and both files' prose is stripped by this
+       pin's own code() reader. The thirteen-file naming allow-list above and
+       both exclusion booleans are byte-identical; only the disk-derived scan
+       cardinality moved by the two accepted files. */
+    13, 126, false, false],
   'boundaries.md section B.7 pins 11 and the two publication owners are named. main.js and organism/furniture.js are in the SCANNED roots and in neither list — section B.6a\'s reclassification, and the scan is what keeps it true. The scanned cardinality is pinned beside the hits so a scan that read nothing reports 0/0 rather than a clean 12');
 
 pin('C6', 'D46 — the camera scan DOES see a code mention and does NOT see a prose one, which is the whole difference between 11 and the raw grep\'s 44',

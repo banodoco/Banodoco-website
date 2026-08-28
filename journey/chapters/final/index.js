@@ -43,6 +43,8 @@ import { createFinalSky } from './sky.js';
 import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
+import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
+import { purposeNavPocket } from '../../layout/final-composition.js';
 
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
@@ -922,6 +924,12 @@ export function createFinal(sceneApi) {
      carriers fall to a whisper. The scene-level ambient mote cloud (the
      fake-DOF bokeh balloons in the near field) dims out entirely and is
      retired below 12% — Connect's raster lesson. */
+  const heroGroundDim = createHeroGroundDimClaim(sceneApi, {
+    keeps: [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25],
+    pointThreshold: 0.12,
+  });
+  // Final also borrows the scene-level ambient mote cloud. It is not shared
+  // with Connect, so it remains a local exact-restoration channel.
   const heroDim = [];
   let heroDimReady = false, heroDimActive = false;
   function addDim(o, keep) {
@@ -934,16 +942,6 @@ export function createFinal(sceneApi) {
   function collectHeroGround() {
     if (heroDimReady) return;
     heroDimReady = true;
-    const gg = sceneApi.groups && sceneApi.groups.ground;
-    if (gg) {
-      // same predicate + order the hero itself uses (§ intro sequencing):
-      // [web, myc, mossPts, pools, roots, ribbon, beads]
-      const withWin = gg.children.filter(o => o.material &&
-        ((o.material.uniforms && o.material.uniforms.uWin) ||
-         (o.material.userData && o.material.userData.uWin)));
-      const KEEP = [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25];
-      withWin.forEach((o, i) => addDim(o, KEEP[i] ?? 0.20));
-    }
     // ambient mote/bokeh cloud: a direct scene child, never the shed
     for (const o of sceneApi.scene.children) {
       if (o.isPoints && o !== sceneApi.groups.spores) addDim(o, 0.0);
@@ -951,6 +949,21 @@ export function createFinal(sceneApi) {
   }
   function applyHeroDim(reach) {
     heroDimActive = reach > 0.001;
+    heroGroundDim.set(reach);
+    if (sceneApi.setGroundNavPocket) {
+      const dpr = window.devicePixelRatio || 1;
+      const pocket = purposeNavPocket({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      sceneApi.setGroundNavPocket({
+        x: pocket.x * dpr,
+        y: pocket.y * dpr,
+        halfWidth: pocket.halfWidth * dpr,
+        halfHeight: pocket.halfHeight * dpr,
+        amount: reach,
+      });
+    }
     for (const d of heroDim) {
       const f = 1 - reach * (1 - d.keep);
       if (d.u) d.u.value = d.base * f;
@@ -1012,6 +1025,8 @@ export function createFinal(sceneApi) {
     return bandInv(bandSTo(u) * (BAND_S / retireCost));
   }
   function restoreHeroDim() {
+    heroGroundDim.clear();
+    if (sceneApi.setGroundNavPocket) sceneApi.setGroundNavPocket();
     for (const d of heroDim) {
       if (d.u) d.u.value = d.base;
       else d.m.opacity = d.base;

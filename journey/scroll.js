@@ -80,7 +80,8 @@ const DESKTOP_PACING = typeof matchMedia === 'function'
    ========================================================================== */
 export { claimInput, releaseInput } from './ownership.js';
 
-export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
+export function createScrollModel({ onIntent = null, onWrap = null,
+  onScrollAttempt = null } = {}) {
   /* ========================================================================
      THE ROAD — the pure, clock-free pixel<->route mapping — is ./road.js.
      `segLens`, `kx`, `ky`, `km`, `invX`, `invY` and the four functions over
@@ -803,6 +804,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
      other view of the model — see that file's header for the seam. */
   const transport = createTransport({
     enabled: () => enabled,
+    blocksTravel: () => typeof onScrollAttempt === 'function',
+    attempt: (kind) => {
+      if (typeof onScrollAttempt !== 'function') return false;
+      onScrollAttempt(kind);
+      return true;
+    },
     push,
     jump,
     beginTouchContact,

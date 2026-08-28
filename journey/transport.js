@@ -33,10 +33,12 @@
 // already had to route around it. Prefer a difference; if you need an
 // absolute, say which clock it is on.
 //
-// The host seam. `createTransport(host)` needs exactly ten capabilities and
+// The host seam. `createTransport(host)` needs exactly twelve capabilities and
 // takes no other view of the model:
 //
 //   enabled()                       is travel accepting input at all
+//   blocksTravel()                  production uses buttons, not travel input
+//   attempt(kind)                   cue those buttons for a blocked gesture
 //   push(dpx, kind, repeat, opts)   deliver surface pixels to the model
 //   jump(target, kind)              Home / End travel to a named anchor
 //   beginTouchContact(y, at, owned) open a contact (state machine, in model)
@@ -50,6 +52,9 @@
 import { WHEEL_LINE_PX, KEY_STEP_PX } from './constants.js';
 
 export function createTransport(host) {
+  let blockedTouch = false;
+  let blockedTouchY = null;
+
   function onWheel(e) {
     if (!host.enabled()) return;
     // A registered owner (dialog card / bottom sheet) scrolls itself: no
@@ -59,6 +64,10 @@ export function createTransport(host) {
     if (e.deltaMode === 1) d *= WHEEL_LINE_PX;
     else if (e.deltaMode === 2) d *= window.innerHeight;
     if (e.cancelable) e.preventDefault();  // no rubber-band / back-swipe
+    if (host.blocksTravel && host.blocksTravel()) {
+      if (d && host.attempt) host.attempt('wheel');
+      return;
+    }
     host.push(d, 'wheel');
   }
 
@@ -69,6 +78,11 @@ export function createTransport(host) {
     // multi-finger deltas never feed the ride.
     if (e.touches.length > 1) return;
     const owned = !!host.ownerOf(e.target);
+    if (!owned && host.blocksTravel && host.blocksTravel()) {
+      blockedTouch = true;
+      blockedTouchY = e.touches[0] ? e.touches[0].clientY : null;
+      return;
+    }
     // Ownership is decided ONCE per gesture, at touchstart: a drag that began
     // inside a sheet stays the sheet's for its whole life even if the finger
     // leaves the element, which is how native scrolling and drag-to-dismiss
@@ -77,6 +91,21 @@ export function createTransport(host) {
       performance.now(), owned);
   }
   function onTouchMove(e) {
+    if (blockedTouch) {
+      if (e.touches.length > 1) {
+        blockedTouch = false;
+        blockedTouchY = null;
+        return;
+      }
+      if (!e.touches[0]) return;
+      const y = e.touches[0].clientY;
+      if (e.cancelable) e.preventDefault();
+      if (blockedTouchY !== null && Math.abs(y - blockedTouchY) >= 8) {
+        if (host.attempt) host.attempt('touch');
+        blockedTouchY = y;
+      }
+      return;
+    }
     if (!host.touchContactLive() || !e.touches[0]) return;
     // Multi-finger = pinch-zoom. Return without preventDefault (the browser
     // keeps the pinch) and without touching touchY, so the zoom never leaks
@@ -86,7 +115,11 @@ export function createTransport(host) {
     if (e.cancelable) e.preventDefault();
     host.moveTouchContact(y);
   }
-  function onTouchEnd() { host.endTouchContact(); }
+  function onTouchEnd() {
+    blockedTouch = false;
+    blockedTouchY = null;
+    host.endTouchContact();
+  }
 
   const KEYS = {
     ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1,
@@ -113,6 +146,11 @@ export function createTransport(host) {
     if (host.modalLive()) return;
     // 2. controls-first: the focused control's own semantics win.
     if (host.targetOwnsKey(e)) return;
+    if (host.blocksTravel && host.blocksTravel()) {
+      e.preventDefault();
+      if (host.attempt) host.attempt('key');
+      return;
+    }
     if (k === 'home') { e.preventDefault(); host.jump(0, 'key'); return; }
     if (k === 'end') { e.preventDefault(); host.jump(1, 'key'); return; }
     const big = e.key === 'PageDown' || e.key === 'PageUp'
@@ -121,7 +159,7 @@ export function createTransport(host) {
     host.push(k * (big ? window.innerHeight * 0.78 : KEY_STEP_PX), 'key', e.repeat);
   }
 
-  /** Register the five travel listeners. Capture phase and passivity are
+  /** Register the six travel listeners. Capture phase and passivity are
    *  load-bearing and are the shipped values: wheel and touchmove must be
    *  non-passive because they preventDefault(); touchstart and touchend never
    *  do and stay passive. Registration ORDER is preserved from scroll.js's
@@ -131,6 +169,7 @@ export function createTransport(host) {
     window.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
     window.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
     window.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { capture: true, passive: true });
     window.addEventListener('keydown', onKey, { capture: true });
   }
 

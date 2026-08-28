@@ -411,6 +411,9 @@ export function makeUniforms(sceneApi) {
     uTime:    { value: 0 },
     uFogNear: { value: 7 },
     uFogFar:  { value: 20 },
+    // Screen-space absence behind Purpose's instrument. Every Final bed line
+    // material shares this object; bodies, pools and point glows do not.
+    uNavPocketPx: { value: new THREE.Vector4() },
     // ---- the poke, for batched bodies (ring.js §POKE) ----
     // A clone owns a scene-graph node and gets organism §10c's cantilever
     // ring-down applied to its own sway pivot. A batched species body has no
@@ -541,12 +544,16 @@ const STRAND_VERT = /* glsl */ `
 
 const STRAND_FRAG = /* glsl */ `
   uniform float uOpacity, uAmount, uFogNear, uFogFar;
+  uniform vec4 uNavPocketPx;
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
   void main() {
     float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
-    gl_FragColor = vec4(vColor * vB * uOpacity * uAmount * fogF, 1.0);
+    vec2 pocketD = (gl_FragCoord.xy - uNavPocketPx.xy)
+      / max(uNavPocketPx.zw, vec2(1.0));
+    float navPocket = smoothstep(0.68, 1.08, length(pocketD));
+    gl_FragColor = vec4(vColor * vB * uOpacity * uAmount * fogF * navPocket, 1.0);
   }
 `;
 

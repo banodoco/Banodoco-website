@@ -78,6 +78,11 @@ import {
 } from './instrument-ledger.mjs';
 import { createRegistry, M, PIN_RECEIVER } from './mutant-registry.mjs';
 
+// The director is the camera-authority half of this controller contract. Its
+// focused live-state regression stages the shipped module under Node and
+// fails this suite if resize can strand the Intro pose again.
+import './test-director-resize.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
 const ARGV = new Set(process.argv.slice(2));
@@ -244,7 +249,8 @@ pin('C2', 'the site set of controller members journey.js reaches, derived from j
     'transition.clearHeroTerms', 'transition.dropCamBlend', 'transition.heroExiting',
     'transition.landWrapHome', 'transition.railFlight', 'transition.railWrap',
     'transition.rewoundHome', 'transition.setBlending', 'transition.steerWrapBlend',
-    'transition.stepCamBlend', 'transition.stepHeroEntry', 'transition.stepHeroExit'],
+    'transition.steerWrapTo', 'transition.stepCamBlend', 'transition.stepHeroEntry',
+    'transition.stepHeroExit'],
   'D54/D99: the seam AS A MANIFEST. A member added, dropped or renamed moves exactly the row it touches');
 
 pin('C3', 'blendCancelled() is called INSIDE applyFrame\'s own guards, never hoisted — the port reads a clock, and the no-blend path must not pay for it',
@@ -441,6 +447,8 @@ function makeRig(factory, { owned = true, heroShown = 1, presence = 0 } = {}) {
   };
   const director = {
     owned,
+    transitioning: false,
+    setTransitioning(on) { this.transitioning = !!on; },
     apply: (p) => log.push(`director.apply(${n3(p)})`),
     restoreHero: () => log.push('director.restoreHero'),
     applyHeroPose: () => log.push('director.applyHeroPose'),

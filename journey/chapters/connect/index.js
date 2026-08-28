@@ -47,6 +47,7 @@ import { makeRng } from '../../anatomy.js';
 import { startOf, endOf, restProgress } from '../../route.js';
 import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
+import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
 import { applyPortrait } from '../../portrait.js';
 import { CAMERA as CONNECT_CAMERA } from './camera.js';
 import { createOwner } from '../../ui/owner.js';
@@ -942,41 +943,12 @@ export function createConnect(sceneApi) {
      (Final-chapter precedent; organism.js is never edited). Restored
      byte-exactly the moment the chapter retires.
      ================================================================ */
-  const heroDim = [];
-  let heroDimReady = false, heroDimActive = false;
-  function collectHeroWeb() {
-    if (heroDimReady) return;
-    heroDimReady = true;
-    const gg = sceneApi.groups && sceneApi.groups.ground;
-    if (!gg) return;
-    // same detection + order the hero builds them in (Final precedent):
-    // [web, myc, mossPts, pools, roots, ribbon, beads]
-    const withWin = gg.children.filter(o => o.material &&
-      ((o.material.uniforms && o.material.uniforms.uWin) ||
-       (o.material.userData && o.material.userData.uWin)));
-    const KEEP = [0.42, 0.42, 0.60, 0.80, 0.48, 0.52, 0.58];
-    withWin.forEach((o, i) => {
-      const m = o.material;
-      const u = m.uniforms && m.uniforms.uOpacity;
-      if (u) heroDim.push({ u, base: u.value, keep: KEEP[i] ?? 0.5 });
-      else if (typeof m.opacity === 'number') heroDim.push({ m, base: m.opacity, keep: KEEP[i] ?? 0.5 });
-    });
-  }
-  function applyHeroDim(reach) {
-    heroDimActive = reach > 0.001;
-    for (const d of heroDim) {
-      const f = 1 - reach * (1 - d.keep);
-      if (d.u) d.u.value = d.base * f;
-      else d.m.opacity = d.base * f;
-    }
-  }
-  function restoreHeroDim() {
-    for (const d of heroDim) {
-      if (d.u) d.u.value = d.base;
-      else d.m.opacity = d.base;
-    }
-    heroDimActive = false;
-  }
+  // Connect and Purpose overlap during direct flights and both dim these same
+  // organism materials. Publish a claim against their one canonical baseline
+  // instead of privately capturing whichever value the previous chapter left.
+  const heroGroundDim = createHeroGroundDimClaim(sceneApi, {
+    keeps: [0.42, 0.42, 0.60, 0.80, 0.48, 0.52, 0.58],
+  });
 
   /* ================================================================
      Per-frame
@@ -1049,16 +1021,15 @@ export function createConnect(sceneApi) {
     // never submitted.
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
     if (!group.visible) {
-      if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
+      heroGroundDim.clear();                 // preserves any sibling claim
       return;
     }
 
     // undercoat dim rides the resolve (camera-pure) and deepens as the light
     // lands — so the two webs never sum to double-exposure mush — and hands
     // the hero's own materials back byte-exactly on retire
-    collectHeroWeb();
     const visualAmount = amount * resolve * entryReveal;
-    applyHeroDim(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
+    heroGroundDim.set(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
 
     U.uTime.value = t;
     U.uAmount.value = visualAmount;
@@ -1184,7 +1155,10 @@ export function createConnect(sceneApi) {
      animator that could throw and trigger that deletion. The alternative —
      an `if (disposed) return;` guard inside the body — leaves the body
      reachable and is strictly worse under S-1. */
-  owner.own(() => { sceneApi.addAnimator('journey-connect', PARKED); });
+  owner.own(() => {
+    heroGroundDim.clear();
+    sceneApi.addAnimator('journey-connect', PARKED);
+  });
 
   /* ================================================================
      Public API — the chapter contract, verbatim, plus drive(p)/snap()

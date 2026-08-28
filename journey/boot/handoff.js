@@ -231,58 +231,13 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     return input;
   }
 
-  function clearIntroDeparture(restore = false) {
-    if (!document.body.classList.contains('intro-depart')) return;
-    if (restore) {
-      document.body.classList.add('intro-restore');
-      setTimeout(() => {
-        document.body.classList.remove('intro-depart', 'intro-restore');
-      }, 220);
-    } else {
-      document.body.classList.remove('intro-depart', 'intro-restore');
-    }
-  }
-
   function replayBootInput(state) {
     const input = takeBootInput();
-    const scroll = state && state.scroll;
-    if (!input || !scroll) {
-      clearIntroDeparture(true);
-      return;
-    }
-    if (input.kind === 'wheel' && scroll.primeBootWheel) {
-      if (scroll.primeBootWheelStream) scroll.primeBootWheelStream(input.samples);
-      else {
-        const first = input.samples[0];
-        scroll.primeBootWheel(first.deltaY, first.deltaMode);
-      }
-    } else if (input.kind === 'touch' && scroll.primeBootTouch) {
-      scroll.primeBootTouch(input.contact);
-    } else if (input.kind === 'key' && state.flyTo) {
-      state.flyTo('inspire');
-      clearIntroDeparture(false);
-      return;
-    }
-    // Hold the immediate visual acknowledgement only until the journey's own
-    // Mission-copy envelope has genuinely taken over. A jitter that never
-    // earns travel restores the hero instead of leaving it blank.
-    if (document.body.classList.contains('intro-depart')) {
-      const started = Date.now();
-      const handoff = () => {
-        const hero = document.querySelector('.ui .hero');
-        const journeyOpacity = hero ? parseFloat(hero.style.opacity) : NaN;
-        const journeyOwnsExit = scroll.progress > 0
-          && Number.isFinite(journeyOpacity) && journeyOpacity <= 0.02;
-        const stayedHome = Date.now() - started > 900
-          && scroll.progress < 0.002 && !scroll.resolving;
-        if (journeyOwnsExit || stayedHome) {
-          clearIntroDeparture(stayedHome);
-          return;
-        }
-        requestAnimationFrame(handoff);
-      };
-      requestAnimationFrame(handoff);
-    }
+    if (!input || !state) return;
+    // Scroll is an instruction request now, not journey travel. The early
+    // gesture may still accelerate the intro so the controls arrive promptly,
+    // but none of its buffered distance is replayed into progress.
+    if (state.cueNavigation) state.cueNavigation(input.kind);
   }
 
   function releaseIntro() {
@@ -306,7 +261,6 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     if (entry && entry !== 'mission') {
       // a direct navigation supersedes any gesture buffered during the intro
       takeBootInput();
-      clearIntroDeparture(false);
     } else {
       replayBootInput(readyState);
     }
@@ -336,12 +290,10 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
       totalMs: HERO_INTRO_MS + 900,
       rampMs: departMs,
     });
-    // A queued CTA/callout entry is a direct navigation and still benefits
-    // from immediate departure feedback while the journey activates. A wheel,
-    // touch or key gesture is different: its buffered deltas are replayed into
-    // the normal p-driven Mission envelope, which must own the gradual fade.
-    // Applying intro-depart there blanked the copy on the very first sample.
-    if (entryQueue.peek()) document.body.classList.add('intro-depart');
+    // Do not install a second visual departure while the live journey is
+    // still preparing. The queued destination is state, not paint: once
+    // activateJourney() drains it, the normal camera/copy/rail ticket owns
+    // the whole departure from the frame that is actually on screen.
     setTimeout(activateJourney, accelerated ? departMs : 80);
   }
   entryQueue.whenRequested(beginFastHandoff);
@@ -428,7 +380,6 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         return state;
       } catch (err) {
         stopIntroInputCapture();
-        clearIntroDeparture(true);
         document.body.classList.remove('scene-preparing');
         document.body.classList.add('scene-intro-live');
         scene.intro.start();
@@ -447,16 +398,21 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
 
   onIntroInput = (e) => {
     if (e.type === 'keydown') {
-      if (!['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
+      if (!['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Spacebar',
+        'Home', 'End'].includes(e.key)) return;
       if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     }
+    if (e.type === 'touchmove' && (!e.touches || e.touches.length !== 1)) return;
+    if ((e.type === 'wheel' || e.type === 'touchmove' || e.type === 'keydown')
+        && e.cancelable) e.preventDefault();
     if (collectBootInput(e)) beginFastHandoff();
   };
   introCaptureLive = true;
   for (const type of INTRO_INPUT_EVENTS) {
-    addEventListener(type, onIntroInput, { capture: true, passive: true });
+    const passive = type !== 'wheel' && type !== 'touchmove' && type !== 'keydown';
+    addEventListener(type, onIntroInput, { capture: true, passive });
   }
 
   // Preparation begins now, not after the old 7.6s timer. Its first heavy

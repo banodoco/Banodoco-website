@@ -36,7 +36,8 @@ import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
 import { arcLength, azTurn } from './camera-path.js';
-import { normaliseNode } from './navigation.js';
+import { controlWrapDirection, normaliseNode } from './navigation.js';
+import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
 import { createTransitionController } from './transition/controller.js';
@@ -301,6 +302,20 @@ export function boot(opts = {}) {
   });
 
   let detailNode = null;      // currently open node id, or null
+  let ui = null;
+
+  function cueNavigation() {
+    // The hint is an answer to a blocked gesture at REST. During a camera
+    // flight the moving navigator already explains the active transport, and
+    // a second wave laid over it reads as a competing navigation animation.
+    if (transition.cameraStateDisagree) return false;
+    const fired = !!(ui && ui.rail && ui.rail.cueNavigation
+      && ui.rail.cueNavigation());
+    if (fired && ui.announce) {
+      ui.announce('Use the navigation buttons to move between sections.');
+    }
+    return fired;
+  }
 
   // The scroll model reports nothing per-EVENT any more. It used to push the
   // raw surface position straight into journeyState on every wheel delta,
@@ -308,6 +323,10 @@ export function boot(opts = {}) {
   // controller owns the displayed position, the per-frame read below is the
   // one and only path from scroll to state.
   const scroll = createScrollModel({
+    // Production is click-only. The scroll model remains the deterministic
+    // progress/placement engine used by direct chapter flights and QA, but
+    // wheel, vertical touch and scroll keys stop at the transport boundary.
+    onScrollAttempt: cueNavigation,
     // GB-3.6: an open detail consumes the first scroll intent; travel resumes
     // once the frame is clear.
     onIntent: () => {
@@ -364,10 +383,10 @@ export function boot(opts = {}) {
       opts.onEntry(id);
       return;
     }
-    navigateTo(id);
+    navigateFromControl(id);
   }
 
-  const ui = createUI({
+  ui = createUI({
     rail: opts.rail || null,
     onNav: handleNavIntent,
     onOpen: (nodeId, trigger) => openDetail(nodeId, trigger),
@@ -579,8 +598,31 @@ export function boot(opts = {}) {
      Routes (adr-d6-routes.md)
      ================================================================ */
   function navigateTo(chapterId, wrap = 0) {
+    // A cue that began just before the click must not keep waving through the
+    // flight. The rail owns its animation class/timer and retires both here.
+    if (ui && ui.rail && ui.rail.stopNavigationCue) ui.rail.stopNavigationCue();
     closeDetail();
     directJumpTo(chapterId, wrap);
+  }
+
+  /** The two bookend buttons meet across the journey's hidden seam. Reuse the
+   * old scroll-loop camera path only for Intro <-> Outro; its hero furniture
+   * timing is endpoint-authored, so near-end pairs must remain direct. Read
+   * the logical chapter before directJumpTo() snaps state to its destination. */
+  function navigateFromControl(chapterId) {
+    /* A second bookend click belongs to the lap already on screen. Ask the
+       transition that owns that lap to steer its own ticket; reconstructing
+       its endpoints here from global journey.progress let an interrupted
+       control path miss the live ticket and fall through to directJumpTo(),
+       which installed a fresh opposite wrap at phase zero. That is the
+       455px -> 356px rail snap (and the hero opacity drop) seen on reversal. */
+    if (transition.steerWrapTo(restProgress(chapterId))) {
+      if (ui && ui.rail && ui.rail.stopNavigationCue) ui.rail.stopNavigationCue();
+      closeDetail();
+      return;
+    }
+    const fromId = chapterAt(journey.progress).id;
+    navigateTo(chapterId, controlWrapDirection(fromId, chapterId));
   }
 
   /* Nav = a DIRECT jump (ride-through #2, Hannah): clicking a chapter must not
@@ -697,6 +739,7 @@ export function boot(opts = {}) {
     // the wrap spends it: a rewound lap lands back on this rest
     // (steerWrapBlend / landWrapHome below).
     const fromP = journey.progress;
+    const fromChapterId = chapterAt(fromP).id;
     // A click may overtake another click. Journey state is already at that
     // older flight's destination, while the rail is visibly between rests;
     // start the replacement from the visible coordinate so interruption and
@@ -766,9 +809,15 @@ export function boot(opts = {}) {
     // an equal-p scroll sample even after the camera path was corrected.
     const wrapTicket = wrap ? {
       dir: wrap,
-      homeP: restProgress(chapterAt(fromP).id),
+      homeP: restProgress(fromChapterId),
+      targetP,
       phase: 0,
     } : null;
+    // The wrap's copy envelope can only be priced after placeAt() reveals the
+    // destination camera. Bank the copy that is actually visible before that
+    // synchronous placement so the eventual arm fades from screen truth even
+    // when the source rest was itself established by a dt === 0 placement.
+    if (wrap) guarded('ui', () => ui.prepareCopyEntry(chapterId));
     transition.beginFlight({
       railWrap: wrapTicket,
       railFlight: wrap ? null : { fromP: railFromP, targetP, phase: 0 },
@@ -810,9 +859,10 @@ export function boot(opts = {}) {
     // duration is unchanged; they differ only for a mid-leg overtake.
     const routePace = routeFaithful ? buildRoutePace(railFromP, targetP) : null;
     const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
-    const dur = wrap
+    const baseDuration = wrap
       ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
       : 0.85 + 0.35 * Math.min(len / 20, 1);
+    const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
     // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
     // p, so a jump threw the whole world's depth to the destination's ramp on
     // the click frame while the camera still stood at the origin: measured on
@@ -1356,16 +1406,18 @@ export function boot(opts = {}) {
       if (first) {
         const target = activationEntry || queuedEntry;
         queuedEntry = null;
-        if (target && target !== 'mission') navigateTo(target);
+        if (target && target !== 'mission') navigateFromControl(target);
       }
       return state;
     },
+    /** A blocked scroll gesture points to the fixed chapter controls. */
+    cueNavigation,
     /** QA: jump progress with no travel and no replay. */
     scrollTo(p) { placeAt(clamp01(p)); return journey.progress; },
     /** QA: navigate to a chapter exactly as a nav click does (direct jump
      *  with the camera blend). The name predates the flight system's removal
      *  and is kept so existing QA scripts still run. */
-    flyTo(id) { navigateTo(id); },
+    flyTo(id) { navigateFromControl(id); },
     /** QA: fire a wrap by hand (+1 = past the end to Mission, -1 = before the
      *  start to Final) — the same call the scroll model's onWrap makes. */
     wrap(dir) { navigateTo(dir > 0 ? 'mission' : 'final', dir > 0 ? 1 : -1); },

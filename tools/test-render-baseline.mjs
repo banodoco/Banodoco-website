@@ -309,6 +309,12 @@ wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCou
 // 0.0000 (orb-arrival/README.md §5). A bare bump would have been this pin
 // complying with the change it exists to police (CONTRIBUTING.md §1); the
 // manifest refresh states which two names arrived and keeps the seam readable.
+// RE-BASELINED at the 2026-08-28 release wave: `uNavPocketPx` is the
+// screen-space ellipse shared by Final's strand materials. It is declared in
+// STRAND_FRAG and bound by makeUniforms(), then written from the same Purpose
+// navigator geometry used by CSS/camera composition. Both manifests gained
+// exactly this one name and neither residue below moved: 135 -> 136 declared,
+// 132 -> 133 bound.
 const UNIFORM_NAMES_DECLARED = [
   'fogFar', 'fogNear', 'map', 'tDiffuse', 'tHistory', 'time', 'uAberration', 'uActive',
   'uActiveAmt', 'uAdosHubAlong', 'uAdosShift', 'uAmount', 'uAnon', 'uArrive', 'uArriveSpan',
@@ -318,7 +324,8 @@ const UNIFORM_NAMES_DECLARED = [
   'uFogDensity', 'uFogFar', 'uFogNear', 'uFrom', 'uFront', 'uFrontOn', 'uGain', 'uGrain',
   'uGrainAmt', 'uGrainSeed', 'uGroundAdosDelta', 'uGrow', 'uHairAmp', 'uHalation', 'uHaze',
   'uHead', 'uHot', 'uHoverA', 'uHoverAmt', 'uHoverIdx', 'uImgMute', 'uLift', 'uLit', 'uLitMax',
-  'uMap', 'uMapA', 'uMapA2', 'uMapB', 'uMapH', 'uMapH2', 'uMapP', 'uMapP2', 'uNear', 'uOpacity',
+  'uMap', 'uMapA', 'uMapA2', 'uMapB', 'uMapH', 'uMapH2', 'uMapP', 'uMapP2', 'uNavPocketPx',
+  'uNear', 'uOpacity',
   'uOwner', 'uOwnerAmt', 'uPartAmp', 'uPhoto', 'uProg', 'uPull', 'uPulse', 'uPulseAmp',
   'uPulseC', 'uPulseColor', 'uPulseHead', 'uPulseOn', 'uPulseP', 'uPulseT', 'uPulseWidth',
   'uQuiet', 'uQuietTier', 'uReach', 'uRes', 'uResolution', 'uRevIn', 'uRim', 'uRouteAmp',
@@ -342,7 +349,8 @@ const UNIFORM_NAMES_BOUND = [
   'uFogDensity', 'uFogFar', 'uFogNear', 'uFrom', 'uFront', 'uFrontOn', 'uGain', 'uGrain',
   'uGrainAmt', 'uGrainSeed', 'uGroundAdosDelta', 'uGrow', 'uHairAmp', 'uHalation', 'uHaze',
   'uHead', 'uHot', 'uHoverA', 'uHoverAmt', 'uHoverIdx', 'uImgMute', 'uLift', 'uLit', 'uLitMax',
-  'uMap', 'uMapA', 'uMapA2', 'uMapB', 'uMapH', 'uMapH2', 'uMapP', 'uMapP2', 'uNear', 'uOpacity',
+  'uMap', 'uMapA', 'uMapA2', 'uMapB', 'uMapH', 'uMapH2', 'uMapP', 'uMapP2', 'uNavPocketPx',
+  'uNear', 'uOpacity',
   'uPartAmp', 'uPhoto', 'uProg', 'uPull', 'uPullRaw', 'uPulse', 'uPulseAmp', 'uPulseC',
   'uPulseColor', 'uPulseHead', 'uPulseOn', 'uPulseP', 'uPulseT', 'uPulseWidth', 'uQuiet',
   'uQuietTier', 'uReach', 'uRes', 'uResolution', 'uRevIn', 'uRim', 'uRouteAmp', 'uScale',
@@ -351,9 +359,9 @@ const UNIFORM_NAMES_BOUND = [
   'uVarB', 'uVarC', 'uVarD', 'uVignette', 'uW', 'uWaveAmt', 'uWaveC', 'uWaveR', 'uWaveW',
   'uWell', 'uWidth', 'uWin', 'uWind', 'uWobA', 'uWobB', 'uWobId', 'uWobR',
 ];
-waveManifest('S12', 'declared uniform names (135; WAS the bare size, 133)',
+waveManifest('S12', 'declared uniform names (136; WAS the bare size, 133)',
   report.shaders.uniformNameUnion, UNIFORM_NAMES_DECLARED);
-waveManifest('S13', 'bound uniform names (132; WAS the bare size, 130)',
+waveManifest('S13', 'bound uniform names (133; WAS the bare size, 130)',
   report.shaders.uniformBindingNameUnion, UNIFORM_NAMES_BOUND);
 // The two cross-check residues below are EXTRACTOR SCOPE, not defects — see
 // limitations.md §2c. They are pinned so a NEW residue is visible.
@@ -385,7 +393,7 @@ check('G1', 'baked manifest version', disk.manifestVersion, 1);
    their recorded hashes — so the bake is deterministic and this delta is one chapter's
    geometry, not a toolchain drift. */
 check('G2', 'baked manifest sha256', disk.manifestSha256,
-  'e85efe05cf8beae42364e2d10d854c6f00b4129d077270415f47e9227a16ec10');
+  '1a0dda2a09f786ed8fc2b647a99e0700b9bb8e3fcd79c8b620887de2e58b1ab5');
 check('G3', 'baked chapter count', disk.chapterCount, 4);
 check('G4', 'baked key count', disk.totalKeyCount, 50);
 check('G5', 'baked attribute count', disk.totalAttrCount, 251);
@@ -395,7 +403,7 @@ for (const [id, bytes, keys, sha] of [
   ['connect', 315888, 2, 'cf610e19cd107a57d3928d875b78e03ab35aa8992ee95c31ddb409e959a9ce29'],
   ['final', 2223988, 16, 'c9ababa77505a974d6c641462da5f4ad32d08618e9c6e1ffada910828aba454f'],
   ['inspire', 80948, 11, '604e3855456819136e7e24dd34021cb6a11f77895fdc2a4cfa8c5641a59e05e9'],
-  ['owned', 2320088, 21, 'd7094e42d6dc7f357e178b9e93cf667c100dca19dc095bee230fa72e2e7a65de'],  // site 13 — see G2
+  ['owned', 2320088, 21, '9332b00f5bbe7a896f2e85532e234b1464a21f17b841a6669497b8463f4fcb3e'],  // site 13 — see G2
 ]) {
   const c = chapter(id);
   check(`G7.${id}`, `${id}.bin byte length`, c.byteLength, bytes);
@@ -543,7 +551,7 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
 // disappear"; the loop's write powered the legacy `.j-rail-following` rule
 // that blanked a row item at the mid-leg wrap seam), so the site left the
 // tree with the defect it was feeding.
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 237);
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 240);
 wave('M2', 'transparent: sites', flag('transparent'), 33);
 wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
 wave('M4', 'blending: sites', flag('blending'), 33);
@@ -662,7 +670,9 @@ const lcSites = (call) => report.lifecycle.perCall.find((c) => c.call === call).
    for them was a removal nothing performed. `journey/ui/owner.js x1` is still
    the funnel's own site and the fifteen files that still route through it are
    unchanged. See docs/code-health/DISPOSAL-REMOVED.md. */
-wave('M6', 'addEventListener sites', lc.addEventListenerSites, 67);
+/* Click-only touch travel adds the platform cancellation partner beside
+   touchend so an interrupted gesture cannot leave its blocked state armed. */
+wave('M6', 'addEventListener sites', lc.addEventListenerSites, 68);
 // D36: WHERE the rAF sites are, as a file-level map. File-level rather than
 // per-site because a line number shifts on unrelated edits, and rAF call text
 // is often a bare `requestAnimationFrame(tick)` that repeats across files.
@@ -672,16 +682,25 @@ wave('M6', 'addEventListener sites', lc.addEventListenerSites, 67);
 // requests through ONE site in journey/ui/owner.js and registers a matching
 // cancelAnimationFrame — so M9's floor gains a site and M19's imbalance
 // narrows 10 -> 8. This entry moved for the same edit that moved M6.
-/* RE-BASELINED by order B01, 2026-08-23: the EIGHT rAF sites moved from
+/* RE-BASELINED by order B01, 2026-08-23: the original eight rAF sites moved from
    main.js to journey/boot/handoff.js, unchanged in count and unchanged one by
    one. They are the journey-preparation machine's own — the nextTask() slicer,
-   activateWhenIntroComplete's poll, the intro-departure handoff loop and the
-   preboot-rail fade — and they went with the machine. WAS (pre-B01):
+   activateWhenIntroComplete's poll, the former scroll-replay handoff loop and
+   the preboot-rail fade — and they went with the machine. The click-only
+   journey later removed the two replay-poll sites because an early scroll is
+   now a navigation cue, not progress. WAS (pre-B01):
    "journey/ui/owner.js x1", "main.js x8", ... A manifest is exactly the right
    pin for this: a bare count would have read 8 -> 8 and said nothing, while
-   this one named both halves of the move. */
+   this one named both halves of the move.
+
+   RE-BASELINED at the 2026-08-28 release wave, handoff.js x8 -> x6: the two
+   removed sites were the nested `intro-depart` polling loop. That parallel
+   paint owner caused the Intro copy to flash off/on around activation; the
+   normal journey ticket now owns the fade, so no replacement polling loop is
+   warranted. The other three files and all six surviving handoff sites are
+   unchanged. */
 const RAF_SITES_BY_FILE = [
-    "journey/boot/handoff.js x8",
+    "journey/boot/handoff.js x6",
     "journey/ui/owner.js x1",
     "organism/animation.js x1",
     "organism/intro.js x1",
@@ -715,6 +734,14 @@ const REMOVE_LISTENER_SITES = [
        argument, paid off. The removal was verified present in its new home
        before this line was re-keyed, not assumed. */
     "journey/boot/handoff.js :: for (const type of INTRO_INPUT_EVENTS) removeEventListener(type, onIntroInput, true);",
+    /* Folded in at the 2026-08-28 wave seam, as the floor's advisory
+       prescribes. The media entry is the no-matchMedia fallback's contract;
+       the spores pair are the real teardown partners for its page-lifetime
+       pointer drift listeners. All three already existed in the accepted
+       tree; recording them tightens the floor without changing production. */
+    "journey/ui/media.js :: : { matches: false, addEventListener() {}, removeEventListener() {} };",
+    "organism/spores.js :: offMouseLeave = () => document.removeEventListener('mouseleave', onMouseLeave);",
+    "organism/spores.js :: offPointerMove = () => removeEventListener('pointermove', onPointerMove);",
     /* FLOOR LOWERED BY EXPLICIT ACCEPTANCE — DISPOSAL REMOVAL, 2026-08-25.
        This is the one thing this floor exists to refuse, and it is being
        done deliberately with the owner's decision behind it, not slipped
@@ -784,15 +811,21 @@ manifestFloor('M9', 'every recorded cancelAnimationFrame site still exists',
 // "an attach added without its teardown" is now every attach, and this ceiling
 // can only detect NEW attach SITES. It is kept for that narrower job and its
 // slack is again zero. docs/code-health/DISPOSAL-REMOVED.md.
+// RAISED 59 -> 60, 2026-08-27: transport's page-lifetime touchcancel partner
+// clears the same state as touchend after an OS/browser-cancelled contact.
 ceiling('M18', 'listener attach/detach imbalance never widens',
-  lc.addEventListenerSites - lc.removeEventListenerSites, 59);
+  lc.addEventListenerSites - lc.removeEventListenerSites, 60);
 // RATCHETED 11 -> 10 by order R02 (organism/intro.js — the ramp rAF is now
 // cancelled). Lowering a ceiling when the tree improves is the maintenance
 // this class requires: leaving it at 11 would silently re-permit the leak R02
 // just closed. The suite emits an advisory when a ratchet has slack, which is
 // how this one was noticed.
+// RATCHETED 10 -> 7 at the 2026-08-28 wave seam: handoff's two parallel
+// intro-depart polling requests were removed, and the accepted tree now has
+// nine request sites against two cancellation sites. The advisory requires
+// consuming that slack so a future request without a cancel cannot hide in it.
 ceiling('M19', 'rAF request/cancel imbalance never widens',
-  lc.requestAnimationFrameSites - lc.cancelAnimationFrameSites, 10);
+  lc.requestAnimationFrameSites - lc.cancelAnimationFrameSites, 7);
 check('M10', 'live listener/rAF counts are declared unmeasured, not faked',
   report.lifecycle.liveCounts.derivation, 'unmeasured');
 
@@ -867,6 +900,10 @@ const DISPOSE_SITES = [
     // Same statement, same behaviour, new file — the floor's identity is the
     // site, so the path is corrected rather than the entry dropped and re-added.
     "journey/chapters/owned/portrait-remix.js :: for (const texture of textures) if (texture && typeof texture.dispose === 'function') texture.dispose();",
+    /* Folded in at the 2026-08-28 wave seam: portrait recomposition replaces
+       one live strand geometry and disposes that exact outgoing leaf so its
+       BufferAttributes' GPU buffers cannot be stranded. */
+    "journey/chapters/owned/portraits.js :: outgoing.dispose();",
     "journey/journey.js :: rt.dispose();",
     "organism/organism.js :: dispose() { this.history.dispose(); this.quad.dispose(); }",
   ];
@@ -1059,6 +1096,7 @@ const SOURCE_MANIFEST = [
     "journey/chapters/final/terrain.js",
     "journey/chapters/final/variation.js",
     "journey/chapters/final/world.js",
+    "journey/chapters/hero-ground-dim.js",
     "journey/chapters/inspire/anatomy.js",
     "journey/chapters/inspire/camera.js",
     "journey/chapters/inspire/index.js",
@@ -1089,11 +1127,17 @@ const SOURCE_MANIFEST = [
     "journey/frame/publication.js",
     "journey/journey-owner.js",
     "journey/journey.js",
+    /* Added at the 2026-08-28 release wave: the one shared source of Final's
+       phone lift and Purpose navigator clearance pocket. */
+    "journey/layout/final-composition.js",
     "journey/layout/rail-geometry.js",
     "journey/lens.js",
     "journey/lib/baked.js",
     "journey/lib/ease.js",
     "journey/lib/helpers.js",
+    /* Added at the same seam: route-pair speed policy, applied once at the
+       existing camera-duration boundary. */
+    "journey/navigation-timing.js",
     "journey/navigation.js",
     "journey/ownership.js",
     "journey/portrait.js",
@@ -1126,6 +1170,7 @@ const SOURCE_MANIFEST = [
     "journey/ui/media.js",
     "journey/ui/owner.js",
     "journey/ui/popover-tier.js",
+    "journey/ui/rail-handoff.js",
     "journey/ui/rail-mask.js",
     "journey/ui/selection.js",
     "journey/ui/sheet-gesture.js",

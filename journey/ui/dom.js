@@ -5,35 +5,40 @@ export function el(tag, cls, text) {
   return node;
 }
 
-import { buildSymbol } from '../symbols.js';
-
 /** Builds chapter destination controls in declaration order.
  *
- *  Two weights of control come out of this: the pill/CTA family
- *  (`j-act-primary` etc., styled as buttons) and the DOOR — the editorial
- *  text link the Epilogue carries (owner, 2026-08-27: "more like
- *  editorial links than buttons... deeper reading"). A door is a bare
- *  anchor: a small glyph from the site's own symbol set, the label in the
- *  body's sans, a trailing arrow, and a hairline rule drawn by CSS. */
+ *  Two families of control come out of this: the pill/CTA family
+ *  (`j-act-primary` etc., styled as buttons), and editorial links. Purpose's
+ *  links are intentionally data-shaped here so their icon/title/descriptor
+ *  remain one accessible anchor while CSS can make the descriptors a quiet
+ *  hover/focus reveal. */
+import { buildSymbol } from '../symbols.js';
+
 export function buildActions(specs) {
   const row = el('div', 'j-actions');
   for (const spec of specs) {
     if (spec.kind !== 'link') continue;
-    const node = el('a', `j-act j-act-${spec.weight || 'primary'}`);
+    // Purpose's editorial doors intentionally do not carry `.j-act`: that
+    // class is the hook for the chapter-arrival rise in arrival-motion.js and
+    // copy-arrival.js. Their own class lets them fade with the Purpose copy
+    // envelope without inheriting the existing navigation animation.
+    const node = el('a', spec.weight === 'purpose'
+      ? 'j-purpose-cta j-act-purpose'
+      : `j-act j-act-${spec.weight || 'primary'}`);
     node.href = spec.href || '#';
     if (spec.id) node.dataset.action = spec.id;
-    if (spec.weight === 'door') {
-      // No trailing arrow (owner, 2026-08-27): an outward arrow claims
-      // "leaves this page", and this door is an in-page destination. The
-      // small glyph carries the affordance; label + glyph is the whole
-      // grammar.
-      if (spec.glyph) {
-        const g = el('span', 'j-door-g');
-        g.setAttribute('aria-hidden', 'true');
-        g.appendChild(buildSymbol(spec.glyph));
-        node.appendChild(g);
-      }
-      node.appendChild(el('span', 'j-act-t', spec.label));
+    if (spec.weight === 'purpose') {
+      // Purpose uses the existing Owned scene mark, reduced to a quiet
+      // editorial scale rather than inventing a second icon vocabulary.
+      const icon = el('span', 'j-purpose-icon');
+      icon.setAttribute('aria-hidden', 'true');
+      if (spec.glyph) icon.appendChild(buildSymbol(spec.glyph));
+      else if (spec.icon) icon.textContent = spec.icon;
+      node.appendChild(icon);
+      const copy = el('span', 'j-purpose-copy');
+      copy.appendChild(el('span', 'j-act-t', spec.label));
+      if (spec.sub) copy.appendChild(el('span', 'j-act-sub', spec.sub));
+      node.appendChild(copy);
     } else {
       node.appendChild(el('span', 'j-act-t', spec.label));
     }

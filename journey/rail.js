@@ -127,6 +127,18 @@ import { installBackdropDismiss } from './backdrop.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { createOwner } from './ui/owner.js';
 import { mediaQuery, REDUCE_MOTION } from './ui/media.js';
+import {
+  RAIL_HANDOFF,
+  applyRailHandoffState,
+  railGatherX,
+  railHandoffRest,
+  railHandoffState,
+  railHandoffVisual,
+  railHandoffWrapVisual,
+  railPurposeWrapPresence,
+  railPurposeLabelStage,
+  PURPOSE_LABEL_TOP_AT,
+} from './ui/rail-handoff.js';
 import { NAV_ROW_ITEMS, rowLayout } from './layout/rail-geometry.js';
 
 /* The panel reuses the initiative pictographs already drawn for the in-scene
@@ -495,7 +507,7 @@ export function createRail({ onNav } = {}) {
   /* ------------------------------------------------------------------ *
    * THE OWNER TREE (J04b, lifecycle.md §6.2/§6.3)
    *
-   * 19 listeners, 6 timers and 2 rAFs, all of which the rail attaches at
+   * 24 listeners, 9 timers and 2 rAFs, all of which the rail attaches at
    * construction and none of which it has ever removed. They now go through
    * an owner, so `destroy()` can.
    *
@@ -539,6 +551,8 @@ export function createRail({ onNav } = {}) {
   const root = el('nav', 'j-rail');
   root.setAttribute('aria-label', 'Journey sections');
   root.dataset.layout = 'mission';
+  root.dataset.handoff = RAIL_HANDOFF.JOURNEY;
+  root.classList.add('j-rail-handoff-journey');
   // The fan geometry: every slot's position is (--i - --cur) tiles from the
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
@@ -699,6 +713,81 @@ export function createRail({ onNav } = {}) {
     slots.push({ id: r.id, li, item });
   });
 
+  /* PURPOSE'S SUBTREE. It stays mounted in all states, but is exposed only
+     when the semantic destination has landed on Purpose or is travelling to
+     Ownership. The ordinary row's Purpose item is always the parent: during
+     Ownership the five row slots gather into the centre, its four peers are
+     absorbed, and Purpose remains full-size as the way back. The duplicate
+     parent retained below is permanently hidden for DOM compatibility.
+
+     Manifesto deliberately reuses Equip's exact unavailable-item contract:
+     a non-link span, not in the tab order, whose label swaps to Soon on hover
+     and whose touch answer is the same timed `.j-rail-note` state. */
+  const purposeTree = el('div', 'j-rail-purpose-tree');
+  purposeTree.setAttribute('role', 'group');
+  purposeTree.setAttribute('aria-label', 'Purpose sections');
+  purposeTree.setAttribute('aria-hidden', 'true');
+  purposeTree.inert = true;
+
+  const purposeParent = el('a', 'j-rail-purpose-parent j-rail-purpose-node');
+  purposeParent.href = '#/final';
+  purposeParent.dataset.chapter = 'final';
+  purposeParent.setAttribute('aria-label', `Return to ${chapterName('final')}`);
+  purposeParent.setAttribute('aria-hidden', 'true');
+  purposeParent.inert = true;
+  const purposeParentMark = el('span', 'j-rail-purpose-mark');
+  purposeParentMark.appendChild(buildSymbol('final'));
+  purposeParent.appendChild(purposeParentMark);
+  purposeParent.appendChild(el('span', 'j-rail-purpose-label', chapterName('final')));
+  itemsOwner.listen(purposeParent, 'click', (e) => {
+    e.preventDefault();
+    navigate('final');
+  });
+  purposeTree.appendChild(purposeParent);
+
+  const purposeChildren = el('div', 'j-rail-purpose-children');
+  const ownershipSlot = el('div', 'j-rail-slot j-rail-minor j-rail-purpose-child j-rail-purpose-ownership');
+  const ownershipLink = el('a', 'j-rail-item');
+  ownershipLink.href = '#/owned';
+  ownershipLink.dataset.chapter = 'owned';
+  ownershipLink.setAttribute('aria-label', 'Ownership');
+  const ownershipMark = el('span', 'j-rail-mark');
+  ownershipMark.appendChild(buildSymbol('owned'));
+  ownershipMark.appendChild(reticle());
+  ownershipLink.appendChild(ownershipMark);
+  ownershipLink.appendChild(el('span', 'j-rail-name', 'Ownership'));
+  itemsOwner.listen(ownershipLink, 'click', (e) => {
+    e.preventDefault();
+    navigate('owned');
+  });
+  ownershipSlot.appendChild(ownershipLink);
+  purposeChildren.appendChild(ownershipSlot);
+
+  const manifestoSlot = el('div', 'j-rail-slot j-rail-minor j-rail-purpose-child j-rail-purpose-manifesto');
+  const manifestoItem = el('span', 'j-rail-item j-rail-soon-item');
+  manifestoItem.setAttribute('aria-label', 'Manifesto, Soon');
+  const manifestoMark = el('span', 'j-rail-mark');
+  // The whole-specimen mark is appropriate here: the manifesto describes
+  // the purpose as a whole, while its unavailable semantics remain Equip's.
+  manifestoMark.appendChild(buildSymbol('mission'));
+  manifestoMark.appendChild(reticle());
+  manifestoItem.appendChild(manifestoMark);
+  manifestoItem.appendChild(el('span', 'j-rail-name', 'Manifesto'));
+  manifestoItem.appendChild(el('span', 'j-rail-soon-note', 'Soon'));
+  itemsOwner.listen(manifestoItem, 'pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    manifestoSlot.classList.add('j-rail-note');
+    itemsOwner.timer(() => manifestoSlot.classList.remove('j-rail-note'), 1600);
+  });
+  manifestoSlot.appendChild(manifestoItem);
+  purposeChildren.appendChild(manifestoSlot);
+  purposeTree.appendChild(purposeChildren);
+
+  const purposeIndicator = el('span', 'j-rail-purpose-indicator');
+  purposeIndicator.setAttribute('aria-hidden', 'true');
+  purposeTree.appendChild(purposeIndicator);
+  inner.appendChild(purposeTree);
+
   /* ---- the menu control: the second resting symbol ---- */
   const menuBtn = el('button', 'j-rail-menu');
   menuBtn.type = 'button';
@@ -724,6 +813,32 @@ export function createRail({ onNav } = {}) {
   inner.appendChild(menuBtn);
 
   document.body.appendChild(root);
+
+  /* Scroll is no longer a journey input. A wheel, one-finger vertical drag,
+     or scroll key points back to this navigator instead: one throttled wave
+     across the five marks, never a camera move. A physical gesture emits a
+     stream of events, so the cooldown owns the whole stream rather than
+     restarting the animation on every trackpad sample. */
+  let lastNavigationCueAt = -Infinity;
+  let navigationCueTimer = null;
+  function stopNavigationCue() {
+    if (navigationCueTimer) clearTimeout(navigationCueTimer);
+    navigationCueTimer = null;
+    root.classList.remove('j-rail-wave');
+  }
+  function cueNavigation() {
+    const now = performance.now();
+    if (now - lastNavigationCueAt < 1000) return false;
+    lastNavigationCueAt = now;
+    stopNavigationCue();
+    void root.offsetWidth;
+    root.classList.add('j-rail-wave');
+    navigationCueTimer = owner.timer(() => {
+      root.classList.remove('j-rail-wave');
+      navigationCueTimer = null;
+    }, 980);
+    return true;
+  }
 
   /* ------------------------------------------------------------------ */
   /* THE SITE-MAP PANEL                                                  */
@@ -1386,6 +1501,7 @@ export function createRail({ onNav } = {}) {
   let nowId = null;
   let activeId = null;
   let semanticId = null;   // aria-current's owner — rides p, not railP
+  let handoffState = RAIL_HANDOFF.JOURNEY;
   let dimmed = null;
   let wasCameraStateDisagree = false;
   let wasBetweenRests = false;
@@ -1397,6 +1513,9 @@ export function createRail({ onNav } = {}) {
   let dockingFlight = null;
   let dockingFlightFrom = 0;
   let dockingFlightTarget = 0;
+  let handoffFlight = null;
+  let handoffFrom = railHandoffRest('mission');
+  let handoffVisual = railHandoffRest('mission');
 
   /* THE CROSSING, GIVEN AN OWNER — and only this one crossing (DEFECT-01 #2).
      The centred row no longer writes ANY inline geometry (the DOCK_INLINE
@@ -1422,7 +1541,12 @@ export function createRail({ onNav } = {}) {
      screen. */
   function setHeroEase() {
     let u;
-    if (horizontalFlight) {
+    if (horizontalWrap) {
+      // The cyclic Mission/Final lap has a long orbital middle. Purpose's
+      // scale-down, lift and branch all belong only to the explicit endpoint
+      // approach, so consume the exact same reversible camera envelope here.
+      u = railPurposeWrapPresence(horizontalWrap);
+    } else if (horizontalFlight) {
       /* A non-adjacent click traverses several semantic rail positions in one
          camera move. Deriving the dock from that coordinate compressed the
          whole 196px Mission move into the final fraction of a return flight:
@@ -1738,13 +1862,24 @@ export function createRail({ onNav } = {}) {
       chX[ci] = L.centres[a] + (L.centres[b] - L.centres[a]) * f;
       chD[ci] = L.dia[a] + (L.dia[b] - L.dia[a]) * f;
     }
-    rowPx = { w, h, L, chX, chD };
+    const purposeRowIndex = ROW.findIndex(entry => entry.id === 'final');
+    const purposeX = purposeRowIndex >= 0
+      ? L.centres[purposeRowIndex] - L.width / 2
+      : 0;
+    rowPx = { w, h, L, chX, chD, purposeX };
     root.style.setProperty('--nav-major', `${L.major}px`);
     root.style.setProperty('--nav-minor', `${L.minor}px`);
     root.style.setProperty('--nav-gap', `${L.gap}px`);
     root.style.setProperty('--nav-centre-bottom', `${h - L.centreY}px`);
+    root.style.setProperty('--purpose-rail-lift-max', `${L.purposeLift}px`);
     root.style.setProperty('--nav-fit-major', String(L.majorFit));
     root.style.setProperty('--nav-fit-minor', String(L.minorFit));
+    if (purposeRowIndex >= 0) {
+      root.style.setProperty(
+        '--purpose-x',
+        `${purposeX.toFixed(3)}px`,
+      );
+    }
     return rowPx;
   }
 
@@ -1919,6 +2054,185 @@ export function createRail({ onNav } = {}) {
     followCoordinate(dir > 0 ? (N - 1) + phase : -phase);
   }
 
+  /* THE PURPOSE TREE RIDES THE CAMERA, NOT A CSS TIMER. The ordinary row,
+     tree reveal, recentering, parent/child current handoff and five-pixel
+     indicator are all projected from one eased value each frame. A new
+     ticket captures the values already painted, so a reversal begins at the
+     current pixels. With no ticket, the selected rest is exact: the current
+     transport is button-led and tiny settling residue in p must not keep the
+     tree trembling after the camera has landed. Purpose <-> Connect flights
+     use their explicit endpoints here; merely crossing Owned's p-band can
+     never summon its subtree. */
+  function paintPurposeHandoff(selectedChapterId, flight, wrap) {
+    const ticket = flight || wrap;
+    if (ticket) {
+      if (handoffFlight !== ticket) {
+        handoffFlight = ticket;
+        handoffFrom = { ...handoffVisual };
+      }
+      handoffVisual = wrap
+        ? railHandoffWrapVisual({
+          from: handoffFrom,
+          targetChapterId: selectedChapterId,
+          phase: ticket.phase,
+        })
+        : railHandoffVisual({
+          from: handoffFrom,
+          targetChapterId: chapterAt(flight.targetP).id,
+          phase: ticket.phase,
+        });
+    } else {
+      handoffFlight = null;
+      handoffVisual = railHandoffRest(selectedChapterId);
+    }
+
+    const treeU = Math.max(0, Math.min(1, handoffVisual.tree));
+    const ownershipU = Math.max(0, Math.min(1, handoffVisual.ownership));
+    const { L, purposeX } = rowFrame();
+    /* The children are a viewport-centred pair, not a cluster hanging from
+       the rightmost Purpose slot. Purpose remains the physical parent while
+       the row is open, so the connector needs two anchors: its root follows
+       Purpose as it gathers, while its junction stays on the viewport axis.
+       The tree's late Ownership grow scales around its root; divide by that
+       scale below so the painted junction (and therefore the pair) remains
+       exactly centred even during that grow. */
+    const childOffset = (L.minor + 52) / 2;
+    const childGap = Math.max(2, childOffset * 2 - L.minor);
+    const childX = -childOffset;
+    const ownershipGrowthX = Math.max(0, Math.min(1, (ownershipU - 0.52) / 0.48));
+    const ownershipGrowth = ownershipGrowthX * ownershipGrowthX * (3 - 2 * ownershipGrowthX);
+    const treeScale = 1 + 0.10 * ownershipGrowth;
+    const treeX = purposeX * (1 - ownershipU);
+    const junctionX = -treeX / treeScale;
+    /* A quiet L-pipe locates the branch without turning it into a flowchart:
+       down from Purpose's lower ring edge, then left to the viewport axis.
+       The junction itself has only two short diagonal arms into the child
+       centres. Lengths and angles are recomputed in the same scaled tree
+       frame on every camera tick, so gathering and reversal do not detach
+       the strokes from either endpoint. */
+    const connectorStartY = L.minorRingD / 2;
+    /* The elbow sits eight pixels above the ordinary active-dot seat. The
+       ordinary dot follows this same camera-paced lift through
+       --purpose-active-node-lift, so when Ownership takes over both dots
+       still occupy the raised elbow's exact pixel; reversal hands it back at
+       that same pixel too. */
+    const ELBOW_LIFT_PX = 8;
+    const splitY = L.major / 2 + 26 - ELBOW_LIFT_PX;
+    const trunkLength = splitY - connectorStartY;
+    const reachLength = Math.abs(junctionX);
+    const childLift = 6;
+    const childTopY = splitY - childLift;
+    const branchDrop = L.major / 2 - childLift;
+    const branchLength = Math.hypot(childOffset, branchDrop);
+    const branchAngle = Math.atan2(branchDrop, childOffset) * 180 / Math.PI;
+    const trunkU = Math.max(0, Math.min(1, treeU / 0.34));
+    const reachU = Math.max(0, Math.min(1, (treeU - 0.18) / 0.44));
+    const forkU = Math.max(0, Math.min(1, (treeU - 0.50) / 0.36));
+    const childU = Math.max(0, Math.min(1, (treeU - 0.64) / 0.36));
+    const childScale = 0.34 + 0.66 * childU;
+    /* Ownership is a branch destination, but it must speak the same selected
+       language as every top-row chapter.  Drive its ink, halo and 5% arrival
+       scale from the branch's own camera-paced coordinate using the exact
+       palette/function used by writeAngles() for Inspire.  At the endpoint
+       the ordinary `.active` rules take over, so this is one navigation
+       grammar with a different path — not a bespoke Ownership state. */
+    const ownershipBase = GLYPH_COLOURS.future;
+    const ownershipTarget = GLYPH_COLOURS.active;
+    const ownershipRgb = ownershipBase.rgb.map((channel, channelIndex) =>
+      channel + (ownershipTarget.rgb[channelIndex] - channel) * ownershipU);
+    const ownershipAlpha = ownershipBase.alpha
+      + (ownershipTarget.alpha - ownershipBase.alpha) * ownershipU;
+    ownershipSlot.style.setProperty('--glyph-r', ownershipRgb[0].toFixed(2));
+    ownershipSlot.style.setProperty('--glyph-g', ownershipRgb[1].toFixed(2));
+    ownershipSlot.style.setProperty('--glyph-b', ownershipRgb[2].toFixed(2));
+    ownershipSlot.style.setProperty('--glyph-alpha', ownershipAlpha.toFixed(3));
+    ownershipSlot.style.setProperty('--glyph-scale', (1 + 0.05 * ownershipU).toFixed(4));
+    ownershipSlot.style.setProperty('--glyph-glow', (0.02 + 0.26 * ownershipU).toFixed(3));
+    ownershipSlot.classList.toggle(
+      'active',
+      selectedChapterId === 'owned' && ownershipU >= 0.9999,
+    );
+    const labelStage = railPurposeLabelStage({ tree: treeU, ownership: ownershipU });
+    const labelFade = labelStage === 'leaving'
+      ? Math.max(0, Math.min(1, 1 - treeU / PURPOSE_LABEL_TOP_AT))
+      : 1;
+
+    root.classList.toggle('j-rail-purpose-visible', treeU > 0.001);
+    root.classList.toggle('j-rail-purpose-gathering', ownershipU > 0.001);
+    for (const stage of ['below', 'leaving', 'above', 'gathering']) {
+      root.classList.toggle(`j-rail-purpose-labels-${stage}`, labelStage === stage);
+    }
+    root.style.setProperty('--purpose-label-fade', labelFade.toFixed(5));
+    // Hairline and peer ink follow the same camera-paced gather. CSS consumes
+    // this open fraction directly; no wall clock chases ownershipU.
+    root.style.setProperty('--purpose-gather-open-u', (1 - ownershipU).toFixed(5));
+    root.style.setProperty('--purpose-rail-lift', `${(L.purposeLift * treeU).toFixed(3)}px`);
+    root.style.setProperty('--purpose-tree-x', `${treeX.toFixed(3)}px`);
+    root.style.setProperty('--purpose-junction-x', `${junctionX.toFixed(3)}px`);
+    root.style.setProperty('--purpose-tree-opacity', treeU.toFixed(5));
+    root.style.setProperty('--purpose-tree-blur', `${(3 * (1 - treeU)).toFixed(3)}px`);
+    root.style.setProperty('--purpose-trunk-u', trunkU.toFixed(5));
+    root.style.setProperty('--purpose-trunk-length', `${trunkLength.toFixed(3)}px`);
+    root.style.setProperty('--purpose-reach-u', reachU.toFixed(5));
+    root.style.setProperty('--purpose-reach-length', `${reachLength.toFixed(3)}px`);
+    root.style.setProperty('--purpose-connector-start-y', `${connectorStartY.toFixed(3)}px`);
+    root.style.setProperty('--purpose-split-y', `${splitY.toFixed(3)}px`);
+    root.style.setProperty('--purpose-child-top-y', `${childTopY.toFixed(3)}px`);
+    root.style.setProperty('--purpose-branch-origin-y', `${childLift.toFixed(3)}px`);
+    root.style.setProperty(
+      '--purpose-active-node-lift',
+      `${(ELBOW_LIFT_PX * treeU).toFixed(3)}px`,
+    );
+    root.style.setProperty('--purpose-fork-u', forkU.toFixed(5));
+    root.style.setProperty('--purpose-branch-length', `${branchLength.toFixed(3)}px`);
+    root.style.setProperty('--purpose-branch-angle', `${branchAngle.toFixed(4)}deg`);
+    root.style.setProperty('--purpose-child-u', childU.toFixed(5));
+    root.style.setProperty('--purpose-child-scale', childScale.toFixed(5));
+    root.style.setProperty('--purpose-tree-scale', treeScale.toFixed(5));
+    root.style.setProperty('--purpose-parent-scale', treeScale.toFixed(5));
+    root.style.setProperty('--purpose-child-gap', `${childGap.toFixed(3)}px`);
+    root.style.setProperty('--purpose-child-shift-x', `${(childX * (1 - childU)).toFixed(3)}px`);
+    root.style.setProperty('--purpose-child-shift-y', `${(-22 * (1 - childU)).toFixed(3)}px`);
+    root.style.setProperty('--purpose-mark-clip-radius', `${(50 * childU).toFixed(3)}%`);
+    const dedicatedIndicator = selectedChapterId === 'owned'
+      || (flight && chapterAt(flight.fromP).id === 'owned')
+      || ownershipU > 0.001;
+    root.style.setProperty(
+      '--purpose-indicator-opacity',
+      (dedicatedIndicator ? treeU : 0).toFixed(5),
+    );
+    const indicatorSplitAt = 0.70;
+    const indicatorReachU = Math.min(1, ownershipU / indicatorSplitAt);
+    const indicatorBranchU = Math.max(0,
+      (ownershipU - indicatorSplitAt) / (1 - indicatorSplitAt));
+    /* The complete tree grows 10% at settled Ownership, but the selected dot
+       is navigation chrome and must keep Inspire's exact screen-space offset
+       below its icon. Divide only that icon-to-dot leg by the tree scale so
+       the painted distance remains L.major / 2 + 26 at every phase. */
+    const indicatorEndY = childTopY + L.major / 2 + (L.major / 2 + 26) / treeScale;
+    const indicatorX = ownershipU <= indicatorSplitAt
+      ? junctionX * indicatorReachU
+      : junctionX + childX * indicatorBranchU;
+    const indicatorY = ownershipU <= indicatorSplitAt
+      ? splitY
+      : splitY + (indicatorEndY - splitY) * indicatorBranchU;
+    root.style.setProperty('--purpose-indicator-x', `${indicatorX.toFixed(3)}px`);
+    root.style.setProperty('--purpose-indicator-y', `${indicatorY.toFixed(3)}px`);
+
+    slots.forEach((slot, index) => {
+      const gatherX = railGatherX({
+        centre: L.centres[index],
+        width: L.width,
+        phase: ownershipU,
+      });
+      slot.li.style.setProperty('--purpose-gather-x', `${gatherX.toFixed(3)}px`);
+      const gatheredAway = slot.id !== 'final' && ownershipU >= 0.9999;
+      slot.li.style.visibility = gatheredAway ? 'hidden' : '';
+      slot.item.inert = gatheredAway;
+      slot.item.setAttribute('aria-hidden', String(gatheredAway));
+    });
+  }
+
   function update(p, {
     modalDetail = false,
     cameraStateDisagree = false,
@@ -1932,8 +2246,12 @@ export function createRail({ onNav } = {}) {
       horizontalFlight = null;
       dockingFlight = null;
       const phase = Math.max(0, Math.min(1, Number(railWrap.phase) || 0));
-      horizontalWrap = { dir: railWrap.dir, phase };
-      dockingProgress = railWrap.dir > 0 ? 1 - phase : phase;
+      horizontalWrap = {
+        dir: railWrap.dir,
+        phase,
+        targetChapterId: chapterAt(p).id,
+      };
+      dockingProgress = railPurposeWrapPresence(horizontalWrap);
       paintHorizontalProgress(0, horizontalWrap);
     } else {
       horizontalWrap = null;
@@ -2046,9 +2364,36 @@ export function createRail({ onNav } = {}) {
        every route. */
     const visNow = chapterAt(railP).id;
     const nowNext = chapterAt(p).id;
+    const nextLayout = visNow === 'mission' ? 'mission' : 'chapter';
+    if (root.dataset.layout !== nextLayout) root.dataset.layout = nextLayout;
+
+    paintPurposeHandoff(nowNext, railFlight, railWrap);
+
+    /* THE PURPOSE -> OWNERSHIP SUBTREE IS SEMANTIC, NOT GEOMETRIC.
+       `railP` / `visNow` are intentionally absent from railHandoffState():
+       Purpose <-> Connect flights pass through Owned's numeric band and must
+       remain the ordinary journey row throughout. An explicit Ownership
+       selection does get its own transit state, so the subtree node begins
+       travelling as soon as the route is chosen; only the landed state hides
+       the five-item row and exposes the tree's Purpose parent. */
+    const nextHandoffState = railHandoffState({
+      selectedChapterId: nowNext,
+      cameraStateDisagree,
+      flightFromId: railFlight ? chapterAt(railFlight.fromP).id : null,
+      flightTargetId: railFlight ? chapterAt(railFlight.targetP).id : null,
+    });
+    if (nextHandoffState !== handoffState) {
+      handoffState = nextHandoffState;
+      applyRailHandoffState({
+        root,
+        journeySurface: list,
+        treeSurface: purposeTree,
+        purposeSurface: purposeParent,
+        ownershipSurface: ownershipLink,
+      }, handoffState);
+    }
     if (visNow !== nowId) {
       nowId = visNow;
-      root.dataset.layout = nowId === 'mission' ? 'mission' : 'chapter';
       const cur = CHAPTERS.findIndex(c => c.id === nowId);
       // The fan is anchored on the current slot: --cur positions every other
       // slot relative to it, --d is each slot's distance for the stagger.
@@ -2138,6 +2483,7 @@ export function createRail({ onNav } = {}) {
 
   return {
     root, menu, update, releaseModal, reveal, setHeroEase,
+    cueNavigation, stopNavigationCue,
     setOnNav(fn) { navigate = typeof fn === 'function' ? fn : () => {}; },
     /** QA */
     get menuOpen() { return menuIsOpen; },
