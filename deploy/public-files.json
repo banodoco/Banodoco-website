@@ -19,7 +19,7 @@
     },
     {
       "path": "content",
-      "include": ["content.js", "contributors.js"]
+      "include": ["connect-nodes.js", "content.js", "contributors.js"]
     },
     {
       "path": "journey",
@@ -55,6 +55,7 @@
     "serve.py",
     "static/index.html",
     "ownership/index.html",
+    "content/connect-nodes.js",
     "journey/index.html",
     "journey-v6/index.html",
     "static/geom/manifest.json",

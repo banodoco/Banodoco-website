@@ -787,6 +787,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-radius: 999px;
     background: rgba(217, 164, 65, 0.06);
   }
+  .j-menu-is > .j-menu-badge {
+    margin-left: 0.42em;
+    vertical-align: middle;
+  }
 
   .j-menu-owned {
     display: block;
