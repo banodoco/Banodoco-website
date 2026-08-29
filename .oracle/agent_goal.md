@@ -23,7 +23,8 @@ Deploy a wide range of independent GPT-5.6 Luna subagents across architecture, U
 - Preserve intended visuals and behavior unless a finding proves that behavior incorrect or unsafe.
 - Build the picture through successive independent Luna exploration waves. Each wave must synthesize gaps and launch targeted follow-up exploration before planning is declared stable.
 - Bounded subsystem/pattern exploration and normal implementation model: **GPT-5.6 Luna**, user-selected.
-- Whole-system/big-picture exploration, exceptional `[XHARD]` reasoning, architectural judgment, difficult fixes, and oracle review model: **GPT-5.6 Sol**, user-selected. On 2026-08-29 the user explicitly authorized a temporary 30-minute Sol implementation burst for obvious verified defects; this is a model-policy override, not a scope or sync expansion.
+- Whole-system/big-picture exploration and planning model used through checkpoint `e250e4a`: **GPT-5.6 Sol**. On 2026-08-29 the user explicitly authorized a temporary Sol implementation burst for obvious verified defects; this was a model-policy override, not a scope or sync expansion.
+- Effective after checkpoint `e250e4a`, exceptional `[XHARD]` work and Oracle judgment/review model: **Grok 4.6**, user-selected. Luna remains the normal bounded exploration/implementation model. Switching Oracle model does not reopen the already-passed Sol-burst checkpoint.
 - Work only in `oracle/codebase-improvement-20260829`; do not mutate `main`.
 
 ## Non-goals and authority boundaries
