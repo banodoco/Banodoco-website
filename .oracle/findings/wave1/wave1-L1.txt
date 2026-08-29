@@ -1,0 +1,16 @@
+**Verified findings**
+
+1. **High | confidence high — preparation can hang without fallback.** `main.js:1222-1237` awaits `bakedGeomReady`; `journey/lib/baked.js:85-99` fetches without timeout; `journey/journey.js:1498-1504` awaits image readiness and `compileAsync`. A stalled request/driver leaves `scene-preparing` indefinitely with no activation or status fallback. **Probe:** intercept manifest/image or hold `compileAsync`; require a visible fallback within a bounded interval.
+
+2. **Medium | confidence high — post-boot render failures lack visitor recovery.** `organism/animation.js:24-36` isolates animator callbacks, but `beforeRender()` and `render()` execute outside the `try`; `main.js:327-335` only handles context loss/restoration. A persistent TAA/composer/render exception can leave a broken live tier without a static handoff. **Probe:** inject a throwing renderer after boot; observe frame behavior and fallback status.
+
+3. **Medium | confidence high — boot is permanently latched before validation.** `journey/journey.js:123-130` sets `started = true` before checking `window.sceneApi`; `journey.js:1256-1269` catches later failures without resetting or exposing retry. **Reproduction:** call `boot()` without a scene, publish one, call again; journey remains unavailable.
+
+4. **Medium | confidence high — partial markup aborts bootstrap before fallback publication.** `main.js:814-817` and `821-823` dereference required callout elements without null checks; `window.sceneApi` is published only at `main.js:911-916`. **Probe:** remove one `co-*` element and load; expect script abort, no journey, and no visitor fallback.
+
+5. **Medium | confidence high — ownership remains globally mutable.** `chapter-registry.js:22-40` caches chapters module-wide; `journey/director.js:207-218` monkey-patches `sceneApi.setView`; `chapters/connect/index.js:516` mutates hero ground through the broad scene API. Reinitialization/retry can cross-wire scene instances. **Probe:** prepare/build against two scene handles and assert isolation.
+
+**No-finding dispositions:** no cycle visible in inspected live import edges. Structure test passes; full `madge` cycle check was unavailable (`madge` missing).
+
+**Evidence gaps:** browser smoke unavailable; no controlled hanging-fetch test; no context-loss/reinitialization runtime trace.
+0

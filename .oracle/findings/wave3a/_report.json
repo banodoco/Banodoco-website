@@ -1,0 +1,86 @@
+{
+  "briefs_dir": null,
+  "default_model": "codex:gpt-5.6-luna",
+  "failed_count": 0,
+  "isolation": "threads",
+  "max_tokens": 65536,
+  "max_workers": 3,
+  "model_map": [],
+  "output_dir": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a",
+  "project_dir": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement",
+  "stopped_by_signal": false,
+  "succeeded_count": 3,
+  "sum_agent_seconds": 905.241,
+  "task_timeout_s": 1800,
+  "tasks": [
+    {
+      "brief": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/briefs/wave3a-L7-ownership-content.md",
+      "elapsed_s": 269.091,
+      "error": null,
+      "error_class": null,
+      "finish_reason": null,
+      "finished_at": "2026-08-29T19:58:35Z",
+      "meta_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L7-ownership-content.meta.json",
+      "model": "codex:gpt-5.6-luna",
+      "pid": 68745,
+      "raw_result_keys": [
+        "stdout"
+      ],
+      "response_chars": 4419,
+      "response_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L7-ownership-content.txt",
+      "started_at": "2026-08-29T19:54:06Z",
+      "status": "ok",
+      "stem": "wave3a-L7-ownership-content",
+      "task_timeout_s": 1800,
+      "tool_calls": 0
+    },
+    {
+      "brief": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/briefs/wave3a-L8-gate-honesty.md",
+      "elapsed_s": 356.365,
+      "error": null,
+      "error_class": null,
+      "finish_reason": null,
+      "finished_at": "2026-08-29T20:00:02Z",
+      "meta_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L8-gate-honesty.meta.json",
+      "model": "codex:gpt-5.6-luna",
+      "pid": 68744,
+      "raw_result_keys": [
+        "stdout"
+      ],
+      "response_chars": 83,
+      "response_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L8-gate-honesty.txt",
+      "started_at": "2026-08-29T19:54:06Z",
+      "status": "ok",
+      "stem": "wave3a-L8-gate-honesty",
+      "task_timeout_s": 1800,
+      "tool_calls": 0
+    },
+    {
+      "brief": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/briefs/wave3a-L9-packaged-http.md",
+      "elapsed_s": 279.785,
+      "error": null,
+      "error_class": null,
+      "finish_reason": null,
+      "finished_at": "2026-08-29T19:58:46Z",
+      "meta_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L9-packaged-http.meta.json",
+      "model": "codex:gpt-5.6-luna",
+      "pid": 68746,
+      "raw_result_keys": [
+        "stdout"
+      ],
+      "response_chars": 4345,
+      "response_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L9-packaged-http.txt",
+      "started_at": "2026-08-29T19:54:06Z",
+      "status": "ok",
+      "stem": "wave3a-L9-packaged-http",
+      "task_timeout_s": 1800,
+      "tool_calls": 0
+    }
+  ],
+  "toolsets": [
+    "('file'",
+    "'terminal')"
+  ],
+  "total_count": 3,
+  "wall_clock_s": 356.37
+}

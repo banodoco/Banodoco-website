@@ -102,13 +102,22 @@ const {
 // EffectComposer renders offscreen, which bypasses the canvas's own antialiasing
 // entirely — so the target has to be multisampled itself. Without this the fine
 // gill lines crawl across the pixel grid as the mushroom sways.
+const _cssSize = renderer.getSize(new THREE.Vector2());
 const _dbSize = renderer.getDrawingBufferSize(new THREE.Vector2());
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
   // 4x; measured, 8x buys no further smoothness here and costs twice the fill
   _dbSize.width, _dbSize.height, { type: THREE.HalfFloatType, samples: 4 }));
+// A supplied target makes EffectComposer assume its dimensions are logical
+// CSS pixels. This target is already in physical drawing-buffer pixels, so
+// normalize the composer's logical size before adding any passes; otherwise it
+// multiplies the TAA history by DPR a second time until the first resize.
+composer.setSize(_cssSize.width, _cssSize.height);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.62, 0.45, 0.1);
 composer.addPass(bloom);
+// Keep first construction identical to syncRenderSizes(): the bloom spread is
+// intentionally authored in CSS pixels rather than drawing-buffer pixels.
+bloom.setSize(_cssSize.width, _cssSize.height);
 
 // Temporal accumulation (TAA). MSAA and the coverage fade can't fully stop
 // near-parallel lines a couple of pixels apart from beating against the pixel

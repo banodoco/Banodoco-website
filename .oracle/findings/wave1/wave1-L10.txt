@@ -1,0 +1,21 @@
+## Ranked findings
+
+1. **High — static no-JS deep links do not resolve. Confidence: high.**
+   Static navigation emits `#/mission` etc. (`static/index.html:1195-1238`), but sections are `id="ch-*"` (`static/index.html:1311-1536`). With JavaScript disabled, no fragment target exists; `static/index.html#/owned` stays at the document start. **Probe:** disable JS and open each rail URL.
+
+2. **High — contributor copy has two canonical records. Confidence: high.**
+   `content/contributors.js:13-17` declares `PERSON` canonical, and ownership rendering uses its researched blurbs (`ownership/ownership.js:261-285`). The journey/static roster separately hard-codes generic blurbs (`content/content.js:793-809`; `static/index.html:1507-1522`). Import comparison found all 16 slot blurbs differ from `PERSON`. **Impact:** ownership, live journey, and static fallback describe the same people differently.
+
+3. **Medium — declared site links are dead data. Confidence: high.**
+   `CONTENT.site.links` defines Banodoco and 2RP destinations (`content/content.js:825-847`), but live menu construction only consumes `site.social` (`journey/rail.js:617-631`) and chapter nodes (`journey/rail.js:645-740`). Static menu has neither destination (`static/index.html:1254-1304`). **Impact:** canonical link edits can pass generation checks while remaining undisplayed.
+
+4. **Medium — node routes are not chapter-scoped. Confidence: high.**
+   Both routers normalize node names without verifying ownership (`journey/state.js:33-42`; `static/index.html:1688-1703`). `#/connect/arca` scrolls to Connect, then opens Inspire’s Arca panel (`static/index.html:1717-1732`). **Probe:** open that URL and compare visible chapter, panel, and rewritten hash.
+
+5. **Medium — contributor cardinality is a post-build hazard. Confidence: high.**
+   Owned geometry cycles 16 authored sites (`journey/chapters/owned/portraits.js:793-811,909-913`), while validation rejects anything other than 16 only after construction (`journey/structure.js:75-78,102`). A 17th row reuses site 0 before failing.
+
+**No findings:** current ledger has 370 unique owners; all 33 grant rows’ names join. Static and structure checks pass.
+
+**Evidence gaps:** external-link reachability; legal/ledger freshness; browser proof of disabled-JS route behavior.
+0

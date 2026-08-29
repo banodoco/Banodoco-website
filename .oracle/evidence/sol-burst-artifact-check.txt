@@ -1,0 +1,10 @@
+
+[1;36m== PUBLIC ARTIFACT[0m
+public artifact: 166 files copied to /private/tmp/glowshroom-check.942YWA/public
+[32m   ✓ public artifact matches its allowlist and substituted source bytes[0m
+
+[1;36m== CHECK PRECONDITIONS[0m
+[32m   ✓ this checkout is served on :8137[0m
+
+[1;36m== CHECK (bake/meta; captures skipped)[0m
+[32m   ✓ bake + meta gates green (capture drift gate skipped)[0m

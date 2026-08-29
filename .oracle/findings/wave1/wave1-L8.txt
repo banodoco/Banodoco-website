@@ -1,0 +1,18 @@
+## Ranked findings
+
+1. **P1 · High confidence — “read-only” checks mutate the worktree.** `[FACT]` `tools/capture.py:847-850,899-904` creates/writes `static/captures/_check/`; `.gitignore:1-10` does not ignore it. `tools/release.sh:131-133` then rejects the residue as untracked. Current `_check/` contains ten PNGs and is not ignored. **Impact:** every full release check can abort after successful gates. **Repro:** run `capture.py --check`, then inspect `git ls-files --others --exclude-standard`.
+
+2. **P1 · High confidence — full build orders metadata before captures.** `[FACT]` `tools/rebuild.py:40-46` runs `build-meta.py` before `capture.py`; `:95-100` confirms this in `--with-captures`. `build-meta.py:106-112` consumes capture PNGs. **Impact:** regenerated OG cards are stale; subsequent `build-meta.py --check` fails, or bypassed checks deploy stale cards. **Probe:** isolated full build, then `build-meta.py --check`.
+
+3. **P1 · High confidence — browser coverage can be a false green.** `[FACT]` `package.json:12` includes browser smoke, but `tools/browser-smoke.mjs:130-139` exits success when Chromium is unavailable. **Impact:** zero browser scenarios execute while `npm test` passes. **Repro:** run with no discovered Chromium executable.
+
+4. **P1 · High confidence — Range implementation violates suffix/multi-range semantics.** `[FACT]` `serve.py:36-45` parses `bytes=-N` as `0-N` and accepts comma-separated ranges. Observed `bytes=-3` returned `Content-Range: bytes 0-3/82`, body `User`; `bytes=0-1,2-3` returned `206`. **Impact:** incorrect media bytes or Safari playback failures.
+
+5. **P2 · High confidence — capture readiness is logged, not gated.** `[FACT]` `capture.py:909` reports `POSE NOT CONFIRMED`, but `:930-960` gates only missing files/MAE. **Impact:** a stale/wrong-frame capture can pass if pixels remain close. **Probe:** force a readiness timeout while preserving a near-identical frame.
+
+6. **P2 · Medium confidence — deployment restart is non-idempotent.** `[HYPOTHESIS]` `railway.toml:5` always targets `/tmp/public`; `package-public.py:112-117` rejects nonempty destinations. A same-container restart with residue fails. **Probe:** isolated runtime simulation with pre-existing `/tmp/public`.
+
+**No finding:** current allowlist packaging passed: 165 files copied, required paths and ORIGIN checks green. Static-content/meta/mark check modes use temporary outputs.
+
+**Next evidence gaps:** packaged-artifact browser smoke; subpath/404/robots validation; manifest-corruption and ownership-reasons contract coverage.
+0

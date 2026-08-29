@@ -1,0 +1,21 @@
+{
+  "brief": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/briefs/wave3a-L8-gate-honesty.md",
+  "elapsed_s": 356.365,
+  "error": null,
+  "error_class": null,
+  "finish_reason": null,
+  "finished_at": "2026-08-29T20:00:02Z",
+  "meta_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L8-gate-honesty.meta.json",
+  "model": "codex:gpt-5.6-luna",
+  "pid": 68744,
+  "raw_result_keys": [
+    "stdout"
+  ],
+  "response_chars": 83,
+  "response_file": "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/.oracle/findings/wave3a/wave3a-L8-gate-honesty.txt",
+  "started_at": "2026-08-29T19:54:06Z",
+  "status": "ok",
+  "stem": "wave3a-L8-gate-honesty",
+  "task_timeout_s": 1800,
+  "tool_calls": 0
+}

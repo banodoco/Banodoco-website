@@ -844,10 +844,13 @@ def main():
             % (BASE_URL, e)
         )
 
-    os.makedirs(out_dir, exist_ok=True)
-    check_dir = os.path.join(out_dir, "_check")
-    if args.check:
-        os.makedirs(check_dir, exist_ok=True)
+    if not args.check:
+        os.makedirs(out_dir, exist_ok=True)
+    # A verification run is read-only with respect to the repository. Keep
+    # fresh shutters in a system temporary directory and remove them before
+    # returning; they exist only long enough to compare with the goldens.
+    check_tmp = tempfile.TemporaryDirectory(prefix="banodoco-capture-check-") if args.check else None
+    check_dir = check_tmp.name if check_tmp else None
 
     profile = tempfile.mkdtemp(prefix="capture-chrome-")
     port = free_port()
@@ -927,9 +930,13 @@ def main():
         worst = 0.0
         missing = False
         failed = False
+        readiness_failed = False
         for r in results:
             golden = os.path.join(out_dir, r["file"])
             fresh = os.path.join(check_dir, r["file"])
+            if not r["ready"]:
+                print("  · %-22s pose not confirmed (%s)" % (r["file"], r["readiness"]))
+                readiness_failed = True
             if not os.path.exists(golden):
                 print("  · %-22s no golden on disk — run without --check first" % r["file"])
                 missing = True
@@ -947,18 +954,24 @@ def main():
                 failed = True
             print("  · %-22s MAE %5.2f/255  %5.1f%% px >8   [%s]" % (r["file"], m, pct, band))
         print("\n  worst MAE %.2f/255. Thresholds warn>%.2f fail>%.2f." % (worst, warn_mae, fail_mae))
-        if check_is_advisory:
+        if readiness_failed:
+            print("  FAIL: one or more captures did not confirm the requested pose.")
+            result = 1
+        elif check_is_advisory:
             print("  Exit code forced to 0: --live scene is unfrozen, per-run variance is ~1-3 MAE")
             print("  by construction (BASELINE.md §8). Drop --live for the real frozen gate.")
-            return 0
-        if missing:
+            result = 0
+        elif missing:
             print("  FAIL: golden(s) missing — run 'capture.py' (no --check) first.")
-            return 1
-        if failed:
+            result = 1
+        elif failed:
             print("  FAIL: drift exceeds the frozen-frame threshold — see FAIL-band rows above.")
-            return 1
-        print("  PASS: all captures within the frozen-frame determinism threshold.")
-        return 0
+            result = 1
+        else:
+            print("  PASS: all captures within the frozen-frame determinism threshold.")
+            result = 0
+        check_tmp.cleanup()
+        return result
 
     # ------------------------------------------------------------------
     # manifest.json — the Tier-3 page and any future <picture>/srcset wiring

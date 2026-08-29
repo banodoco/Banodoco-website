@@ -5,9 +5,9 @@ The journey has NO compiler. "Building" it means regenerating the committed
 derived artifacts from the live scene and sources:
 
     bake-geom.py    -> static/geom/*.bin     (deterministic chapter geometry)
+    capture.py      -> static/captures/*.png (Tier-3 stills; ~1-2 min, optional)
     build-meta.py   -> favicon.ico + assets/brand/og-* (favicons + social cards)
     build-mark.py   -> assets/brand/mark-b-mask-*.png (logo masks)
-    capture.py      -> static/captures/*.png (Tier-3 stills; ~1-2 min, optional)
 
 Usage:
     python3 tools/rebuild.py                  # fast: bake + meta + mark, NO captures
@@ -44,6 +44,18 @@ FAST_STEPS = [
     ("build-mark.py", [], "logo masks       assets/brand/mark-b-mask-*.png", False),
 ]
 CAPTURE_STEP = ("capture.py", [], "Tier-3 stills    static/captures/*.png", True)
+
+
+def build_steps(with_captures=False, check=False):
+    """Return steps in dependency order without running them."""
+    steps = list(FAST_STEPS)
+    if with_captures:
+        meta_index = next(i for i, step in enumerate(steps) if step[0] == "build-meta.py")
+        steps.insert(meta_index, CAPTURE_STEP)
+    if check:
+        steps = [(tool, ["--check"], label, needs_server)
+                 for tool, _args, label, needs_server in steps]
+    return steps
 
 
 def server_up():
@@ -87,15 +99,9 @@ def main():
 
     os.chdir(ROOT)
 
-    if args.check:
-        steps = [(t, ["--check"], l, s) for t, _a, l, s in FAST_STEPS]
-        if args.with_captures:
-            steps.append((CAPTURE_STEP[0], ["--check"], CAPTURE_STEP[2], CAPTURE_STEP[3]))
-    else:
-        steps = list(FAST_STEPS)
-        if args.with_captures:
-            steps.append(CAPTURE_STEP)
-        else:
+    steps = build_steps(args.with_captures, args.check)
+    if not args.check:
+        if not args.with_captures:
             print("note: captures NOT regenerated — add --with-captures for the full build")
             print("      (see BUILDING.md; the mission@430x932 freeze is nondeterministic)")
 

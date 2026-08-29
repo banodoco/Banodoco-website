@@ -1,0 +1,18 @@
+## Ranked findings
+
+1. **High | High confidence — modal menu leaks input through its scrim.**
+   **Fact:** only `.j-menu` claims input (`journey/rail.js:1081-1089`); the open scrim is pointer-active (`journey/site.css:519-529`). `scroll.js` bypasses ownership only for the event target (`journey/scroll.js:843-852`), while modal protection applies only to keys (`959-965`). **Impact:** wheel or drag starting outside the panel scrubs the journey behind an open modal. **Repro:** open Menu, wheel/drag over the scrim. Add a scrim-target wheel/touch regression. **Outcome:** fix modal-scrim ownership.
+
+2. **High | High confidence — lifting one finger cancels a surviving touch scrub.**
+   **Fact:** multi-touch `touchstart` is ignored, but every `touchend` calls `endTouchContact()` unconditionally (`journey/scroll.js:915-939`). **Impact:** pinch/second-finger interaction terminates the original finger’s active scrub. **Repro:** start one-finger drag, add/lift a second finger, continue the first; movement stops. Add a multi-touch continuation trace.
+
+3. **Medium | High confidence — same-mode tablet/compact resize leaves responsive camera offsets stale.**
+   **Fact:** resize reapplies `setView()` only for desktop, deskNarrow, and mobile (`main.js:721-737`); `viewFor()` derives Mission pixel correction from `innerHeight` (`main.js:249-252`). Organism resize updates aspect/render targets only (`organism/organism.js:1845-1849`). **Impact:** browser chrome/split-height changes preserve stale composition. Repro: resize 768×1024 → 768×900 without crossing mode.
+
+4. **Medium | Medium confidence — square viewport disagrees with CSS breakpoint semantics.**
+   **Fact/Hypothesis:** JS requires `h > w` for portrait (`main.js:201-208`), while CSS portrait media rules cover square frames (`hero.css:870-931`). At 800×800, JS selects `deskNarrow` while CSS selects portrait layout. Confirm in target browsers; capture camera/layout at 620×620 and 800×800.
+
+**No finding:** card-panel internal scrolling/keyboard routing and card placement use explicit ownership and shared frame geometry (`journey/ui.js:1633-1641,2675-2684`).
+
+**Evidence gaps:** browser traces for scrim gestures; square orientation behavior; resize during camera tween and return-to-Mission.
+0

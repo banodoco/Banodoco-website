@@ -1,0 +1,14 @@
+## Ranked findings
+
+1. **High — malformed bake manifest can disable the entire interactive journey. Confidence: High.** `journey/lib/baked.js:85-112` accepts any JSON with `version === 1`, then `isBaked()` dereferences `manifest.chapters`. A valid `{ "version": 1 }` therefore throws at `journey/chapters/inspire/index.js:331`; `main.js:1256-1268` converts it to the static fallback. `tools/package-public.py:52-94` validates presence/bytes, not schema. **Probe:** serve a version-1 manifest without `chapters`; load `/?nointro=1`; assert `window.journey` never appears and status fallback is shown.
+
+2. **Medium — live Discord media is an unconstrained trust-boundary sink. Confidence: High for behavior; Medium for exploitability.** Supabase data supplies `m.url` through `journey/cards/discord.js:87-95,118`; it is assigned directly to `thumbEl.src` at `:235-240`. This permits arbitrary remote/data image requests, enabling tracking or excessive payloads if upstream data is compromised/misconfigured. `referrerPolicy` mitigates referrer leakage but not the request. **Probe:** intercept the API response with an attacker-origin image URL and assert the browser requests it.
+
+3. **Medium — subsystem failures are swallowed without visitor fallback. Confidence: High.** `journey/failure-guard.js:4-10` permanently disables a subsystem after one exception and only logs to console. `journey/journey.js:1006-1007` guards UI updates; handled failures do not increment `window.__pageErrors`, and no status/static-tier notice appears. **Probe:** inject one `ui.update` throw and verify the page visibly signals degraded behavior.
+
+4. **Low/Medium — idle warming has no cancellation. Confidence: High.** `journey/cards/index.js:92-113` schedules every font/media fetch; hover/deactivation cannot stop the queue despite the comment at `:78-79`. **Probe:** throttle network, hover immediately, and verify heavy requests continue.
+
+**No findings:** `innerHTML` sinks are static/escaped (`main.js:57,71-72`); storage failures are QA-only intentional no-ops (`flags.js:207-234`); dynamic links are source-defined and use `noopener` (`journey/rail.js:624-626`); production no-store headers (`serve.py:18-23`) prevent an active cache-mix finding.
+
+**Next-wave gaps:** malformed-manifest deployment test; real API media-origin/size policy; forced subsystem-failure and network-cancellation browser probes.
+0
