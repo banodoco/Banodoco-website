@@ -6,6 +6,7 @@
 // exactly as the inline block did.
 import * as THREE from 'three';
 import { INTROAT } from '../flags.js';
+import { createIntroClock } from './intro-clock.js';
 
 export function setupIntro(ctx) {
   const { scene, renderer, mushroom, stemGroup, groundGroup,
@@ -133,19 +134,19 @@ export function setupIntro(ctx) {
   // ?introat=P (0..1) freezes the drawing at that progress for frame inspection
   // (parsed once, in ../flags.js — THE flag registry)
   const _introAt = INTROAT;
-  // Wall-clock moment the live intro started; stays null when the intro is
-  // skipped or frozen, which is what makes accelerate() a safe no-op there.
-  let introT0 = null;
+  // This clock is local to the draw choreography. Its acceleration never
+  // leaks into scroll, readiness, seam, tooling, or other scene clocks.
+  const introClock = createIntroClock();
   let completed = false;
 
   function start() {
-    if (_introAt !== null || intro <= 0 || introT0 !== null || completed) return false;
+    if (_introAt !== null || intro <= 0 || introClock.started || completed) return false;
     // Wall clock, not accumulated rAF dt: the page's CSS choreography runs on
     // the wall clock, and rAF stops entirely in a hidden tab — accumulating dt
     // would let the text finish while the specimen was still being drawn.
-    introT0 = performance.now();
+    introClock.start();
     addAnimator('intro-draw', () => {
-      const lived = (performance.now() - introT0) / 1000;
+      const lived = introClock.elapsedMs() / 1000;
       if (lived >= intro) {
         // Don't snap to the parked value: glide uProg from 1 to 2 over 0.7s
         // so the stem's buried joint fades in behind the cap.
@@ -188,15 +189,12 @@ export function setupIntro(ctx) {
 
   /* ---- accelerate(): the intro fast-forward (ride-through #4) -----------
      Scrolling during the entry choreography must never be a locked door.
-     The grow-in above runs on the wall clock (performance.now() read live
-     each frame), so SKEWING THE CLOCK fast-forwards the ENTIRE intro
-     through its own real math — growth, ember release, shell restore — in
-     ~0.5 s. The skew is a constant offset once the ramp settles, so
-     performance.now() stays monotonic for every later consumer. This
-     mechanism lived as an inline script in index.html until the M5 shell
-     move; the intro owns its own clock trick now — the page merely wires
-     the trigger events and its CSS half (the body.intro-fast compression
-     classes ride with the hero stylesheet).
+     The grow-in above runs on an intro-owned transform of wall time, so the
+     ramp fast-forwards the ENTIRE draw through its own real math — growth,
+     ember release, shell restore — in ~0.5 s. The browser's performance
+     clock and every unrelated consumer continue to observe native time. The
+     page merely wires the trigger events and its CSS half (the
+     body.intro-fast compression classes ride with the hero stylesheet).
 
      `totalMs` is the PAGE's total choreography length (scene grow-in plus
      the callout boots plus the caller's settle margin) — the page knows
@@ -205,31 +203,15 @@ export function setupIntro(ctx) {
      accelerate (intro skipped/frozen/finished, or < 200 ms left — "intro
      basically done anyway"), in which case the caller must not compress
      its CSS half either. */
-  let accelerated = false;
   function accelerate({ totalMs = intro * 1000, rampMs = 480 } = {}) {
-    if (accelerated || introT0 === null) return false;
-    const orig = performance.now.bind(performance);
-    const lived = orig() - introT0;
-    const remaining = Math.max(0, totalMs - lived);
-    if (remaining < 200) return false;
-    accelerated = true;
-    let skew = 0;
-    performance.now = () => orig() + skew;
-    const RAMP_MS = Math.max(80, rampMs);
-    const rampT0 = orig();
-    (function ramp() {
-      const f = Math.min((orig() - rampT0) / RAMP_MS, 1);
-      skew = remaining * (f * f * (3 - 2 * f));   // smoothstep ramp — same feel as shipped
-      if (f < 1) requestAnimationFrame(ramp);
-    })();
-    return true;
+    return introClock.accelerate({ totalMs, rampMs });
   }
 
   return {
     start,
     finish,
     accelerate,
-    get started() { return introT0 !== null; },
+    get started() { return introClock.started; },
     get complete() { return completed; },
   };
 }

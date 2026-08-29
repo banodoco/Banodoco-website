@@ -1,0 +1,12 @@
+**Verified inventory:** `state.js` owns progress, routing, hash listener, and suppression timeout; `scroll.js` owns virtual position, gesture/resolution state, and window/document listeners; `director.js` owns camera interception, fog, and handheld state; chapters/cards own animators, DOM, timers, and fetches; `main.js` owns intro timers/rAF handoff. `poseAt()` and portrait composition are pure.
+
+1. **High | high confidence — portrait loading can block activation indefinitely.** `portrait-photo-loader.js:4-10` creates an uncancellable `Image` promise; `journey/journey.js:1498-1500` awaits it; `main.js:1236-1238` awaits `state.ready`. Default `PHOTOS` is enabled (`flags.js:120`). A stalled avatar request can leave the intro and journey activation pending forever. Reproduce by blocking one sprite request without completing it; assert `state.ready` never settles. **Outcome:** bound photo readiness or remove it from the activation gate.
+
+2. **High | high confidence — chapter registry is cross-scene state.** `chapter-registry.js:22-40` caches prepared chapters globally without scene identity or reset. Prepare with scene A, then build with scene B: the prepared chapter remains attached to A, producing mixed graphs and stale animators. **Outcome:** enforce single ownership or provide explicit reset/disposal.
+
+3. **Medium | high confidence — no teardown/recreate boundary.** State’s listener lacks removal (`state.js:72-81`); scroll exposes attach but no detach (`scroll.js:1668-1693`); director replaces `sceneApi.setView` without restoration (`director.js:207-218`); Final adds document listeners without removal (`final/index.js:141-148`); the render RAF is perpetual (`organism/animation.js:17-19`). Duplicate instantiation can retain old callbacks and loops. Reproduce by creating two instances, then hash/scroll/pointer input.
+
+**No finding:** card timers generally clear on deactivate; portrait disposal guards late texture settlement.
+
+**Evidence gaps:** browser proof of stalled-image behavior; duplicate-scene callback/resource counts; hidden-tab and context-loss recovery traces.
+0

@@ -1,0 +1,10 @@
+1. **High — startup can hang indefinitely on resource loads. Confidence: high.** `portrait-photo-loader.js:4-10` creates an uncancellable `Image`; normal startup enables it (`flags.js:120`), then `journey.js:1495-1500` awaits `photosReady` before readiness. Baked manifest/bin fetches also have no timeout (`journey/lib/baked.js:75-99`), and `main.js:1222-1237` awaits both. A stalled image or geometry request leaves the deferred intro blank with no fallback (`main.js:311-313`, `1240-1248`). **Repro:** intercept `profile-sprite.jpg` or `static/geom/manifest.json` and never resolve; assert `scene-preparing` persists after several seconds. Add bounded-load/fallback coverage.
+
+2. **High — context restoration does not invalidate TAA history. Confidence: medium-high.** `TemporalAccumulatePass.validHistory` becomes true after the first render and is reset only by `setSize()` (`organism/organism.js:123-165`). The context-restored handler only clears the visitor note (`main.js:327-336`); it does not flush history or rewarm dependent resources. **Impact:** restored frames may blend undefined/cleared GPU history, causing a flash or smear. **Probe:** trigger `WEBGL_lose_context`, restore, and compare several post-restore frames against a fresh load.
+
+3. **Medium — scene lifecycle is non-reentrant and lacks teardown. Confidence: high.** Prepared chapters are module-global and reused across scene handles (`journey/chapter-registry.js:22-40`); the lens is also a module singleton (`journey/lens.js:300-304`). The animation loop has no stop path (`organism/animation.js:13-39`), while resize listeners are permanent (`organism/organism.js:1845-1849`). **Repro:** construct two scene/journey instances; verify chapters and lens attach to the first scene and both rAF loops remain active.
+
+**No findings:** seeded geometry/baked-copy contracts and shader finite-value guards are explicit; resize ordering appears coherent in the single-page path. Deliberate portrait `Math.random` is excluded from frozen deterministic captures.
+
+**Next gaps:** measure restored-context pixels; test stalled-load UX; define whether multi-scene teardown is supported.
+0

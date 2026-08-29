@@ -1,0 +1,13 @@
+# Execution Log
+
+- 2026-08-29: Captured clean source custody at `1fa145fc51e89c8a1788db39aff98e775a576073`.
+- 2026-08-29: Created isolated worktree and branch `oracle/codebase-improvement-20260829`.
+- 2026-08-29: Frozen North Star, agent goal, model declaration, authority, done criteria, and validation contract.
+- 2026-08-29: User explicitly excluded Desloppify and required successive Luna exploration waves; updated the run contract before scanning or planning.
+- 2026-08-29: User assigned whole-system/big-picture exploration to Sol in addition to Sol planning, judgment, and review; bounded exploration and normal implementation remain Luna-owned.
+- 2026-08-29: Sol completed Phase 1 planning. Accepted plan v1 and huge-run determination (35–58 engineer-days; periodic cumulative gates required). Plan remains forming pending exploration waves.
+- 2026-08-29: Luna Exploration Wave 1 completed: 10/10 bounded domains succeeded from one immutable source state; no application/source writes. Launched parallel Sol whole-system architecture, lifecycle/state, and performance/failure passes.
+- 2026-08-29: Sol Exploration Wave 2 completed: S1 architecture, S2 lifecycle/state, S3 performance/failure, and S4 synthesis. Plan remains forming. S4 retained verified delivery/gate/state failures and specified ten targeted Luna probes; no task yet meets `[XHARD]` implementation threshold.
+- 2026-08-29: Wave 3A completed after one evidence-only retry; verified packaged HTTP Range defects and gate-honesty defects, and narrowed ownership/content semantics. Wave 3B L1 reproduced six unbounded startup phases; GPU fence is already bounded. Wave 3B L2 was stopped before source mutation for a user-authorized 30-minute Sol implementation burst and remains undetermined.
+- 2026-08-29: User explicitly authorized Sol subagents to fix obvious verified defects during the burst. Dispatch targets are disjoint: HTTP Range protocol, validation-gate honesty, and global-clock corruption. No push/merge/deploy authority added.
+- 2026-08-29: Sol burst expanded only as slots freed to static no-JS routing, initial TAA sizing, baked-manifest validation, and authoritative suite integration. Independent reviews repaired no-JS cold scroll landing and overstrict manifest/fallback semantics. Focused/unit/lint/cycles and read-only artifact gates passed. Full browser attempt passed six scenarios; two navigation scenarios timed out under unrelated extreme host contention and remain retryable.

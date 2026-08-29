@@ -33,15 +33,36 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         """206 response for a satisfiable byte range; error already sent on
         failure, so send_head returns None and the caller stops."""
         size = os.path.getsize(path)
-        m = re.match(r'bytes=(\d*)-(\d*)', self.headers['Range'])
-        if not m:
-            self.send_error(416, 'Range Not Satisfiable')
+        value = self.headers['Range'].strip()
+
+        # This small development server only implements one byte range.  Do
+        # not silently discard later ranges: callers could otherwise receive
+        # different bytes from those described by their request.
+        m = re.fullmatch(r'bytes=(\d*)-(\d*)', value)
+        if not m or (not m.group(1) and not m.group(2)):
+            self._range_error(size)
             return None
-        start = int(m.group(1)) if m.group(1) else 0
-        end = int(m.group(2)) if m.group(2) else size - 1
+
+        try:
+            if not m.group(1):
+                suffix_length = int(m.group(2))
+                if suffix_length == 0 or size == 0:
+                    self._range_error(size)
+                    return None
+                start = max(size - suffix_length, 0)
+                end = size - 1
+            else:
+                start = int(m.group(1))
+                end = int(m.group(2)) if m.group(2) else size - 1
+        except ValueError:
+            # Python limits the number of digits accepted by int(); an
+            # oversized field value is still a bad range, not a server error.
+            self._range_error(size)
+            return None
+
         end = min(end, size - 1)
         if start > end or start >= size:
-            self.send_error(416, 'Range Not Satisfiable')
+            self._range_error(size)
             return None
         self.send_response(206)
         self.send_header('Content-Type', self.guess_type(path))
@@ -50,6 +71,14 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-Length', str(end - start + 1))
         self.end_headers()
         return open(path, 'rb'), start, end
+
+    def _range_error(self, size):
+        """Send the RFC-required representation size for a rejected range."""
+        self.send_response(416, 'Range Not Satisfiable')
+        self.send_header('Accept-Ranges', 'bytes')
+        self.send_header('Content-Range', f'bytes */{size}')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
 
     def do_GET(self):
         f = self.send_head()

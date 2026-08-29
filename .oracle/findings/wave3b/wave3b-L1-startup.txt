@@ -1,0 +1,215 @@
+# W3-L1 — Startup terminality report
+
+## Conclusion
+
+**REPRODUCED — startup nonterminality.**
+
+Six independently held startup operations remained pending through the fixed observation deadlines with:
+
+- no fallback note,
+- no visible static handoff,
+- `readyState=false`,
+- `journeyActive=false`,
+- continued hero RAF/render work.
+
+The GPU fence subclaim was **FALSIFIED as indefinite**: the source’s internal 8-second fence budget eventually allowed readiness, observed by 12 seconds.
+
+Per-phase result:
+
+| Held operation | Binary result |
+|---|---|
+| `journeyModuleP` / `journey.js` import | **REPRODUCED nonterminal** |
+| Bake manifest | **REPRODUCED nonterminal** |
+| One bake bin (`owned.bin`) | **REPRODUCED nonterminal** |
+| Portrait image | **REPRODUCED nonterminal** |
+| `compileAsync` | **REPRODUCED nonterminal** |
+| Hidden draw | **REPRODUCED nonterminal** |
+| GPU fence | **FALSIFIED as indefinite; bounded internally** |
+
+## Base, environment, and commands
+
+Immutable source check:
+
+```text
+git rev-parse HEAD
+1fa145fc51e89c8a1788db39aff98e775a576073
+
+git status --short
+?? .oracle/
+```
+
+Environment:
+
+```text
+Darwin arm64
+Apple M2
+Node v24.4.1
+Python 3.11.11
+Google Chrome for Testing 148.0.7778.96
+```
+
+Disposable local server:
+
+```text
+PORT=38217 python3 serve.py
+```
+
+Probe commands:
+
+```text
+node --check /tmp/w3b-l1-startup-probe-20260829.mjs
+node /tmp/w3b-l1-startup-probe-20260829.mjs
+```
+
+Raw JSON captures:
+
+```text
+/tmp/w3b-l1-startup-probe-20260829.json
+/tmp/w3b-l1-startup-probe-20260829-rerun.json
+/tmp/w3b-l1-startup-probe-20260829-gpu12.json
+```
+
+Final source-integrity check:
+
+```text
+git diff --quiet 1fa145fc51e89c8a1788db39aff98e775a576073 -- . ':!.oracle'
+source-diff=clean
+```
+
+Instrumentation was external: Playwright route interception, disposable response-time wrappers, and browser init-script counters. No repository source was modified.
+
+## Direct pending-operation observations
+
+Deadlines were measured from page boot at 1, 3, and 8 seconds. The 1-second sample generally preceded the target request; the 3- and 8-second samples show the held operation.
+
+`RAF/draw` is the observed RAF callback count and combined `drawArrays + drawElements` count.
+
+| Held operation | 3-second observation | 8-second observation | After release |
+|---|---|---|---|
+| `journey.js` import | pending `/journey/journey.js`; class `scene-preparing hero-entry-ready mode-deskNarrow`; ready/active `false/false`; RAF/draw `125/5207` | still pending; ready/active `false/false`; RAF/draw `403/16883` | class `... j-rail-on scene-static`; ready/active `true/true`; RAF/draw `579/24424` |
+| Manifest | pending `/static/geom/manifest.json`; class `... j-rail-on`; ready/active `false/false`; RAF/draw `114/4619` | still pending; ready/active `false/false`; RAF/draw `383/15917` | `scene-static`; ready/active `true/true`; RAF/draw `549/23164` |
+| `owned.bin` | pending `/static/geom/owned.bin`; ready/active `false/false`; RAF/draw `103/4157` | still pending; ready/active `false/false`; RAF/draw `376/15623` | `scene-static`; ready/active `true/true`; RAF/draw `557/23500` |
+| Portrait image | pending `/assets/contributor-portraits/profile-sprite.jpg`; ready/active `false/false`; RAF/draw `115/4493` | still pending; ready/active `false/false`; RAF/draw `392/16127` | `scene-static`; ready/active `true/true`; RAF/draw `573/24172` |
+| `compileAsync` | `compileAsync-enter`; ready/active `false/false`; RAF/draw `100/3863` | still held; ready/active `false/false`; RAF/draw `374/15371` | `scene-static`; ready/active `true/true`; RAF/draw `484/20434` |
+| Hidden draw | `hidden-draw-enter`; ready/active `false/false`; RAF/draw `89/3401` | still held; ready/active `false/false`; RAF/draw `364/14951` | `scene-static`; ready/active `true/true`; RAF/draw `569/24004` |
+| GPU fence | `gpu-fence-pending`; ready/active `false/false`; RAF/draw `94/4054` | pending; ready/active `false/false` | At 12 seconds, before release: `scene-static`; ready/active `true/true`; RAF/draw `585/24676` |
+
+No page errors were recorded in the probe matrix.
+
+## DOM, focus, and static handoff
+
+Before fallback, held cases consistently showed:
+
+```text
+focus: BODY
+status elements: none
+body class: scene-preparing ...
+```
+
+The pre-existing static handoff link was present but hidden:
+
+```text
+text: A still version of this journey
+href: /static/
+visible: false
+```
+
+No direct pending case reached the source fallback by the 3- or 8-second deadline.
+
+## Controlled fallback and late settlement
+
+A second disposable pass injected a synthetic readiness rejection at approximately 3.1–3.5 seconds solely to exercise the existing `main.js` catch path. This is **probe instrumentation, not shipped behavior**.
+
+Observed fallback DOM:
+
+```text
+body class:
+hero-entry-ready mode-deskNarrow j-rail-on scene-intro-live
+
+status text:
+The interactive journey could not load. The hero scene above is still live,
+and the static journey carries every chapter.
+
+fallback link:
+text: the static journey
+href: /static/
+visible: true
+
+focus: BODY
+readyState: false
+journeyActive: false
+```
+
+At the fallback sample, RAF/render work continued:
+
+| Held operation | Synthetic fallback time | Pending after fallback | RAF/draw after fallback |
+|---|---:|---|---:|
+| `journey.js` import | 3109.8 ms | `/journey/journey.js` | `151/6299` |
+| Manifest | 3183.5 ms | `/static/geom/manifest.json` | `186/7643` |
+| `owned.bin` | 3127.5 ms | `/static/geom/owned.bin` | `175/7181` |
+| Portrait image | 3226.1 ms | portrait JPG | `148/5879` |
+| `compileAsync` | 3097.9 ms | JavaScript hold | `156/6215` |
+| Hidden draw | 3105.7 ms | JavaScript hold | `146/5795` |
+| GPU fence | 3508.4 ms | fence hold | `137/5860` |
+
+After releasing the held operation:
+
+- `journey.js`, manifest, and `owned.bin`: no readiness state was published and no activation occurred.
+- Portrait image: underlying readiness settled at `8891.3 ms`; no activation occurred.
+- `compileAsync`: underlying readiness settled at `8551.5 ms`; no activation occurred.
+- Hidden draw: underlying readiness settled at `8446.8 ms`; no activation occurred.
+- GPU fence: underlying readiness settled at `11485.7 ms`; no activation occurred.
+
+This is the late-settlement result: **underlying work can settle after the fallback, but it did not late-activate the journey in the instrumented run.** The fallback remained visible and `readyState/journeyActive` remained `false`.
+
+## GPU fence result
+
+The source’s GPU loop contains an explicit timeout:
+
+```text
+journey/journey.js:1463-1477
+```
+
+With `clientWaitSync()` forced to return `TIMEOUT_EXPIRED`:
+
+- 3 seconds: `ready=false`, `active=false`, repeated pending fence calls.
+- 9 seconds: still pending because the fence phase began several seconds after page boot.
+- 12 seconds: `ready=true`, `active=true`, `scene-static`, before the probe released the fence.
+
+Therefore the GPU fence is bounded by the existing internal timeout. It is not part of the reproduced indefinite-startup result.
+
+## Second-boot contract probe
+
+After successful direct releases, a second `boot()` call was attempted.
+
+Observed for the instrumented direct cases:
+
+```text
+sameObject: true
+hasHero: true
+chapter: mission
+detail: null
+journeyGlobalSame: true
+bootCalls: 2
+```
+
+The held `journey.js` import case also returned the same first state and preserved global ownership; its boot-call counter was unavailable because the delayed module response was released without the disposable instrumentation wrapper.
+
+Forced-fallback cases did not expose `window.journey`, so no second boot was attempted. This is consistent with no successfully published readiness state.
+
+## Exact source citations
+
+- Startup sequence and uncaught pending awaits: `main.js:1174-1188,1222-1237`
+- Fallback catch and static link: `main.js:1256-1269`
+- Baked manifest fetch and bin `Promise.all`: `journey/lib/baked.js:75-107`
+- Portrait promise and image callbacks: `journey/chapters/owned/portrait-photo-loader.js:3-10`
+- Portrait readiness consumed during GPU preparation: `journey/journey.js:1495-1503`
+- `compileAsync` await: `journey/journey.js:1502-1507`
+- Hidden draw loop: `journey/journey.js:1512-1556`
+- GPU fence loop and 8-second bound: `journey/journey.js:1454-1483`
+- Readiness publication: `journey/journey.js:1557-1564`
+- Single-start ownership and second-boot return: `journey/journey.js:106-130`
+- Public state and idempotent activation: `journey/journey.js:1361-1385`
+
+**Final binary disposition: REPRODUCED for startup nonterminality across journey import, manifest, bin, portrait, compile, and hidden draw; FALSIFIED for an indefinitely pending GPU fence because its existing 8-second phase timeout completed readiness.**
+0

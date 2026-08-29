@@ -1,0 +1,49 @@
+## Result
+
+**Local packaged-artifact evidence only.** No production or Railway persistence/compression claim was made.
+
+### Commands/results
+
+- `git rev-parse HEAD && git status --short` → exact base `1fa145fc51e89c8a1788db39aff98e775a576073`; only pre-existing untracked `.oracle/`.
+- `python3 tools/package-public.py /tmp/... --origin https://example.test --revision 1fa145fc51e89c8a1788db39aff98e775a576073` → **165 source files copied**; **166 artifact files including `release-revision.txt`**; all 17 required paths present. Manifest contains 10 explicit files, 8 trees, 17 required paths, 9 forbidden top-level paths (`deploy/public-files.json:1-79`; `tools/package-public.py:25-49,52-94,119-128`).
+- Disposable `PORT=18743 python3 serve.py` → ready; stopped and temporary artifact removed afterward (`serve.py:101-114`).
+
+### Range matrix
+
+Fixture: `/static/geom/manifest.json`, **125,360 bytes**, SHA-256 `a422ead3853ec4bcd930b507a6b563670610f9ae63a3f4f0b0d82a2f252a1131`.
+
+| Request | GET / HEAD result | Observed body / hash |
+|---|---|---|
+| no Range | 200 / 200 | GET 125,360 bytes; full hash above; HEAD body 0, `Content-Length: 125360` |
+| `bytes=2-5` | 206 / 206 | `Content-Range: bytes 2-5/125360`, CL 4, GET hash `5ff474ec566015321f2a4873c6ff44462ad0347ca61feafdfc6e64782884f6a9` |
+| `bytes=2-` | 206 / 206 | `2-125359`, CL 125,358, GET 125,358 bytes; hash `b2f4263c2159499624a4656b51cdbd539b2ba74d701553391c59a2e647599390` |
+| `bytes=-3` | **206 / 206 defect** | returns `0-3`, CL 4, not last 3 bytes; hash `2fcde7527e9cd81d62ae7ad3b1131615570c5028a57e630f18dc6a21e0c27bc6` |
+| `bytes=999999-` | 416 / 416 | no `Content-Range`; GET error body 466 bytes, hash `0fac6fd77332e4eba6c3b32aa1aae9b2e7ba040cff0aa79afda5bb722332d60b` |
+| invalid `bytes=abc` | 416 / 416 | same 466-byte error; no `Content-Range` |
+| `bytes=0-1,2-3` | **206 / 206 defect** | silently serves only `0-1`, CL 2, hash `a6fb08fda1acb957b6116bd37811a1fe41a01611c0631edbf786d6889a27a55c` |
+
+The same defects reach media: `/assets/cards/ados/la-2025-preview.mp4` is 752,656 bytes, full SHA-256 `88e099795009fcab3ecdb4f55365929315447735312916d2166534706b4b254f`; `bytes=-100` returned `0-100`/101 bytes, and multi-range returned only the first range. Range parsing is `serve.py:25-52`.
+
+### Routes, headers, revision
+
+- `/`, `/index.html`, and trailing-slash `/static/`, `/ownership/`, `/journey/`, `/journey-v6/` → 200.
+- Bare directories → 301 to slash.
+- `/missing`, `/missing/`, `/static/missing`, `/foo/bar` → 404.
+- GET/HEAD correctly preserve `Content-Length`; HEAD bodies were zero for direct files, ranged responses, and errors.
+- Local GET with `Accept-Encoding: gzip, br`: HTML, JS, MP4, and 404 all had `Cache-Control: no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0`; no `Content-Encoding` or `Vary`. This is local-only, matching `serve.py:18-23`.
+- `/release-revision.txt` and query variant returned exact base SHA plus newline, 41 bytes, SHA-256 `6c3d0d1ba4a7ab4c1445546eb0b64614190cd7c5a008ba44395615ee01701b71`. Release logic verifies only this body (`tools/release.sh:152-169`).
+
+### Findings
+
+1. **Verified defect, High severity/confidence, media-seek reach:** suffix ranges are wrong; multi-ranges are silently truncated.
+2. **Verified protocol gap, Medium severity/high confidence:** 416 responses omit `Content-Range: bytes */size`.
+3. **No local route/header/revision defect beyond those findings.** Compression and Railway restart behavior remain unverified.
+
+### Exact remaining probes
+
+- Browser media probe: Chromium/Safari `<video>` initial play, seek, and replay against packaged MP4; record request sequence, statuses, ranges, lengths, stalls, and replay completion.
+- Deployed-header probe: GET/HEAD production `/`, `/main.js`, MP4, and `/release-revision.txt?release=<nonce>` with `Accept-Encoding: gzip, br`; record `Content-Encoding`, `Content-Length`, `Content-Range`, cache, `Vary`, CDN/server headers. Also test deployed MP4 `Range: bytes=0-99`.
+- Railway probe: determine whether `/tmp/public` survives restart; `railway.toml:4-5` plus `package-public.py:112-117` makes persistence materially relevant.
+
+**North Star alignment:** this preserves the visual/application artifact while exposing the narrow byte-delivery contract failures and separating verified local behavior from undeployed platform claims.
+0

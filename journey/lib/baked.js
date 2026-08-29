@@ -17,10 +17,12 @@
 //     bytes. Attributes are wrapped over COPIES (slice of the typed-array
 //     view), never shared views: owned's aAnonF/aOwner are mutated at
 //     runtime, and a runtime write must never corrupt the shared bin buffer.
-//   - Fallback: any fetch failure, wrong manifest version, or missing key
-//     throws from geometry(); the chapter's caller catches it and builds
-//     live. The live builders remain as the automatic fallback AND as the
-//     ?livebuild=1 tuning path (LIVEBUILD skips the fetch entirely).
+//   - Fallback: an absent/unreadable/unsupported manifest leaves every chapter
+//     live. A missing, unreadable or malformed bin leaves that chapter live,
+//     as does a missing geometry key caught by its chapter. A recognised
+//     version-1 manifest with a malformed schema is rejected before any bin
+//     fanout and likewise leaves every chapter live. ?livebuild=1 remains the
+//     explicit all-live tuning path.
 //   - Capture path (?bakedump=1): registerGeometry/registerPayload RECORD
 //     instead of read — the bake tool polls bakeDumpDone and harvests
 //     window.__bake.chapters into static/geom/.
@@ -48,12 +50,14 @@ import { LIVEBUILD, BAKEDUMP } from '../../flags.js';
 
 const MANIFEST_URL = 'static/geom/manifest.json';
 const MANIFEST_VERSION = 1;
+const EXPECTED_CHAPTERS = ['owned', 'final', 'connect', 'inspire'];
+const ATTRIBUTE_KINDS = new Set(['f32', 'u32']);
 
 // ---- baked state (filled by the background fetch; null/absent means
 //      "build live", which is how the fallback is expressed) ------------
 
-let manifest = null;      // parsed manifest.json, or null until it arrives
-                          // AND its version matches MANIFEST_VERSION
+let manifest = null;      // parsed + fully validated manifest, or null until
+                          // its available chapter bins have been checked
 const bins = new Map();   // chapterId -> ArrayBuffer (that chapter's .bin)
 
 // ---- shared helpers ---------------------------------------------------
@@ -70,6 +74,190 @@ function viewOf(chapterId, attr) {
   return new Ctor(bins.get(chapterId), attr.byteOffset, attr.byteLength / 4);
 }
 
+// ---- manifest boundary ------------------------------------------------
+
+export class BakedManifestError extends Error {
+  constructor(path, detail) {
+    super(`baked manifest invalid at ${path}: ${detail}`);
+    this.name = 'BakedManifestError';
+  }
+}
+
+const invalid = (path, detail) => { throw new BakedManifestError(path, detail); };
+const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+function record(value, path) {
+  if (!isRecord(value)) invalid(path, 'expected an object');
+  return value;
+}
+
+function string(value, path) {
+  if (typeof value !== 'string' || value.length === 0) invalid(path, 'expected a non-empty string');
+  return value;
+}
+
+function nonNegativeInteger(value, path) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    invalid(path, 'expected a finite non-negative integer');
+  }
+  return value;
+}
+
+/** Validate the concrete format emitted by tools/bake-geom.py.
+ *  Throws the first precise schema error so no bin fetch can begin from a
+ *  partially trusted manifest. Returns the original object when valid. */
+export function validateBakedManifest(value) {
+  const root = record(value, '$');
+  if (root.version !== MANIFEST_VERSION) {
+    invalid('$.version', `expected ${MANIFEST_VERSION}`);
+  }
+  const chapters = record(root.chapters, '$.chapters');
+  const chapterIds = Object.keys(chapters);
+  const extra = chapterIds.filter((id) => !EXPECTED_CHAPTERS.includes(id));
+  if (extra.length) {
+    invalid('$.chapters', `unexpected ${extra.join(', ')}; expected a subset of ${EXPECTED_CHAPTERS.join(', ')}`);
+  }
+
+  const files = new Set();
+  for (const chapterId of chapterIds) {
+    const path = `$.chapters.${chapterId}`;
+    const chapter = record(chapters[chapterId], path);
+    const file = string(chapter.file, `${path}.file`);
+    if (!/^[^/\\]+\.bin$/.test(file)) invalid(`${path}.file`, 'expected a local .bin filename');
+    if (files.has(file)) invalid(`${path}.file`, `duplicate filename ${file}`);
+    files.add(file);
+    if (typeof chapter.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(chapter.sha256)) {
+      invalid(`${path}.sha256`, 'expected a 64-character lowercase hex string');
+    }
+    if (!Array.isArray(chapter.keys) || chapter.keys.length === 0) {
+      invalid(`${path}.keys`, 'expected a non-empty array');
+    }
+    record(chapter.payload, `${path}.payload`);
+
+    const keys = new Set();
+    let packedOffset = 0;
+    for (let keyIndex = 0; keyIndex < chapter.keys.length; keyIndex += 1) {
+      const keyPath = `${path}.keys[${keyIndex}]`;
+      const keyRecord = record(chapter.keys[keyIndex], keyPath);
+      const key = string(keyRecord.key, `${keyPath}.key`);
+      if (!key.startsWith(`${chapterId}/`)) {
+        invalid(`${keyPath}.key`, `expected ${chapterId}/ prefix`);
+      }
+      if (keys.has(key)) invalid(`${keyPath}.key`, `duplicate geometry key ${key}`);
+      keys.add(key);
+      if (!Array.isArray(keyRecord.attrs) || keyRecord.attrs.length === 0) {
+        invalid(`${keyPath}.attrs`, 'expected a non-empty array');
+      }
+
+      const names = new Set();
+      for (let attrIndex = 0; attrIndex < keyRecord.attrs.length; attrIndex += 1) {
+        const attrPath = `${keyPath}.attrs[${attrIndex}]`;
+        const attr = record(keyRecord.attrs[attrIndex], attrPath);
+        const name = string(attr.name, `${attrPath}.name`);
+        if (names.has(name)) invalid(`${attrPath}.name`, `duplicate attribute ${name}`);
+        names.add(name);
+        if (!ATTRIBUTE_KINDS.has(attr.kind)) invalid(`${attrPath}.kind`, 'expected f32 or u32');
+        if (!Number.isSafeInteger(attr.itemSize) || attr.itemSize <= 0) {
+          invalid(`${attrPath}.itemSize`, 'expected a finite positive integer');
+        }
+        const byteOffset = nonNegativeInteger(attr.byteOffset, `${attrPath}.byteOffset`);
+        const byteLength = nonNegativeInteger(attr.byteLength, `${attrPath}.byteLength`);
+        if (byteOffset % 4 !== 0) invalid(`${attrPath}.byteOffset`, 'expected 4-byte alignment');
+        if (byteLength % 4 !== 0) invalid(`${attrPath}.byteLength`, 'expected 4-byte alignment');
+        if ((byteLength / 4) % attr.itemSize !== 0) {
+          invalid(`${attrPath}.byteLength`, `not divisible by itemSize ${attr.itemSize}`);
+        }
+        if (!Number.isSafeInteger(byteOffset + byteLength)) {
+          invalid(attrPath, 'byte window exceeds the safe integer range');
+        }
+        if (byteOffset !== packedOffset) {
+          invalid(`${attrPath}.byteOffset`, `expected packed offset ${packedOffset}`);
+        }
+        packedOffset = byteOffset + byteLength;
+        if (name === 'index' && (attr.kind !== 'u32' || attr.itemSize !== 1)) {
+          invalid(attrPath, 'index must use kind u32 and itemSize 1');
+        }
+      }
+    }
+  }
+  return value;
+}
+
+function validateBinWindows(chapterId, chapter, bin) {
+  const path = `$.chapters.${chapterId}`;
+  if (!(bin instanceof ArrayBuffer)) invalid(`${path}.file`, 'response was not an ArrayBuffer');
+  for (let keyIndex = 0; keyIndex < chapter.keys.length; keyIndex += 1) {
+    const attrs = chapter.keys[keyIndex].attrs;
+    for (let attrIndex = 0; attrIndex < attrs.length; attrIndex += 1) {
+      const attr = attrs[attrIndex];
+      if (attr.byteOffset + attr.byteLength > bin.byteLength) {
+        invalid(
+          `${path}.keys[${keyIndex}].attrs[${attrIndex}]`,
+          `byte window ends at ${attr.byteOffset + attr.byteLength}, beyond ${bin.byteLength}-byte file`,
+        );
+      }
+    }
+  }
+  const attrs = chapter.keys.flatMap((key) => key.attrs);
+  const declaredLength = attrs.length
+    ? attrs[attrs.length - 1].byteOffset + attrs[attrs.length - 1].byteLength
+    : 0;
+  if (declaredLength !== bin.byteLength) {
+    invalid(`${path}.file`, `declares ${declaredLength} bytes but response has ${bin.byteLength}`);
+  }
+}
+
+export async function fetchBakedAssets(fetchImpl = fetch) {
+  let response;
+  try {
+    response = await fetchImpl(MANIFEST_URL);
+  } catch {
+    return null;
+  }
+  if (!response.ok) return null;
+
+  let parsed;
+  try {
+    parsed = await response.json();
+  } catch {
+    return null;
+  }
+  // Unknown versions are unsupported rather than corrupt: preserve the
+  // original all-live compatibility path. Once a manifest claims version 1,
+  // however, its complete schema is our contract and malformed data fails
+  // before any bin request can fan out.
+  if (!isRecord(parsed) || parsed.version !== MANIFEST_VERSION) return null;
+  let checkedManifest;
+  try {
+    checkedManifest = validateBakedManifest(parsed);
+  } catch (error) {
+    if (error instanceof BakedManifestError) return null; // invalid optimisation -> all-live
+    throw error;
+  }
+  const loadedBins = new Map();
+  await Promise.all(Object.entries(checkedManifest.chapters).map(async ([id, chapter]) => {
+    let binResponse;
+    try {
+      binResponse = await fetchImpl('static/geom/' + chapter.file);
+    } catch { /* absorbed: isBaked(id) stays false; that chapter builds live */ }
+    if (!binResponse || !binResponse.ok) return;
+    let bin;
+    try {
+      bin = await binResponse.arrayBuffer();
+    } catch {
+      return;                            // unreadable bin -> this chapter builds live
+    }
+    try {
+      validateBinWindows(id, chapter, bin);
+    } catch (error) {
+      if (error instanceof BakedManifestError) return; // malformed bin -> chapter builds live
+      throw error;
+    }
+    loadedBins.set(id, bin);
+  }));
+  return { manifest: checkedManifest, bins: loadedBins };
+}
+
 // ---- the background fetch (shipped path, module-load time) ------------
 
 export const ready = (async () => {
@@ -80,23 +268,10 @@ export const ready = (async () => {
     console.info('[baked] ?livebuild=1 — live builders forced for every chapter');
     return;                              // tuning path: never touch the bake
   }
-  let m;
-  try {
-    const res = await fetch(MANIFEST_URL);
-    if (!res.ok) return;                 // no bake present -> live everywhere
-    m = await res.json();
-  } catch {
-    return;                              // network/JSON error -> live everywhere
-  }
-  if (!m || m.version !== MANIFEST_VERSION) return;   // wrong schema -> live
-  manifest = m;
-  await Promise.all(Object.entries(m.chapters || {}).map(async ([id, ch]) => {
-    try {
-      const res = await fetch('static/geom/' + ch.file);
-      if (!res.ok) return;
-      bins.set(id, await res.arrayBuffer());
-    } catch { /* absorbed: isBaked(id) stays false; that chapter builds live */ }
-  }));
+  const loaded = await fetchBakedAssets();
+  if (!loaded) return;                   // no bake present -> live everywhere
+  manifest = loaded.manifest;
+  for (const [id, bin] of loaded.bins) bins.set(id, bin);
   // Which-path legibility (2026-08-17): one line naming every chapter that
   // will build from bytes; anything unnamed builds live. ?livebuild=1 logs
   // its own line above.

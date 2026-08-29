@@ -1,0 +1,63 @@
+## W3-L7 — Ownership/content contract
+
+**Severity/confidence:** P1 semantic/accessibility contract risk; **high source confidence**. No browser/AT or external-URL availability claims made.
+
+### Deterministic probe
+
+Command:
+
+```sh
+node /tmp/w3l7.mjs
+node tools/build-static-content.mjs --check
+node tools/test-static-content.mjs
+```
+
+Results:
+
+- `CONTENT.contributors`: **16 unique slots**.
+- `PERSON`: **370 records**.
+- `OWNERSHIP`: **370 unique normalized usernames**.
+- `PERSON ↔ OWNERSHIP`: **370/370 join; no missing records**.
+- Parsed grant-name tokens: **1,045; all join `OWNERSHIP`**.
+- Portrait pool: **120**.
+- Slot names all join `PERSON`; `melmass` is the one opening slot not in the portrait pool.
+- Runtime dealing confirms the distinction: `portrait-deal.js:8-35` replaces each slot’s name/role/blurb with a random person from the 120-person pool.
+- Static contributor rows: **16**, unique IDs, exact positional match to `CONTENT.contributors`.
+- Generator: `static content OK (131 text bindings, 8 link bindings)`.
+- Semantic test passes, but only checks static structure/counts/no-canvas (`tools/test-static-content.mjs:16-28`).
+
+### What “complete contributor index” demonstrably means
+
+The live source explicitly defines the 16 records as **visual slots/opening occupants**, not the complete person ledger (`content/content.js:761-781,793-810`). `PERSON` is explicitly canonical and ledger-backed (`content/contributors.js:13-24,174-184,226-283`). The ownership page renders ledger-derived rows from all `OWNERSHIP` records (`ownership/ownership.js:176-225,259-285`).
+
+Static copy nevertheless calls the 16 slot rows “the complete contributor list” and “authoritative, crawlable version” (`static/index.html:1497-1506`). Therefore, “complete” is unresolved: 16 routable visual positions versus 370 ledger owners. **Finding:** semantic authority/wording conflict, not a join-integrity failure.
+
+Repository copy is also stale: `content/COPY-TABLE.md:36-52,65-66` still describes contributor and link data as placeholders, contradicted by current real records and URLs (`content/content.js:793-810,825-855`). Maintenance risk; not a runtime finding.
+
+### Filters and no-JS behavior
+
+Both filters are placeholder-only:
+
+- `ownership/index.html:216-219`
+- `ownership/index.html:243-246`
+
+No static `<label>`, `aria-label`, or `aria-labelledby` exists. `ownership.js` only queries the inputs and attaches `input` handlers (`ownership/ownership.js:141-143,255-288`). **Finding:** explicit programmatic naming is absent; actual browser/AT name computation remains unverified.
+
+Ownership tables and contributor list are empty in static DOM (`ownership/index.html:181-248`) and populated only by the module loaded at `:317`. Existing no-JS claims apply to the separate static journey, whose content is authored HTML (`static/index.html:28-56`); no explicit ownership-page no-JS ledger promise was found. Treat no-JS ledger availability as a **policy candidate**, not a confirmed contract violation.
+
+### Declared site links
+
+`CONTENT.site.links` declares three destinations (`content/content.js:812-847`):
+
+- `banodoco.ai`: **not rendered** in live/static site-map.
+- `2RP`: **not rendered**; static row is a non-anchor (`static/index.html:1277`). Repository-wide search found no matching `href`; the contrary comment at `content/content.js:569-571` is stale.
+- `Ownership`: destination is rendered, but via separately authored paths (`journey/rail.js:684-693`; `static/index.html:1292-1294`), not the declaration.
+
+The generator’s eight link bindings therefore do not cover `site.links` (`tools/build-static-content.mjs:44-63`).
+
+**No-finding:** ledger joins, static-row generation, and grant-name joins are internally complete.
+
+**Bounded recommendation:** name the contracts separately: 16 visual slots, 120 portrait pool, 370 ledger persons. Either generate a genuinely complete static index from `PERSON` or relabel the 16-row surface as a slot/opening roster. Add explicit filter labels and make `site.links` the single rendered-link source.
+
+**Remaining browser accessibility probe:** Chromium accessibility snapshot plus VoiceOver/NVDA focus test for both filters before and after typing; record computed name, role, value, announcements, and keyboard reachability. This advances the North Star by making content ownership and accessibility contracts explicit without redesigning the visual system.
+0

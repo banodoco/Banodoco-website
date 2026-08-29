@@ -1,0 +1,162 @@
+Sat Aug 29 21:37:40 UTC 2026
+1fa145fc51e89c8a1788db39aff98e775a576073
+ M journey/lib/baked.js
+ M main.js
+ M organism/intro.js
+ M organism/organism.js
+ M package.json
+ M serve.py
+ M static/index.html
+ M tools/browser-smoke.mjs
+ M tools/build-static-content.mjs
+ M tools/capture.py
+ M tools/rebuild.py
+ M tools/test-static-content.mjs
+?? .oracle/
+?? organism/intro-clock.js
+?? tools/test-baked-manifest.mjs
+?? tools/test-gate-browser-smoke.mjs
+?? tools/test-gate-capture.py
+?? tools/test-gate-rebuild.py
+?? tools/test-initial-render-target-size.mjs
+?? tools/test-intro-clock.mjs
+?? tools/test-serve-range.mjs
+
+> banodoco-website@0.0.0 lint
+> eslint .
+
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/content/contributors.js
+  213:22  warning  The value assigned to 'names' is not used in subsequent statements  no-useless-assignment
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/connect/camera.js
+  80:7  warning  'DEG' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/connect/tendrils.js
+  155:7   warning  'sm' is assigned a value but never used. Allowed unused vars must match /^_/u    no-unused-vars
+  621:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u     no-unused-vars
+  647:24  warning  'ri' is defined but never used. Allowed unused args must match /^_/u             no-unused-vars
+  724:15  warning  'node' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/final/canopy.js
+  326:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/final/clones.js
+  1030:11  warning  'pull' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  1063:11  warning  The value assigned to 'prog' is not used in subsequent statements                no-useless-assignment
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/final/ring.js
+  282:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+  464:9   warning  The value assigned to 'body' is not used in subsequent statements             no-useless-assignment
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/final/sky.js
+  212:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+  786:7   warning  The value assigned to 'si' is not used in subsequent statements               no-useless-assignment
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/final/terrain.js
+  31:7   warning  The value assigned to 'soil' is not used in subsequent statements             no-useless-assignment
+  73:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/inspire/index.js
+  280:9   warning  'gauss2' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+  352:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u       no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/owned/index.js
+  147:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/owned/portraits.js
+  753:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/chapters/owned/substrate.js
+   225:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+   427:7   warning  The value assigned to 'fanVerts' is not used in subsequent statements         no-useless-assignment
+   496:7   warning  The value assigned to 'hairVerts' is not used in subsequent statements        no-useless-assignment
+   550:7   warning  The value assigned to 'webVerts' is not used in subsequent statements         no-useless-assignment
+   782:7   warning  The value assigned to 'crownVerts' is not used in subsequent statements       no-useless-assignment
+   888:7   warning  The value assigned to 'hubVerts' is not used in subsequent statements         no-useless-assignment
+  1176:7   warning  The value assigned to 'lidVerts' is not used in subsequent statements         no-useless-assignment
+  1273:7   warning  The value assigned to 'feltVerts' is not used in subsequent statements        no-useless-assignment
+  1273:22  warning  The value assigned to 'grainPoints' is not used in subsequent statements      no-useless-assignment
+  1430:7   warning  The value assigned to 'fillVerts' is not used in subsequent statements        no-useless-assignment
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/journey/lens.js
+  306:9  warning  'taaHardened' is assigned a value but never used. Allowed unused vars must match /^_/u  no-unused-vars
+
+/Users/peteromalley/Documents/banodoco-workspace/banodoco-website-oracle-codebase-improvement/tools/scrollprobe.js
+  161:35  warning  'aspectW' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+✖ 31 problems (0 errors, 31 warnings)
+
+
+> banodoco-website@0.0.0 cycles
+> madge --circular --warning --extensions js,mjs --webpack-config madge.webpack.cjs main.js journey organism ownership content tools
+
+- Finding files
+Processed 118 files (8.6s) (2 warnings)
+
+✔ No circular dependency found!
+
+✖ Skipped 2 files
+
+./organism/organism.js?v=1785427900
+playwright-core
+
+
+> banodoco-website@0.0.0 test
+> node tools/scroll-touch-gates.mjs && node tools/test-connect-motion.mjs && node tools/test-chapter-entry.mjs && node tools/test-static-content.mjs && node tools/test-intro-clock.mjs && node tools/test-initial-render-target-size.mjs && node tools/test-baked-manifest.mjs && python3 tools/test-gate-rebuild.py && python3 tools/test-gate-capture.py && node tools/test-serve-range.mjs && node tools/test-gate-browser-smoke.mjs && node tools/browser-smoke.mjs
+
+PASS Connect road has no stall-then-roll trough: 0.918151 {"gains":[0.0000202,0.00001947,0.00001893,0.00001862,0.00001854,0.00001871,0.0000191]}
+PASS coalesced wheel after a frame stall keeps physical rate: 0.010078
+PASS second gesture cannot collapse an in-flight Connect floor: 0.752070 {"preRate":0.07827,"minRate":0.05886,"target":0.725}
+PASS single swipe buys Inspire only: 0.260000
+PASS single coalesced swipe buys Inspire only: 0.259978 {"streaming":true,"peak":0.043457364911254626,"target":0.26,"p":0.0034173353053998014,"surface":0.032858993321151934}
+PASS single touch jitter buys nothing: 0.000000
+PASS cold-boot touch continues without scroll-side touchstart: 0.259977
+PASS cold-boot coalesced touch ended before boot buys Inspire: 0.259977 {"streaming":true,"peak":0.043457364911254626,"target":null,"p":0,"surface":0.032858993321151934}
+PASS cold-boot touch jitter stays at Mission: 0.000000
+PASS one cold-boot touch contact cannot buy two sections: 0.260000
+PASS rapid repeat buys Connect: 0.522997
+PASS rapid repeat (2 delivered moves) buys Connect: 0.523000
+PASS rapid repeat (3 delivered moves) buys Connect: 0.523000
+PASS rapid repeat (4 delivered moves) buys Connect: 0.522997
+PASS rapid repeat (one coalesced move each) buys Connect: 0.523000
+PASS rapid reversal returns to Mission: 0.000000
+PASS owned sheet drag never reaches journey: 0.260000
+PASS cold-boot delayed tail buys one section only: 0.259978
+PASS genuine post-boot repeat still buys Connect: 0.523000
+PASS delayed momentum tail holds at Inspire: 0.260000
+PASS coalesced delayed tail holds at Inspire: 0.260000
+PASS long coalesced momentum tail holds at Inspire: 0.260000
+PASS delayed momentum tail cannot buy a second section: 0.523000
+PASS Connect released glide has no near-static landing crawl: 0.523000 {"releaseToLandingMs":2480}
+Connect camera motion: PASS
+chapter entry lifecycle: PASS
+static content semantics OK (real HTML, native routes, bindings, links, symbols, accessibility landmarks)
+intro local clock contract: PASS
+initial render-target sizing: PASS
+baked manifest contract: PASS
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+capture.py — 1 pose(s) x 1 size(s), dpr 1, settle 0.6s, mode FROZEN (?capture=)
+  source : http://localhost:8137/index.html
+  output : /var/folders/_w/b3tthv192m77c760dbyzvk200000gn/T/gate-capture-golden-q_qj187j
+  chrome : hidden (pure scene; Tier 3 renders the copy as HTML)
+  · mission  desktop .
+----------------------------------------------------------------------
+Ran 1 test in 0.035s
+
+OK
+POSE NOT CONFIRMED (no-journey)     0.1 KB  mean 255.0   0.0s
+
+--- drift check (REAL GATE: frozen captures, exit 1 on FAIL-band) ---
+  · mission@1440x900.png   pose not confirmed (no-journey)
+  · mission@1440x900.png   MAE  0.00/255    0.0% px >8   [within]
+
+  worst MAE 0.00/255. Thresholds warn>0.50 fail>1.00.
+  FAIL: one or more captures did not confirm the requested pose.
+serve.py range handling: ok
+gate browser-smoke tests passed
+BROWSER_SMOKE_RESULT {"gate":"browser-smoke","status":"skip","reason":"no Chromium executable (set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)","optInSkip":true}

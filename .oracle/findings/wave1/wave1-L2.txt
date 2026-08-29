@@ -1,0 +1,15 @@
+## Ranked findings
+
+1. **High — static no-JS deep links do not land at their destination.**
+   **Confidence:** High. **Evidence:** `static/index.html:44-56` promises identical `#/<chapter>[/<node>]` routes and no-JS content; route parsing exists only in `static/index.html:1697-1703` inside the script. **Impact:** A JS-disabled visitor opening `static/#/owned` remains at scroll `0`, sees the Mission still, and must manually locate Ownership; menu links fail similarly. **Repro:** Disable JavaScript, load `http://…/static/#/owned`; observed `scrollY=0`, Mission opacity `1`, Ownership far below viewport.
+
+2. **Medium — ownership filters have no persistent accessible label.**
+   **Confidence:** High. **Evidence:** `ownership/index.html:216-219` and `:243-246` contain placeholder-only inputs with no `<label>`, `aria-label`, or `aria-labelledby`. **Impact:** Filter purpose can disappear once text is entered and is less robust across screen readers. **Probe:** VoiceOver/NVDA focus each field before and after typing; run an accessibility rule check.
+
+3. **Medium — ownership ledger data disappears with JavaScript disabled.**
+   **Confidence:** High for behavior; **unknown** whether this is an intended contract. **Evidence:** `ownership/index.html:181-232` leaves ledger `<tbody>` elements empty and `:248` leaves the contributor list empty; population is only in `ownership/ownership.js:68-103`, `:176-225`, `:259-285`, loaded at `ownership/index.html:317`. **Repro:** JS-disabled load produced zero grant, transfer, ownership, and contributor rows.
+
+**No verified finding:** live menu focus trap/Escape/focus return, hotspot disclosure state, static native disclosures, and reduced-motion CSS kill switches. Dynamic preference changes and VoiceOver announcement quality remain unverified.
+
+**Next-wave evidence gaps:** deployed-subpath no-JS routing; Safari/VoiceOver keyboard matrix; explicit ownership no-JS support decision.
+0

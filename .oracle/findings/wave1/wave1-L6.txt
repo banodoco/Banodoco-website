@@ -1,0 +1,18 @@
+**Verified facts (ranked)**
+
+1. **High | C0.99 — TAA history is 2× each axis at DPR2 until resize.** `organism/organism.js:105-108,167-171` creates at drawing-buffer size; `vendor/three/addons/postprocessing/EffectComposer.js:32-39,63-67` multiplies pass size by renderer DPR. Runtime `?pr=2`: DB 2880×1800, history 5760×3600; 44 frames/2.04s before resize vs 121/2.01s at DPR1 and 54/2.01s after. Reach: every high-DPR first load; 4× history pixels/GPU work. Reproduce by reading history dimensions and tracing GPU.
+
+2. **High | C0.99 — Static tier eagerly downloads five stills.** `static/index.html:140-153,1141-1146` declares five backgrounds. Browser probe fetched 10.79 MB desktop, 3.33 MB mobile on first load. Reach: every static visitor, regardless of chapter; network latency/image-memory pressure. Recheck with cache disabled and Resource Timing.
+
+3. **High | C0.97 — Baked geometry fetch is concurrent and retained.** `journey/lib/baked.js:75-99` uses `Promise.all` at module evaluation; `main.js:18-25` starts that import immediately; `baked.js:137-145` copies attributes again. Probe fetched ~5.07 MB, including 2.32 MB owned and 2.22 MB final, before chapter selection. Reach: mobile bandwidth/heap and later build/GC spikes. Capture heap/request timing.
+
+4. **High | C0.99 — Context loss leaves rendering alive.** `organism/animation.js:13-19` schedules unconditionally; `main.js:327-335` only shows a note. `WEBGL_lose_context` probe: 181 composer renders during 3 s fallback. Reach: lost mobile tabs burn battery/CPU and issue invalid GPU work. Test Safari/mobile recovery.
+
+5. **Medium | C0.95 — Active paths repeat 4,200-dot CPU scans.** `organism/spores.js:405-456` always iterates dots; `934-1001` scans each against three chains; `1095-1138` adds region work. `?tkdbg=1` measured emphasis 2.963 ms/frame on M2, excluding drift. Probe low-end 30/60-Hz devices.
+
+**Hypothesis | Medium | C0.85:** Idle card warming (`journey/cards/index.js:92-112`) has no `requestIdleCallback` deadline; after ~9 s only fonts warmed in this runtime, so first hover may stay cold. Verify production while busy/hidden.
+
+**No finding:** steady projection caches one matrix/frame (`organism/organism.js:255-275`); Arca/ADOS release media (`cards/arca.js:61-75`; `ados.js:248-260`).
+
+**Evidence gaps:** iOS/Safari context loss; low-end GPU timer/memory; production cache/decoded-image accounting.
+0

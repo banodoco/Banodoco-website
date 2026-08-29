@@ -1,0 +1,31 @@
+## Command/exit matrix
+
+| Command | Result | Disposition |
+|---|---:|---|
+| `python3 tools/package-public.py /tmp/... --origin ... --revision 1fa145...` | **0**, 165 files copied; 166 files including revision marker; `_check/` absent | Packager passes allowlist/roundtrip. |
+| `python3 tools/build-meta.py --check` | **0** | Temp-dir comparison; no repository mutation (`tools/build-meta.py:122-134`). |
+| `python3 tools/build-mark.py --check`; `node tools/build-static-content.mjs --check` | **0 / 0** | Temp/content comparisons pass. |
+| `PORT=59999 python3 tools/rebuild.py --check` | **2** | Correct closed-server prerequisite failure (`tools/rebuild.py:102-105`). |
+| `CHECK_ORIGIN=http://127.0.0.1:59999 tools/check.sh --skip-captures` | **2** | Public artifact passes, served-checkout precondition fails (`tools/check.sh:32-50`). |
+| `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/definitely/missing node tools/browser-smoke.mjs` | **1** before gate | `playwright-core` is unavailable; no Chrome launched. Auto-skip branch therefore untested. |
+| Isolated `capture_one()` with fake CDP returning `no-journey` | `ready=False`, `readiness=no-journey`, PNG written | Confirms absent readiness still produces an output; check-mode predicate does not consume `ready`. |
+| `git diff --quiet BASE -- . ':!.oracle'`; `git diff --check ...` | clean / clean | No application/source diff; only expected untracked `.oracle/` evidence. |
+
+## Gate map and dispositions
+
+- **Browser false green:** absent Chromium and launch failure set `process.exitCode = 0` (`tools/browser-smoke.mjs:127-139`). WebGL-unavailable live coverage returns normally (`:244-253`), then the harness prints `PASS` for the scenario (`:296-303`). These are false passes unless an explicit authorized-skip mode exists.
+- **Source/package gap:** browser smoke serves `ROOT` via `serve.py` (`tools/browser-smoke.mjs:10,116-120`), never the package produced by `tools/package-public.py`. Package verification checks bytes/allowlist only (`tools/package-public.py:52-94`). Post-deploy release verification checks only `release-revision.txt` (`tools/release.sh:152-169`).
+- **No-JS false coverage:** the no-JS scenario checks five sections, links, and no canvas, but not hash destination (`tools/browser-smoke.mjs:158-168`).
+- **Capture readiness false pass:** readiness is logged (`tools/capture.py:899-910`) but omitted from frozen `--check` failure conditions (`:922-960`). Missing goldens, size mismatch, and MAE fail; `ready=False` alone does not. Isolated invocation confirmed this path. Non-check generation does reject bad readiness (`:1013-1021`).
+- **Derived-artifact mutation:** `capture.py --check` creates and writes `static/captures/_check/` (`tools/capture.py:847-850,899-904`), contradicting its read-only contract. Hide-selector mismatch only warns (`:718-725`); wrong screenshot dimensions are silently resized (`:741-744`).
+- **Ordering defect:** full rebuild runs metadata before captures (`tools/rebuild.py:40-46,90-100`), although metadata consumes mission/owned captures (`tools/build-meta.py:106-112`). This can leave stale OG cards after a successful full build.
+- **Target identity weakness:** `rebuild.py` accepts any HTTP 200 root (`tools/rebuild.py:49-53,102-105`). `check.sh` later compares only four served files (`tools/check.sh:43-48`), not the complete runtime/source graph.
+- **Explicit authorized skips:** fast build omits captures (`tools/build.sh:8-23`); `check.sh --skip-captures` (`tools/check.sh:67-74`); release `--skip-captures` and `--no-verify` (`tools/release.sh:15-16,70-74,122-143,152`). `capture.py --live` is explicitly advisory (`:826,950-953`). The final-mobile known-flake exception is narrow but weakens the gate (`tools/check.sh:89-98`).
+- **Unrestricted bypass:** `SKIP_SCENE_CHECK` exits the pre-commit hook before scene gates (`tools/pre-commit:70-75`), and `PREFLIGHT_DONE` skips them based only on environment (`:77-84`).
+
+## Untested branches
+
+Actual Chromium launch failure, WebGL absence, capture timeout/readiness failure under CDP, full capture/build ordering, bake runtime, release push/deploy, and restart behavior remain unexecuted. No capture or full build was run.
+
+**Exclusive follow-up:** Chromium launch/WebGL matrix; forced readiness-timeout and wrong-frame capture; full rebuild with changed mission/owned captures; packaged-artifact browser smoke; deployed route/header/revision verification. This preserves the North Star by making every green gate prove the artifact and behavior it claims, without changing product visuals or source.
+0

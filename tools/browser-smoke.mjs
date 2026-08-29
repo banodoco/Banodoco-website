@@ -4,7 +4,8 @@ import net from 'node:net';
 import process from 'node:process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 
 const ROOT = new URL('..', import.meta.url);
@@ -13,7 +14,26 @@ const timeout = 90_000;
 const scenarioTimeout = 45_000;
 const tests = [];
 const test = (name, fn, deadline = scenarioTimeout) => tests.push({ name, fn, deadline });
-const profileRoot = await mkdtemp(join(tmpdir(), 'banodoco-browser-smoke-'));
+let profileRoot;
+
+export class CoverageUnavailableError extends Error {}
+
+// Coverage gaps are failures by default. Local environments may consciously
+// opt into a skip, which is emitted as a stable JSON record for CI/reporters.
+export function coverageDisposition(reason, allowSkip = process.env.BROWSER_SMOKE_ALLOW_SKIP === '1') {
+  return {
+    gate: 'browser-smoke',
+    status: allowSkip ? 'skip' : 'fail',
+    reason,
+    optInSkip: allowSkip,
+  };
+}
+
+function reportUnavailable(reason) {
+  const result = coverageDisposition(reason);
+  console.log(`BROWSER_SMOKE_RESULT ${JSON.stringify(result)}`);
+  return result.status === 'skip';
+}
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -43,13 +63,13 @@ async function waitForServer(port, child) {
 }
 
 function executablePath() {
-  const candidates = [
-    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  const configured = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const candidates = configured ? [configured] : [
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/usr/bin/google-chrome',
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
-  ].filter(Boolean);
+  ];
   return candidates.find(path => { try { return process.getBuiltinModule('fs').existsSync(path); } catch { return false; } });
 }
 
@@ -113,7 +133,9 @@ async function assertNoErrors(errors) {
   assert.deepEqual(errors, [], errors.join('\n'));
 }
 
-const port = await freePort();
+async function main() {
+  profileRoot = await mkdtemp(join(tmpdir(), 'banodoco-browser-smoke-'));
+  const port = await freePort();
 const server = spawn('python3', ['serve.py'], {
   cwd: ROOT,
   env: { ...process.env, PORT: String(port) },
@@ -128,14 +150,14 @@ try {
   await waitForServer(port, server);
   const chrome = executablePath();
   if (!chrome) {
-    console.log('SKIP browser smoke: no Chromium executable (set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)');
-    process.exitCode = 0;
+    const reason = 'no Chromium executable (set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)';
+    process.exitCode = reportUnavailable(reason) ? 0 : 1;
   } else {
     try {
       browser = await launchBrowser(chrome);
     } catch (error) {
-      console.log(`SKIP browser smoke: Chromium could not launch (${error.message.split('\n')[0]})`);
-      process.exitCode = 0;
+      const reason = `Chromium could not launch (${error.message.split('\n')[0]})`;
+      process.exitCode = reportUnavailable(reason) ? 0 : 1;
     }
   }
 
@@ -150,7 +172,7 @@ try {
       const errors = observeErrors(page);
       await page.goto(`${base}/static/`, { waitUntil: 'networkidle', timeout });
       await page.waitForFunction(() => window.staticJourney?.chapter === 'mission');
-      assert.equal(await page.locator('body').getAttribute('class').then(v => v?.includes('no-js')), false);
+      assert.equal(await page.locator('html').getAttribute('class').then(v => v?.includes('no-js')), false);
       await assertNoErrors(errors);
       await page.close();
     });
@@ -159,10 +181,21 @@ try {
       const context = await browser.newContext({ javaScriptEnabled: false });
       const page = await context.newPage();
       try {
-        await page.goto(`${base}/static/`, { waitUntil: 'domcontentloaded' });
+        await page.goto(`${base}/static/#/owned`, { waitUntil: 'domcontentloaded' });
         assert.equal(await page.locator('main section[data-chapter]').count(), 5);
         assert.ok(await page.locator('main a[href]').count() > 0);
         assert.equal(await page.locator('canvas').count(), 0);
+        assert.equal(new URL(page.url()).hash, '#/owned');
+        const owned = page.locator('section[data-chapter="owned"]');
+        const landingDeadline = Date.now() + 5_000;
+        let ownedBox;
+        do {
+          ownedBox = await owned.boundingBox();
+          if (ownedBox && ownedBox.y >= 0 && ownedBox.y < 300) break;
+          await page.waitForTimeout(100);
+        } while (Date.now() < landingDeadline);
+        assert.ok(ownedBox && ownedBox.y >= 0 && ownedBox.y < 300,
+          `native #/owned target did not land near the viewport top: ${JSON.stringify(ownedBox)}`);
       } finally {
         await context.close();
       }
@@ -243,13 +276,11 @@ try {
 
     test('live journey boots cleanly and supports navigation, aliases, and card input', async () => {
       if (!webglAvailable) {
-        console.log('SKIP live WebGL assertions: persistent preflight context unavailability');
-        return;
+        throw new CoverageUnavailableError('live WebGL preflight context unavailable');
       }
       const liveBrowser = browser;
       if (!await hasStableWebGL(liveBrowser)) {
-        console.log('SKIP live WebGL assertions: persistent fresh-browser context unavailability');
-        return;
+        throw new CoverageUnavailableError('live WebGL fresh-browser context unavailable');
       }
       const context = await liveBrowser.newContext({
         viewport: { width: 1280, height: 800 },
@@ -301,8 +332,12 @@ try {
         await runWithDeadline(fn, deadline, name);
         console.log(`PASS ${name}`);
       } catch (error) {
-        failures += 1;
-        console.error(`FAIL ${name}\n${error.stack || error}`);
+        if (error instanceof CoverageUnavailableError && reportUnavailable(error.message)) {
+          console.log(`SKIP ${name}`);
+        } else {
+          failures += 1;
+          console.error(`FAIL ${name}\n${error.stack || error}`);
+        }
       } finally {
         await closeWithin(activeBrowser);
         if (browser === activeBrowser) browser = undefined;
@@ -325,3 +360,7 @@ try {
   await rm(profileRoot, { recursive: true, force: true });
   if (serverError && process.exitCode) console.error(serverError.trim());
 }
+}
+
+const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
+if (import.meta.url === invokedPath) await main();

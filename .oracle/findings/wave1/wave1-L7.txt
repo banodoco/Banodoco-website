@@ -1,0 +1,18 @@
+### Verified findings (ranked)
+
+1. **High / high confidence — malformed bake manifests are fatal.** `journey/lib/baked.js:91-112,148-152` indexes `manifest.chapters` after accepting any version-1 JSON. Browser interception with `{version:1}` produced `[journey-v6] failed ... reading 'inspire'` and `window.journey=false`. A damaged artifact blocks the interactive tier; validate manifest shape before indexing.
+
+2. **High / high confidence — intro acceleration mutates a global clock.** `organism/intro.js:209-224` assigns `performance.now = ...` and never restores it. Live probe: `performance.now() - rAF timestamp` changed from 22.7 ms before input to 8,504 ms after one wheel trigger. Other timers/libraries see a permanent discontinuity. Reproduce with a clock-delta probe around first input.
+
+3. **Medium / high confidence — route validation misses numeric invariants.** `journey/structure.js:55-119` accepts `span=0`, `stops=[2]`, `scrollVh=-1` (`validateJourneyStructure(...) === true`); `journey/route.js:573-591` logs bad segment lengths but continues. Add adversarial schema tests before boot.
+
+4. **Medium / high confidence — inbound detail routes lack ownership checks.** `journey/navigation.js:3-11` returns any node; `journey/journey.js:790-797` stores it before checking UI success. Browser `#/inspire/discord` left `detail=discord`, showed no card, and consumed the next wheel intent. Validate node existence and chapter ownership.
+
+5. **Medium / medium confidence — context-loss timers race.** `main.js:327-335` overwrites one timer but restore clears only the newest. Synthetic loss, loss, restore still showed fallback after 2.5 s. Confirm Safari behavior and coalesce timers.
+
+6. **Low / high confidence — QA flags remain substring shims.** `flags.js:163-191`; `?x=notaa` disabled TAA in a live probe. Unrelated query text can alter rendering; parse exact keys.
+
+**No finding:** route invariants and static-content checks passed; raw hover-zone projection is intentionally documented and inert (`journey/ui.js:3018-3038`).
+
+**Evidence gaps:** production frequency of malformed manifests; real multi-emission context-loss behavior; cross-browser impact of the global clock mutation.
+0

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -86,6 +86,7 @@
     /* the fixed header must not cover a section we scroll a route to */
     scroll-padding-top: 6.5rem;
   }
+  html.no-js { scroll-behavior: auto; }
   body {
     margin: 0;
     background: var(--bg);
@@ -469,9 +470,9 @@
   }
   a.rail-item, .rail-menu { pointer-events: auto; }
   /* At rest only the CURRENT tile is live in the stack — the collapse rules
-     are body:not(.no-js)-guarded so a scripting-disabled visitor can click
+     are html:not(.no-js)-guarded so a scripting-disabled visitor can click
      everything the always-expanded rail shows. */
-  body:not(.no-js) .rail:not(:has(:focus-visible)) .rail-list:not(:hover)
+  html:not(.no-js) body .rail:not(:has(:focus-visible)) .rail-list:not(:hover)
     .rail-slot:not(.now) a.rail-item { pointer-events: none; }
   .rail-mark { position: relative; flex: 0 0 auto; display: block; width: 24px; height: 24px; }
   /* the dark rim: the marks carry their own contrast over the stills' bright
@@ -922,7 +923,8 @@
     border: 1px solid var(--panel-edge);
     border-radius: 3px;
   }
-  #ch-owned > .inner, #ch-final > .inner { width: min(58rem, 100%); }
+  .chapter[data-chapter="owned"] > .inner,
+  .chapter[data-chapter="final"] > .inner { width: min(58rem, 100%); }
   .eyebrow {
     margin: 0 0 0.9rem;
     font-size: 0.66rem;
@@ -1132,7 +1134,7 @@
   }
 </style>
 </head>
-<body class="no-js">
+<body>
 
 <a class="skip" href="#main">Skip to content</a>
 
@@ -1307,8 +1309,14 @@
 
 <main id="main">
 
+  <!-- A #/<chapter> URL is also a native fragment. The section IDs are
+       generated from the canonical journey schema, so these links reach the
+       intended, focusable section even when this page's enhancement script
+       cannot run. Unknown hashes deliberately have no native target; with JS
+       they retain the router's existing normalisation to Mission. -->
+
   <!-- ========================= MISSION ========================= -->
-  <section class="chapter" id="ch-mission" data-chapter="mission" aria-labelledby="h-mission" tabindex="-1">
+  <section class="chapter" id="/mission" data-chapter="mission" aria-labelledby="h-mission" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 01 — Mission</p>
       <h1 id="h-mission" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</h1>
@@ -1317,7 +1325,7 @@
   </section>
 
   <!-- ========================= INSPIRE ========================= -->
-  <section class="chapter" id="ch-inspire" data-chapter="inspire" aria-labelledby="h-inspire" tabindex="-1">
+  <section class="chapter" id="/inspire" data-chapter="inspire" aria-labelledby="h-inspire" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 02 — Inspire</p>
       <h2 id="h-inspire" data-src="chapters.inspire.heading">Inspire the movement.</h2>
@@ -1371,7 +1379,7 @@
   </section>
 
   <!-- ========================= CONNECT ========================= -->
-  <section class="chapter" id="ch-connect" data-chapter="connect" aria-labelledby="h-connect" tabindex="-1">
+  <section class="chapter" id="/connect" data-chapter="connect" aria-labelledby="h-connect" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 03 — Connect</p>
       <h2 id="h-connect" data-src="chapters.connect.heading">Connect the community.</h2>
@@ -1424,7 +1432,7 @@
   </section>
 
   <!-- ========================= OWNED ========================= -->
-  <section class="chapter" id="ch-owned" data-chapter="owned" aria-labelledby="h-owned" tabindex="-1">
+  <section class="chapter" id="/owned" data-chapter="owned" aria-labelledby="h-owned" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 04 — Ownership</p>
       <h2 id="h-owned" data-src="chapters.owned.heading">Owned by contributors</h2>
@@ -1527,7 +1535,7 @@
   <!-- ========================= FINAL / EPILOGUE ========================= -->
   <!-- Not a sixth peer chapter (10-chapter-final.md): route only, no nav item,
        no detail states. Owned stays the current nav entry here. -->
-  <section class="chapter" id="ch-final" data-chapter="final" aria-labelledby="h-final" tabindex="-1">
+  <section class="chapter" id="/final" data-chapter="final" aria-labelledby="h-final" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Epilogue</p>
       <h2 id="h-final" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</h2>
@@ -1552,15 +1560,15 @@
    ================================================================== */
 (function () {
   'use strict';
-  document.body.classList.remove('no-js');
+  document.documentElement.classList.remove('no-js');
 
-  var CHAPTERS = ['mission', 'inspire', 'connect', 'owned', 'final'];
+  var CHAPTERS = ["mission","inspire","connect","owned","final"];
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   var stills = {}, sections = {}, navLinks = {}, railSlots = {}, menuLinks = {};
   CHAPTERS.forEach(function (id) {
     stills[id] = document.querySelector('.still[data-chapter="' + id + '"]');
-    sections[id] = document.getElementById('ch-' + id);
+    sections[id] = document.getElementById('/' + id);
     var n = document.querySelector('.rail-item[data-nav="' + id + '"]');
     if (n) navLinks[id] = n;
     railSlots[id] = document.querySelector('.rail-slot[data-chapter="' + id + '"]');

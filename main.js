@@ -4,9 +4,9 @@
 // (responsive compositions, callout trackers, QA params), then the journey
 // bootstrap (input policy, delayed boot, intro fast-forward wiring). The
 // old DOM input shield is GONE — replaced by the organism's input-policy
-// API (organism.js setInputPolicy, item 6); the intro fast-forward's
-// clock-skew mechanism moved into organism/intro.js accelerate(), and this
-// file merely wires its trigger events. Styles moved to hero.css +
+// API (organism.js setInputPolicy, item 6); the intro fast-forward's local
+// time transform lives in organism/intro.js accelerate(), and this file
+// merely wires its trigger events. Styles moved to hero.css +
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
 import { createScene } from './organism/organism.js?v=1785427900';
@@ -1000,10 +1000,9 @@ if (sceneApi) {
      not exist while an early gesture is asking the intro to finish, so boot
      consumes this one observed physical input only after scroll.attach(). */
   function collectBootInput(e) {
-    // Event timestamps stay on the browser's physical input clock. The intro
-    // deliberately skews performance.now() while fast-forwarding, so using it
-    // after the first move would falsely add several seconds to the finger's
-    // duration and erase the real swipe rate.
+    // Prefer the event's own timestamp so every sample in a buffered gesture
+    // stays on the same physical input clock. The intro's accelerated draw
+    // time is deliberately local and never participates in this duration.
     const now = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
     if (e.type === 'touchstart') {
       if (!bootInput && e.touches && e.touches.length === 1) {
