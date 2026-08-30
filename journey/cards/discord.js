@@ -374,14 +374,12 @@ export default {
     stage = s;
     stage.classList.add('dc');
 
-    // the head names the card (round 2: the shell head is gone): the
-    // wordmark in their blurple left, the feed's status — beacon plus one
-    // word — right
+    // Round 3: the round-2 wordmark leaves this row — the restored shell
+    // head says DISCORD — and the feed's status corner (beacon plus one
+    // word) keeps the row alone, top-right over the topics like a
+    // broadcast bug.
     const head = document.createElement('div');
     head.className = 'dc-head';
-    const name = document.createElement('span');
-    name.className = 'dc-name';
-    name.textContent = 'DISCORD';
     const status = document.createElement('span');
     status.className = 'dc-status';
     const beacon = document.createElement('span');
@@ -391,7 +389,7 @@ export default {
     headerLabel.className = 'dc-label';
     headerLabel.textContent = 'UPDATES';
     status.append(beacon, headerLabel);
-    head.append(name, status);
+    head.append(status);
 
     const body = document.createElement('div');
     body.className = 'dc-body';
@@ -453,7 +451,7 @@ export default {
     // the ending — the invite as a full-width band in their blurple, the
     // walk's dots resting just above it
     const door = document.createElement('a');
-    door.className = 'dc-door card-cta';
+    door.className = 'dc-door card-door card-cta';
     door.href = 'https://discord.gg/NnFxGvx94b';
     door.target = '_blank';
     door.rel = 'noopener noreferrer';

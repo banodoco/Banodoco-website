@@ -58,10 +58,9 @@ export default {
     mastEl = mast;
     // the opening face is a random draw, as the site's is per session
     setFace(Math.floor(Math.random() * FACES.length));
-    // Lead with what 2RP is, then let the mark and launch status follow.
-    const dek = document.createElement('span');
-    dek.className = 'rp-dek';
-    dek.textContent = 'AN ART AND TECH PUBLICATION';
+    // Round 3: the dek that led the mark is gone — it was the shell head's
+    // short line word for word, and the restored head says it now. The
+    // masthead alone is the cover; its rotating face IS the identity.
 
     // hover = the identity itself: the mark cycles faces while pointed at
     stage.addEventListener('pointerenter', () => {
@@ -72,7 +71,7 @@ export default {
       if (flicker) { clearInterval(flicker); flicker = null; }
     });
 
-    head.append(dek, mast);
+    head.append(mast);
     media.append(cover, scrim, head);
 
     // the ending — a letterpress status band, the one card that closes on
@@ -80,7 +79,7 @@ export default {
     // soon." for AT, so the band stays decorative rather than
     // double-announcing.
     const foot = document.createElement('div');
-    foot.className = 'rp-foot';
+    foot.className = 'rp-foot card-door';
     foot.setAttribute('aria-hidden', 'true');
     const soon = document.createElement('span');
     soon.className = 'rp-soon';

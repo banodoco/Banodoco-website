@@ -106,12 +106,14 @@ export default {
       return fig;
     });
 
+    // Round 3: the THE/PRIZE eyebrows are gone — the restored shell head
+    // directly above says ARCA GIDAN PRIZE, and the in-art wordmark stays
+    // only as the artwork's own signature (and the hover instrument: the
+    // syllables are the site's interaction), set smaller and quieter by
+    // cards.css so it no longer reads as a second header.
     const word = document.createElement('div');
     word.className = 'ag-word';
     word.setAttribute('aria-hidden', 'true');
-    const the = document.createElement('span');
-    the.className = 'ag-eyebrow';
-    the.textContent = 'THE';
     const title = document.createElement('div');
     title.className = 'ag-title';
     syls = FIGURES.map((f, i) => {
@@ -125,24 +127,18 @@ export default {
       title.appendChild(span);
       return span;
     });
-    const prize = document.createElement('span');
-    prize.className = 'ag-eyebrow';
-    prize.textContent = 'PRIZE';
-    word.append(the, title, prize);
+    word.append(title);
 
-    // THE RECORD, below the art rather than crowding it (round 2): what it
-    // is in one tracked caption, then three cells, value over label,
-    // hairline-separated — the artwork keeps only its own wordmark, and
-    // everything written moves onto the ink plate where it reads over
-    // nothing. Same verified figures as before (see the STATS provenance
-    // note at the top of this file); "Edition II" rides the door's own
-    // destination rather than a fourth cell.
+    // THE RECORD, below the art rather than crowding it (round 2): three
+    // cells, value over label, hairline-separated — everything written
+    // moves onto the ink plate where it reads over nothing. Round 3 drops
+    // the tracked caption that led the plate: it repeated the shell head's
+    // short line word for word, and the head says it now. Same verified
+    // figures as before (see the STATS provenance note at the top of this
+    // file); "Edition II" rides the door's own destination rather than a
+    // fourth cell.
     const foot = document.createElement('div');
     foot.className = 'ag-foot';
-    const desc = document.createElement('p');
-    desc.className = 'ag-desc';
-    desc.textContent = 'OPEN SOURCE AI ART COMPETITION';
-    foot.appendChild(desc);
     const band = document.createElement('div');
     band.className = 'ag-band';
     for (const [num, lab] of [['198', 'ENTRIES'], ['7,287', 'VOTES'], ['$56.8K', 'PRIZES']]) {
@@ -162,7 +158,7 @@ export default {
     // announced 2026-04-06), so the door says what a visitor can actually
     // do: see the winners. The href is the site's own winners route.
     const door = document.createElement('a');
-    door.className = 'ag-door card-cta';
+    door.className = 'ag-door card-door card-cta';
     door.href = 'https://arcagidan.com/winners/edition-2';
     door.target = '_blank';
     door.rel = 'noopener noreferrer';

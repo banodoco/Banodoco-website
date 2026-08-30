@@ -148,16 +148,17 @@ export default {
     const scrim = document.createElement('div');
     scrim.className = 'ad-scrim';
 
+    // Round 3: the AI ART GATHERINGS eyebrow is gone — the restored shell
+    // head above the window says ADOS and carries the one descriptor line.
+    // The Pilowlava mark stays inside the footage (it is the site's own
+    // identity), stepped down by cards.css to read as the artwork's
+    // signature under the head rather than a second header.
     const word = document.createElement('div');
     word.className = 'ad-word';
     const mark = document.createElement('span');
     mark.className = 'ad-mark';
     mark.setAttribute('aria-hidden', 'true');
     mark.textContent = 'ADOS';
-    const eyebrow = document.createElement('span');
-    eyebrow.className = 'ad-eyebrow';
-    eyebrow.setAttribute('aria-hidden', 'true');
-    eyebrow.textContent = 'AI ART GATHERINGS';
 
     const prev = document.createElement('button');
     prev.className = 'ad-nav ad-prev';
@@ -181,7 +182,7 @@ export default {
     // One centred identity stack: current gathering, ADOS, then its eyebrow.
     // Keeping the caption in this group means changing events never changes
     // the group's optical centre or pushes a separate footer around.
-    word.append(center, mark, eyebrow);
+    word.append(center, mark);
 
     prev.addEventListener('click', () => manualStep(-1));
     next.addEventListener('click', () => manualStep(1));
@@ -228,7 +229,7 @@ export default {
 
     // the ending — the site's own eyebrow voice as a full-width band
     const door = document.createElement('a');
-    door.className = 'ad-door card-cta';
+    door.className = 'ad-door card-door card-cta';
     door.href = 'https://ados.events/';
     door.target = '_blank';
     door.rel = 'noopener noreferrer';
