@@ -15,7 +15,7 @@
  *                             page-lifetime singleton and area A is the
  *                             evidence for that decision, not a decoration
  *                             on top of it.
- *   main.js                   sixteen listener sites, one removal site, and
+ *   main.js                   fourteen listener sites, one removal site, and
  *                             the page-lifetime register the file now carries
  *                             in its own header block.
  *   journey/transport.js      onWheel — READ ONLY, and the reason it is here
@@ -88,8 +88,8 @@
  *     J04e recorded for journey/journey.js, now recorded for main.js too.
  *   * Nothing calls dispose() in production. Area E's three cycles run in a
  *     scenario this suite constructs. The whole Wave-3 family's limitation.
- *   * The live registration COUNT on a real page is not measured. Five of
- *     main.js's sixteen sites sit inside a loop over three callouts, so the
+ *   * The live registration COUNT on a real page is not measured. Three of
+ *     main.js's fourteen sites sit inside a loop over three callouts, so the
  *     site count and the live count differ and only the site count is
  *     asserted here. A live count needs an instrumented browser and belongs
  *     to the G1 gate owner.
@@ -546,12 +546,12 @@ pin('A5', 'ONE INSTALL PER PAGE MODULE, on the REAL flags.js: three imports unde
 /* ------------------------------------------------------------------ *
  * B — main.js's register, statically.                                  *
  * ------------------------------------------------------------------ */
-console.log('\nB — the register: the sixteen sites, the one removal, and the ungated QA key');
+console.log('\nB — the register: the fourteen sites, the one removal, and the ungated QA key');
 
 const ADD_RE = /\baddEventListener\s*\(/;
 const ANY_LISTENER_RE = /\b(?:add|remove)EventListener\s*\(/;
 
-pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code text — SIXTEEN, fifteen of them page wiring in main.js and the one BOUNDED capture beside its own remover in journey/boot/handoff.js — and the same scanner returns journey/backdrop.js\'s eight in the same call (D102)',
+pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code text — FOURTEEN, thirteen of them page wiring in main.js and the one BOUNDED capture beside its own remover in journey/boot/handoff.js — and the same scanner returns journey/backdrop.js\'s eight in the same call (D102)',
   (i) => ({
     register: registerSites(i, ADD_RE),
     control: foreignSiteSet('journey/backdrop.js', i.backdrop, ANY_LISTENER_RE, { blankStrings: false })
@@ -560,11 +560,27 @@ pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code t
   { main: SRC.main, handoff: SRC.handoff, backdrop: SRC.backdrop },
   {
     /* RE-KEYED from a bare main.js text list to `file :: text` by order B01,
-       2026-08-23. THE SIXTEEN TEXTS ARE UNCHANGED, character for character;
-       what each has gained is the file it lives in, and that is the half of
-       this pin that got STRONGER. The old form could not have told a site
-       that moved from main.js to another file from a site that vanished; this
-       one names both halves of such a move. */
+       2026-08-23. THE TEXTS WERE UNCHANGED by that move, character for
+       character; what each gained is the file it lives in, and that is the
+       half of this pin that got STRONGER. The old form could not have told a
+       site that moved from main.js to another file from a site that vanished;
+       this one names both halves of such a move.
+
+       SIXTEEN -> FOURTEEN, 2026-08-30, and the two that left are the whole
+       of the Equip promotion's cost to this register:
+
+         el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
+         tag.addEventListener('click', (e) => {
+
+       The first was the EQUIP tag's refusal to navigate; the second the
+       hoverless-device toggle that lit the stem and revealed "coming soon"
+       instead. Both existed only because Equip was deferred, and both are
+       deleted now that it is a chapter — the EQUIP tag takes the same
+       `el.querySelector('.tag')` click site the other two callouts already
+       shared, which is why that entry does NOT gain a duplicate. Note the
+       shape this pin's key gives the change: a REMOVED pair with no
+       corresponding ADDED pair, which is what a deletion looks like here and
+       is exactly what a site quietly relocating would NOT look like. */
     register: [
       "main.js :: addEventListener('error', (e) => {",
       "main.js :: addEventListener('keydown', (e) => {",
@@ -576,12 +592,10 @@ pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code t
       "main.js :: canvas.addEventListener('webglcontextrestored', () => {",
       "main.js :: el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));",
       "main.js :: el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));",
-      "main.js :: el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());",
       "main.js :: el.querySelector('.tag').addEventListener('click', (e) => {",
       "main.js :: exploreCta.addEventListener('click', (e) => {",
       "main.js :: logoLink.addEventListener('click', (e) => {",
       "main.js :: skipLink.addEventListener('click', (e) => {",
-      "main.js :: tag.addEventListener('click', (e) => {",
     ].sort(),
     control: [
       "journey/backdrop.js :: backdrop.addEventListener('lostpointercapture', clear);",
@@ -594,7 +608,7 @@ pin('B1', 'the page register\'s listener SITES, keyed by file and trimmed code t
       "journey/backdrop.js :: backdrop.removeEventListener('pointerup', onPointerUp);",
     ].sort(),
   },
-  'five of the sixteen sit inside a loop over three callouts, so the LIVE registration count on a real page is larger than sixteen. That count is not asserted anywhere in this suite and the header says why');
+  'three of the fourteen sit inside a loop over three callouts, so the LIVE registration count on a real page is larger than fourteen. That count is not asserted anywhere in this suite and the header says why');
 
 pin('B2', 'the page register has exactly ONE removal site across BOTH its files, and it is the intro capture\'s loop, in the module that owns the capture — the register\'s single BOUNDED registration, everything else being page-lifetime by design',
   (i) => registerSites(i, /\bremoveEventListener\s*\(/),
