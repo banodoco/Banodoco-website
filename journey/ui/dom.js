@@ -5,15 +5,43 @@ export function el(tag, cls, text) {
   return node;
 }
 
-/** Builds chapter destination controls in declaration order. */
+/** Builds chapter destination controls in declaration order.
+ *
+ *  Two families of control come out of this: the pill/CTA family
+ *  (`j-act-primary` etc., styled as buttons), and editorial links. Purpose's
+ *  links are intentionally data-shaped here so their icon/title/descriptor
+ *  remain one accessible anchor while CSS can make the descriptors a quiet
+ *  hover/focus reveal. */
+import { buildSymbol } from '../symbols.js';
+
 export function buildActions(specs) {
   const row = el('div', 'j-actions');
   for (const spec of specs) {
     if (spec.kind !== 'link') continue;
-    const node = el('a', `j-act j-act-${spec.weight || 'primary'}`);
+    // Purpose's editorial doors intentionally do not carry `.j-act`: that
+    // class is the hook for the chapter-arrival rise in arrival-motion.js and
+    // copy-arrival.js. Their own class lets them fade with the Purpose copy
+    // envelope without inheriting the existing navigation animation.
+    const node = el('a', spec.weight === 'purpose'
+      ? 'j-purpose-cta j-act-purpose'
+      : `j-act j-act-${spec.weight || 'primary'}`);
     node.href = spec.href || '#';
     if (spec.id) node.dataset.action = spec.id;
-    node.appendChild(el('span', 'j-act-t', spec.label));
+    if (spec.weight === 'purpose') {
+      // Purpose uses the existing Owned scene mark, reduced to a quiet
+      // editorial scale rather than inventing a second icon vocabulary.
+      const icon = el('span', 'j-purpose-icon');
+      icon.setAttribute('aria-hidden', 'true');
+      if (spec.glyph) icon.appendChild(buildSymbol(spec.glyph));
+      else if (spec.icon) icon.textContent = spec.icon;
+      node.appendChild(icon);
+      const copy = el('span', 'j-purpose-copy');
+      copy.appendChild(el('span', 'j-act-t', spec.label));
+      if (spec.sub) copy.appendChild(el('span', 'j-act-sub', spec.sub));
+      node.appendChild(copy);
+    } else {
+      node.appendChild(el('span', 'j-act-t', spec.label));
+    }
     row.appendChild(node);
   }
   return row;

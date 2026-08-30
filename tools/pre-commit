@@ -16,12 +16,17 @@
 # change that didn't regenerate the bake fails the commit. Skip with
 # SKIP_SCENE_CHECK=1 for doc-only emergencies — never for code.
 #
-# KNOWN FLAKE: final@430x932 re-shoots with a reproducible ~24 MAE drift
+# Capture-gate decision policy: identical to tools/check.sh's (Q05/D13/D15;
+# see that file's decide_captures() for the full contract and rationale).
+# There is no longer a named-pose exemption — final@430x932's ~24 MAE flake
 # (chrome bakes into the mobile final golden; the chrome-hide selectors
-# match nothing at that pose). It is the same nondeterminism class as
-# mission@430x932 (BUILDING.md). The gate fails ONLY when other poses also
-# drift; a sole final@430x932 FAIL-band with everything else 0.00 MAE is
-# reported loudly and allowed.
+# match nothing at that pose — same nondeterminism class as mission@430x932,
+# BUILDING.md) is a hard non-pass like any other [FAIL-band] row. The one
+# sanctioned way past a genuine environment issue is the shared adjudication
+# escape hatch: CAPTURE_CHECK_ADJUDICATION=<reason> turns a fail-band result
+# into a distinct, still-non-zero `blocked` status (exit 3) — never a pass.
+# This hook sources check.sh's decide_captures() rather than reimplementing
+# it, so the two gates cannot drift apart again.
 
 # Resolve the hook's real location via the repo root, not $0/BASH_SOURCE:
 # this file is installed as a SYMLINK at .git/hooks/pre-commit, and when git
@@ -67,6 +72,92 @@ if echo "$STAGED" | grep -q \
   }
 fi
 
+# --- BEGIN DWELL RECEIPT GATE (§5.4 of the scroll-through-category design) ---
+#
+# THE CATEGORY THIS CLOSES IS A WIRING FAILURE. Four owner reports of "it
+# scrolled through the section", months apart, each diagnosed and each fixed
+# — and the only instrument that can observe the class, tools/dwell-run.mjs,
+# was wired into no required ring and had never run. Its contract was also
+# stale, but that cost nothing on its own: a stale contract and a contract
+# nobody evaluates are the same object.
+#
+# So the browser ring is REQUIRED FOR THE PATHS THAT OWN THE CLASS. It is
+# deliberately NOT inside `npm run check` — it needs Chrome and a served
+# tree, and a check people cannot run at their desk gets bypassed within a
+# week, which is exactly how this category got here.
+#
+# The receipt stamps the SHA of each governed file as the green run measured
+# it, so this gate asks "was the ring green against THESE bytes", not "was a
+# browser run ever done" — which is all a timestamp could say. The governed
+# list lives in tools/dwell-oracle.mjs (GOVERNED_PATHS) and is read from
+# there, never copied here: two copies of a path list is how a file quietly
+# stops being governed.
+#
+# The override is DELIBERATELY NOISY and DELIBERATELY RECORDED. §9 of the
+# design says this gate is load-bearing and that habitual overriding reverts
+# the whole design to the status quo, so the escape hatch demands a reason
+# and prints it, in the shape CAPTURE_CHECK_ADJUDICATION already uses.
+DWELL_RECEIPT="$TOOLS/dwell-receipt.json"
+DWELL_GOVERNED=$(node -e '
+  import("'"$TOOLS"'/dwell-oracle.mjs").then((m) => console.log(m.GOVERNED_PATHS.join("\n")));
+' 2>/dev/null)
+if [ -z "$DWELL_GOVERNED" ]; then
+  echo "pre-commit: could not read GOVERNED_PATHS from tools/dwell-oracle.mjs." >&2
+  exit 1
+fi
+DWELL_HIT=""
+while IFS= read -r gp; do
+  [ -z "$gp" ] && continue
+  if echo "$STAGED" | grep -qx "$gp"; then DWELL_HIT="$DWELL_HIT $gp"; fi
+done <<< "$DWELL_GOVERNED"
+
+if [ -n "$DWELL_HIT" ]; then
+  if [ -n "${DWELL_RING_ADJUDICATION:-}" ]; then
+    echo "pre-commit: DWELL RING OVERRIDDEN for$DWELL_HIT" >&2
+    echo "  reason: $DWELL_RING_ADJUDICATION" >&2
+    echo "  (§9: this gate is load-bearing. Habitual overriding reverts the design to the status quo.)" >&2
+  elif [ ! -f "$DWELL_RECEIPT" ]; then
+    echo "pre-commit: staged$DWELL_HIT but there is no browser-ring receipt." >&2
+    echo "  These files own the in-flight authority class (four owner reports)." >&2
+    echo "  Run:  PORT=8177 python3 serve.py   then   npm run test:dwell" >&2
+    echo "  Override (recorded):  DWELL_RING_ADJUDICATION='<reason>' git commit ..." >&2
+    exit 1
+  else
+    # Compare the receipt's stamped hashes against the STAGED bytes, not the
+    # working tree's: the commit is what ships, and an unstaged edit that
+    # happened to match the receipt would otherwise let a different tree
+    # inherit the pass. The staged blobs are read one at a time with
+    # `git show :<path>` rather than by materialising the whole index — the
+    # static-content gate above checks out the full tree because it runs a
+    # BUILD over it, and this gate needs five files.
+    DWELL_STALE=$(node -e '
+      const { readFileSync } = require("node:fs");
+      const { execFileSync } = require("node:child_process");
+      const { createHash } = require("node:crypto");
+      const receipt = JSON.parse(readFileSync(process.argv[1], "utf8"));
+      const stale = [];
+      for (const [rel, want] of Object.entries(receipt.governed || {})) {
+        let got = "NOT-IN-INDEX";
+        try {
+          const blob = execFileSync("git", ["show", `:${rel}`], { maxBuffer: 1 << 26 });
+          got = createHash("sha256").update(blob).digest("hex").slice(0, 16);
+        } catch { /* deleted, or never tracked */ }
+        if (got !== want) stale.push(`${rel} (receipt ${want}, staged ${got})`);
+      }
+      if (stale.length) console.log(stale.join("\n"));
+    ' "$DWELL_RECEIPT" 2>&1)
+    if [ -n "$DWELL_STALE" ]; then
+      echo "pre-commit: the browser-ring receipt does not cover this staged tree." >&2
+      echo "$DWELL_STALE" | sed 's/^/    /' >&2
+      echo "  Run:  PORT=8177 python3 serve.py   then   npm run test:dwell" >&2
+      echo "  Override (recorded):  DWELL_RING_ADJUDICATION='<reason>' git commit ..." >&2
+      exit 1
+    fi
+    echo "pre-commit: browser-ring receipt covers$DWELL_HIT" >&2
+  fi
+fi
+# --- END DWELL RECEIPT GATE ---
+
 echo "$STAGED" | grep -q "organism/\|journey/" || exit 0
 
 if [ -n "$SKIP_SCENE_CHECK" ]; then
@@ -100,26 +191,35 @@ if ! curl -s -o /dev/null --max-time 2 http://localhost:8137/; then
   exit 1
 fi
 
-# capture gate, with the known-flake tolerance
+# --- BEGIN CAPTURE GATE (sourced verbatim by tools/test_capture_check.py's
+# --- precommit-wiring test between these two markers — keep it a
+# --- self-contained shell fragment; do not rely on state defined outside
+# --- this block other than TOOLS and CAPTURE_PY) ---
+#
+# capture gate — decided by tools/check.sh's decide_captures(), sourced
+# (not duplicated) so this hook can never re-diverge from the accepted
+# decision table. Run in an isolated `bash -c` subshell, exactly as
+# tools/test_capture_check.py drives it: check.sh's `set -euo pipefail`
+# then applies only inside that subshell, never leaking into this hook's
+# own (non -e) error handling. The BASH_SOURCE[0]==$0 guard at the bottom
+# of check.sh skips its `main` (Chrome/curl/rebuild) when sourced.
 CAPTURE_LOG=$(mktemp)
 python3 "$CAPTURE_PY" --check > "$CAPTURE_LOG" 2>&1
 CAPTURE_RC=$?
-if [ $CAPTURE_RC -ne 0 ]; then
-  FAIL_ROWS=$(grep -c '\[FAIL-band\]' "$CAPTURE_LOG" || true)
-  KNOWN=$(grep 'final@430x932.png.*FAIL-band' "$CAPTURE_LOG" | head -1)
-  OTHERS=$(grep '\[FAIL-band\]' "$CAPTURE_LOG" | grep -v 'final@430x932' | head -5)
-  if [ "$FAIL_ROWS" = "1" ] && [ -n "$KNOWN" ] && [ -z "$OTHERS" ]; then
-    echo "pre-commit: KNOWN FLAKE ONLY — final@430x932 mobile drifts (pre-existing" >&2
-    echo "  chrome nondeterminism, BUILDING.md class). All other poses 0.00 MAE." >&2
-    echo "  Committing with the known flake." >&2
-  else
-    cat "$CAPTURE_LOG" >&2
-    echo "pre-commit: capture regression failed — see output above." >&2
-    rm -f "$CAPTURE_LOG"
-    exit 1
-  fi
+CHECK_SH="$TOOLS/check.sh"
+if [ ! -f "$CHECK_SH" ]; then
+  echo "pre-commit: expected check.sh at $CHECK_SH — not found." >&2
+  rm -f "$CAPTURE_LOG"
+  exit 1
 fi
+bash -c 'source "$1"; decide_captures "$2" "$3"' _ "$CHECK_SH" "$CAPTURE_LOG" "$CAPTURE_RC"
+DECIDE_RC=$?
 rm -f "$CAPTURE_LOG"
+if [ $DECIDE_RC -ne 0 ]; then
+  echo "pre-commit: capture check did not pass (exit $DECIDE_RC; see output above)." >&2
+  exit $DECIDE_RC
+fi
+# --- END CAPTURE GATE ---
 
 python3 "$BAKE_PY" --check || {
   echo "pre-commit: geometry bake is stale — see output above." >&2

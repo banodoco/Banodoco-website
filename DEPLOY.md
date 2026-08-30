@@ -24,12 +24,14 @@ It fetches and requires `origin/main` to be an ancestor (the one-time legacy
 history merge is already in main), then commits, pushes `main`, and polls
 production. Divergence aborts rather than discarding the remote tree. Each
 destructive boundary is confirmed.
-Before committing, it runs `npm run check` (lint, cycles, unit and browser
-contracts) and `tools/check.sh` (scene drift plus deploy artifact) against the
-reviewed tree, and aborts if either the staged diff or `HEAD` changes meanwhile.
-`--yes` authorizes them non-interactively; `--no-verify` skips only the final
-URL poll and does not make the command a dry run. Use `tools/release.sh --help`
-for the complete interface.
+Before committing, it runs `npm run check` (lint, cycles, unit, contract, and
+static-content tests — no browser) and `tools/check.sh` (scene drift plus
+deploy artifact) against the reviewed tree, and aborts if either the staged
+diff or `HEAD` changes meanwhile. Neither step launches a browser scenario
+run: those live behind `npm run test:browser` / `check:browser` and are never
+invoked by the release flow. `--yes` authorizes them non-interactively;
+`--no-verify` skips only the final URL poll and does not make the command a
+dry run. Use `tools/release.sh --help` for the complete interface.
 
 ## Public boundary
 
@@ -63,28 +65,52 @@ uses a relative path. `tools/package-public.py --origin ...` replaces every
 `ORIGIN` occurrence only in the temporary public artifact, covering these
 files and `404.html`, and fails if any placeholder remains. The source checkout
 is never rewritten. Railway supplies `https://www.banodoco.ai`; local artifact
-inspection must pass an explicit origin. Set the final absolute `Sitemap:` URL
-in `robots.txt` if the deployment origin changes.
+inspection must pass an explicit origin. `robots.txt`'s `Sitemap:` line is
+deliberately relative (`./sitemap.xml`) precisely so it needs no edit if the
+deployment origin ever changes — nothing in `robots.txt` requires updating.
 
 ## Railway operations (practical)
 
 Railway auto-deploys `main` on push (GitHub integration → Railpack → the
-packaging startCommand below). The quick path:
+packaging startCommand below). `tools/release.sh` (above) is the authorized
+way to reach that push — it stages only reviewed paths, runs `npm run check`
+and `tools/check.sh` against the exact staged tree, commits, pushes, and
+polls `release-revision.txt` for you. The commands below are for **watching**
+that deploy (or a push made by other means) land, not an alternate release
+procedure:
 
 ```bash
-# commit everything (PREFLIGHT_DONE=1 skips the capture-gate pre-commit hook)
+railway status --json        # wait for status: SUCCESS
+curl -s https://www.banodoco.ai/release-revision.txt   # == pushed commit SHA
+```
+
+**Manual bypass (not the authorized flow).** `git add -A` / commit / push
+directly to `main` also triggers the same Railway auto-deploy, but it skips
+everything `tools/release.sh` exists to enforce: no reviewed `--stage` set (so
+an accidental untracked file ships), no `npm run check`, no `tools/check.sh`,
+and no `origin/main`-is-an-ancestor divergence guard. `PREFLIGHT_DONE=1` on a
+manual commit only skips the pre-commit hook's own scene regression gate
+(the `organism/`/`journey/` capture + bake check in `tools/pre-commit`) — it
+does not run any of `tools/release.sh`'s checks in its place, unlike when
+`tools/release.sh` sets it (there, the checks already ran against this exact
+tree seconds earlier). Reserve this path for doc-only or otherwise
+non-scene-touching commits where re-running the full gate is genuinely not
+warranted; use `tools/release.sh` for anything else, and especially for
+anything touching `organism/`, `journey/`, or the deploy allowlist:
+
+```bash
 PREFLIGHT_DONE=1 git add -A
 PREFLIGHT_DONE=1 git commit -m "deploy"
 git push origin main
-railway status --json        # wait for status: SUCCESS
-curl -s https://www.banodoco.ai/release-revision.txt   # == pushed commit SHA
 ```
 
 When scene/content changed, rebuild derived artifacts first (see
 BUILDING.md): `python3 tools/rebuild.py --with-captures`, then
 `python3 tools/build-meta.py` (captures feed the og cards — build-meta
 must run AFTER captures, or the pre-commit hook flags `og-home.jpg
-DRIFTED`; re-add and re-commit).
+DRIFTED`; re-add and re-commit). `tools/release.sh` does this build step for
+you (`tools/build.sh` / `tools/build.sh --with-captures`); the manual path
+does not, so run it yourself first.
 
 ### railway.toml contract (do not regress)
 

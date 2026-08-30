@@ -210,7 +210,7 @@ const historyByKey = (() => {
     const segs = g.grants.split('|');
     for (const seg of segs) {
       const m = seg.match(/^([A-Z /]+):\s*(.*)$/);
-      let cats = [], names = [];
+      let cats = [], names;
       if (m) { cats = [m[1].trim()]; names = m[2].split(';').map((s) => s.trim()).filter(Boolean); }
       else { names = seg.split(';').map((s) => s.trim()).filter(Boolean); }
       for (const n of names) {

@@ -82,6 +82,7 @@ import atexit
 import base64
 import json
 import os
+import platform
 import shutil
 import signal
 import socket
@@ -229,6 +230,38 @@ HIDE_SELECTORS = [
 FROZEN_MEASURED_SPREAD = 0.0        # measured, not a placeholder — see comment above
 FAIL_MAE_FROZEN = max(3.0 * FROZEN_MEASURED_SPREAD, 1.0)
 WARN_MAE_FROZEN = FAIL_MAE_FROZEN / 2.0
+
+# The double-shoot agreement tolerance (HYGIENE-01, 2026-08-23).
+#
+# THE FAILURE THIS EXISTS FOR: on a loaded machine, at roughly 1 frame in 50,
+# the shutter fires on the wrong frame. One observed run wrote a capture at
+# MAE 20.28 while the other nine files held their exact values — a near-MISSION
+# frame saved under the INSPIRE filename. Boot-retries normally recover from a
+# mis-timed shutter; that one did not, and nothing in the run said so. A single
+# shot cannot tell "the site changed" from "the camera fired early", because
+# both arrive as one PNG that differs from the golden.
+#
+# So `--check` shoots every pose TWICE and compares the two fresh frames to
+# EACH OTHER before either is compared to a golden. Two independent shots of a
+# frozen scene are bit-identical; a mis-timed shutter is not reproducible. If
+# the pair disagrees, the run REFUSES TO REPORT that file rather than reporting
+# a drift number it cannot stand behind.
+#
+# WHY 1.0, THE SAME NUMBER AS THE DRIFT FLOOR:
+#   · Measured self-agreement in frozen mode is 0.00/255 — bit-identical, both
+#     runs, all ten files (the M6 measurement above). So any non-zero tolerance
+#     is already pure headroom.
+#   · The hazard it must catch is 20.28 — twenty times this tolerance. The
+#     margin is enormous in the direction that matters; there is no useful
+#     precision to buy by tightening toward zero.
+#   · A zero tolerance would trip on font-hinting and GPU-driver noise, which
+#     is the exact reason FAIL_MAE_FROZEN carries a 1.0 floor rather than 3x a
+#     measured zero. Agreement and drift face the same noise, so they take the
+#     same floor — one number to maintain and to justify, not two that drift
+#     apart.
+# A tolerance of 1.0 therefore admits every honest re-shoot and excludes every
+# wrong-frame capture observed to date.
+AGREE_MAE_FROZEN = FAIL_MAE_FROZEN
 
 # LIVE mode (--live, advisory only): the original ADR D5 percentages, sized
 # for an unfrozen, permanently-moving scene.
@@ -500,6 +533,52 @@ WEBGL_JS = """
   }
 })()
 """
+
+
+def probe_environment(cdp, gl_renderer):
+    """The three strings the manifest never recorded.
+
+    WHY THIS EXISTS
+    ---------------
+    A two-day investigation (2026-08-20/21) asked one question: had the
+    refactor visibly changed the site? The answer was ENVIRONMENTAL — the
+    pristine pre-refactor tree misses the goldens by exactly the same MAE as
+    the current tree (2.08-3.15 across ten files, to two decimals), while
+    pristine-vs-current renders 9 of 10 bit-identical. Nothing had changed;
+    the goldens had simply been shot on a different renderer.
+
+    That took two days because manifest.json recorded `generated`, `commit`,
+    `dpr`, `settleSeconds`, `frozen`, `chromeHidden` and `quantized` — and
+    NOTHING about the machine. Three strings would have made the whole
+    investigation unnecessary, so this records exactly those three:
+
+      chrome         Chrome's own product string, from CDP Browser.getVersion.
+      webglRenderer  UNMASKED_RENDERER_WEBGL. Note this was ALREADY being
+                     computed at shoot time and thrown away: wait_webgl()
+                     returns precisely this string, and main() has held it in
+                     `gl` since the day that function was written. It is
+                     passed in here rather than re-probed so the manifest
+                     records the value the RUN actually used, not a second
+                     reading that could differ after a GPU-process restart.
+      platform       The host OS/arch, from Python, not from the user agent —
+                     the UA lies about macOS versions by design.
+
+    Best effort by construction: a capture must never fail because a
+    provenance string could not be read. Every field independently degrades
+    to None, and the caller records whatever it got.
+    """
+    env = {"chrome": None, "webglRenderer": gl_renderer or None, "platform": None}
+    try:
+        v = cdp.call("Browser.getVersion", timeout_s=10.0)
+        env["chrome"] = v.get("product") or None
+        env["userAgent"] = v.get("userAgent") or None
+    except Exception:
+        pass
+    try:
+        env["platform"] = "%s %s" % (platform.platform(), platform.machine())
+    except Exception:
+        pass
+    return env
 
 
 def wait_webgl(cdp, timeout_s=WEBGL_TIMEOUT_S, verbose=False):
@@ -797,6 +876,46 @@ def git_head(cwd=None):
         return None
 
 
+def _is_within_repo(path, repo_root):
+    """True if the realpath of `path` is `repo_root` itself or under it."""
+    p = os.path.realpath(path)
+    root = os.path.realpath(repo_root)
+    return p == root or p.startswith(root + os.sep)
+
+
+def resolve_check_out(check_out_arg, repo_root=None):
+    """Resolve the directory `--check` writes fresh comparison images to.
+
+    A check must never write repository artifacts (protected golden bytes
+    and the tracked `_check/` set live under `static/captures/`, and this
+    program forbids a comparison run mutating them). With no override this
+    returns a freshly created directory under the system temp dir
+    (`tempfile.mkdtemp`), which is outside the repo by construction. An
+    explicit override (`--check-out <dir>`) is honoured unless it resolves
+    inside the repository, in which case this raises SystemExit with a
+    clear message — the caller lets that propagate as a non-zero process
+    exit rather than silently falling back to the default.
+
+    No Chrome/network/filesystem-outside-tempdir side effects beyond
+    `os.makedirs` on the resolved directory, so this is safe to call (and to
+    unit-test) without the capture pipeline running.
+    """
+    root = os.path.realpath(repo_root if repo_root is not None else JOURNEY_DIR)
+    if check_out_arg:
+        resolved = os.path.realpath(os.path.abspath(check_out_arg))
+        if _is_within_repo(resolved, root):
+            raise SystemExit(
+                "--check-out must not resolve inside the repository "
+                "(got %r -> %r, repo root %r). A check must never write "
+                "repository artifacts — omit --check-out to use a fresh "
+                "system temp directory, or pass a path outside the repo."
+                % (check_out_arg, resolved, root)
+            )
+        os.makedirs(resolved, exist_ok=True)
+        return resolved
+    return tempfile.mkdtemp(prefix="capture-check-")
+
+
 def main():
     global DPR
     ap = argparse.ArgumentParser(description="Tier-3 capture + CI regression gate (PL-3.3 / ADR D5 / M6)")
@@ -809,7 +928,12 @@ def main():
     ap.add_argument("--chrome", action="store_true", help="keep the page's own nav/copy/hotspots in the still")
     ap.add_argument("--quantize", action="store_true",
                     help="256-colour palette PNG: ~50%% smaller, MAE 1.10/255 (below scene noise)")
-    ap.add_argument("--check", action="store_true", help="re-capture beside the existing goldens and report drift")
+    ap.add_argument("--check", action="store_true", help="re-capture and report drift against the existing goldens")
+    ap.add_argument("--check-out", default=None, dest="check_out",
+                    help="directory for --check's fresh comparison images (default: a fresh "
+                         "system temp dir, printed at run time). Refused with a non-zero exit "
+                         "if it resolves inside this repository — a check must never write "
+                         "repository artifacts.")
     ap.add_argument("--live", action="store_true",
                     help="use the pre-freeze scrub path (?pose=) instead of the ?capture= freeze; "
                          "--check --live stays advisory (unfrozen scene, ~1-3 MAE noise by construction)")
@@ -828,6 +952,14 @@ def main():
     sizes = args.size or list(SIZES)
     if not poses:
         sys.exit("no matching pose; known: %s" % ", ".join(p["id"] for p in POSES))
+    if args.check_out and not args.check:
+        sys.exit("--check-out only applies together with --check")
+
+    # Validate an explicit override before any network/Chrome work. The
+    # default scratch directory is created only after server readiness and is
+    # owned by TemporaryDirectory so every normal return removes it.
+    check_tmp = None
+    check_dir = resolve_check_out(args.check_out) if args.check and args.check_out else None
 
     # The server must already be up (BASELINE.md §machine: port 8137 rooted at
     # glowshroom/). This script never starts or stops it.
@@ -844,13 +976,16 @@ def main():
             % (BASE_URL, e)
         )
 
+    if args.check and check_dir is None:
+        check_tmp = tempfile.TemporaryDirectory(prefix="banodoco-capture-check-")
+        check_dir = check_tmp.name
+    # Confirming shots belong to the same outside-repository scratch tree.
+    confirm_dir = os.path.join(check_dir, "_confirm") if check_dir else None
+    if confirm_dir:
+        os.makedirs(confirm_dir, exist_ok=True)
+
     if not args.check:
         os.makedirs(out_dir, exist_ok=True)
-    # A verification run is read-only with respect to the repository. Keep
-    # fresh shutters in a system temporary directory and remove them before
-    # returning; they exist only long enough to compare with the goldens.
-    check_tmp = tempfile.TemporaryDirectory(prefix="banodoco-capture-check-") if args.check else None
-    check_dir = check_tmp.name if check_tmp else None
 
     profile = tempfile.mkdtemp(prefix="capture-chrome-")
     port = free_port()
@@ -858,11 +993,14 @@ def main():
           % (len(poses), len(sizes), DPR, settle, "LIVE (unfrozen)" if args.live else "FROZEN (?capture=)"))
     print("  source : %s" % BASE_URL)
     print("  output : %s" % out_dir)
+    if args.check:
+        print("  check-out : %s (fresh comparison images; goldens above are untouched)" % check_dir)
     if not args.chrome:
         print("  chrome : hidden (pure scene; Tier 3 renders the copy as HTML)")
     proc = launch_chrome(profile, port, args.verbose)
     atexit.register(reap_chrome, proc)
     results = []
+    environment = {}
     try:
         cdp = CDP(page_ws_url(port), args.verbose)
         cdp.call("Page.enable")
@@ -895,6 +1033,12 @@ def main():
                 sys.exit("Chrome WebGL context never became ready (ANGLE Metal). "
                          "Another headless Chrome may be holding the GPU — "
                          "reap leftover capture-chrome processes and retry.")
+        # Read the provenance strings from the SAME cdp/GPU that is about to
+        # shoot, after any relaunch above has settled — a relaunch can land on
+        # a different backend, and the manifest must name the one used.
+        environment = probe_environment(cdp, gl)
+        print("  env    : %s | %s" % (environment.get("chrome") or "chrome ?",
+                                      environment.get("webglRenderer") or "renderer ?"))
         for pose in poses:
             for size_key in sizes:
                 t0 = time.time()
@@ -908,6 +1052,33 @@ def main():
                 finally:
                     globals()["OUT_DIR"] = saved_out
                 r["dir"] = target_dir
+                # THE CONFIRMING SHOT. Same pose, same size, same session,
+                # immediately after — the cheapest thing that can distinguish
+                # "the site changed" from "the shutter fired on the wrong
+                # frame". Frozen only: with --live the scene is moving by
+                # construction (~1-3 MAE per run), so a second shot of a live
+                # pose disagrees with the first for entirely honest reasons and
+                # the comparison would mean nothing.
+                r["confirm"] = None
+                if args.check and not args.live:
+                    try:
+                        # Re-assert the directory immediately before the shot,
+                        # not just once at startup. OBSERVED 2026-08-23: a run
+                        # died with FileNotFoundError on this path because
+                        # check_dir had been removed UNDER the run between
+                        # startup and the first confirming shot. No tmp-reaping
+                        # daemon exists in launchd or cron on this machine, so
+                        # the likeliest author is one of the concurrent orders
+                        # sweeping os.tmpdir() — which is precisely the kind of
+                        # thing this tree does to itself. Whatever the cause, a
+                        # provenance guard must not be the reason a check dies.
+                        os.makedirs(confirm_dir, exist_ok=True)
+                        globals()["OUT_DIR"] = confirm_dir
+                        r2 = capture_one(cdp, pose, size_key, not args.chrome,
+                                         settle, args.verbose, args.quantize, live=args.live)
+                        r["confirm"] = os.path.join(confirm_dir, r2["file"])
+                    finally:
+                        globals()["OUT_DIR"] = saved_out
                 results.append(r)
                 flag = "ok " if r["ready"] else "POSE NOT CONFIRMED (%s) " % r["readiness"]
                 black = " ⚠ BLACK/near-empty" if r["mean"] < 3.0 else ""
@@ -931,12 +1102,28 @@ def main():
         missing = False
         failed = False
         readiness_failed = False
+        refused = []
         for r in results:
             golden = os.path.join(out_dir, r["file"])
             fresh = os.path.join(check_dir, r["file"])
             if not r["ready"]:
                 print("  · %-22s pose not confirmed (%s)" % (r["file"], r["readiness"]))
                 readiness_failed = True
+                continue
+            # AGREEMENT BEFORE DRIFT. If this run's two shots of the same pose
+            # do not agree, this run has nothing trustworthy to say about that
+            # file — not "pass", not "fail". Refusing is the whole point: a
+            # drift number computed from a frame the camera got wrong is worse
+            # than no number, because it reads as a finding about the site.
+            if r.get("confirm"):
+                agree, _ = mae(fresh, r["confirm"])
+                if agree is None or agree > AGREE_MAE_FROZEN:
+                    print("  · %-22s REFUSED — this run's two shots disagree "
+                          "(MAE %s > %.2f); the shutter, not the site"
+                          % (r["file"], "size-mismatch" if agree is None else "%.2f" % agree,
+                             AGREE_MAE_FROZEN))
+                    refused.append(r["file"])
+                    continue
             if not os.path.exists(golden):
                 print("  · %-22s no golden on disk — run without --check first" % r["file"])
                 missing = True
@@ -954,6 +1141,12 @@ def main():
                 failed = True
             print("  · %-22s MAE %5.2f/255  %5.1f%% px >8   [%s]" % (r["file"], m, pct, band))
         print("\n  worst MAE %.2f/255. Thresholds warn>%.2f fail>%.2f." % (worst, warn_mae, fail_mae))
+        if refused:
+            print("  self-agreement: %d file(s) REFUSED at tolerance %.2f — %s"
+                  % (len(refused), AGREE_MAE_FROZEN, ", ".join(refused)))
+        elif not args.live and not readiness_failed:
+            print("  self-agreement: all %d file(s) shot twice, both shots agree "
+                  "within %.2f." % (len(results), AGREE_MAE_FROZEN))
         if readiness_failed:
             print("  FAIL: one or more captures did not confirm the requested pose.")
             result = 1
@@ -961,6 +1154,12 @@ def main():
             print("  Exit code forced to 0: --live scene is unfrozen, per-run variance is ~1-3 MAE")
             print("  by construction (BASELINE.md §8). Drop --live for the real frozen gate.")
             result = 0
+        elif refused:
+            print("  INCONCLUSIVE: %d file(s) could not be measured this run. "
+                  "Re-run — a disagreeing pair is a mis-timed shutter, which is "
+                  "not reproducible; a pair that keeps disagreeing is a real "
+                  "instability worth chasing." % len(refused))
+            result = 1
         elif missing:
             print("  FAIL: golden(s) missing — run 'capture.py' (no --check) first.")
             result = 1
@@ -970,7 +1169,8 @@ def main():
         else:
             print("  PASS: all captures within the frozen-frame determinism threshold.")
             result = 0
-        check_tmp.cleanup()
+        if check_tmp:
+            check_tmp.cleanup()
         return result
 
     # ------------------------------------------------------------------
@@ -982,7 +1182,23 @@ def main():
     frozen = not args.live
     manifest = {
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        # KNOWN DEFECT, RECORDED NOT FIXED (HYGIENE-01, 2026-08-23).
+        # This is the HEAD AT CAPTURE TIME, not the tree that was captured.
+        # A shoot that runs against a dirty working tree records the commit
+        # the tree is sitting on, while the pixels come from the edits on top
+        # of it — and at least one golden set was shot exactly that way, from
+        # a tree already carrying changes that landed in a LATER commit. That
+        # is why picking the "right" revision to reproduce a golden took real
+        # work. Fixing it means recording dirtiness (and ideally a tree hash)
+        # alongside the sha; that is a change to what the field MEANS, and a
+        # capture-adjacent order should own it deliberately rather than have
+        # it arrive as a side effect of a provenance patch.
         "commit": git_head(),
+        # The three strings whose absence cost two days — see
+        # probe_environment() for the full account. New captures carry them;
+        # goldens shot before 2026-08-23 do not, and their absence is itself
+        # the useful signal that they predate this record.
+        "environment": environment,
         "reason": args.note or (
             "pre-restage goldens retired; frozen-capture era begins (M6) — "
             "shot through ?capture= at the merged, Hannah-era-approved tip"

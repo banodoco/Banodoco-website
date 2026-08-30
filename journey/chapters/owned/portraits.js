@@ -36,600 +36,13 @@ import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { REST_P } from './leg.js';
 import { createPortraitDealer } from './portrait-deal.js';
 import { makePortraitAtlas } from './portrait-atlas.js';
-import { loadPortraitSprite } from './portrait-photo-loader.js';
 import { createPortraitTextureOwner } from './portrait-textures.js';
+import { PHOTO_GRADE, drawBust, drawAnonGlyph } from './portrait-paint.js';
+import { rowLayout } from '../../layout/rail-geometry.js';
+import { createPortraitRemix, bustSeedsFor } from './portrait-remix.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
-
-/* ================================================================== */
-/* atlas painting (spike verbatim)                                     */
-/* ================================================================== */
-
-const SKIN_RAMP = [
-  [78, 50, 34], [102, 66, 44], [130, 86, 56], [158, 110, 74],
-  [184, 138, 98], [206, 164, 124],
-];
-const CLOTH = [[40, 30, 22], [54, 40, 27], [32, 27, 31], [62, 46, 31], [46, 35, 41]];
-const HAIR = [[36, 24, 17], [52, 36, 22], [76, 53, 30], [30, 27, 30], [96, 70, 40], [160, 138, 114]];
-
-function lerpC(a, b, t) {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-}
-function rampPick(ramp, t) {
-  const f = clamp(t, 0, 0.999) * (ramp.length - 1);
-  const i = Math.floor(f);
-  return lerpC(ramp[i], ramp[i + 1], f - i);
-}
-function css(c, a = 1) {
-  return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
-}
-function scaleC(c, f) { return [Math.min(255, c[0] * f), Math.min(255, c[1] * f), Math.min(255, c[2] * f)]; }
-
-// Shared edge language: irregular ember rim arcs + outward fibre ticks,
-// drawn AFTER the circular soft mask so they fray past the disc edge.
-function drawEmbedEdge(g, cx, cy, R, r) {
-  g.globalCompositeOperation = 'lighter';
-  for (let k = 0; k < 88; k++) {
-    const a0 = (k / 88) * TAU + (r() - 0.5) * 0.05;
-    const a1 = a0 + (TAU / 88) * (1.05 + r() * 0.6);
-    const rr = R * (0.90 + (r() - 0.5) * 0.09);
-    g.strokeStyle = `rgba(255,${185 + ((r() * 45) | 0)},${115 + ((r() * 55) | 0)},${(0.07 + r() * 0.24).toFixed(3)})`;
-    g.lineWidth = (0.8 + r() * 1.8) * 2;
-    g.beginPath(); g.arc(cx, cy, rr, a0, a1); g.stroke();
-  }
-  for (let k = 0; k < 44; k++) {
-    const a = r() * TAU;
-    const r0 = R * 0.93, r1 = R * (1.02 + r() * 0.26);
-    const x0 = cx + Math.cos(a) * r0, y0 = cy + Math.sin(a) * r0;
-    const bend = (r() - 0.5) * 0.20;
-    const x1 = cx + Math.cos(a + bend) * r1, y1 = cy + Math.sin(a + bend) * r1;
-    const gl = g.createLinearGradient(x0, y0, x1, y1);
-    gl.addColorStop(0, `rgba(255,190,120,${(0.10 + r() * 0.28).toFixed(3)})`);
-    gl.addColorStop(1, 'rgba(255,190,120,0)');
-    g.strokeStyle = gl;
-    g.lineWidth = (0.6 + r() * 1.1) * 2;
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-  }
-  g.globalCompositeOperation = 'source-over';
-}
-
-// `unify` is the strength of the amber wash. It stays 0.33 for the procedural
-// busts and the anonymous glyphs — they are PAINTED in the palette already, so
-// the wash only seasons them, and the frozen goldens render exactly those two
-// paths. Only the photo cell passes a lower figure (PHOTO_GRADE.unify): a
-// source-atop fill is a straight lerp toward ONE colour, so at 0.33 it is the
-// single largest hue-collapsing term in the photo pipeline. See PHOTO_GRADE.
-function grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, unify = 0.33, veil = 1) {
-  // amber unify — everything drawn so far pulls toward the palette
-  g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = `rgba(196,124,48,${unify})`;
-  g.fillRect(ox, oy, CELL, CELL);
-  // upper-left key bloom + speckle, scaled by `veil` — the hover cells bake
-  // these at 0 (HOVER_GRADE.veil): gauze over a picture reads as blur, and
-  // the hover cell's whole job is the picture. Busts/glyphs keep the default.
-  if (veil > 0) {
-    const bloom = g.createRadialGradient(cx - R * 0.55, cy - R * 0.65, R * 0.05, cx - R * 0.55, cy - R * 0.65, R * 1.4);
-    bloom.addColorStop(0, `rgba(255,200,140,${(0.13 * veil).toFixed(3)})`);
-    bloom.addColorStop(1, 'rgba(255,200,140,0)');
-    g.fillStyle = bloom;
-    g.fillRect(ox, oy, CELL, CELL);
-  }
-  // photographic speckle
-  for (let k = 0; k < 340 * veil; k++) {
-    const a = r() * TAU, rr = R * Math.sqrt(r());
-    const lum = r() < 0.5;
-    g.fillStyle = lum
-      ? `rgba(255,214,160,${(0.02 + r() * 0.05).toFixed(3)})`
-      : `rgba(8,5,2,${(0.03 + r() * 0.07).toFixed(3)})`;
-    g.beginPath();
-    g.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 0.5 + r() * 1.2, 0, TAU);
-    g.fill();
-  }
-  g.globalCompositeOperation = 'source-over';
-}
-
-function softMask(g, ox, oy, CELL, cx, cy, R, feather = 0.86) {
-  g.globalCompositeOperation = 'destination-in';
-  const m = g.createRadialGradient(cx, cy, R * 0.5, cx, cy, R);
-  m.addColorStop(0, 'rgba(0,0,0,1)');
-  m.addColorStop(feather, 'rgba(0,0,0,1)');
-  m.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = m;
-  g.fillRect(ox, oy, CELL, CELL);
-  g.globalCompositeOperation = 'source-over';
-}
-
-/* THE PHOTO GRADE, IN ONE PLACE (Hannah, 2026-08-11 — "the colour is sapped
-   too much from them; could you put the colour in a little bit more").
-
-   WHY SATURATION WAS THE WRONG NUMBER TO CHASE. Measured at the Owned rest
-   before this pass (1440x900, frozen frame with uPhoto forced to 1, sampled
-   over the inner 0.62 of each of the sixteen drawn discs), luminance-weighted
-   HSV saturation was already 0.569 and Lab chroma already 41.4 — HIGH. The
-   faces were not short of saturation. They were short of DIFFERENT colours:
-   within-face Lab hue circular variance measured 0.0050, and across the
-   sixteen the mean hues spanned 3.4 degrees. Skin, hair, cloth and backdrop
-   had all landed on one 66-79 degree amber, which is the definition of a sepia
-   print. That is also why ride-through #2 (0.62/0.90 -> 0.40/0.72) did not fix
-   the read: it lightened the cast without giving anything back its own hue.
-
-   So the number this grade is tuned against is a RATIO — the common amber cast
-   over the colour variation around it, both luminance-weighted, per face:
-
-     cast       mean Lab chroma
-     variation  RMS distance of each pixel's (a*,b*) from the face's own mean
-
-   The source photographs run about 1.9:1. The shipped grade turned that into
-   7.9:1, measured across all sixteen baked atlas cells. This pass lands 5.4:1.
-
-   WHAT ACTUALLY COLLAPSED IT. Instrumenting the chain stage by stage on four
-   source images showed one step doing nearly all of the damage: the step-2
-   amber MULTIPLY took hue variance from 0.106 to 0.0046 on m11 and from 0.494
-   to 0.0070 on w44, a 20-70x collapse in a single operation. Not because it
-   destroys the photo's chroma — because it INDUCES about 25-35 chroma of its
-   own, in one fixed direction, on top of source images that only carry 11-22.
-   The photo's colour is swamped, not removed.
-
-   The obvious move — weaken the multiply — was tried and rejected by eye. At
-   amber 0.36 the discs lost their ember glow and read as cool photographic
-   cut-outs pasted onto the field, which is the exact failure this treatment
-   exists to prevent. The multiply IS the palette tie, so it barely moves.
-   What moves instead are the terms that were throwing the photo's own colour
-   away BEFORE and AFTER the multiply, where the cost is variation and the
-   benefit was never the glow:
-
-     desat     the step-1 saturation-blend fill. Pure loss: it removes source
-               chroma outright, and the multiply then supplies far more amber
-               than it took out. 0.40 -> 0.06.
-     amber     alpha of the step-2 amber multiply — the palette tie. Left
-               nearly alone on purpose. 0.72 -> 0.64.
-     burnMute  how far the step-5 edge-burn gradient is pulled toward its own
-               luma. The burn's job is DARKENING; it was also toning, and a
-               multiply by an amber factor is precisely a sepia operation.
-               0 (the original stops) -> 0.70.
-     unify     alpha of grainAndGrade's source-atop wash — a straight lerp
-               toward one solid colour. 0.33 -> 0.16 FOR PHOTOS ONLY; the
-               procedural busts and the anonymous glyphs keep 0.33, so the
-               frozen goldens are byte-identical (see grainAndGrade).
-
-   Result across the sixteen baked cells: cast 41.9 -> 40.8 (-2.7%, i.e. the
-   warmth stays), variation 5.27 -> 7.59 (+44%), within-face hue variance
-   0.0015 -> 0.0050 (+233%), HSV saturation 0.630 -> 0.591 (it FALLS, and that
-   is the point — less of one colour, more of several).
-
-   Deliberately NOT touched: the burn's luminance profile, the warm-black lift,
-   the ember rim arcs, the face key light, the grain, the mask feather, and
-   every shader term. The faces have to stay inside near-black / deep-brown /
-   amber-gold and read as nodes in the network, not as photographs pasted on
-   top — this is a correction, not a reversal. */
-const PHOTO_GRADE = Object.freeze({
-  desat: 0.06,
-  amber: 0.64,
-  unify: 0.16,
-  burnMute: 0.70,
-  /* THE HOVER GRADE, third attempt (2026-08-18, Hannah: "when I hover over an
-     individual I want it to GREATLY reduce the sepia effect on their
-     particular image so it shows its proper colours" — the same ask as
-     2026-08-14 and 2026-08-16, still not landing).
-
-     WHY THE FIRST TWO ATTEMPTS CANCELLED EACH OTHER, measured this time
-     rather than reasoned. A CDP probe (rest vs held hover, same node, each
-     term toggled in isolation, Lab cast = luminance-weighted mean chroma over
-     the face) on a contributor whose real avatar is neutral grey (cast 0.8):
-
-       rest                              cast 35.4
-       shipped hover (divide + expand)   cast 45.5   MORE sepia than rest
-       divide alone                      cast 25.1   the only state below rest
-       chroma expansion alone            cast 48.1   the saboteur
-
-     The 2026-08-14 divide works exactly as designed. But the 2026-08-16
-     chroma expansion pivots each texel about its OWN grey — and after the
-     divide the face still carries the unify wash, the warm-black lift, the
-     burn residue and the baked ember arcs, all amber. Expanding chroma about
-     grey doubles that shared amber remainder along with the picture's own
-     colour: the term amplifies precisely the cast the divide just removed,
-     and nets the hover MORE sepia than doing nothing. Two correct-sounding
-     terms, opposite signs, and the sum was the bug Hannah kept seeing.
-
-     WHAT REPLACES BOTH: stop inverting the bake and stop approximating.
-     Every photo arrangement now bakes TWO cells from the same source tile —
-     the resting grade above, and a HOVER_GRADE cell that simply never applies
-     the colour-collapsing steps (no desat fill, amber multiply at a whisper,
-     no unify wash, burn fully hue-muted, lift and key light halved). The
-     shader crossfades the sampled texel to the hover cell by `vH`, so a
-     hovered face shows the photograph's actual colours because those are the
-     bytes in the texture — nothing left to invert, nothing left to expand.
-     `hoverDeSepia` survives as the strength of that crossfade.
-
-     PHOTOS ONLY, unchanged by construction: the crossfade is applied to `tP`
-     before the bust/photo/glyph mix, `vH` is 0 at rest, and the frozen
-     goldens render the procedural busts (uPhoto never advances under
-     freezeTime — see snap()). */
-  hoverDeSepia: 1.0,
-  /* The `pg` terms in the fragment shader: pull back the amber the HOVER
-     RESPONSE itself adds over a photographed face — the core lamp used to go
-     0.07 -> 0.31 and the image term 1.12 -> 1.42 on hover, before UnrealBloom
-     got to work on the result. Both are multiplied by `uPhoto * vH`, so the
-     resting frame, the frozen goldens and the procedural busts are untouched.
-     1 = that term's hover growth is removed entirely on a photo. imgMute went
-     0.70 -> 1.0 with the atlas crossfade (2026-08-18): the hover cell is
-     already brighter than the resting one (no amber multiply darkening it),
-     and the probe's no-bloom frame showed the leftover x1.21 growth was
-     feeding the bloom wash that makes a hovered face read as an amber orb.
-     The ember RIM still answers 0.20 -> 1.00, untouched on purpose — it sits
-     at the disc's edge, not on the person, and it is the "lit node in a
-     network" contract 45f600b's F.3 refused to trade away. */
-  hoverCoreMute: 1.0,
-  hoverImgMute: 1.0,
-  /* SOLIDITY (2026-08-18, Hannah: hovered faces "still seem blurred and
-     distorted, maybe because they are transparent"). She is right about the
-     cause: the portrait plane blends ADDITIVELY, so a face can only pour
-     light on top of the cords, strands and halos behind it — every one of
-     them keeps shining through the person, and no colour fix can make an
-     image read as an image while the background adds through it.
-
-     The material therefore blends premultiplied (ONE, ONE_MINUS_SRC_ALPHA),
-     which is bit-identical to the old additive sum wherever the written
-     alpha is 0 — out = rgb*a + dst — and becomes occlusion where it is not.
-     This term is that alpha: how completely a hovered photo face covers
-     what is behind it. It rides `uPhoto * vH * mask`, so the resting frame,
-     the busts, the glyphs and the frozen goldens all still write alpha 0 and
-     remain additive by construction. 1 = the disc fully owns its pixels at
-     full hover. */
-  hoverSolid: 1.0,
-});
-
-/* The bake knobs for the hover cell — same pipeline, run gently. Amber stays
-   faintly on (0.14) so a hovered face is still lit by the room it hangs in
-   rather than cut out of it; the burn keeps its full DARKNESS (vignette) with
-   the hue rotation taken out entirely; lift and face key halve rather than
-   vanish for the same belonging reason. desat/unify are pure colour-collapse
-   with no compositional job, so they go to zero outright. */
-const HOVER_GRADE = Object.freeze({
-  desat: 0,
-  /* 0.14 -> 0 (2026-08-18 round 4, "still quite sepia'd"): the whisper of
-     palette tie was still a visible warm film over neutral avatars. The
-     hovered face's belonging is carried by the ember ring, the burn's
-     vignette and the mask feather — the picture itself now goes untinted. */
-  amber: 0,
-  unify: 0,
-  burnMute: 1.0,
-  lift: 0.2,
-  /* key and veil go to ZERO here where the resting grade keeps them: the face
-     key light, the upper-left key-bloom wash and the speckle are atmosphere
-     laid OVER the picture, and the blur probe showed the hovered face's
-     problem is precisely veiling — a real image under gauze reads as blur.
-     The ring, the burn's darkness and the mask feather still tie the disc
-     into the field. */
-  key: 0,
-  veil: 0,
-  /* 0.76 -> 0.92: the hovered disc keeps only a slim feather. The rest
-     cell's wide fade melts the disc into the substrate — right for a resting
-     node, but under the hover ring's bloom it read as a blurred rim on the
-     photograph itself. A near-hard edge is most of perceived sharpness. */
-  feather: 0.92,
-  /* Luma parity with the resting cell, and it is load-bearing: the resting
-     amber multiply darkens (its factor's Rec.709 luma is 0.786 at alpha
-     0.64; this cell no longer multiplies at all), so an unlevelled hover
-     cell runs ~27% brighter than the one it replaces — and UnrealBloom turns
-     exactly that surplus into the amber orb the first two attempts were
-     blamed for (the probe's no-bloom frame showed a legible face under the
-     wash). The old shader inverse pinned luma per-texel for the same reason.
-     Equal to the resting multiply's own luma factor now that amber is 0. */
-  level: 0.786,
-});
-
-// Real-photo treatment (assets/contributor-portraits — contributors' own
-// avatars out of Banodoco's published sprite; this is the SHIPPED path).
-// Spike-calibrated pipeline: desaturation -> amber multiply -> warm-black
-// lift -> edge burn -> unify/grain -> mask feather 0.76 -> edge. The four
-// grade strengths live in PHOTO_GRADE above.
-function drawPhotoCell(g, ox, oy, CELL, spec) {
-  const { img, mirror, exposure, warmth, seed } = spec;
-  // Which strength set to run — the resting grade, or the gentle HOVER_GRADE
-  // when this cell is being baked for the hover atlas (photoSpecs threads it).
-  const G = spec.grade || PHOTO_GRADE;
-  const liftK = G.lift ?? 1, keyK = G.key ?? 1;
-  // No sheet (it failed to load): draw the slot's procedural bust into the
-  // photo cell instead, so the atlas stays complete and correctly indexed.
-  if (!img) return drawBust(g, ox, oy, CELL, spec.bustSeed);
-  const r = H.rng(((seed * 3319 + 811) | 0) >>> 0);
-  const cx = ox + CELL / 2, cy = oy + CELL / 2;
-  const R = CELL * 0.36;
-  g.save();
-  g.beginPath(); g.rect(ox, oy, CELL, CELL); g.clip();
-
-  g.save();
-  g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.clip();
-  const D = R * 2.06;
-  g.save();
-  g.translate(cx, cy);
-  if (mirror) g.scale(-1, 1);
-  // One tile out of the published sheet. The 96px source is drawn straight to
-  // the cell's disc diameter rather than being pre-upscaled: the grade below
-  // (desaturate, amber, edge burn, grain) is doing far more to legibility than
-  // the resample would, and the discs are small on screen at the rest pose.
-  g.drawImage(img, spec.sx, spec.sy, spec.sw, spec.sh, -D / 2, -D / 2, D, D);
-  g.restore();
-
-  // 1. partial desaturation — kill the cool studio colour cast
-  //    (0.62 -> 0.40 at ride-through #2, -> PHOTO_GRADE.desat now)
-  g.globalCompositeOperation = 'saturation';
-  g.fillStyle = `rgba(128,128,128,${G.desat})`;
-  g.fillRect(ox, oy, CELL, CELL);
-  // 2. amber multiply — the main push into the palette
-  g.globalCompositeOperation = 'multiply';
-  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},${G.amber})`;
-  g.fillRect(ox, oy, CELL, CELL);
-  // 3. deterministic exposure trim (density variation), folded together with
-  // the hover grade's luma-parity level (1 for the resting grade)
-  const trim = (exposure < 1 ? exposure : 1) * (G.level ?? 1);
-  if (trim < 1) {
-    const k = (trim * 255) | 0;
-    g.fillStyle = `rgb(${k},${k},${k})`;
-    g.fillRect(ox, oy, CELL, CELL);
-  }
-  // 4. warm-black lift — ties the photo's blacks to the field's near-black
-  g.globalCompositeOperation = 'lighter';
-  g.fillStyle = `rgba(58,30,12,${((exposure > 1 ? 0.26 : 0.16) * liftK).toFixed(3)})`;
-  g.fillRect(ox, oy, CELL, CELL);
-  // 5. edge burn — crush bright studio backgrounds so only the person holds
-  // light and the disc melts into the dark substrate before the ember arcs.
-  //
-  // The burn was doing TWO jobs and only one of them was wanted. Darkening is
-  // the job: that is the vignette, and it is untouched below. But it darkened
-  // through a strongly amber gradient, and a multiply by an amber factor is
-  // exactly the sepia-toning operation — it scales blue down about three times
-  // harder than red, so a neutral becomes orange and a cool tone becomes a
-  // warm one. Stacked on the amber multiply in step 2, that is what flattened
-  // sixteen different people onto one hue. `burnMute` pulls each stop toward
-  // its own Rec.709 luma, which holds the gradient's DARKNESS constant to
-  // within a value or two while taking the hue rotation out of it. The face
-  // still warms — steps 2, 4 and 6 and the ember rim all still run — it just
-  // no longer warms by destroying the blue channel. (1 = the original stops.)
-  g.globalCompositeOperation = 'multiply';
-  const burn = g.createRadialGradient(cx, cy - R * 0.08, R * 0.30, cx, cy, R);
-  const mute = (c) => {
-    const y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    const k = G.burnMute;
-    return `rgba(${(c[0] + (y - c[0]) * k) | 0},${(c[1] + (y - c[1]) * k) | 0},${(c[2] + (y - c[2]) * k) | 0},1)`;
-  };
-  burn.addColorStop(0, 'rgba(255,255,255,1)');
-  burn.addColorStop(0.58, mute([206, 172, 140]));
-  burn.addColorStop(0.85, mute([96, 62, 32]));
-  burn.addColorStop(1, mute([34, 20, 10]));
-  g.fillStyle = burn;
-  g.fillRect(ox, oy, CELL, CELL);
-  // and give the face itself back a touch of ember key light
-  g.globalCompositeOperation = 'lighter';
-  const faceKey = g.createRadialGradient(cx, cy - R * 0.12, R * 0.05, cx, cy - R * 0.08, R * 0.55);
-  faceKey.addColorStop(0, `rgba(255,196,130,${(0.16 * keyK).toFixed(3)})`);
-  faceKey.addColorStop(1, 'rgba(255,196,130,0)');
-  g.fillStyle = faceKey;
-  g.fillRect(ox, oy, CELL, CELL);
-  g.globalCompositeOperation = 'source-over';
-  g.restore();   // circle clip off
-
-  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, G.unify, G.veil ?? 1);
-  // Wider feather than the busts at rest; the hover cell tightens it (G):
-  // the disc's own edge is the largest edge in the stimulus, and a 12%-wide
-  // fade under the ring's bloom is most of what still read as "blurry".
-  softMask(g, ox, oy, CELL, cx, cy, R, G.feather ?? 0.76);
-  drawEmbedEdge(g, cx, cy, R, r);
-  g.restore();
-}
-
-function drawBust(g, ox, oy, CELL, seed) {
-  const r = H.rng((seed * 7919 + 4111) >>> 0);
-  const cx = ox + CELL / 2, cy = oy + CELL / 2;
-  const R = CELL * 0.36;
-  g.save();
-  g.beginPath(); g.rect(ox, oy, CELL, CELL); g.clip();
-
-  // --- dark warm chamber behind the person ---
-  const bg = g.createRadialGradient(cx - R * 0.25, cy - R * 0.3, R * 0.1, cx, cy, R * 1.05);
-  bg.addColorStop(0, 'rgba(68,41,19,0.96)');
-  bg.addColorStop(0.6, 'rgba(34,20,9,0.97)');
-  bg.addColorStop(1, 'rgba(12,7,3,0.98)');
-  g.fillStyle = bg;
-  g.beginPath(); g.arc(cx, cy, R * 1.02, 0, TAU); g.fill();
-
-  const skin = rampPick(SKIN_RAMP, r());
-  const cloth = CLOTH[(r() * CLOTH.length) | 0];
-  const hair = HAIR[(r() * HAIR.length) | 0];
-
-  const hx = cx + (r() - 0.5) * R * 0.10;
-  const hy = cy - R * 0.22 + (r() - 0.5) * R * 0.06;
-  const rx = R * (0.40 + r() * 0.05);
-  const ry = rx * (1.20 + r() * 0.10);
-
-  // --- neck (deep shadow — never brighter than the face) ---
-  g.fillStyle = css(scaleC(skin, 0.48));
-  g.beginPath();
-  g.rect(hx - rx * 0.32, hy + ry * 0.50, rx * 0.64, ry * 0.85);
-  g.fill();
-
-  // --- shoulders: a full bust filling the lower disc ---
-  const shTop = cy + R * (0.30 + r() * 0.07);
-  const shW = R * (1.10 + r() * 0.15);
-  const shGrad = g.createLinearGradient(cx - shW, shTop, cx + shW * 0.5, cy + R);
-  shGrad.addColorStop(0, css(scaleC(cloth, 1.9)));
-  shGrad.addColorStop(0.45, css(cloth));
-  shGrad.addColorStop(1, css(scaleC(cloth, 0.55)));
-  g.fillStyle = shGrad;
-  g.beginPath();
-  g.moveTo(cx - shW, cy + R * 1.1);
-  g.bezierCurveTo(cx - shW * 0.96, shTop + R * 0.12, cx - rx * 1.4, shTop, cx - rx * 0.60, shTop - R * 0.02);
-  g.lineTo(cx + rx * 0.60, shTop - R * 0.02);
-  g.bezierCurveTo(cx + rx * 1.4, shTop, cx + shW * 0.96, shTop + R * 0.12, cx + shW, cy + R * 1.1);
-  g.closePath();
-  g.fill();
-
-  // --- head, key-lit from upper-left ---
-  const key = g.createRadialGradient(
-    hx - rx * 0.42, hy - ry * 0.42, rx * 0.12,
-    hx, hy, ry * 1.25,
-  );
-  key.addColorStop(0, css(scaleC(skin, 1.26)));
-  key.addColorStop(0.42, css(scaleC(skin, 0.98)));
-  key.addColorStop(1, css(scaleC(skin, 0.44)));
-  g.fillStyle = key;
-  g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.fill();
-
-  // --- warm bounce from BELOW: the mycelium's own light on the jaw ---
-  g.save();
-  g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.clip();
-  g.globalCompositeOperation = 'lighter';
-  const up = g.createRadialGradient(hx, hy + ry * 1.15, ry * 0.1, hx, hy + ry * 1.15, ry * 1.2);
-  up.addColorStop(0, 'rgba(255,179,107,0.16)');
-  up.addColorStop(1, 'rgba(255,179,107,0)');
-  g.fillStyle = up;
-  g.fillRect(hx - rx, hy - ry, rx * 2, ry * 2.2);
-  g.globalCompositeOperation = 'source-over';
-  g.restore();
-
-  // shade the far side of the face
-  g.save();
-  g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.clip();
-  const sh = g.createLinearGradient(hx - rx * 0.2, hy, hx + rx, hy + ry * 0.6);
-  sh.addColorStop(0, 'rgba(18,9,4,0)');
-  sh.addColorStop(1, 'rgba(18,9,4,0.52)');
-  g.fillStyle = sh;
-  g.fillRect(hx - rx, hy - ry, rx * 2, ry * 2);
-  // abstract feature shadows: brow line + eye sockets + under-nose, all soft
-  g.shadowColor = 'rgba(15,8,4,0.7)';
-  g.shadowBlur = CELL * 0.04;
-  g.fillStyle = 'rgba(24,12,6,0.17)';
-  g.beginPath(); g.ellipse(hx - rx * 0.36, hy - ry * 0.05, rx * 0.19, ry * 0.062, 0.08, 0, TAU); g.fill();
-  g.beginPath(); g.ellipse(hx + rx * 0.34, hy - ry * 0.05, rx * 0.19, ry * 0.062, -0.08, 0, TAU); g.fill();
-  g.fillStyle = 'rgba(24,12,6,0.10)';
-  g.beginPath(); g.ellipse(hx - rx * 0.02, hy + ry * 0.22, rx * 0.10, ry * 0.055, 0, 0, TAU); g.fill();
-  g.fillStyle = 'rgba(24,12,6,0.13)';
-  g.beginPath(); g.ellipse(hx, hy + ry * 0.44, rx * 0.24, ry * 0.045, 0, 0, TAU); g.fill();
-  g.shadowBlur = 0;
-  g.restore();
-
-  // chin/jaw shadow onto neck
-  g.fillStyle = 'rgba(12,6,3,0.38)';
-  g.beginPath(); g.ellipse(hx, hy + ry * 0.72, rx * 0.42, ry * 0.16, 0, 0, TAU); g.fill();
-
-  // optional facial hair
-  if (r() < 0.32) {
-    g.fillStyle = css(scaleC(hair, 0.85), 0.62);
-    g.beginPath(); g.ellipse(hx, hy + ry * 0.42, rx * 0.52, ry * 0.30, 0, 0, Math.PI); g.fill();
-  }
-
-  // --- hair / head-covering variants ---
-  const hv = (r() * 5) | 0;
-  g.fillStyle = css(hair, 0.96);
-  if (hv === 0) {
-    g.beginPath(); g.ellipse(hx, hy - ry * 0.42, rx * 1.06, ry * 0.52, 0, Math.PI, TAU); g.fill();
-  } else if (hv === 1) {
-    g.beginPath(); g.ellipse(hx, hy - ry * 0.40, rx * 1.12, ry * 0.55, 0, Math.PI, TAU); g.fill();
-    g.beginPath();
-    g.ellipse(hx - rx * 1.02, hy + ry * 0.34, rx * 0.30, ry * 0.85, 0.12, 0, TAU); g.fill();
-    g.beginPath();
-    g.ellipse(hx + rx * 1.02, hy + ry * 0.34, rx * 0.30, ry * 0.85, -0.12, 0, TAU); g.fill();
-  } else if (hv === 2) {
-    g.beginPath(); g.ellipse(hx, hy - ry * 0.44, rx * 1.04, ry * 0.48, 0, Math.PI, TAU); g.fill();
-    g.beginPath(); g.arc(hx + rx * 0.15, hy - ry * 1.06, rx * 0.34, 0, TAU); g.fill();
-  } else if (hv === 3) {
-    for (let k = 0; k < 11; k++) {
-      const a = Math.PI + (k / 10) * Math.PI;
-      const rr = rx * (1.02 + r() * 0.22);
-      g.beginPath();
-      g.arc(hx + Math.cos(a) * rr, hy - ry * 0.30 + Math.sin(a) * ry * 0.62, rx * (0.24 + r() * 0.14), 0, TAU);
-      g.fill();
-    }
-  } else {
-    // hood / head-wrap (like the approved still's hooded figures)
-    g.strokeStyle = css(scaleC(cloth, 1.35), 0.95);
-    g.lineWidth = rx * 0.46;
-    g.beginPath(); g.ellipse(hx, hy - ry * 0.06, rx * 1.22, ry * 1.02, 0, Math.PI * 1.06, TAU - Math.PI * 0.06); g.stroke();
-  }
-
-  // lit edge of hair (key side)
-  g.strokeStyle = css(scaleC(hair, 2.6), 0.75);
-  g.lineWidth = CELL * 0.012;
-  g.beginPath(); g.ellipse(hx, hy - ry * 0.40, rx * 1.02, ry * 0.52, 0, Math.PI * 1.05, Math.PI * 1.75); g.stroke();
-
-  // --- ember rim light on the shadow side (the mycelium lights them) ---
-  g.shadowColor = 'rgba(255,179,107,0.9)';
-  g.shadowBlur = CELL * 0.03;
-  g.strokeStyle = 'rgba(255,185,118,0.62)';
-  g.lineWidth = CELL * 0.011;
-  g.beginPath(); g.ellipse(hx, hy, rx * 1.01, ry * 1.01, 0, -Math.PI * 0.22, Math.PI * 0.38); g.stroke();
-  g.shadowBlur = 0;
-
-  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r);
-  softMask(g, ox, oy, CELL, cx, cy, R);
-  drawEmbedEdge(g, cx, cy, R, r);
-  g.restore();
-}
-
-function drawAnonGlyph(g, ox, oy, CELL, seed) {
-  const r = H.rng((seed * 6011 + 977) >>> 0);
-  const cx = ox + CELL / 2, cy = oy + CELL / 2;
-  const R = CELL * 0.36;
-  g.save();
-  g.beginPath(); g.rect(ox, oy, CELL, CELL); g.clip();
-
-  const bg = g.createRadialGradient(cx, cy, R * 0.08, cx, cy, R * 1.05);
-  bg.addColorStop(0, 'rgba(58,34,14,0.96)');
-  bg.addColorStop(0.55, 'rgba(28,16,7,0.97)');
-  bg.addColorStop(1, 'rgba(10,6,3,0.98)');
-  g.fillStyle = bg;
-  g.beginPath(); g.arc(cx, cy, R * 1.02, 0, TAU); g.fill();
-
-  g.globalCompositeOperation = 'lighter';
-  // spore-print glyph: fine radiating filaments, like a gill print
-  const N = 46 + ((r() * 10) | 0);
-  for (let k = 0; k < N; k++) {
-    const a = (k / N) * TAU + (r() - 0.5) * 0.05;
-    const r0 = R * (0.14 + r() * 0.05);
-    const r1 = R * (0.52 + r() * 0.30);
-    const bend = (r() - 0.5) * 0.16;
-    const x0 = cx + Math.cos(a) * r0, y0 = cy + Math.sin(a) * r0;
-    const x1 = cx + Math.cos(a + bend) * r1, y1 = cy + Math.sin(a + bend) * r1;
-    const gl = g.createLinearGradient(x0, y0, x1, y1);
-    gl.addColorStop(0, `rgba(255,196,128,${(0.16 + r() * 0.26).toFixed(3)})`);
-    gl.addColorStop(1, `rgba(255,180,110,${(0.02 + r() * 0.06).toFixed(3)})`);
-    g.strokeStyle = gl;
-    g.lineWidth = (0.5 + r() * 0.9) * 2;
-    g.beginPath();
-    g.moveTo(x0, y0);
-    g.quadraticCurveTo(
-      cx + Math.cos(a + bend * 0.5) * (r0 + r1) * 0.5,
-      cy + Math.sin(a + bend * 0.5) * (r0 + r1) * 0.5,
-      x1, y1);
-    g.stroke();
-  }
-  // two broken concentric rings
-  for (const rr of [0.34, 0.58]) {
-    const segs = 7 + ((r() * 4) | 0);
-    for (let k = 0; k < segs; k++) {
-      const a0 = (k / segs) * TAU + r() * 0.3;
-      const a1 = a0 + (TAU / segs) * (0.45 + r() * 0.35);
-      g.strokeStyle = `rgba(255,200,135,${(0.10 + r() * 0.16).toFixed(3)})`;
-      g.lineWidth = (0.7 + r() * 0.8) * 2;
-      g.beginPath(); g.arc(cx, cy, R * (rr + (r() - 0.5) * 0.03), a0, a1); g.stroke();
-    }
-  }
-  // warm core — a held place, not a missing image
-  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.18);
-  core.addColorStop(0, 'rgba(255,214,158,0.60)');
-  core.addColorStop(0.5, 'rgba(255,190,120,0.26)');
-  core.addColorStop(1, 'rgba(255,180,110,0)');
-  g.fillStyle = core;
-  g.beginPath(); g.arc(cx, cy, R * 0.19, 0, TAU); g.fill();
-  g.globalCompositeOperation = 'source-over';
-
-  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r);
-  softMask(g, ox, oy, CELL, cx, cy, R);
-  drawEmbedEdge(g, cx, cy, R, r);
-  g.restore();
-}
 
 /* ================================================================== */
 /* node-strand material: one draw call for every node's LOCAL strands  */
@@ -707,8 +120,13 @@ export function buildPortraitField({
   group.name = 'owned-portraits-' + NODE_COUNT;
   const {
     camDist, nearestCamPt, restFrame, projectInto, clampUnder, groundY,
-    portraitField, portraitAspect, restFramePortrait,
   } = leg;
+  /* THE BAND-DEPENDENT TRIO, and the only mutable placement state in this
+     file. `let`, not `const`, because a viewport that crosses the portrait
+     boundary re-asks leg.fieldFor() for it and re-places the field against
+     the answer — see recompose() at the bottom. Every fresh load is
+     bit-identical to what these three were as constants. */
+  let { portraitField, portraitAspect, restFramePortrait } = leg;
   const { nearestCordPoint, inVoid } = substrate;
 
   // ---- baked-read wiring (2026-08-17) --------------------------------
@@ -775,9 +193,9 @@ export function buildPortraitField({
      table as the picture it is:
 
        · two far arms sweep up and outward at ndcY ~ +0.30, flanking the copy;
-       · the sides fill at ndcY ~ 0;
-       · the lower half carries nine of the sixteen, in two loose ranks;
-       · the three nearest sit lowest and read largest.
+       · the sides fill at ndcY ~ 0; nine ride the lower half in two ranks,
+         nearest lowest and largest — except bottom-LEFT: the navigator docks
+         there and rail-mask.js deletes covered faces, so site 13 rides high.
 
      Depth falls as the row falls (13.0 at the top of the arc, 5.2 at the
      bottom), which is what makes "larger and lower reads as nearer" true in
@@ -805,9 +223,9 @@ export function buildPortraitField({
     [-0.58, -0.47, 7.2, 0.44],
     [0.56, -0.45, 7.0, 0.44],
     [-0.05, -0.50, 8.0, 0.43],
-    [-0.84, -0.68, 6.2, 0.46],
+    [-0.86, -0.52, 7.0, 0.45], // was [-0.84,-0.68,6.2,0.46]; lifted clear of the navigator dock (2026-08-23) — evidence/2026-08-21-elegance-run-01/owned-pass/
     [0.82, -0.64, 6.0, 0.46],
-    [0.28, -0.76, 5.6, 0.47],
+    [0.40, -0.76, 5.6, 0.39], // shifted clear of the return CTA; peer-sized at its nearer authored depth
   ];
 
   /* PORTRAIT ARC (2026-08-17; revised the same day). The table above is the
@@ -829,10 +247,10 @@ export function buildPortraitField({
        · the crown holds the top edge, the copy block runs to ndcY ~ +0.05;
        · a clear dark band (~0.16 of frame height) separates the button from
          the first face — the composition breathes where the eye enters;
-       · two flankers peek in AT THE BUTTON LINE from the far edges
-         (y ~ +0.10, |x| ~0.83, depth 13+): beside the button the edges are
-         empty at every review size, so they read as the network continuing
-         past the frame, not as glow behind the words;
+       · the LEFT flanker peeks in AT THE BUTTON LINE from the far edge
+         (y +0.12, x -0.82, depth 13.6), where the edge is empty. The RIGHT
+         one cannot: the navigator docks dead centre of the right edge on
+         every portrait viewport, so its mirror rides the first rank's line;
        · four ranks descend from there — 3 / 4 / 3 / 4, alternating so no
          face sits directly above another — with rank gaps of ~0.20 frame
          heights and depth falling 11.8 -> 5.5, so lower IS nearer and the
@@ -844,7 +262,7 @@ export function buildPortraitField({
   const REST_SITES_PORTRAIT = [
     // ndcX, ndcY, depth, size
     [-0.82, 0.12, 13.6, 0.34],
-    [0.84, 0.08, 13.2, 0.34],
+    [0.94, -0.28, 12.8, 0.34], // was [0.84,0.08,13.2,0.34]; the navigator's right-edge dock ate it on every phone (2026-08-24) — evidence/2026-08-21-elegance-run-01/defect-03/
     [-0.55, -0.20, 11.8, 0.37],
     [0.02, -0.26, 11.4, 0.37],
     [0.60, -0.21, 11.0, 0.37],
@@ -862,13 +280,18 @@ export function buildPortraitField({
   ];
 
   // The frame, aspect and table every placement read below composes against.
-  // One trio, chosen once — a landscape build is bit-identical to what this
-  // file always produced (siteFrame IS restFrame), and a portrait build is
-  // the authored tall-frame arc through the same placement law, separation
-  // pass, clearance rule and repair loop.
-  const SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
-  const siteFrame = portraitField ? restFramePortrait : restFrame;
-  const siteAspect = portraitField ? portraitAspect : 1.6;
+  // One trio, chosen from the band the viewport is in — a landscape build is
+  // bit-identical to what this file always produced (siteFrame IS restFrame),
+  // and a portrait build is the authored tall-frame arc through the same
+  // placement law, separation pass, clearance rule and repair loop.
+  //
+  // Re-chosen, not patched, when the viewport crosses the band boundary
+  // (recompose()): the three move together or not at all, because a table
+  // read through the other band's frame is precisely the defect this file
+  // carried until 2026-08-25.
+  let SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
+  let siteFrame = portraitField ? restFramePortrait : restFrame;
+  let siteAspect = portraitField ? portraitAspect : 1.6;
 
   // Rest reachability repair (the grey-box gap, fixed by construction and
   // then VERIFIED here): every routable node must project into the rest
@@ -879,9 +302,41 @@ export function buildPortraitField({
   // the rest gaze rather than re-rolled somewhere else: the arc is authored,
   // so the repair must preserve it. `restOk` stays defined on both paths: it
   // is also the runtime `restVisible()` QA gate.
+  /* THE NAVIGATOR'S BAND IS NOT A SEAT (nav-restage, 2026-08-27). The
+     journey navigator stopped docking at the right edge and now stands as
+     a centred row across the bottom of every viewport. A face resting
+     inside that band would only ever be WITHHELD by the rail mask
+     (journey/ui/rail-mask.js) — measured before this rule: four of
+     sixteen contributors gone at the phone rest, one at the desktop rest.
+     So the placement law itself refuses the seat and the repair loop
+     below finds another, exactly as it already does for a seat outside
+     the chip layer's margins. The band is derived from the SAME
+     rowLayout() the navigator is laid out by — pure arithmetic, no DOM —
+     at the nominal frame of the band this composition is authored for
+     (430x932 portrait / 1440x900 landscape, the frames the faces gate
+     measures), padded by the mask's own 24px profile clearance plus a
+     12px safety margin. */
+  function navBandRefuses(pr, size) {
+    const hpx = siteAspect < 1 ? 932 : 900;
+    const wpx = Math.round(hpx * siteAspect);
+    const L = rowLayout(wpx, hpx);
+    const px = (pr.x * 0.5 + 0.5) * wpx;
+    const py = (-pr.y * 0.5 + 0.5) * hpx;
+    const tanv = Math.tan(0.5 * siteFrame.fov * Math.PI / 180);
+    const rpx = size * (hpx * 0.5) / (Math.max(0.05, pr.z) * tanv);
+    const pad = 24;
+    const bl = L.left - pad;
+    const br = L.left + L.width + pad;
+    const bt = L.centreY - L.major / 2 - pad;
+    const cx = Math.max(bl, Math.min(px, br));
+    const cy = Math.max(bt, Math.min(py, hpx));
+    return Math.hypot(px - cx, py - cy) < rpx + 12;
+  }
+
   function restOk(nd) {
     const pr = projectInto(siteFrame, nd.pos, siteAspect);
-    return pr.z > 2.6 && pr.z < 16.5 && Math.abs(pr.x) <= 0.97 && Math.abs(pr.y) <= 0.90;
+    return pr.z > 2.6 && pr.z < 16.5 && Math.abs(pr.x) <= 0.97 && Math.abs(pr.y) <= 0.90
+      && !navBandRefuses(pr, nd.size);
   }
 
   // Baked read path: reconstruct the runtime-read node fields from the
@@ -906,7 +361,23 @@ export function buildPortraitField({
       anchors: (P.nodeAnchors[i] || []).map(([x, y, z]) => new V3(x, y, z)),
     }));
   } else {
-    nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
+    nodes = placeNodes();
+  }
+
+  /* THE PLACEMENT LAW, AS A FUNCTION OF THE BAND — moved here whole on
+     2026-08-25 and otherwise unchanged, so a first call reproduces the
+     `nodes = Array.from(...)` block, the three separation passes, the
+     clearance rule and the repair loop exactly as they stood.
+     Making it callable twice is the whole fix: a viewport that crosses the
+     portrait boundary calls it again against the re-chosen trio above.
+     It reads only `SITES` / `siteFrame` / `siteAspect` and `contributors`,
+     and it re-derives EVERY per-node number from `contributors[i]`'s own
+     seed — never from a node it is replacing — which is what lets a page
+     that booted on the BAKED path (where seed/tilt/strandCount/rand arrive
+     as zeroes and null) re-place itself with the identical stream a live
+     build would have drawn. */
+  function placeNodes() {
+    const nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
       const c = contributors[i % C_COUNT];
       const routable = i < C_COUNT;
       const rand = H.rng((((c.seed ?? (i + 1)) * 7919 + 17 + i * 977) | 0) >>> 0);
@@ -1013,6 +484,7 @@ export function buildPortraitField({
       }
       enforceClearance(nd);
     }
+    return nodes;
   }
 
   /* ---------------- atlases (8 columns; flipY-correct cell coords) ------ */
@@ -1021,15 +493,22 @@ export function buildPortraitField({
   const ROWS = Math.ceil(NODE_COUNT / COLS);
   const cellUV = (i) => [(i % COLS) / COLS, 1 - (Math.floor(i / COLS) + 1) / ROWS];
 
-  // arrangement 0 (`bustSeedsFor` lives with the remix machinery below, so the
-  // seed rule has one home and the build-time atlas is simply its first call)
-  const atlasA = makePortraitAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(0));
+  // arrangement 0 (`bustSeedsFor` lives with the remix machinery, in
+  // portrait-remix.js, so the seed rule has one home and the build-time atlas
+  // is simply its first call — an import edge now, where before A01a-2 it was
+  // a hoisted forward call to a function declared 800 lines further down)
+  const atlasA = makePortraitAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(nodes, 0));
   const anonSeeds = [11, 23, 37, 53];
   const atlasB = makePortraitAtlas(4, 2, CELL, drawAnonGlyph, anonSeeds);
 
-  /* ---------------- local strands that TERMINATE at each node ----------- */
-  const nodeStrandSpecs = [];   // empty on the baked path; strandCurves comes from the payload
-  if (!baked) {
+  /* ---------------- local strands that TERMINATE at each node -----------
+     Wrapped in a function on 2026-08-25, contents unchanged: the strands grow
+     FROM the node positions, so re-placing the field has to regrow them. On
+     the build path it is called exactly where it always ran (and not at all
+     on the baked path, where the bytes already hold the answer). */
+  let nodeStrandSpecs = [];     // empty on the baked path; strandCurves comes from the payload
+  function growStrandSpecs(nodes) {
+    const nodeStrandSpecs = [];
     function addStrandCurve(startPt, target, nodeIdx, strandVal, seedA, seedB, amp) {
       const segs = 5;
       const pts = [];
@@ -1091,6 +570,49 @@ export function buildPortraitField({
         addStrandCurve(m.pos.clone(), n.pos, n.i, 0.9 - k * 0.25, n.i * 1.7 + k * 3.1, 7700 + n.i, 1.35);
       }
     }
+    return nodeStrandSpecs;
+  }
+  if (!baked) nodeStrandSpecs = growStrandSpecs(nodes);
+
+  /** One curve spec -> its 8 line segments, as four flat arrays. The
+   *  tessellation moved here verbatim so the build and a recompose cannot
+   *  drift; `STRAND_SEGS` is the 8 the build has always used, and it is what
+   *  turns a curve budget into a vertex budget. */
+  const STRAND_SEGS = 8;
+  function strandArrays(specs) {
+    const pos = [], along = [], strand = [], nodeA = [];
+    for (const s of specs) {
+      const curve = H.catmull(s.pts);
+      let prev = curve.getPointAt(0);
+      for (let j = 1; j <= STRAND_SEGS; j++) {
+        const t = j / STRAND_SEGS;
+        const p = curve.getPointAt(t);
+        pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+        along.push((j - 1) / STRAND_SEGS, t);
+        strand.push(s.strand, s.strand);
+        nodeA.push(s.node, s.node);
+        prev = p;
+      }
+    }
+    return { pos, along, strand, nodeA };
+  }
+
+  /** THE STRAND GEOMETRY'S ONE CONSTRUCTION SITE — the build's and the
+   *  recompose's alike. It is exactly sized to the specs it is given, which is
+   *  what keeps the tree's standing invariant true (test-render-baseline D1:
+   *  no source site narrows a draw range, so every geometry here draws its
+   *  full attribute count and three.js's default range is the shipped one).
+   *  A capacity buffer plus setDrawRange would have avoided the per-crossing
+   *  allocation and broken that invariant to do it; a 40 KB buffer handed back
+   *  at the leaf that owns it is the cheaper trade. */
+  function buildStrandGeometry(specs) {
+    const { pos, along, strand, nodeA } = strandArrays(specs);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+    geo.setAttribute('aNode', new THREE.Float32BufferAttribute(nodeA, 1));
+    return geo;
   }
 
   const nodeStrands = (() => {
@@ -1102,27 +624,8 @@ export function buildPortraitField({
       geo = baked.g.strands;
       verts = geo.attributes.position.count;
     } else {
-      const pos = [], along = [], strand = [], nodeA = [];
-      const N = 8;
-      for (const s of nodeStrandSpecs) {
-        const curve = H.catmull(s.pts);
-        let prev = curve.getPointAt(0);
-        for (let j = 1; j <= N; j++) {
-          const t = j / N;
-          const p = curve.getPointAt(t);
-          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          along.push((j - 1) / N, t);
-          strand.push(s.strand, s.strand);
-          nodeA.push(s.node, s.node);
-          prev = p;
-        }
-      }
-      geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-      geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-      geo.setAttribute('aNode', new THREE.Float32BufferAttribute(nodeA, 1));
-      verts = pos.length / 3;
+      geo = buildStrandGeometry(nodeStrandSpecs);
+      verts = geo.attributes.position.count;
     }
     const lines = new THREE.LineSegments(geo, mat);
     lines.frustumCulled = false;
@@ -1157,6 +660,14 @@ export function buildPortraitField({
       // uniform is 0 whenever no swap is running (see promoteSwap), 1 during
       // one, and 0 under prefers-reduced-motion.
       uSwapFlare: { value: 0 },
+      // FIRST ARRIVAL (2026-08-26). The clock the sixteen faces condense in
+      // on, one per-node window each, ordered by the same aSwapD wave the
+      // remix travels — crown outward, as drawn. RESTS AT 1: a settled frame
+      // multiplies every term it touches by exactly 1.0, so the resting
+      // composition, the hover calibration and the frozen goldens are
+      // untouched by construction. See the arrival block above setFade().
+      uArrive: { value: 1 },
+      uArriveSpan: { value: 0.5 },
       uAnon: { value: 0 },
       uPhoto: { value: 0 },
       uCellAP: { value: new THREE.Vector2(1 / COLS, 1 / ROWS) },
@@ -1209,11 +720,13 @@ export function buildPortraitField({
       uniform float uTime, uHoverIdx, uHoverAmt, uSelIdx, uSelAmt;
       uniform float uWaveR, uWaveW, uWaveAmt;
       uniform float uSwap, uSwapSpan, uSwapFlare;
+      uniform float uArrive, uArriveSpan;
       uniform vec3 uWaveC;
       uniform vec2 uCellAP;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
       varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare, vRailVis;
+      varying float vArr, vArrR;
       void main() {
         vRailVis = aRailVis;
         vQ = aCorner;
@@ -1229,6 +742,19 @@ export function buildPortraitField({
         // happens INSIDE a flush of ember rather than being watched happening.
         float fq = (uSwap - (d0 + span * 0.5)) / (span * 0.5);
         vFlare = exp(-fq * fq * 2.4) * uSwapFlare;
+        // FIRST ARRIVAL: the swap's own construction, on its own clock —
+        // one uArrive, opened per node by the same aSwapD order, so the
+        // people arrive on the wave the chapter already speaks (crown
+        // outward, as drawn). Two windows per face: the ember ring's leads
+        // the image's by ~0.2 s of the clock — the light is the cause, the
+        // face condenses out of it — and both are monotone 0 -> 1 with no
+        // overshoot, the entry-path lesson below applied from the start.
+        // At uArrive = 1 (rest, snap(), every frozen path) both are exactly
+        // 1.0 for every aSwapD, since az + aw <= 1.
+        float aw = max(uArriveSpan, 0.001);
+        float az = aSwapD * (1.0 - aw);
+        vArrR = smoothstep(az, az + aw * 0.55, uArrive);
+        vArr = smoothstep(az + aw * 0.30, az + aw, uArrive);
         vec2 half01 = aCorner * 0.5 + 0.5;
         vUvA = half01 * uCellAP + aCellA;
         vUvB = half01 * 0.5 + aCellB;
@@ -1293,6 +819,7 @@ export function buildPortraitField({
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
       varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare, vRailVis;
+      varying float vArr, vArrR;
       void main() {
         float r = length(vQ);
         if (r > 1.30) discard;
@@ -1302,7 +829,10 @@ export function buildPortraitField({
         // incoming image lose definition together at the middle of the node's
         // crossfade and the new one comes back sharp. A straight A/B mix of two
         // sharp faces reads as a jump cut; this reads as a focus pull.
-        float slod = lod + vFlare * 1.7;
+        // FIRST ARRIVAL rides the same optics: a face arrives OUT of soft
+        // focus (1 - vArr adds mip exactly as the flare does), never by
+        // scaling or moving — nothing about arrival moves a node either.
+        float slod = lod + (vFlare + (1.0 - vArr)) * 1.7;
         // three-way content: procedural bust -> real photo -> anonymous glyph
         // (vAnonF is the per-node consent gate: it forces the glyph even in
         // photo mode when enforcement is on)
@@ -1404,14 +934,37 @@ export function buildPortraitField({
         //   flick the living flicker under bloom reads as shimmering glow;
         //        a face being read holds a steady exposure instead.
         float flickH = mix(flick, 0.95, pg);
-        vec3 col = t.rgb * (1.12 - 0.17 * pg + 0.30 * boost * (1.0 - uImgMute * pg) + 0.55 * vWv + 0.10 * vFlare)
-          + uRim * rim * (0.20 + 0.80 * boost * (1.0 - 0.35 * pg) + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85)
-          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost * (1.0 - uCoreMute * pg) + 0.30 * vWv + 0.15 * vFlare);
+        // THE ENTRY PATH (2026-08-25, Hannah: the border "lights up and
+        // disappears before it properly loads"). Round 4's three mutes used
+        // to ride pg — the same clock as the boost each one corrects — so a
+        // muted term was boost*(1 - mute*boost): a parabola along the hover
+        // ramp. The endpoints were calibrated and correct; the PATH overshot
+        // and handed the light back. Measured at 1440x900, first hover of a
+        // near face: ring-band luma 123 -> 173 by 200 ms, then down through
+        // its own resting value while the photo terms caught up — the
+        // lit-then-dying border she is describing. The image term peaked at
+        // vH 0.22 and the core lamp relit to double its endpoint at vH 0.5.
+        // The mutes now ride uPhoto alone: on a photo each term runs
+        // STRAIGHT from its resting value to its held-hover value (both
+        // unchanged — pg equals uPhoto at vH 1, so the calibrated endpoints
+        // are byte-identical), and every millisecond of the ramp buys
+        // motion toward the state it lands in. Busts (uPhoto 0), rest
+        // (boost 0) and the frozen goldens are untouched by construction.
+        // FIRST ARRIVAL, applied per term: the ring rides its leading window
+        // (vArrR), the image and the core lamp ride the trailing one (vArr).
+        // Each term runs STRAIGHT from 0 to its calibrated resting value —
+        // monotone, no overshoot, no handing light back — and at rest both
+        // windows are exactly 1.0, so every number below is untouched.
+        vec3 col = t.rgb * (1.12 - 0.17 * pg + 0.30 * boost * (1.0 - uImgMute * uPhoto) + 0.55 * vWv + 0.10 * vFlare) * vArr
+          + uRim * rim * (0.20 + 0.80 * boost * (1.0 - 0.35 * uPhoto) + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85) * vArrR
+          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost * (1.0 - uCoreMute * uPhoto) + 0.30 * vWv + 0.15 * vFlare) * vArr;
         // distant nodes emerge from amber haze rather than vanishing to black
         float haze = exp(-0.00135 * vDepth * vDepth);
         float hazeMix = mix(clamp(haze + 0.14, 0.0, 1.0), 1.0, pg * 0.85);
         col = mix(uHaze * 0.38, col, hazeMix) * flickH;
-        float alpha = mask * (1.0 - vSoft * 0.85) * (0.35 + 0.75 * haze) * uOpacity * uExposure;
+        // alpha follows the LEADING window: the disc exists from the moment
+        // its ring does, and the image resolves inside it.
+        float alpha = mask * (1.0 - vSoft * 0.85) * (0.35 + 0.75 * haze) * uOpacity * uExposure * vArrR;
         alpha = clamp(alpha * (1.0 + 0.22 * vWv + 0.12 * vFlare), 0.0, 1.0);
         // SOLIDITY (2026-08-18) — the written alpha under premultiplied
         // blending: how much this fragment OCCLUDES the layers drawn behind
@@ -1424,7 +977,7 @@ export function buildPortraitField({
         // where it dimmed the strands in a visible rounded-square edge. The
         // baked disc ends where the image ends, at every hover amount.
         // (No backticks anywhere in this shader: it is a JS template literal.)
-        float occ = uSolid * pg * t.a * (1.0 - anon) * uOpacity;
+        float occ = uSolid * pg * t.a * (1.0 - anon) * uOpacity * vArr;
         gl_FragColor = vec4(col * alpha * vRailVis, occ * vRailVis);
       }`,
   });
@@ -1459,7 +1012,11 @@ export function buildPortraitField({
      near-equidistant nodes turn over a beat apart, so the field reads as
      thinking rather than counting. */
   const swapEpicentre = (leg.CROWN ? leg.CROWN.clone() : nodes[0].pos.clone());
-  const swapDelays = baked ? null : (() => {
+  // The wave is ordered by distance AS DRAWN, so its order is a property of
+  // the band's frame, not of the world — which is why this is a function of
+  // `nodes` and re-runs with them (the IIFE it was until 2026-08-25 could
+  // not).
+  function computeSwapDelays(nodes) {
     const crownNdc = projectInto(siteFrame, swapEpicentre, siteAspect);
     const d = nodes.map((nd) => {
       const p = projectInto(siteFrame, nd.pos, siteAspect);
@@ -1470,10 +1027,78 @@ export function buildPortraitField({
     const lo = Math.min(...d), hi = Math.max(...d);
     const spread = (hi - lo) || 1;
     return nodes.map((nd, i) => clamp((d[i] - lo) / spread + (nd.seed - 0.5) * 0.11, 0, 1));
-  })();
+  }
+  let swapDelays = baked ? null : computeSwapDelays(nodes);
   // World radius for the colony wave index.js fires alongside the swap — that
   // one IS a spherical wave in the world, so it keeps world units.
-  const swapMaxR = baked ? baked.portraits.swapMaxR : Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
+  let swapMaxR = baked ? baked.portraits.swapMaxR : Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
+
+  /* ---- THE THREE FIXED-SIZE FILLS (2026-08-25) --------------------------
+     planes, rim and the two glow point clouds are sized by NODE_COUNT and
+     constants alone — never by where the nodes ended up — so re-placing the
+     field rewrites their attributes and allocates nothing. These three
+     functions are the fills, lifted verbatim out of the builders below so
+     that the build and a recompose cannot drift into two different pictures.
+     Only the strand geometry's LENGTH depends on placement, and it is dealt
+     with on its own terms in recompose(). */
+  const PLANE_CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  function fillPlaneArrays(nodes, swapDelays, a) {
+    nodes.forEach((nd, i) => {
+      const [ax, ay] = cellUV(i);
+      const bcell = i % 4;
+      const bx = (bcell % 2) * 0.5, by = 1 - (Math.floor(bcell / 2) + 1) * 0.5;
+      for (let k = 0; k < 4; k++) {
+        const v = i * 4 + k;
+        a.pos[v * 3 + 0] = nd.pos.x; a.pos[v * 3 + 1] = nd.pos.y; a.pos[v * 3 + 2] = nd.pos.z;
+        a.corner[v * 2 + 0] = PLANE_CORNERS[k][0]; a.corner[v * 2 + 1] = PLANE_CORNERS[k][1];
+        a.cellA[v * 2 + 0] = ax; a.cellA[v * 2 + 1] = ay;
+        a.cellB[v * 2 + 0] = bx; a.cellB[v * 2 + 1] = by;
+        a.nodeA[v] = i; a.seedA[v] = nd.seed * 9.7 + i * 1.31;
+        a.sizeA[v] = nd.size; a.tiltA[v] = nd.tilt;
+        a.swapD[v] = swapDelays[i];
+      }
+    });
+  }
+
+  const RIM_SEGS = 3;
+  function fillRimArrays(nodes, a) {
+    let w = 0;
+    nodes.forEach((nd, i) => {
+      const rand = H.rng((3300 + i * 97) >>> 0);
+      for (let f = 0; f < RIM_FIBRES; f++) {
+        const a0 = (f / RIM_FIBRES) * TAU + (rand() - 0.5) * 0.42;
+        const r0 = nd.size * (0.66 + rand() * 0.10);
+        const len = nd.size * (0.34 + rand() * 0.72);
+        const bend = (rand() - 0.5) * 0.9;
+        const sd = rand();
+        const pts = [];
+        for (let s = 0; s <= RIM_SEGS; s++) {
+          const t = s / RIM_SEGS;
+          const ang = a0 + bend * t * t;
+          const rr = r0 + len * t;
+          const jit = (H.noise3(i * 2.1 + f * 0.7, t * 4.0, sd * 9.0)) * nd.size * 0.10 * t;
+          pts.push([Math.cos(ang) * rr + jit, Math.sin(ang) * rr - jit * 0.6, t]);
+        }
+        for (let s = 0; s < RIM_SEGS; s++) {
+          for (const q of [pts[s], pts[s + 1]]) {
+            a.pos[w * 3 + 0] = nd.pos.x; a.pos[w * 3 + 1] = nd.pos.y; a.pos[w * 3 + 2] = nd.pos.z;
+            a.off[w * 2 + 0] = q[0]; a.off[w * 2 + 1] = q[1];
+            a.nodeA[w] = i; a.seedA[w] = sd * 7.3 + f * 0.53; a.alongA[w] = q[2];
+            w++;
+          }
+        }
+      }
+    });
+  }
+
+  function fillGlowArrays(nodes, sizeMul, a) {
+    nodes.forEach((nd, i) => {
+      a.pos[i * 3] = nd.pos.x; a.pos[i * 3 + 1] = nd.pos.y; a.pos[i * 3 + 2] = nd.pos.z;
+      a.sizeA[i] = nd.size * sizeMul;
+      a.seedA[i] = nd.seed * 11.3 + i * 0.77;
+      a.nodeA[i] = i;
+    });
+  }
 
   const portraits = (() => {
     let geo;
@@ -1492,25 +1117,16 @@ export function buildPortraitField({
       const anonF = new Float32Array(n * 4);
       const swapD = new Float32Array(n * 4);
       const idx = new Uint16Array(n * 6);
-      const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-      nodes.forEach((nd, i) => {
-        const [ax, ay] = cellUV(i);
-        const bcell = i % 4;
-        const bx = (bcell % 2) * 0.5, by = 1 - (Math.floor(bcell / 2) + 1) * 0.5;
-        for (let k = 0; k < 4; k++) {
-          const v = i * 4 + k;
-          pos[v * 3 + 0] = nd.pos.x; pos[v * 3 + 1] = nd.pos.y; pos[v * 3 + 2] = nd.pos.z;
-          corner[v * 2 + 0] = CORNERS[k][0]; corner[v * 2 + 1] = CORNERS[k][1];
-          cellA[v * 2 + 0] = ax; cellA[v * 2 + 1] = ay;
-          cellB[v * 2 + 0] = bx; cellB[v * 2 + 1] = by;
-          nodeA[v] = i; seedA[v] = nd.seed * 9.7 + i * 1.31;
-          sizeA[v] = nd.size; tiltA[v] = nd.tilt;
-          anonF[v] = 0;    // consent enforcement writes 1s via setConsentEnforced
-          swapD[v] = swapDelays[i];
-        }
+      // anonF is left at the Float32Array's own zeros — consent enforcement
+      // writes 1s into it via setConsentEnforced, and a recompose must not
+      // reach in and clear them, so it is the one plane attribute
+      // fillPlaneArrays() below does not own.
+      fillPlaneArrays(nodes, swapDelays,
+        { pos, corner, cellA, cellB, nodeA, seedA, sizeA, tiltA, swapD });
+      for (let i = 0; i < n; i++) {
         const o = i * 4;
         idx.set([o, o + 1, o + 2, o, o + 2, o + 3], i * 6);
-      });
+      }
       geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('aCorner', new THREE.BufferAttribute(corner, 2));
@@ -1601,40 +1217,13 @@ export function buildPortraitField({
       geo = baked.g.rim;
       verts = geo.attributes.position.count;
     } else {
-      const SEGS = 3;
-      const total = NODE_COUNT * RIM_FIBRES * SEGS * 2;
+      const total = NODE_COUNT * RIM_FIBRES * RIM_SEGS * 2;
       const pos = new Float32Array(total * 3);
       const off = new Float32Array(total * 2);
       const nodeA = new Float32Array(total);
       const seedA = new Float32Array(total);
       const alongA = new Float32Array(total);
-      let w = 0;
-      nodes.forEach((nd, i) => {
-        const rand = H.rng((3300 + i * 97) >>> 0);
-        for (let f = 0; f < RIM_FIBRES; f++) {
-          const a0 = (f / RIM_FIBRES) * TAU + (rand() - 0.5) * 0.42;
-          const r0 = nd.size * (0.66 + rand() * 0.10);
-          const len = nd.size * (0.34 + rand() * 0.72);
-          const bend = (rand() - 0.5) * 0.9;
-          const sd = rand();
-          const pts = [];
-          for (let s = 0; s <= SEGS; s++) {
-            const t = s / SEGS;
-            const a = a0 + bend * t * t;
-            const rr = r0 + len * t;
-            const jit = (H.noise3(i * 2.1 + f * 0.7, t * 4.0, sd * 9.0)) * nd.size * 0.10 * t;
-            pts.push([Math.cos(a) * rr + jit, Math.sin(a) * rr - jit * 0.6, t]);
-          }
-          for (let s = 0; s < SEGS; s++) {
-            for (const q of [pts[s], pts[s + 1]]) {
-              pos[w * 3 + 0] = nd.pos.x; pos[w * 3 + 1] = nd.pos.y; pos[w * 3 + 2] = nd.pos.z;
-              off[w * 2 + 0] = q[0]; off[w * 2 + 1] = q[1];
-              nodeA[w] = i; seedA[w] = sd * 7.3 + f * 0.53; alongA[w] = q[2];
-              w++;
-            }
-          }
-        }
-      });
+      fillRimArrays(nodes, { pos, off, nodeA, seedA, alongA });
       geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('aOff', new THREE.BufferAttribute(off, 2));
@@ -1715,12 +1304,7 @@ export function buildPortraitField({
       const sizeA = new Float32Array(n);
       const seedA = new Float32Array(n);
       const nodeA = new Float32Array(n);
-      nodes.forEach((nd, i) => {
-        pos[i * 3] = nd.pos.x; pos[i * 3 + 1] = nd.pos.y; pos[i * 3 + 2] = nd.pos.z;
-        sizeA[i] = nd.size * sizeMul;
-        seedA[i] = nd.seed * 11.3 + i * 0.77;
-        nodeA[i] = i;
-      });
+      fillGlowArrays(nodes, sizeMul, { pos, sizeA, seedA, nodeA });
       geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
@@ -1731,60 +1315,13 @@ export function buildPortraitField({
     pts.frustumCulled = false;
     pts.renderOrder = order;
     group.add(pts);
-    return { pts, mat, geo };
+    // `sizeMul` is kept because recompose() re-fills these arrays and the
+    // multiplier is the only thing that distinguishes the core from the halo.
+    return { pts, mat, geo, sizeMul };
   }
   // the halo each face sits inside; the core is the ember at its centre
   const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.085, 0.30, 3, baked?.g.cores);
   const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.7, 0.058, 0.18, -2, baked?.g.halos);
-
-  /* ---------------- photo pipeline (async; never blocks boot) -------------
-     REAL CONTRIBUTORS since 2026-08-16. This used to load assets/test-portraits
-     — randomuser.me/pravatar stock faces, marked LOOK-DEV ONLY and barred from
-     shipping. It now loads each contributor's OWN avatar, as published by
-     Banodoco on its own front page; see assets/contributor-portraits/
-     manifest.js for provenance.
-
-     ONE PORTRAIT PER PERSON, BY IDENTITY. The old loader fetched a POOL of 26
-     images and dealt them to nodes by a stride permutation, because with
-     anonymous placeholder rows it did not matter which face landed where. It
-     matters completely now: the popover beside a face prints that node's
-     `content.name`, so a mis-dealt image captions a real person with someone
-     else's name. Each node therefore loads the file named by its own row's
-     `avatar` field and no other, and the deal is gone rather than reseeded.
-
-     A MISSING FILE IS SURVIVABLE, per node. One failed image no longer rejects
-     the whole set (the old Promise.all did, dropping the entire field back to
-     procedural over a single 404) — that node keeps its procedural bust and the
-     other fifteen still show. Only a wholesale failure leaves the field as it
-     was, which is the same graceful outcome as before. */
-  /* ---------------- ARRANGEMENTS: what a remix actually re-deals ----------
-     REMIX (Hannah, 2026-08-07) — see 20-owned-root-network.md.
-
-     THE PORTRAIT-SET SITUATION, stated where the code lives — and resolved
-     2026-08-16. This block used to record a constraint: the repo's only image
-     set was 26 stock faces barred from shipping, so a remix could re-light the
-     field but never honestly re-cast it. That is over. The set is now
-     Banodoco's own published avatar sheet and the pool is 120 real people
-     (content/contributors.js), so a re-deal genuinely changes WHO is in the
-     field — sixteen out of 120, which is what the mechanism was always built
-     general for.
-
-     The prediction in the retired note was right about the shape and wrong
-     about the seam: it expected a second manifest to be swapped in behind
-     `variantSpecs`. What actually changed is that the arrangement index now
-     selects PEOPLE as well as treatment, because identity turned out to be
-     the thing that has to move — and the thing that has to move atomically
-     with the name beside it.
-
-     Arrangement 0 is byte-identical to what shipped before this feature (the
-     stride/offset pair at v=0 is the old `i * 7 + 3`, and every other term
-     reduces to its old form), so nothing about the resting composition, the
-     goldens or the look-dev calibration moves.
-
-     Strides are all coprime with the 20-image small pool, so each is a
-     different permutation rather than a rotation of the last. */
-  let photosAvailable = false;
-  let photoSet = null;        // { images, wanted } once loaded
 
   /* WHO IS IN THE FIELD, AND WHAT A RE-DEAL ACTUALLY CHANGES.
 
@@ -1816,66 +1353,33 @@ export function buildPortraitField({
      grain seed — so a re-deal re-lights the field as well as re-casting it.
      V_STRIDE/V_OFFSET survive as generators for those. */
   const dealer = createPortraitDealer({ nodes, contributors, nodeCount: NODE_COUNT });
-  const { dealFor, seatPeople } = dealer;
 
-  function photoSpecs(v, grade) {
-    return dealer.photoSpecs(v, photoSet.sheet, grade);
-  }
-  function bustSeedsFor(v) {
-    return nodes.map((nd, i) => (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973);
-  }
-  function bakeBusts(v) {
-    return v === 0 ? atlasA : makePortraitAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(v));
-  }
-  function bakePhotos(v) {
-    return photoSet ? makePortraitAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, photoSpecs(v)) : null;
-  }
-  /** The same sixteen tiles, graded gently — what a hovered face crossfades
-   *  to. Baked wherever bakePhotos is, so the pair can never disagree about
-   *  who is in the field.
-   *
-   *  Baked at DOUBLE the cell resolution, deliberately. Measured 2026-08-18
-   *  (blur probe, dpr 2): a hovered near face renders its disc at ~440 device
-   *  px, and the 256-cell's 190px disc — itself a bilinear blow-up of the
-   *  96px source tile — was being magnified a second time by the GPU. Two
-   *  stacked bilinear upscales is exactly the mush Hannah kept calling
-   *  blurred. One high-quality 96 -> 380 resample at bake (see makeAtlas's
-   *  imageSmoothingQuality) plus a ~1.16x GPU step is the sharpest chain the
-   *  96px source can support. Costs ~4x the bake pixels and ~17MB of GPU
-   *  memory for the pair — paid only in photo mode, only for the two hover
-   *  atlases; the resting atlases and the goldens' bust path are untouched. */
-  const HOVER_CELL = CELL * 2;
-  function bakePhotosHover(v) {
-    if (!photoSet) return null;
-    const tex = makePortraitAtlas(NODE_COUNT, COLS, HOVER_CELL, drawPhotoCell, photoSpecs(v, HOVER_GRADE));
-    // The hovered plane tilts and breathes fractionally off-axis; anisotropic
-    // sampling keeps the magnified face from smearing on that slight skew.
-    // Hover atlases only — the resting atlas feeds the goldens untouched.
-    tex.anisotropy = 8;
-    return tex;
-  }
+  /* ---------------- the remix pipeline (portrait-remix.js) ---------------
+     A01a-2 moved the arrangement/texture lifecycle out of this closure: the
+     async photo load, the four atlas bakes, the swap clock and its six direct
+     mutators of variant/pending/prepareTimer/swap. It is constructed here, at
+     the exact point loadPortraitSprite() used to be called, so the request
+     still leaves at the same moment in the build.
 
-  let disposed = false;
-  const photosReady = (photosEnabled ? loadPortraitSprite() : Promise.resolve(null)).then((photos) => {
-    if (!photos) return false;
-    if (disposed) return false;
-    photoSet = photos;
-    // The nearest-node/large-source ranking retired with the mixed-resolution
-    // stock pool: every tile in the published sheet is the same 96px, so there
-    // is no sharper variant to reserve for the faces closest to camera.
-    //
-    // Seat arrangement 0's people at the same moment its atlas becomes the
-    // resting one. Until this line the rows still carry their opening
-    // occupants from content.js, which is the correct thing to show while the
-    // sheet is in flight.
-    seatPeople(dealFor(0));
-    portraitMat.uniforms.uMapP.value = bakePhotos(0);
-    portraitMat.uniforms.uMapH.value = bakePhotosHover(0);
-    photosAvailable = true;
-    return true;
-  }).catch((e) => {
-    console.warn('[owned] test photos unavailable — staying procedural:', e.message);
-    return false;
+     Eight of its members are re-published on `api` below, unchanged. The
+     three getters are re-declared as getters rather than spread, because a
+     spread would read them once at build time and freeze arrangement 0,
+     swapping=false and photosAvailable=false forever. */
+  const remixer = createPortraitRemix({
+    uniforms: portraitMat.uniforms,
+    nodes,
+    atlasA,
+    atlasB,
+    textureOwner,
+    dealer,
+    nodeCount: NODE_COUNT,
+    cols: COLS,
+    cell: CELL,
+    photosEnabled,
+    swapEpicentre,
+    // a getter, not the number: recompose() re-measures it — see the note on
+    // createPortraitRemix's parameter list
+    swapMaxR: () => swapMaxR,
   });
 
   /* ---------------- state + frame update ---------------- */
@@ -1885,73 +1389,43 @@ export function buildPortraitField({
   let wave = null;
   let fade = 0;
 
-  /* ---------------- the remix swap ----------------
-     One clock (uSwap 0 -> 1) opened at a different moment per node by aSwapD.
-     While it runs, uMap*2 hold the incoming arrangement; when it lands, the
-     incoming becomes current, uSwap drops back to 0 and the retired atlases
-     are released. Nothing here touches placement, size, strands or camera —
-     the field is exactly the field it was, wearing different faces. */
-  const SWAP_MS = 1250;
-  const SWAP_MS_REDUCED = 320;
-  const SWAP_SPAN = 0.34;          // each node's own crossfade, as a fraction
-  const reduceMotion = typeof matchMedia === 'function'
+  /* ---------------- FIRST ARRIVAL (2026-08-26) ----------------
+     What the sixteen did before this: nothing of their own. One scalar —
+     setFade's camera-pure product from owned/index.js — lit the whole field
+     as a unit, an opacity ramp and nothing else. The reveal LAW is not
+     touched here: that fade is still the CEILING, and this clock only ever
+     multiplies BELOW it in the shader, so it cannot create light the lens
+     has not earned — every mask, wrap fix and golden derivation in
+     owned/index.js still holds, and a reverse scrub retires the field on
+     the camera exactly as before.
+
+     What is added is the performed half, the icon-arrival doctrine
+     (evidence/2026-08-21-elegance-run-01/icon-arrival/): the arrival is a
+     performance in SECONDS — you cannot scrub a person taking their place —
+     armed when the light first returns from fully dark, advanced
+     monotonically by the frame clock, snapped to its end by every dt = 0
+     placement path (snap(), which deep links, ?capture= and hidden-tab
+     bursts all reach). Re-armed ONLY through fully dark (fade exactly 0:
+     the group hidden, or the lens above the face window), so a mid-scrub
+     wobble cannot replay it, and recompose() never touches it — a resize
+     re-places the field without re-performing it.
+
+     The tempo keys to the chapter's own grammar: the remix swap crosses the
+     field in 1.25 s at span 0.34; the arrival takes 1.4 s at span 0.5 —
+     each face's own resolve is ~0.7 s (the paced icon formation's scale),
+     onsets rippling crown-outward over the other 0.7 s on aSwapD's own
+     jittered order. On the ride, the face window opens as the dive lands,
+     so the people finish taking their places about when the copy settles —
+     the arrival law final/index.js §41 already states: a town you are
+     walking into may go on lighting while you stand still. */
+  const ARRIVE_S = 1.4;
+  const ARRIVE_S_REDUCED = 0.35;  // span 1: one paced crossfade, no travel
+  const ARRIVE_SPAN = 0.5;
+  const arriveMotion = typeof matchMedia === 'function'
     ? matchMedia('(prefers-reduced-motion: reduce)')
     : { matches: false };
-  let variant = 0;
-  let pending = null;              // { v, bust, photo } — warmed ahead of the press
-  let prepareTimer = null;
-  let swap = null;                 // { t, dur }
-
-  /** Bake the arrangement after the current one. Called on an idle beat after
-   *  the photos land and again after every completed swap, so a press is never
-   *  waiting on two canvas atlases; called inline from remix() only if the
-   *  visitor got there first. */
-  function prepareNext() {
-    if (disposed) return;
-    const v = variant + 1;
-    if (pending && pending.v === v && (!photoSet || pending.photo)) return;
-    if (pending) { retire(pending.bust); retire(pending.photo); retire(pending.photoHover); }
-    pending = { v, bust: bakeBusts(v), photo: bakePhotos(v), photoHover: bakePhotosHover(v) };
-  }
-  function schedulePrepare() {
-    if (disposed || prepareTimer) return;
-    const run = () => { prepareTimer = null; prepareNext(); };
-    prepareTimer = typeof requestIdleCallback === 'function'
-      ? requestIdleCallback(run, { timeout: 1500 })
-      : setTimeout(run, 400);
-  }
-
-  /** Release a canvas texture, unless it is still wired to something. The two
-   *  build-time atlases are never released: atlasA is arrangement 0's busts and
-   *  is also uMapP's stand-in until the photos land, and atlasB is the
-   *  anonymous glyph sheet, which a remix has no business touching. */
-  function retire(tex) {
-    textureOwner.retire(tex);
-  }
-
-  /** The incoming arrangement becomes the resting one. */
-  function promoteSwap() {
-    const u = portraitMat.uniforms;
-    // NAMES CHANGE HERE, not when the incoming atlas was baked. prepareNext()
-    // bakes the next arrangement minutes ahead, while the visitor is still
-    // looking at the current one — reseating on bake would rename sixteen
-    // people under faces that have not turned over yet, and a popover opened
-    // in that window would caption the wrong person. The swap wave is the
-    // moment the field genuinely becomes the new cast, so it is the moment the
-    // rows do too.
-    seatPeople(dealFor(variant));
-    const oldBust = u.uMapA.value, oldPhoto = u.uMapP.value, oldHover = u.uMapH.value;
-    u.uMapA.value = u.uMapA2.value;
-    u.uMapP.value = u.uMapP2.value;
-    u.uMapH.value = u.uMapH2.value;
-    u.uSwap.value = 0;
-    u.uSwapFlare.value = 0;    // back to an exactly-unlit resting field
-    swap = null;
-    if (oldBust !== u.uMapA.value) retire(oldBust);
-    if (oldPhoto !== u.uMapP.value) retire(oldPhoto);
-    if (oldHover !== u.uMapH.value) retire(oldHover);
-    schedulePrepare();
-  }
+  let arrive = 1;      // settled: any path that never arms shows today's frame
+  let arriveRate = 0;
 
   // HELD STILL (2026-08-11, Hannah: the node dots must not pulse): the glow
   // points (cores + halos — the per-face ember DOTS) left timeMats. Their
@@ -1975,27 +1449,178 @@ export function buildPortraitField({
     });
   let railMaskKey = '';
 
+  /* ==================================================================
+     RECOMPOSE — the authored composition, RE-ASKED (2026-08-25)
+     ==================================================================
+     THE DEFECT THIS CLOSES, stated as the owner reported it: "when I resize
+     the screen, the number of items that shows in the ownership section
+     doesn't update appropriately." Measured, one live page driven across the
+     portrait boundary against fresh-load controls: 16/16 faces on frame at
+     1440x900, 8/16 at 700x900 and 4/16 at 430x932 — while a FRESH load at
+     each of those sizes framed all sixteen. It was never a stale count. The
+     camera re-poses every frame (fov 58 -> 64, the portrait pose adopted on
+     crossing), so a page that crossed the band was showing the LANDSCAPE arc
+     through the PORTRAIT lens: the positions were wrong, and twelve of the
+     sixteen were simply outside the frame.
+
+     WHY THIS IS THE SHAPE OF THE FIX, and not one of the two obvious
+     alternatives:
+
+       * REBUILD THE CHAPTER on a crossing. It cannot be done from inside the
+         chapter — the hotspot registry, the rail mask, the animator and the
+         card layer all hold this build by identity — and it would need the
+         teardown path that was deliberately removed the day before this was
+         written. It also throws away everything a rebuild has no reason to
+         redo: two 2048x512 atlases, the photo fetch, four graded bakes,
+         eleven shader programs. None of that depends on the aspect.
+       * PRE-BUILD BOTH FIELDS AND SWAP. The geometry it would double is the
+         cheap half (the five batched buffers are ~82 KB together); the
+         expensive half is the atlas/photo/material set, which is per-FIELD
+         and would double with it — megabytes of texture and a second photo
+         pipeline, paid by every visitor, to serve a gesture almost none of
+         them make.
+
+     So: ONE field, re-placed. Everything downstream already reads through —
+     `worldOf`/`radiusOf` return live node state, so the chips and the rail
+     mask follow for nothing, and the camera was never the problem.
+
+     WHAT IT COSTS, plainly. Four of the five batched geometries are sized by
+     NODE_COUNT and constants alone, so they are REWRITTEN IN PLACE and
+     allocate nothing at all. The strand geometry is not: its length depends
+     on which node-to-node links survive the 8.5-unit reach test, which
+     depends on where the nodes ended up. So a crossing builds one new strand
+     geometry (~1700 line vertices, ~40 KB across four attributes) and hands
+     the outgoing one back. Measured on this machine, under headless Chrome
+     with ANGLE/Metal: 57 ms for the first crossing on a page (cold JIT),
+     ~4 ms warm. The settle in owned/index.js is what keeps that to ONE
+     crossing per gesture however far the window is dragged.
+
+     WHY NOT A CAPACITY BUFFER AND A DRAW RANGE, which would have made the
+     allocation once-ever: because tools/test-render-baseline.mjs D1 pins, as
+     a standing invariant, that NO source site in this tree narrows a draw
+     range — every geometry draws its full attribute count and three.js's
+     default { start: 0, count: Infinity } is the shipped value everywhere. A
+     40 KB buffer rebuilt on a gesture nobody makes twice a minute is a much
+     smaller price than being the first order to break that.
+
+     WHAT IT DOES NOT FIX, and the cost of fixing it: on a page that booted
+     LANDSCAPE the substrate is serving from baked bytes, and the baked read
+     leaves `netNodes`/`webAdj`/`webLinkMeta` empty — so `assignOwners()`
+     cannot re-walk, and the web's per-face ownership keeps the landscape
+     assignment. After such a crossing, hovering a face lights filaments
+     chosen for where that face used to be. Making it right means rebuilding
+     the substrate's 430-vertex web graph live — the chapter's largest
+     allocation — at the exact moment someone is dragging a window, or giving
+     up the bake for every visitor to serve that drag. Neither is worth it for
+     a hover accent; a page that boots portrait builds live and is correct.
+
+     @param {number} aspect  the viewport aspect to compose for. Returns true
+            when the field moved, false when the answer was already right —
+            so a caller may ask on every settled resize without a predicate
+            of its own. `?aspect=` still wins inside leg.fieldFor(), which is
+            what keeps capture.py and every golden pinned. */
+  function recompose(aspect) {
+    if (typeof leg.fieldFor !== 'function') return false;
+    const next = leg.fieldFor(aspect);
+    const bandSame = next.portraitField === portraitField;
+    // Inside the portrait band the ARC ITSELF is composed at the live aspect
+    // (a tablet spreads it, a phone does not), so a band that stays portrait
+    // still has to follow — otherwise a drag that crosses at 0.875 and
+    // carries on to 0.46 leaves the arc composed for a frame twice as wide.
+    if (bandSame && (!portraitField || Math.abs(next.portraitAspect - portraitAspect) < 1e-4)) {
+      return false;
+    }
+    portraitField = next.portraitField;
+    portraitAspect = next.portraitAspect;
+    restFramePortrait = next.restFramePortrait;
+    SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
+    siteFrame = portraitField ? restFramePortrait : restFrame;
+    siteAspect = portraitField ? portraitAspect : 1.6;
+
+    /* 1. THE SIXTEEN, RE-PLACED. The node OBJECTS are written THROUGH, never
+       replaced: the dealer, the remixer, `worldOf`/`radiusOf`/`indexOf` and
+       the bake payload all hold this array and its members by identity, and
+       `content`/`id`/`routable` belong to the deal, not to the composition —
+       a re-place must not re-cast the field. */
+    const placed = placeNodes();
+    for (let i = 0; i < NODE_COUNT; i++) {
+      const a = nodes[i], b = placed[i];
+      a.pos.copy(b.pos);
+      a.size = b.size; a.seed = b.seed; a.tilt = b.tilt;
+      a.strandCount = b.strandCount; a.rand = b.rand;
+    }
+    // regrow the strands (this also rewrites every node's `anchors`, which is
+    // what owned/index.js re-hands to substrate.assignOwners) and re-measure
+    // the two swap-order derivations, both of which are frame-relative.
+    nodeStrandSpecs = growStrandSpecs(nodes);
+    swapDelays = computeSwapDelays(nodes);
+    swapMaxR = Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
+
+    /* 2. THE FOUR FIXED-SIZE GEOMETRIES — rewritten, never reallocated.
+       aAnonF is untouched on purpose: it carries consent enforcement, which
+       is identity and not composition. */
+    const pa = portraits.geo.attributes;
+    fillPlaneArrays(nodes, swapDelays, {
+      pos: pa.position.array, corner: pa.aCorner.array, cellA: pa.aCellA.array,
+      cellB: pa.aCellB.array, nodeA: pa.aNode.array, seedA: pa.aSeed.array,
+      sizeA: pa.aSize.array, tiltA: pa.aTilt.array, swapD: pa.aSwapD.array,
+    });
+    const ra = rimFibres.geo.attributes;
+    fillRimArrays(nodes, {
+      pos: ra.position.array, off: ra.aOff.array, nodeA: ra.aNode.array,
+      seedA: ra.aSeed.array, alongA: ra.aAlong.array,
+    });
+    for (const glow of [cores, halos]) {
+      const ga = glow.geo.attributes;
+      fillGlowArrays(nodes, glow.sizeMul, {
+        pos: ga.position.array, sizeA: ga.aSize.array,
+        seedA: ga.aSeed.array, nodeA: ga.aNode.array,
+      });
+      for (const k of ['position', 'aSize', 'aSeed', 'aNode']) ga[k].needsUpdate = true;
+    }
+    for (const k of ['position', 'aCorner', 'aCellA', 'aCellB', 'aNode', 'aSeed', 'aSize', 'aTilt', 'aSwapD']) {
+      pa[k].needsUpdate = true;
+    }
+    for (const k of ['position', 'aOff', 'aNode', 'aSeed', 'aAlong']) ra[k].needsUpdate = true;
+
+    /* 3. THE STRANDS — the one length that placement can change, and the one
+       geometry this fix ever allocates or releases. See the note above. */
+    const grown = buildStrandGeometry(nodeStrandSpecs);
+    grown.setAttribute('aRailVis',
+      new THREE.BufferAttribute(new Float32Array(grown.attributes.aNode.count).fill(1), 1));
+    const outgoing = nodeStrands.lines.geometry;
+    nodeStrands.lines.geometry = grown;
+    nodeStrands.geo = grown;
+    nodeStrands.verts = grown.attributes.position.count;
+    railBindings[4] = { node: grown.getAttribute('aNode'), vis: grown.getAttribute('aRailVis') };
+    /* THE RELEASE, and it is deliberate that it is a LEAF. Replacing an
+       attribute in place would have been cheaper still and would have LEAKED:
+       three.js keys its GL buffers off the BufferAttribute in a WeakMap and
+       frees them only from a geometry's own dispose, so a replaced attribute's
+       buffer is never reclaimed. So the outgoing geometry is disposed here, at
+       the site that owns it and nowhere else — no cascade, no registry, no
+       teardown path reintroduced. DEF-A01-03 was closed as moot when the
+       cascade was removed and stays closed; this is the leaf disposer that
+       removal deliberately kept. */
+    outgoing.dispose();
+
+    /* 4. The rail mask is keyed off its CONTENT, and the strand layer's
+       aNode has just changed under it — so drop the key and let the next
+       frame's unconditional setExcludedNodes re-derive all five layers. */
+    railMaskKey = '';
+    return true;
+  }
+
   const api = {
     group, nodes,
-    photosReady,
-    /** Build and submit the first remix set while startup is still on the
-     *  empty scene. This used to arm on the visitor's first input, which put
-     *  two large Canvas2D atlas bakes back into visible motion. */
-    prepareRemix(renderer) {
-      if (disposed) return;
-      prepareNext();
-      if (renderer && renderer.initTexture && pending) {
-        /* Keep the 4096×1024 hover atlas lazy. Chromium's software WebGL path
-           can block indefinitely inside initTexture() for that one upload,
-           preventing journey.ready from ever publishing. The two resting
-           atlases are the visible remix path we need to warm at startup; the
-           hover-only texture is first sampled by an explicit pointer action. */
-        for (const tex of [pending.bust, pending.photo]) {
-          if (tex) renderer.initTexture(tex);
-        }
-      }
-    },
-    get photosAvailable() { return photosAvailable; },
+    /** Re-place the sixteen for a viewport aspect. See recompose() above. */
+    recompose,
+    /** Which band the field is currently COMPOSED for — not which band the
+     *  viewport is in. owned/index.js compares the two. */
+    get portraitField() { return portraitField; },
+    photosReady: remixer.photosReady,
+    prepareRemix: remixer.prepareRemix,
+    get photosAvailable() { return remixer.photosAvailable; },
     setRailExcluded(ids) {
       const excluded = ids instanceof Set ? ids : new Set(ids || []);
       const hidden = new Uint8Array(NODE_COUNT);
@@ -2014,34 +1639,24 @@ export function buildPortraitField({
       if (!railMaskKey) return [];
       return Array.from(railMaskKey, (v, i) => v === '0' ? -1 : i).filter(i => i >= 0);
     },
-    /** Idempotent texture/async teardown for a chapter owner that retires. */
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      photosAvailable = false;
-      if (prepareTimer) {
-        if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prepareTimer);
-        else clearTimeout(prepareTimer);
-        prepareTimer = null;
-      }
-      const u = portraitMat.uniforms;
-      const textures = new Set([
-        atlasA, atlasB,
-        u.uMapA.value, u.uMapP.value, u.uMapA2.value,
-        u.uMapP2.value, u.uMapH.value, u.uMapH2.value,
-        pending && pending.bust, pending && pending.photo,
-        pending && pending.photoHover,
-      ]);
-      pending = null;
-      for (const texture of textures) if (texture && typeof texture.dispose === 'function') texture.dispose();
-    },
+    /** Idempotent texture/async teardown for a chapter owner that retires.
+     *  Lives in portrait-remix.js, which owns every texture this frees.
+     *  DEF-A01-03 stands: no geometry, no material and no scene removal is
+     *  covered here or anywhere else under journey/chapters/owned/. */
+    dispose: remixer.dispose,
+    // The two placement-dependent counters are GETTERS (2026-08-25): a
+    // recompose regrows the strands, and a QA counter frozen at build would
+    // report the field that was replaced. The rest are build-time constants
+    // and stay values.
     counts: {
       nodeCount: NODE_COUNT,
       routable: C_COUNT,
       planes: portraits.planes,
-      strandVerts: nodeStrands.verts,
+      get strandVerts() { return nodeStrands.verts; },
       rimVerts: rimFibres.verts,
-      strandCurves: baked ? baked.portraits.strandCurves : nodeStrandSpecs.length,
+      get strandCurves() {
+        return nodeStrandSpecs.length || (baked ? baked.portraits.strandCurves : 0);
+      },
       atlasPx: `${atlasA.image.width}x${atlasA.image.height} ×2 + ${atlasB.image.width}x${atlasB.image.height}`,
     },
     // The bake recording site (owned/index.js) reads these AFTER assignOwners
@@ -2053,7 +1668,9 @@ export function buildPortraitField({
       rim: rimFibres.geo,
       cores: cores.geo,
       halos: halos.geo,
-      strands: nodeStrands.geo,
+      // a getter: recompose() re-seats the strand geometry once, on the first
+      // band crossing, and a captured reference would name a disposed one
+      get strands() { return nodeStrands.geo; },
     },
     bakePayload: {
       portraits: {
@@ -2126,68 +1743,13 @@ export function buildPortraitField({
       wave = { c: center.clone(), r: -width * 0.6, speed, width, maxR, amp };
     },
 
-    /** REMIX: re-deal the field's faces (Hannah, 2026-08-07).
-     *
-     *  Returns the shape the caller needs to answer in the scene and in the
-     *  DOM — { arrangement, ms, epicentre, maxR, speed } — or null if a swap
-     *  is already running. `speed` is the world-units/sec a wave must travel
-     *  to keep pace with the node order, so the strand/rim/halo response the
-     *  chapter fires arrives at each face as that face turns over.
-     *
-     *  Under prefers-reduced-motion the span opens to 1: every node's window
-     *  is the whole clock, so the field cross-fades as one over a third of a
-     *  second, with the per-node ember flare off. Same start state, same end
-     *  state, no travelling motion. */
-    remix() {
-      if (disposed || swap) return null;
-      const reduced = !!reduceMotion.matches;
-      if (!pending || pending.v !== variant + 1 || (photoSet && !(pending.photo && pending.photoHover))) {
-        if (prepareTimer) {
-          if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prepareTimer);
-          else clearTimeout(prepareTimer);
-          prepareTimer = null;
-        }
-        prepareNext();
-      }
-      const u = portraitMat.uniforms;
-      u.uMapA2.value = pending.bust;
-      // With no photo set the material's two channels are the same sheet, the
-      // way they are at boot before the photos land — so a procedural-only
-      // build still genuinely remixes (different busts) instead of no-oping.
-      u.uMapP2.value = pending.photo || pending.bust;
-      u.uMapH2.value = pending.photoHover || pending.bust;
-      u.uSwapSpan.value = reduced ? 1 : SWAP_SPAN;
-      u.uSwapFlare.value = reduced ? 0 : 1;
-      u.uSwap.value = 0;
-      variant = pending.v;
-      pending = null;
-      const dur = (reduced ? SWAP_MS_REDUCED : SWAP_MS) / 1000;
-      swap = { t: 0, dur };
-      return {
-        arrangement: variant,
-        ms: Math.round(dur * 1000),
-        epicentre: swapEpicentre.clone(),
-        maxR: swapMaxR,
-        // the wave has to cross the field in the stretch of the clock the node
-        // order actually occupies (1 - span), or it outruns its own faces
-        speed: swapMaxR / Math.max(0.12, dur * (reduced ? 1 : 1 - SWAP_SPAN)),
-      };
-    },
-
-    /** Advance the swap clock. Deliberately NOT inside update(): the chapter
-     *  stops calling update the moment the group goes invisible, and a visitor
-     *  who presses Remix and immediately scrolls out would otherwise come back
-     *  to a field frozen half-way between two arrangements. Called from the
-     *  chapter animator ahead of its own visibility gate. */
-    tickSwap(dt) {
-      if (!swap) return;
-      swap.t += dt;
-      const f = swap.t / swap.dur;
-      portraitMat.uniforms.uSwap.value = f < 1 ? f : 1;
-      if (f >= 1) promoteSwap();
-    },
-    get swapping() { return !!swap; },
-    get arrangement() { return variant; },
+    /** REMIX: re-deal the field's faces. Both of these, and the two getters
+     *  under them, are portrait-remix.js's — re-published here unchanged so
+     *  owned/index.js and the C04 lifecycle suites keep the api they had. */
+    remix: remixer.remix,
+    tickSwap: remixer.tickSwap,
+    get swapping() { return remixer.swapping; },
+    get arrangement() { return remixer.arrangement; },
     /** Jump the eased UI channels to their targets — the dt = 0 path (deep
      *  links, hidden-tab and frozen capture), reached through the chapter's
      *  snap().
@@ -2219,6 +1781,8 @@ export function buildPortraitField({
      *  checked by eye on the live page. */
     snap() {
       const u = portraitMat.uniforms;
+      // the dt = 0 placement contract: the arrival performance lands settled
+      u.uArrive.value = arrive = 1;
       u.uAnon.value = anonTarget;
       hoverAmt = hoverIdx >= 0 ? 1 : 0;
       selAmt = selIdx >= 0 ? 1 : 0;
@@ -2226,6 +1790,17 @@ export function buildPortraitField({
       u.uSelIdx.value = selIdx; u.uSelAmt.value = selAmt;
     },
     setFade(a) {
+      // The arrival performance arms on the first light after fully dark —
+      // and only then; a settled field (arrive already 1, e.g. a deep-link
+      // snap) stays settled. The media query is read at the arm, not at
+      // build, following portrait-remix.js's remix().
+      if (a > 0 && fade <= 0 && arrive < 1) {
+        const reduced = !!arriveMotion.matches;
+        portraitMat.uniforms.uArriveSpan.value = reduced ? 1 : ARRIVE_SPAN;
+        arriveRate = 1 / (reduced ? ARRIVE_S_REDUCED : ARRIVE_S);
+      } else if (a <= 0) {
+        arrive = 0;   // fully dark re-arms: every descent is an arrival
+      }
       fade = a;
       portraitMat.uniforms.uOpacity.value = a;
       rimMat.uniforms.uFade.value = a;
@@ -2245,6 +1820,11 @@ export function buildPortraitField({
     update(dt, time) {
       if (fade <= 0 && !wave) return;
       for (const m of timeMats) m.uniforms.uTime.value = time;
+
+      // the arrival clock: monotone, seconds-denominated, and ceiling-bounded
+      // in the shader (every term it gates also rides the camera-pure fade)
+      if (arrive < 1) arrive = Math.min(1, arrive + dt * arriveRate);
+      portraitMat.uniforms.uArrive.value = arrive;
 
       // colony wave: expand, fade out over the last quarter, then rest
       if (wave) {

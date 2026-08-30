@@ -10,24 +10,29 @@
 // preservation.md), so this module fades that block rather than duplicating it.
 
 import { CONTENT } from '../content/content.js';
-import { CARD_BUILDERS, CARD_ICONS } from './cards/index.js';
+import { CARD_ICONS } from './cards/index.js';
 import { createRail } from './rail.js';
-import { claimInput, releaseInput } from './scroll.js';
-import { CHAPTERS } from './route.js';
-import { JOURNEY_SCHEMA } from './structure.js';
-import { createSheetGesture } from './ui/sheet-gesture.js';
-import { applyHotspotLabelPolicy } from './ui/label-policy.js';
-import { buildActions, createCard, createPopover, el } from './ui/dom.js';
-import { createArrivalMotion } from './ui/arrival-motion.js';
-import { createLiveRegion } from './ui/live-region.js';
+import { createRailExclusion, railBox } from './layout/rail-geometry.js';
+import { createFrameProjection } from './ui/frame-projection.js';
+import { createHotspotFrame } from './ui/hotspot-frame.js';
+import { createHoverZones } from './ui/hover-zone.js';
+import { createRailMask } from './ui/rail-mask.js';
 import {
-  COPY_BANDS, COPY_FADE_P,
-  COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
-  COPY_TRAVEL_LO, COPY_TRAVEL_HI,
-  HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K, HOTSPOT_HOLD_HOME_K,
-  HOTSPOT_DODGE_GAP, HOTSPOT_DODGE_MAX,
-  COPY_JUMP_LEAD, COPY_JUMP_COPY_TAIL_S,
-} from './constants.js';
+  anchorPoint, resolveCardPlacement, filamentOffset,
+} from './ui/card-layout.js';
+import { CHAPTERS } from './route.js';
+import { JOURNEY_SCHEMA, RUNTIME_CHAPTER_IDS } from './structure.js';
+import { createLabelPolicies } from './ui/label-policies.js';
+import { buildActions, createCard, createPopover, el } from './ui/dom.js';
+import { createCopyArrival, COPY_SURFACES } from './ui/copy-arrival.js';
+import { createLiveRegion } from './ui/live-region.js';
+import { createPopoverTier } from './ui/popover-tier.js';
+import { createCardTier } from './ui/card-tier.js';
+import { createSelection, createFocusReturn } from './ui/selection.js';
+import { createOwner } from './ui/owner.js';
+import { createHotState } from './ui/hot-state.js';
+import { mediaQuery, REDUCE_MOTION } from './ui/media.js';
+import { COPY_BANDS } from './constants.js';
 
 /* --------------------------------------------------------------------------
    NOTE (a11y debt #1, closed): W4-E shipped a module-scope keydown guard here
@@ -40,31 +45,20 @@ import {
    It is gone. core/scroll.js now dispatches keys CONTROLS-FIRST using platform
    semantics (a focused <button> owns Space, a scrollable ancestor owns the
    scrolling keys, text entry owns everything) and honours an input-ownership
-   registry — `claimInput` / `releaseInput`, imported above — for regions that
-   handle their own wheel/touch/keys. The dialog card registers itself while
-   open; that one call replaces the guard AND is what lets a bottom sheet
-   scroll internally under a window-capture preventDefault.
+   registry — `claimInput` / `releaseInput` in core/scroll.js — for regions
+   that handle their own wheel/touch/keys. The dialog card registers itself
+   while open (journey/ui/card-tier.js); that one call replaces the guard AND
+   is what lets a bottom sheet scroll internally under a window-capture
+   preventDefault.
    -------------------------------------------------------------------------- */
 
-const reduceMotion = typeof matchMedia === 'function'
-  ? matchMedia('(prefers-reduced-motion: reduce)')
-  : { matches: false, addEventListener() {} };
+const reduceMotion = mediaQuery(REDUCE_MOTION);
 
 /* Bottom-sheet condition (PL-1.3): a coarse pointer, or a viewport too narrow
    for the desktop side card. Live — a hybrid laptop that starts a session with
    a mouse and continues with a finger re-evaluates on the next open, and an
    orientation change re-evaluates immediately. */
-const sheetQuery = typeof matchMedia === 'function'
-  ? matchMedia('(pointer: coarse), (max-width: 720px)')
-  : { matches: false, addEventListener() {} };
-
-// The shared detail-surface exit is 170ms. Keep the vessel in the box tree a
-// little longer so its last painted frame lands before teardown.
-const CARD_FADE_MS = 190;
-// A drag-dismissed sheet is also completing its existing 280ms direct-
-// manipulation release. Let that physical slide finish even though the new
-// shell fade has already gone dark.
-const CARD_DRAG_FADE_MS = 320;
+const sheetQuery = mediaQuery('(pointer: coarse), (max-width: 720px)');
 
 const CHAPTER_POSITION = Object.fromEntries(JOURNEY_SCHEMA.chapters
   .filter(({ copyPosition }) => copyPosition)
@@ -84,30 +78,41 @@ const CHAPTER_POSITION = Object.fromEntries(JOURNEY_SCHEMA.chapters
   final: 'pos-bottomleft',
 }; */
 
-/* Chapters whose prose `sub` fires a scene response on hover.
-   Ride-through #2 gave the Owned claims list a job beyond copy: each <li>
-   pulsed the colony through the chapter's trigger(). Hannah's 2026-08-05
-   direction turned that list into one prose line (content/content.js), so the
-   behaviour moved with it — the whole sentence became the claim, and it fired
-   the whole-colony wave.
+/* THE COPY SUB-PULSE IS GONE (C05 slice D, design.md §6.1). What stood here
+   was `const CHAPTER_SUB_PULSE = {}` plus, in the copy builder below, a
+   `pointerenter` listener that reached `window.journey.chapters[c.id].trigger`.
+   The table had been empty since 2026-08-06 and was never written, so `pulse`
+   was always `undefined`: the `.j-pulse` class was never added and the
+   listener was never attached. Zero DOM nodes and zero listeners change.
 
-   RETIRED for Owned, 2026-08-06 (Hannah, report C). Measured, that prose line
-   is a 416x77 px box at the dead centre of the frame, between the crown at
-   the top and the portrait arc below it — i.e. squarely on the route a
-   pointer takes to reach a face. Every crossing fired substrate.surge() and a
-   30-unit colony wave, so the whole root system lit at moments that felt
-   arbitrary: "the roots ALL light up when I'm hovering over below randomly,
-   but this should only happen when I hover over the TOP root thing." The
-   response now belongs to the crown, as a HOVER ZONE (see addHoverZone below
-   and chapters/owned/index.js hoverZones()).
+   THE HISTORY, kept because the deletion retires an authored decision rather
+   than an oversight. Ride-through #2 gave the Owned claims list a job beyond
+   copy: each <li> pulsed the colony through the chapter's trigger(). Hannah's
+   2026-08-05 direction turned that list into one prose line
+   (content/content.js), so the behaviour moved with it — the whole sentence
+   became the claim, and it fired the whole-colony wave. RETIRED for Owned,
+   2026-08-06 (Hannah, report C): measured, that prose line is a 416x77 px box
+   at the dead centre of the frame, between the crown at the top and the
+   portrait arc below it — i.e. squarely on the route a pointer takes to reach
+   a face. Every crossing fired substrate.surge() and a 30-unit colony wave, so
+   the whole root system lit at moments that felt arbitrary: "the roots ALL
+   light up when I'm hovering over below randomly, but this should only happen
+   when I hover over the TOP root thing." The response moved to the crown, as a
+   HOVER ZONE (see addHoverZone below and chapters/owned/index.js hoverZones()).
 
-   The mechanism stays: it is keyed by chapter, so a chapter that wants one
-   says so here and every other chapter is untouched. Nothing asks for one
-   today. */
-const CHAPTER_SUB_PULSE = {};
+   THE DECISION THAT WAS OVERRULED, quoted so it is visibly discarded rather
+   than silently lost: "The mechanism stays: it is keyed by chapter, so a
+   chapter that wants one says so here and every other chapter is untouched.
+   Nothing asks for one today." It is overruled because the extension point's
+   only cost was the `window.journey` read this slice exists to close, and
+   because there is now a better-owned door for the same want: a chapter that
+   wants a copy-hover response declares `interaction.trigger`
+   (journey/chapter-contract.js), which the registrar already dispatches
+   without naming a chapter. Reach for that, not for a second global read. */
 
-function smoothA(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
-const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+/* `smoothA`, `clamp01` and `bandOpacity` moved to ./ui/bands.js (J04b).
+   Verbatim; they are the pure part of this module and the only part a node
+   harness can execute. */
 
 /* --------------------------------------------------------------------------
    LABEL POLICY (hotspot registration contract, W4-F)
@@ -125,34 +130,24 @@ const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
        ui.addHotspot({ id, chapter, world, label, labelOnHover: true })
 
-   and — because a chapter does not always own its own registrar (journey.js
-   registers from `nodeIds` and is read-only in this lane) — the identical
-   per-node flag is reachable from the CHAPTER CONTRACT:
+   and — because a chapter does not always own its own registrar
+   (chapter-interactions.js registers from `visibility.nodeIds`) — the
+   identical per-node flag is reachable from the CHAPTER CONTRACT:
 
-       chapterModule.labelPolicy(nodeId)
+       chapter.visibility.labelPolicy(nodeId)
          -> { labelOnHover: true, label: 'Name · Role' }   // hover-only chip
          -> null | undefined                               // default, untouched
 
-   Resolved lazily (window.journey publishes its chapter modules after
-   registration), per node, once. No chapter or node id appears in this file:
-   any chapter can adopt it, and a chapter that never grows the method keeps
-   exactly the behaviour it has today.
+   Read off the `chapters` map createUI is handed (C05 slice D), per node,
+   once. No chapter or node id appears in this file: any chapter can adopt it,
+   and a chapter that never declares the member keeps exactly the behaviour it
+   has today.
 
    `hot` is already the union of hover, keyboard focus and the touch-armed
    state (see the touch-model note below), so keying the chip off it gives
    focus/touch parity for free — the same rule that lights the dot reveals
    the label.
    -------------------------------------------------------------------------- */
-function bandOpacity(p, band) {
-  if (!band) return 0;
-  const { lo, hi } = band;
-  if (p <= lo - COPY_FADE_P || p >= hi + COPY_FADE_P) return 0;
-  const inLo = lo <= -1 ? 1 : Math.min(1, Math.max(0, (p - (lo - COPY_FADE_P)) / COPY_FADE_P));
-  const inHi = hi >= 2 ? 1 : Math.min(1, Math.max(0, ((hi + COPY_FADE_P) - p) / COPY_FADE_P));
-  const a = Math.min(inLo, inHi);
-  return a * a * (3 - 2 * a);
-}
-
 /** `project` is the scene's `steadyProject` — a `Vector3.project(camera)` that
  *  has the renderer's per-frame TAA jitter taken back out. Every world-to-
  *  screen step in here goes through it rather than through `project()`: this
@@ -163,10 +158,38 @@ function bandOpacity(p, band) {
  *  camera, which is Hannah's "shuddering/shivering in place" (2026-08-12).
  *  Optional so an isolated harness can still construct the UI; without it the
  *  chips fall back to the jittering projection they had before. */
-export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: preparedRail = null }) {
+export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
+  rail: preparedRail = null, chapters = {} }) {
   const projectStable = project
     ? (v) => project(v)                 // scene-owned, jitter-free
     : (v, cam) => v.project(cam);       // harness fallback: THREE's own
+
+  /* ==========================================================================
+     THE OWNER TREE (lifecycle.md §6.3, minus the lifecycle)
+
+     Every listener and every timer this module attaches is registered against
+     one of these, so "what does the UI own?" is answered by reading an object
+     instead of by grepping 3,000 lines, and the raw registration sites in this
+     subtree stay countable (tools/test-render-baseline.mjs's manifest). There
+     is no teardown behind them any more — see
+     docs/code-health/DISPOSAL-REMOVED.md — so the children are a naming
+     scheme, not a disposal graph.
+
+     WHY THE CHILDREN ARE THESE FIVE. They are five of the six construction
+     phases below, in the order they run. The rail is not among them: on the
+     shipped path the PAGE builds the rail (main.js -> journey.js prepareRail
+     -> createRail) and hands it in as `preparedRail`, so it was never this
+     module's to own. */
+  const owner = createOwner('ui');
+  const popoverOwner = owner.child('popover');
+  const hotspotsOwner = owner.child('hotspots');
+  const zonesOwner = owner.child('zones');
+  const cardOwner = owner.child('card');
+  /* `lifecycle.md` §6.3 lists a sixth child, `copy`. IT IS NOT CREATED HERE:
+     the copy subsystem (armCopyEntry / paintCopy / the arrival envelope)
+     attaches no listener and arms no timer — it is driven entirely from
+     update(). */
+
   /* ---------------- the side navigator ---------------- */
   // Hannah, 2026-08-07 / redux 2026-08-09: the chapter list left the hero's
   // <nav> row and became a side rail with a site-map panel behind it — now on
@@ -200,29 +223,34 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   const actionRows = {};       // chapterId -> its `.j-actions` row, if it has one
   for (const c of CHAPTERS) {
     const data = CONTENT.chapters[c.id];
-    if (!data || c.id === 'mission') continue;   // Mission is the hero's own DOM
+    // A chapter whose copy is hosted anywhere but a `j-block` does not get one
+    // built here. Mission is the only such chapter today — its copy is the
+    // hero's own DOM — but that is now the manifest's statement rather than an
+    // id test in this loop (order U04, N01's dispatch route).
+    if (!data || COPY_SURFACES[c.id].host !== 'block') continue;
     const b = el('div', `j-block ${CHAPTER_POSITION[c.id] || 'pos-left'}`);
     b.dataset.chapter = c.id;
     b.appendChild(el('h2', 'j-h', data.heading));
-    if (data.sub) {
-      const sub = el('p', 'j-sub', data.sub);
-      const pulse = CHAPTER_SUB_PULSE[c.id];
-      if (pulse) {
-        // pointer-events are off for the whole `.j-copy` layer, so the one
-        // line that answers a hover has to opt back in (`.j-sub.j-pulse`).
-        sub.classList.add('j-pulse');
-        sub.addEventListener('pointerenter', () => {
-          const mod = window.journey && window.journey.chapters && window.journey.chapters[c.id];
-          if (mod && typeof mod.trigger === 'function') mod.trigger(pulse);
-        });
-      }
-      b.appendChild(sub);
-    }
+    if (data.sub) b.appendChild(el('p', 'j-sub', data.sub));
     if (Array.isArray(data.actions) && data.actions.length) {
       // cached on the element: paintCopy reaches for it every frame, for every
       // chapter, and a per-frame querySelector for a node we already hold is a
       // reflow risk for nothing.
       actionRows[c.id] = b.appendChild(buildActions(data.actions));
+      /* AN ACTION MAY POINT BACK INTO THE JOURNEY (the Epilogue's Ownership
+         button, owner's navigation restage 2026-08-26). A `#/<chapter>` href
+         is a real deep link for the keyboard and for "open in new tab", but
+         a same-document click must travel through the journey's own handle —
+         the same interception the logo's #/mission link gets in main.js —
+         rather than writing the hash and going nowhere. External links are
+         untouched: only hrefs in the journey's own hash namespace divert. */
+      for (const a of actionRows[c.id].querySelectorAll('a[href^="#/"]')) {
+        const dest = a.getAttribute('href').slice(2);
+        owner.listen(a, 'click', (e) => {
+          e.preventDefault();
+          onNav(dest);
+        });
+      }
     }
     copyHost.appendChild(b);
     blocks[c.id] = b;
@@ -276,432 +304,43 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   /* ---------------- hotspot proxies ---------------- */
   const hotHost = el('div', 'j-hotspots');
   document.body.appendChild(hotHost);
-  const hotspots = [];
+  /* `hotspots` and `hoverZones` are ALIASES for the registry's own arrays,
+     never copies (U02, journey/ui/hot-state.js). */
+  const hotState = createHotState();
+  const hotspots = hotState.nodes;
 
-  /* ==========================================================================
-     THE NODE POPOVER (Hannah, 2026-08-05)
+  /* The two facts BOTH disclosure vessels need and neither may own: which
+     node wears the chapter's selected LIGHT, and which node's disclosure is
+     COMMITTED — plus the control a committed close hands focus back to. All
+     three were `let`s in this closure that five sub-owners wrote directly.
+     See journey/ui/selection.js. */
+  const selection = createSelection({ hotspots, chapters });
+  const focusReturn = createFocusReturn();
+  /* ---------------- the two disclosure vessels ----------------
+     WHICH vessel a node uses is decided by CONTENT and by nothing else: a node
+     with a `short` line discloses BESIDE its chip in the popover; a node
+     without one (Owned's sixteen contributors, whose whole content is a name,
+     a role and a blurb) discloses in the card. No chapter and no node id
+     appears in that choice. `mountDisclosure` below is the only place it is
+     made, and journey/ui/popover-tier.js records why this build gives the
+     popover the WHOLE disclosure for its nodes rather than making it a preview
+     of a card it would then have to be worse than.
 
-     "When I hover over the items (2RP, Discord, etc.), it should reveal the
-     details upon hover next to where I'm hovering — right now it takes a click
-     and shows way over to the right."
-
-     Hovering a chip now reveals its detail BESIDE the chip. Below is the
-     decision that shapes everything else in this block.
-
-     ---- POPOVER vs CARD: the popover REPLACES the card for these nodes ----
-
-     The brief allowed either "popover previews, card details" or "the popover
-     is the whole disclosure." This build takes the second, because on this
-     content the first is not progressive disclosure — it is a downgrade.
-
-     Look at what each vessel can actually say about a node like 2RP:
-
-       popover:  '2RP' + 'Rigorous research in AI art.' + 'Read the publication'
-       card:     the same title, the same link, plus two paragraphs that open
-                 'This is placeholder summary copy standing in for the 2RP
-                 spotlight until Content/Ops drafts real copy' and a status line
-                 reading 'Status: to be confirmed'.
-
-     The popover carries every word of real content the node has. The card adds
-     only text that admits it is filler. So "hover to preview, click for more"
-     would promise more and deliver less — the weaker surface would win the
-     click, which is exactly the "two competing ideas" failure to avoid. One
-     gesture, one answer.
-
-     ---- which nodes ----
-
-     Eligibility is by CONTENT, not by id — no chapter or node id appears in
-     this file. A node qualifies if it has a `short` line to show. That cleanly
-     selects the six STRUCTURE chips Hannah named (Inspire's ArtCompute / Arca
-     Gidan Prize / 2RP, Connect's ADOS / Hivemind / Discord) and cleanly
-     excludes Owned's sixteen CONTRIBUTORS, who have no `short` — a person's
-     row is a name, a role and a blurb, which is a profile, not a caption.
-
-     That split is the LABEL POLICY distinction already drawn above (page
-     furniture vs a field of people), and it keeps one rule, not two: EVERY
-     chip reveals what it has on hover. A structure chip has a line of prose and
-     a link, so that is what appears beside it. A contributor chip's whole
-     content is its name and role, and revealing that on hover is precisely
-     what `labelOnHover` already does. Clicking a person still opens their
-     profile card, which is the only vessel that fits a profile.
-
-     ---- what CLICK does now ----
-
-     Click / Enter / Space PINS the popover instead of opening a card. Pinning
-     is what makes the popover usable by everyone rather than mouse-only: it
-     survives the pointer leaving, it puts the CTA link in the tab order, and it
-     is the second tap of the existing touch model. It also keeps the ROUTE
-     model whole — journey.js still funnels this through openCard(), and still
-     closes on Escape / a press outside / scroll-intent. A deep link therefore
-     lands on the same thing a click produces, which the split-vessel option
-     could not offer. (It USED to write #/chapter/node and push a history entry
-     the close would spend with Back. Neither happens as of 2026-08-11: the
-     ride writes nothing to the URL, so every close is direct — journey.js
-     closeDetail.)
-
-     ---- a11y contract ----
-
-     The chip stays the disclosure control. `aria-expanded` tracks the PINNED
-     state (via selectedNode/syncExpanded, so it is right on every path
-     including deep links). `aria-describedby` points at the short line while
-     the popover shows, so hovering and focusing announce the same sentence a
-     pointer sees — that is the description, while the chip's own label remains
-     its name. `aria-haspopup="dialog"` is dropped for these nodes because what
-     opens is no longer a dialog; contributors keep it, because theirs is.
-     Escape dismisses. Focus never moves off the chip: this is a non-modal
-     disclosure, so the popover is placed directly AFTER its chip in the DOM and
-     Tab simply walks into the link.
-     ========================================================================== */
-  const POP_GAP = 12;        // clearance between chip box and popover box
-  const POP_MARGIN = 10;     // hard minimum from any viewport edge
-  /* The popover stands POP_GAP away from its chip, so a pointer travelling
-     from one to the other crosses bare canvas — and the chip's pointerleave
-     lands BEFORE the popover's pointerenter. Hiding on that leave would pull
-     the popover out from under the pointer mid-journey and, because a shut
-     popover has pointer-events:none, make its link unreachable by mouse
-     entirely. So a hover-out schedules the hide instead of doing it, and
-     anything that re-opens cancels it. Long enough to cross 12px, short
-     enough not to feel sticky. */
-  const POP_HIDE_MS = 160;
-  /* `.j-pop-enter` owns the card-specific interior and filament sequence.
-     The shared shell gesture has its own `.j-detail-enter` lifetime, ended by
-     animationend, so a cold rendering frame cannot spend it offscreen. This
-     timer only covers the slowest interior part (the 0.62 s filament) with a
-     little air. */
-  const POP_ENTER_MS = 700;
-
-  const {
-    pop,
-    title: popTitle,
-    short: popShort,
-    link: popLink,
-  } = createPopover(hotHost);
-  /* ---- rich stages (2026-08-17, "show, don't tell" previews) ----------
-     Six nodes carry a builder in journey/cards/ that fills a media stage
-     with that project's own assets and motion. The stage is built lazily,
-     ONCE per node, and cached here — switching nodes swaps stage elements
-     rather than rebuilding, so a hover replays instantly. Everything else
-     about the popover (shell, entry, placement, a11y) is untouched; a node
-     without a builder renders exactly the pre-2026-08-17 popover.
-     NB 2026-08-18: this block was lost once to a concurrent session's
-     ui.js write — if the cards ever render as plain popovers again, check
-     that this wiring (import, this block, the showPop/hidePop hooks, and
-     index.html's cards.css link) is still present before debugging cards/. */
-  const stageCache = new Map();   // nodeId -> { el, builder }
-  let activeStage = null;         // the { el, builder } currently in the pop
-
-  function stageFor(nodeId) {
-    if (stageCache.has(nodeId)) return stageCache.get(nodeId);
-    const builder = CARD_BUILDERS[nodeId];
-    if (!builder) { stageCache.set(nodeId, null); return null; }
-    const stageEl = el('div', 'j-pop-stage');
-    builder.build(stageEl, CONTENT.nodes[nodeId]);
-    // One organism, six interiors: every project keeps complete ownership of
-    // its stage while this shared, non-interactive frame supplies the site's
-    // mycelial edge language around it. The wrapper is cached with the stage,
-    // so switching nodes never rebuilds or re-parents a builder's own DOM.
-    const frameEl = el('div', 'j-pop-frame');
-    frameEl.appendChild(stageEl);
-    const entry = { el: frameEl, stage: stageEl, builder };
-    stageCache.set(nodeId, entry);
-    return entry;
-  }
-
-  function setStage(nodeId) {
-    const next = stageFor(nodeId);
-    if (activeStage === next) return;
-    if (activeStage) {
-      activeStage.builder.deactivate();
-      activeStage.el.remove();
-    }
-    activeStage = next;
-    if (next) {
-      pop.prepend(next.el);
-      pop.classList.add('j-pop-rich');
-      pop.dataset.node = nodeId;
-    } else {
-      pop.classList.remove('j-pop-rich');
-      delete pop.dataset.node;
-    }
-  }
-  // The description is the SHORT LINE only, not the whole popover: the title
-  // duplicates the chip's accessible name and the link is a control, and
-  // neither belongs in a description string.
-  // Out of the tab order until a popover is actually PINNED — it gains an href
-  // on first reveal, and an <a href> is tabbable by default.
-
-  let popNode = null;        // the hotspot the popover currently belongs to
-  let popPinned = false;     // committed (click / Enter / Space / deep link)
-  let popHover = false;      // pointer is inside the popover itself
-  let popDismissed = null;   // node id whose TRANSIENT popover Escape dismissed
-  let popHideTimer = null;
-  let hotSeq = 0;            // monotonic: which chip went hot most recently
-
-  function cancelPopHide() {
-    if (popHideTimer) { clearTimeout(popHideTimer); popHideTimer = null; }
-  }
-
-  /* Which chip the popover should follow when several are hot at once.
-     They genuinely can be: keyboard focus sits on one chip while the pointer
-     rests on another, and both are `hot` by the same OR that lights them.
-     Registration order would hand it to whichever was declared first, which
-     is arbitrary and usually wrong — the visitor's LAST action is the one
-     they are waiting on an answer for. */
-  function hottest() {
-    let best = null;
-    for (const h of hotspots) {
-      if (!h.hot || !h.preview) continue;
-      if (!best || h.hotSeq > best.hotSeq) best = h;
-    }
-    return best;
-  }
-
-  /** hottest()'s twin for the CARD (2026-08-14). Same tie-break — the
-   *  visitor's last action is the one they are waiting on — and the same
-   *  content-derived eligibility, read the other way round: a chip with no
-   *  `short` line has no popover to show, so what it discloses is its card.
-   *  That selects Owned's sixteen contributors and nothing else in this build,
-   *  without naming a chapter or a node id. */
-  function hottestCard() {
-    let best = null;
-    for (const h of hotspots) {
-      if (!h.hot || h.preview) continue;
-      if (!best || h.hotSeq > best.hotSeq) best = h;
-    }
-    return best;
-  }
-
-  /** The popover's content for a node, or null if this node doesn't get one.
-   *  `short` is the qualifier — see the eligibility note above. */
-  function previewFor(nodeId) {
-    const node = CONTENT.nodes[nodeId];
-    if (!node || !node.short) return null;
-    const d = node.spotlight || node.card || {};
-    return { title: d.title || node.label, short: node.short, link: d.link || null };
-  }
-
-  /* Anchored beside the chip, flipping rather than clipping.
-
-     Horizontal is the real decision and it is made first: right of the chip by
-     default, LEFT if the popover would cross the right edge, and only if
-     neither side fits does it drop BELOW (a viewport narrower than chip +
-     popover + margins). Vertical is then just centring plus a clamp.
-
-     Why that order matters for "never covers its own chip": the two side
-     placements are horizontally DISJOINT from the chip by construction, so the
-     vertical clamp — which is what handles a chip near the top or bottom edge,
-     and is what makes a top-edge chip open downwards — can never slide the
-     popover over the chip it belongs to. Only the below/above fallback shares
-     the chip's columns, and that one is placed past the chip's own edge. */
-  function placePop() {
-    if (!popNode) return;
-    const c = popNode.btn.getBoundingClientRect();
-    const p = pop.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-
-    let x = c.right + POP_GAP;
-    let side = 'right';
-    if (x + p.width > vw - POP_MARGIN) {
-      x = c.left - POP_GAP - p.width;
-      side = 'left';
-      if (x < POP_MARGIN) side = 'below';
-    }
-
-    let y;
-    if (side === 'below') {
-      x = clamp(c.left, POP_MARGIN, Math.max(POP_MARGIN, vw - POP_MARGIN - p.width));
-      y = c.bottom + POP_GAP;
-      // no room under it either — go above, still clear of the chip
-      if (y + p.height > vh - POP_MARGIN) y = c.top - POP_GAP - p.height;
-    } else {
-      y = c.top + c.height / 2 - p.height / 2;
-      y = clamp(y, POP_MARGIN, Math.max(POP_MARGIN, vh - POP_MARGIN - p.height));
-    }
-
-    pop.dataset.side = side;
-    pop.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-  }
-
-  let popEnterTimer = null;
-
-  /** Start (or restart) the entry choreography. Called only on a FRESH reveal
-   *  — a pointer that leaves a chip and comes back inside POP_HIDE_MS, or a
-   *  syncPop that re-asserts an already-open popover, must not re-play it. */
-  function runPopEntry() {
-    if (popEnterTimer) clearTimeout(popEnterTimer);
-    if (pop.classList.contains('j-pop-enter') || pop.classList.contains('j-detail-enter')) {
-      // chip-to-chip hop inside the entry window: the keyframes only restart
-      // if the class is genuinely absent for a style resolution, so force one
-      pop.classList.remove('j-pop-enter', 'j-detail-enter');
-      void pop.offsetWidth;
-    }
-    pop.classList.add('j-pop-enter');
-    // The shell owns its own completion signal. Keeping this separate from
-    // j-pop-enter means a cold WebGL frame cannot let the 700ms interior timer
-    // remove the fast shell animation before Chrome has painted frame one.
-    if (!reduceMotion.matches) pop.classList.add('j-detail-enter');
-    popEnterTimer = setTimeout(() => {
-      popEnterTimer = null;
-      pop.classList.remove('j-pop-enter');
-    }, POP_ENTER_MS);
-  }
-
-  function stopPopEntry() {
-    if (popEnterTimer) { clearTimeout(popEnterTimer); popEnterTimer = null; }
-    pop.classList.remove('j-pop-enter', 'j-detail-enter');
-  }
-
-  const finishPopShellEntry = (e) => {
-    if (e.target === pop && e.animationName === 'j-detail-arrive') {
-      pop.classList.remove('j-detail-enter');
-    }
-  };
-  pop.addEventListener('animationend', finishPopShellEntry);
-
-  /** Point the popover at a hotspot and show it. */
-  function showPop(h) {
-    const d = h.preview;
-    if (!d) return;
-    // A reveal is fresh when the popover is landing on a node it was not
-    // already showing, or when it was shut. Hover, keyboard focus and the
-    // touch arm all arrive here through the same `hot` state, so all three
-    // get the identical entry with nothing said about pointer type.
-    const fresh = popNode !== h || !pop.classList.contains('open');
-    // a reveal mid-exit cancels the exit and takes the panel back live
-    if (popExitTimer) {
-      clearTimeout(popExitTimer);
-      popExitTimer = null;
-      pop.classList.remove('j-pop-exit');
-    }
-    if (popNode !== h) {
-      setStage(h.id);
-      popTitle.textContent = d.title;
-      popShort.textContent = d.short;
-      if (d.link) {
-        popLink.textContent = d.link.label;
-        popLink.href = d.link.href || '#';
-        popLink.hidden = false;
-      } else {
-        popLink.hidden = true;
-      }
-      if (popNode) popNode.btn.removeAttribute('aria-describedby');
-      popNode = h;
-      // DOM order IS the tab order: sitting immediately after its chip means a
-      // pinned popover's link is simply the next Tab stop. The element is
-      // absolutely positioned, so moving it costs no layout.
-      h.btn.after(pop);
-    }
-    h.btn.setAttribute('aria-describedby', popShort.id);
-    pop.classList.add('open');
-    // rich stages reveal their in-world CTA while pinned (cards.css keys
-    // this class alongside :hover and :focus-within)
-    pop.classList.toggle('j-pop-pinned', popPinned);
-    // a transient popover's link is reachable by pointer but stays out of the
-    // tab order — Tab belongs to the chips until the visitor commits
-    popLink.tabIndex = popPinned ? 0 : -1;
-    // same rule for any controls a rich stage carries (ADOS's event toggle):
-    // pointer-reachable while transient, tabbable only once pinned
-    if (activeStage) {
-      const ti = popPinned ? 0 : -1;
-      for (const b of activeStage.el.querySelectorAll('button, a')) b.tabIndex = ti;
-    }
-    // Place before arming the entry so the contact filament's side is correct
-    // on its first painted frame.
-    placePop();
-    if (fresh) runPopEntry();
-    // fresh reveal -> let the stage run its motion (no-op when reduced)
-    if (fresh && activeStage) activeStage.builder.activate();
-  }
-
-  /* The exit is choreographed, not cut (Hannah, 2026-08-18: "a nice exit
-     animation for when we dehover") — `.j-pop-exit` plays the interiors'
-     settle (cards.css) over POP_EXIT_MS while `.open` keeps the panel on
-     screen, and only then does the real teardown run. A pointer that comes
-     back mid-exit is caught at the top of showPop, which cancels the timer
-     and simply re-opens — the panel never blinks. Reduced motion tears
-     down immediately, as before. */
-  const POP_EXIT_MS = 230;
-  let popExitTimer = null;
-
-  function teardownPop() {
-    if (activeStage) activeStage.builder.deactivate();
-    pop.classList.remove('open', 'j-pop-pinned');
-    popLink.tabIndex = -1;
-    if (popNode) popNode.btn.removeAttribute('aria-describedby');
-    popNode = null;
-    popHover = false;
-  }
-
-  function hidePop() {
-    cancelPopHide();
-    stopPopEntry();
-    if (popExitTimer) return;   // exit already playing; teardown will land
-    if (!pop.classList.contains('open') || reduceMotion.matches) {
-      teardownPop();
-      return;
-    }
-    pop.classList.add('j-pop-exit');
-    popExitTimer = setTimeout(() => {
-      popExitTimer = null;
-      pop.classList.remove('j-pop-exit');
-      teardownPop();
-    }, POP_EXIT_MS);
-  }
-
-  /** Which hotspot the popover SHOULD be showing, or null for none.
-   *  One function so the deferred hide below re-asks exactly the question
-   *  syncPop asked — an earlier version re-tested only `hottest()` there and
-   *  silently ignored `popDismissed`, which made Escape a no-op whenever focus
-   *  stayed on the chip (which is always, for a non-modal disclosure). */
-  function popTarget() {
-    if (popPinned && popNode) return popNode;
-    const hot = hottest();
-    if (hot && popDismissed !== hot.id) return hot;
-    return null;
-  }
-
-  /** The single place that decides what the popover shows. Pinned wins;
-   *  otherwise the hot chip; otherwise a pointer resting on the popover itself
-   *  holds it open, so a mouse can travel from the chip to the link. */
-  function syncPop() {
-    cancelPopHide();
-    const want = popTarget();
-    if (want) { showPop(want); return; }
-    if (popHover && popNode) return;           // pointer is in the popover
-    // Not an immediate hide — see POP_HIDE_MS. The decision is re-asked when
-    // the timer fires, so a pointer that has since landed on the popover (or
-    // on another chip) keeps it.
-    if (pop.classList.contains('open')) {
-      popHideTimer = setTimeout(() => {
-        popHideTimer = null;
-        if (!popTarget() && !popHover) hidePop();
-      }, POP_HIDE_MS);
-    } else hidePop();
-  }
-
-  pop.addEventListener('pointerenter', (e) => {
-    if (e.pointerType === 'touch') return;
-    popHover = true;
-  });
-  pop.addEventListener('pointerleave', (e) => {
-    if (e.pointerType === 'touch') return;
-    popHover = false;
-    syncPop();
-  });
-  /* A first mobile tap leaves the popover in its transient, hotspot-owned
-     state. Pressing one of the popover's own controls then moves focus off
-     that hotspot before `click`, which used to tear the popover down before
-     the control could act. Commit through the normal disclosure path on
-     pointerdown, while the hotspot still owns focus; the ensuing click keeps
-     its native button/link behavior, and the pinned popover retains the
-     standard outside-tap, scroll and Escape exits. */
-  pop.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'touch' || popPinned || !popNode) return;
-    const control = e.target instanceof Element
-      ? e.target.closest('button, a[href], input, select, textarea')
-      : null;
-    if (control && pop.contains(control)) onOpen(popNode.id, popNode.btn);
+     THE SHELLS ARE BUILT HERE, in one place and in one sequence, because DOM
+     construction order is observable — it is the document order the captures
+     read and the record order the trace oracle compares. That is also why the
+     live region is built between the card's shell and the card's listeners
+     rather than beside the vessel that announces most through it. */
+  const popShell = createPopover(hotHost);
+  const popover = createPopoverTier({
+    shell: popShell, owner: popoverOwner, hotState, reduceMotion,
+    selection, focusReturn, onOpen,
+    /* Two forward references, and they are forced rather than chosen: the live
+       region and the card's own state are built further down this function, at
+       the positions their DOM has always occupied. Neither is read until a
+       visitor commits a disclosure, which is many frames later. */
+    announce: (message) => announce(message),
+    requireVesselFree: () => { if (cardTier.isOpen()) closeCard(); },
   });
 
   /* ---- the touch model (PL-1.2 / handoff) ----------------------------------
@@ -722,29 +361,26 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
 
      The armed node keeps its lit state even though a touch pointer fires
      pointerleave the moment the finger lifts; hover, focus and arm are three
-     independent reasons for the same visual, OR'd together. */
-  let armed = null;                 // the touch-focused hotspot, or null
+     independent reasons for the same visual, OR'd together.
 
-  function clearArmed(except = null) {
-    if (armed && armed !== except) { armed.armed = false; armed.refresh(); }
-    if (armed !== except) armed = null;
-  }
+     WHICH node is armed is not stored here: it is read off the records by
+     journey/ui/hot-state.js, so the arm cannot disagree with itself. */
 
   // Tap anywhere that is not a hotspot clears the focus state — including the
   // canvas, whose tap handling (organism.js, journey input policy) is unaffected (this listener
   // observes, never cancels).
-  document.addEventListener('pointerdown', (e) => {
+  owner.listen(document, 'pointerdown', (e) => {
     const outside = !(e.target instanceof Node) || !hotHost.contains(e.target);
     if (!outside) return;
     // A pinned popover is non-modal, so pressing anywhere else dismisses it —
     // for EVERY pointer type, not just touch (a mouse has no other way out
     // besides Escape). Routed through onClose() so journey.js unwinds its own
     // detail state with it.
-    if (popPinned) {
+    if (popover.isPinned()) {
       // Closing returns focus to the hotspot. Remember the dismissal BEFORE
-      // that focus move, exactly as Escape does below, or syncPop() sees the
-      // newly-hot chip and immediately recreates the transient popover.
-      if (popNode) popDismissed = popNode.id;
+      // that focus move, exactly as Escape does below, or the popover's sync
+      // sees the newly-hot chip and immediately recreates the transient one.
+      popover.dismissShown();
       onClose();
     }
     // The pinned CARD closes on a press outside it too (2026-08-18, Hannah —
@@ -753,69 +389,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
     // here, so tapping another face retargets the card through that chip's
     // own handler instead of closing-then-reopening; the grip, the body and
     // the close button are all card.contains and keep their own semantics.
-    if (cardIsOpen && cardPinned && !card.contains(e.target)) onClose();
-    if (e.pointerType !== 'touch' || !armed) return;
-    clearArmed();
+    if (cardTier.isOpen() && cardTier.isPinned() && !card.contains(e.target)) onClose();
+    if (e.pointerType !== 'touch' || !hotState.armed()) return;
+    hotState.disarm();
     if (document.activeElement && hotHost.contains(document.activeElement)) {
       document.activeElement.blur();
     }
   }, { capture: true });
 
-  /* ---- label policy plumbing (see the note at module scope) ---- */
-  let policyPending = false;
-
-  function applyLabelPolicy(h, pol) {
-    /* `chip: 'none'` — THE CHIP PAINTS NOTHING, EVER (2026-08-14, Hannah:
-       "there are now two things that show on the orbs upon hover, can you
-       please delete the smaller ones, we should only keep the black one
-       above").
-
-       The smaller of the two was this chip: a dark pill carrying a gold dot
-       and "CONTRIBUTOR · RESEARCHER", revealed on hover by `labelOnHover`.
-       It long predates the card's transient tier — it is the label policy this
-       function has always applied — but the two only ever showed TOGETHER as
-       of 2026-08-14, and the panel says both of the things the pill did.
-
-       DELETED, not hidden: the label and the dot come out of the DOM, so there
-       is no invisible text left in the a11y tree and no element left painting
-       zero pixels. What stays is everything that was never visible in the
-       first place — the button (the tab stop), its `aria-label` (the whole
-       accessible name, which never depended on the label being drawn), and the
-       hit pad, which IS the target and always was (696e95d). The chip is now
-       what a hover zone is: a control with no pixels of its own, answering for
-       a thing the scene draws.
-
-       Per-node, through the policy a chapter already owns, so this is an
-       OWNED-ONLY removal: Inspire's and Connect's chips declare no policy at
-       all, keep their resting pills, and are untouched — verified by their
-       label boxes still measuring their full width. */
-    // A bare chip draws nothing at rest either, so it is `labelOnHover` in
-    // every sense the rest of this file uses the flag for — the collision
-    // dodge skips it, and the arrival stagger does not queue it.
-    // AT parity (the whole point): the chip may be invisible for most of its
-    // life, the ACCESSIBLE NAME never is. A screen reader hears the same
-    // "Name · Role" a pointer reveals, at rest and while hot alike. Set for
-    // every policied node, hover-only or not, so the name is stated rather
-    // than inherited from text whose visibility this file is now changing.
-    applyHotspotLabelPolicy(h, pol);
-  }
-
-  /** Ask each chapter module, once, what it wants for its own nodes.
-   *  window.journey (and with it the chapter modules) is published AFTER
-   *  registration, so this runs from the frame loop until it can succeed. */
-  function resolveLabelPolicies() {
-    const mods = (typeof window !== 'undefined' && window.journey) ? window.journey.chapters : null;
-    if (!mods) return;                       // not published yet — try next frame
-    let left = false;
-    for (const h of hotspots) {
-      if (h.policyDone) continue;
-      const mod = mods[h.chapter];
-      if (!mod) { left = true; continue; }   // chapter not mounted yet
-      h.policyDone = true;
-      if (typeof mod.labelPolicy === 'function') applyLabelPolicy(h, mod.labelPolicy(h.id));
-    }
-    policyPending = left;
-  }
+  /* LABEL POLICY moved to journey/ui/label-policies.js (order U06). It held
+     `policyPending` — the last mutable binding in this closure shared across
+     more than one sub-owner, and the reason `update()`'s first statement was
+     a conditional rather than a call. */
+  const policies = createLabelPolicies({ hotspots, chapters });
 
   /** Register a named node. `world()` returns a THREE.Vector3 or null.
    *  Registration order within a chapter is the label stagger order.
@@ -829,7 +415,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
     btn.type = 'button';
     btn.dataset.node = id;
     btn.dataset.chapter = chapter;
-    const preview = previewFor(id);
+    const preview = popover.previewFor(id);
     // A node that discloses a popover does NOT open a dialog, and saying so
     // would be a lie to AT. `aria-expanded` (set just below) is the whole
     // contract for a non-modal disclosure. Contributors still open a real modal
@@ -872,6 +458,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false, iconTab,
+      // The tempo floor's per-chip state (DEFECT-01 #3). Written only by
+      // journey/ui/hotspot-frame.js; initialised here for the same reason
+      // `a`, `armAt` and `sup` are — the record states its whole shape at
+      // registration, so no reader ever meets an `undefined` field.
+      beatAt: null, beatA: 0,
       radius: typeof radius === 'function' ? radius : null,
       // Per-node scene gate (2026-08-16): when a chapter supplies one, this
       // chip arrives with what the scene DRAWS for its node (Connect: the
@@ -885,6 +476,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       // clock. Reverse scrubs therefore withdraw the marker in the same frame
       // as its core instead of leaving a fading pill behind a moving node.
       revealScrub: !!revealScrub,
+      // A direct navigation retires the source scene synchronously, but its
+      // copy remains on the camera-flight crossfade. The hotspot frame uses
+      // these three fields to carry an already-visible initiative marker on
+      // that exact outgoing copy envelope instead of losing it on the click.
+      departureTicket: null, departureA: 0, departureCopy: 0,
       // ...and the band that close edge is read from, built once — the
       // placement loop runs per frame and COPY_BANDS never moves after load.
       revealBand: COPY_BANDS[chapter]
@@ -905,34 +501,32 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       // that says nothing asks its chapter, once, on the next frame.
       policyDone: labelOnHover !== undefined,
     };
-    if (labelOnHover !== undefined) applyLabelPolicy(h, { labelOnHover });
-    else policyPending = true;
+    policies.register(h, labelOnHover);
     // one visual, three reasons — see the touch-model note above
     h.refresh = () => {
-      const on = h.hover || h.focused || h.armed;
-      if (on === h.hot) return;
-      h.hot = on;
+      if (!hotState.latch(h)) return;   // the union of the three, and the latch
+      const on = h.hot;
       btn.classList.toggle('hot', on);
       if (h.onHot) h.onHot(on);
-      if (on) h.hotSeq = ++hotSeq;      // newest hot chip wins — see hottest()
+      hotState.rank(h);                 // newest hot chip wins — see hottest()
       // Leaving the chip re-arms a popover Escape dismissed, so the next hover
       // works again — the dismissal is of that one reveal, not of the node.
-      if (!on && popDismissed === h.id) popDismissed = null;
+      if (!on) popover.rearm(h.id);
       // ...and the same for the card's own dismissal (2026-08-14). A close is
       // of that one reveal, not of the person. A dismissal the POINTER is
       // parked on is exempt — it is re-armed by a real pointer move off the
       // chip instead; see cardDismissBtn.
-      if (!on && cardDismissed === h.id && !cardDismissBtn) cardDismissed = null;
+      if (!on) cardTier.rearm(h.id);
       // The popover keys off the SAME `hot` state that lights the chip, which
       // is what buys hover / keyboard-focus / touch-armed parity for free.
-      syncPop();
+      popover.sync();
       // The card now does too. Which of the two answers is decided by content
-      // (a `short` line or not), never by chapter — see hottestCard().
-      syncCard();
+      // (a `short` line or not), never by chapter — see the router below.
+      cardTier.sync();
     };
 
-    btn.addEventListener('pointerdown', (e) => { h.pointer = e.pointerType || 'mouse'; });
-    btn.addEventListener('click', () => {
+    hotspotsOwner.listen(btn, 'pointerdown', (e) => { h.pointer = e.pointerType || 'mouse'; });
+    hotspotsOwner.listen(btn, 'click', () => {
       const via = h.pointer;
       h.pointer = null;
       /* THE FIRST TAP, and what it is for (amended 2026-08-14).
@@ -953,11 +547,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
          So a tap on a card chip goes STRAIGHT to the commit. Popover chips
          keep the two-tap model exactly as shipped — their first tap still
          earns its keep. */
-      if (via === 'touch' && armed !== h && h.preview) {
+      if (via === 'touch' && hotState.armed() !== h && h.preview) {
         // first tap: take the focus state, show it, and stop.
-        clearArmed(h);
-        armed = h;
-        h.armed = true;
+        hotState.arm(h);
         h.refresh();
         btn.focus({ preventScroll: true });
         return;
@@ -973,7 +565,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
          without a pointer. Popover nodes keep their existing click-to-pin
          behaviour because their pinned tier makes the CTA keyboard-reachable. */
       const clickedOpenHoverCard = (via === 'mouse' || via === 'pen')
-        && h.hover && !h.preview && cardIsOpen && !cardPinned && cardNodeId === h.id;
+        && h.hover && !h.preview && cardTier.isOpen() && !cardTier.isPinned()
+        && cardTier.nodeId() === h.id;
       if (clickedOpenHoverCard) {
         btn.blur();
         return;
@@ -987,110 +580,28 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
 
     // A touch pointerenter fires at finger-down and pointerleave at lift, so
     // these are the mouse's channel; `armed` is the finger's.
-    btn.addEventListener('pointerenter', (e) => {
+    hotspotsOwner.listen(btn, 'pointerenter', (e) => {
       if (e.pointerType === 'touch') return;
       h.hover = true; h.refresh();
     });
-    btn.addEventListener('pointerleave', (e) => {
+    hotspotsOwner.listen(btn, 'pointerleave', (e) => {
       if (e.pointerType === 'touch') return;
       h.hover = false; h.refresh();
     });
-    btn.addEventListener('focus', () => { h.focused = true; h.refresh(); });
-    btn.addEventListener('blur', () => {
+    hotspotsOwner.listen(btn, 'focus', () => { h.focused = true; h.refresh(); });
+    hotspotsOwner.listen(btn, 'blur', () => {
       h.focused = false;
-      if (h.armed) { h.armed = false; if (armed === h) armed = null; }
+      h.armed = false;             // the arm is the record's; nothing else holds it
       h.refresh();
     });
     hotHost.appendChild(btn);
-    hotspots.push(h);
-    return h;
+    return hotState.add(h);
   }
 
-  /* ---------------- THE HOVER HOLD (2026-08-09) ----------------
-     Hannah: "when I'm hovering over an individual item, can you make it so
-     that it stays in place… right now they get moved by the wind and stuff,
-     and if they're being moved when I hover it causes a weird shudder."
-
-     She is exactly right about the cause, and the measurement says the wind
-     is the WHOLE of it. A chip is projected every frame from a world anchor
-     that rides the scene — Inspire's three anchor mid-plume, on the streak
-     head that the breeze is carrying (chapters/inspire/index.js labelOffsets)
-     — so the chip is only as still as the thing it annotates. Traced at the
-     Inspire rest over 12 s, 1440x900:
-
-       chip         total wander        of which the CAMERA
-       artcompute   29.5 x 41.5 px      0.65 x 0.62 px
-       arca         28.3 x 29.0 px      0.65 x 0.62 px
-       tworp        14.8 x 12.6 px      0.65 x 0.62 px
-
-     — up to 2.7 px of movement between consecutive frames, and 98% of it is
-     the anchor, not the lens. A 41 px target that keeps sliding out from
-     under the pointer is not a target; that is the shudder.
-
-     So a HOT chip (hover, keyboard focus or touch-armed — the same `hot` the
-     chip's own lit state runs on, so all three channels get the same answer)
-     freezes its WORLD ANCHOR, not its screen position. Freezing the anchor is
-     what keeps the chip honest: it stops riding the wind but keeps riding the
-     LENS, so a wheel scroll or a nav jump under a held hover still carries the
-     chip with the scene instead of pinning it to the glass. Everything
-     downstream is derived from the same `w` — the dot, the pill's flip and
-     nudge, the hit pad's centre AND its projected radius, the copy-rect
-     suppression test, and placePop() off the chip's own rect — so all of them
-     hold still together, and none of them can disagree about where the node
-     is. The pad (696e95d) and the popover (d1ecc23) are untouched: they are
-     downstream of this, and a still chip is the condition they were both
-     designed for.
-
-     IT CANNOT DRIFT OUT OF ALIGNMENT WITH A LONG HOVER. The anchor's motion
-     is a bounded oscillation, not a drift: traced over 24 s the live anchor's
-     distance from a fixed one runs 0 -> 39 px -> 0 with a ~5 s period and
-     returns to under 1 px four times. So the held chip's error is bounded by
-     the swing, never accumulates, and the node keeps coming back to it.
-
-     RELEASE IS A MOVEMENT, NOT A JUMP. Going cold does not restore the live
-     anchor in one frame. The hold becomes an OFFSET — where the chip is minus
-     where its node now is — and that offset decays geometrically to zero, so
-     the chip glides back onto its node and is then dropped entirely.
-
-     The offset, and not a lerp of the held point toward the live one, because
-     the live one is MOVING: a first-order lag chasing a moving target settles
-     at a nonzero steady-state error (measured here: the anchor's typical
-     0.27 px/frame against a 0.1/frame gain parks the chip ~2.7 px behind its
-     node, forever). A chip that had been hovered once would then have carried
-     a permanent low-pass filter for the rest of the ride. Decaying the offset
-     instead converges on zero whatever the node is doing, and the hold is
-     released outright below 0.001 world units (~0.14 px).
-
-     dt === 0 is the placement path (deep link, ?p=, the ?capture= freeze):
-     nothing is hot there and any hold is dropped outright, so every frozen
-     golden is bit-identical by construction.
-
-     2026-08-10 ADDENDUM: Hannah generalised the request — chips and their
-     markers should never ride the wind in ANY state — and the fix landed at
-     the SOURCE: Inspire's nodeWorld() now anchors each chip to its release
-     lip at the mushroom's REST pose (wind rotations zeroed — see the
-     mushroomRestMatrix block in chapters/inspire/index.js), and Connect's
-     hubs and Owned's faces were static world points all along. So every
-     live anchor this loop reads is now constant, all states sit at the
-     camera-only floor (measured 0.65 x 0.62 px over 12 s in all three
-     chapters), and this hold is a GUARD: it costs nothing against a static
-     anchor and keeps the hot state honest if any future chapter registers a
-     moving one. */
-  function holdAnchor(h, live, dt) {
-    if (!live) { h.holdAt = h.holdOff = null; return null; }
-    if (h.hot) {
-      h.holdOff = null;
-      if (!h.holdAt) h.holdAt = live.clone();
-      return h.holdAt;
-    }
-    // the frame the hover ends, the held POINT becomes a held OFFSET
-    if (h.holdAt) { h.holdOff = h.holdAt.sub(live); h.holdAt = null; }
-    if (!h.holdOff) return live;
-    if (dt === 0) { h.holdOff = null; return live; }
-    h.holdOff.multiplyScalar(Math.max(0, 1 - dt * HOTSPOT_HOLD_HOME_K));
-    if (h.holdOff.lengthSq() < 1e-6) { h.holdOff = null; return live; }
-    return h.holdOff.clone().add(live);
-  }
+  /* THE HOVER HOLD moved to journey/ui/hotspot-frame.js (order U06), with the
+     whole placement machine it guards. It is a per-frame concern and it reads
+     `h.hot`; keeping it here while its only caller left would have been a
+     helper stranded on the far side of the seam. */
 
   /* ==========================================================================
      HOVER ZONES (report C, 2026-08-06) — and the crown's COMMIT (2026-08-13)
@@ -1170,150 +681,28 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
      sixteen contributors. Stacking is by explicit z-index, not DOM order, so
      moving it changes nothing about what paints over what.
      ========================================================================== */
-  /** Time inside the zone before a hover commits. The only test there is:
-   *  340 ms is longer than a pointer crossing the top of the frame on its way
-   *  somewhere else, and short enough that a visitor who meant it does not
-   *  wonder whether the control is broken. (Was 380 ms plus a stillness test;
-   *  see the note above for why the stillness half is gone.) */
-  const ZONE_DWELL_MS = 340;
+  /* THE ZONE'S COMMIT MACHINE AND ITS FRAME PASS BOTH MOVED (order U06) to
+     journey/ui/hover-zone.js. They were 700 lines apart in this file — the
+     six-binding dwell/commit machine here, the per-frame projection inside
+     `update()` — and they are one machine: the frame pass is what takes a
+     zone out of the commit machine when it leaves the frame. What stayed is
+     this file's job: building the host, and composing the owner. */
   const zoneHost = el('div', 'j-hotzones');
   document.body.insertBefore(zoneHost, hotHost);
-  const hoverZones = [];
-  function addHoverZone({ id, chapter, world, radius, onHot, action, label, announce: fallback }) {
-    const act = typeof action === 'function' ? action : null;
-    const zEl = el(act ? 'button' : 'i', 'j-hotzone');
-    if (act) {
-      zEl.type = 'button';
-      zEl.setAttribute('aria-label', label || id);
-    } else {
-      // scenery: never in the a11y tree, never in the tab order
-      zEl.setAttribute('aria-hidden', 'true');
-    }
-    zoneHost.appendChild(zEl);
-    const z = { id, chapter, world, radius: radius || 0.3, onHot, el: zEl, live: false, hot: false, r: 0 };
-
-    /** The light. Idempotent per visit — `hot` is the latch. */
-    function light(on) {
-      if (z.hot === on) return;
-      z.hot = on;
-      z.onHot(on);
-    }
-
-    if (act) {
-      let busyUntil = 0;
-      let busyTimer = null;
-      let dwellTimer = null;
-      let enteredAt = 0;
-      let spent = false;              // one commit per visit — see above
-      let lastPointerType = '';
-
-      const stopDwell = () => {
-        if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; }
-      };
-
-      function fire() {
-        stopDwell();
-        // BUSY IS CHECKED BEFORE THE VISIT IS SPENT (2026-08-16). It used to
-        // spend first, so a hover arriving during the 1250 ms swap burned the
-        // visit and did nothing — the visitor then had to leave and come back
-        // to get any response at all, which read as the control ignoring them
-        // at random. Refusing without spending means the gesture simply has no
-        // effect while a swap is already running, which is the truth: a switch
-        // is in flight. Nothing reschedules, so this cannot fire late either.
-        if (performance.now() < busyUntil) return;
-        spent = true;
-        const res = act();
-        // The chapter refuses while its own transition is running; that is
-        // its call to make, and it is not an error.
-        if (!res) return;
-        const msg = (res && typeof res.announce === 'string') ? res.announce : fallback;
-        if (msg) announce(msg);
-        const ms = (res && typeof res.busyMs === 'number') ? res.busyMs : 0;
-        if (ms > 0) {
-          busyUntil = performance.now() + ms;
-          // aria-disabled, NOT the `disabled` attribute. A real `disabled`
-          // blurs the element the instant it is set, so a keyboard visitor
-          // who pressed Enter would be thrown back to <body>. This keeps
-          // focus where the visitor put it and says "not now" to AT; the
-          // guard above is what actually refuses the second commit.
-          zEl.setAttribute('aria-disabled', 'true');
-          if (busyTimer) clearTimeout(busyTimer);
-          busyTimer = setTimeout(() => {
-            busyTimer = null;
-            zEl.removeAttribute('aria-disabled');
-          }, ms);
-        }
-      }
-
-      /** Poll rather than one timer: "still for N ms" is a moving deadline,
-       *  and re-arming a timeout on every pointermove would be a timer per
-       *  mouse event. 90 ms is far below the windows it is testing. */
-      function watch() {
-        dwellTimer = null;
-        if (!z.hot || spent) return;
-        if (performance.now() - enteredAt >= ZONE_DWELL_MS) {
-          fire();
-          return;
-        }
-        dwellTimer = setTimeout(watch, 90);
-      }
-
-      zEl.addEventListener('pointerenter', (e) => {
-        if (e.pointerType === 'touch') return;
-        light(true);
-        enteredAt = performance.now();
-        spent = false;
-        stopDwell();
-        dwellTimer = setTimeout(watch, 90);
-      });
-      zEl.addEventListener('pointerleave', (e) => {
-        if (e.pointerType === 'touch') return;
-        stopDwell();
-        spent = false;                   // leaving re-arms the next visit
-        light(false);
-      });
-      zEl.addEventListener('pointerdown', (e) => { lastPointerType = e.pointerType; });
-      // click covers mouse, pen, tap AND Enter/Space on the <button>.
-      zEl.addEventListener('click', () => {
-        // A finger has no hover, so the tap has to bring the light with it —
-        // and the crown's own response is a one-shot wave, so firing it here
-        // is exactly the gesture a mouse gets on entry. Keyboard gets its
-        // light from focus (below), so only touch needs this.
-        if (lastPointerType === 'touch') { z.hot = false; light(true); }
-        lastPointerType = '';
-        // ONE COMMIT PER VISIT INCLUDES THE CLICK (2026-08-16). This used to
-        // call fire() unconditionally, so a mouse visitor whose hover had
-        // already committed got a SECOND re-deal the moment they clicked the
-        // thing they were looking at — two swaps from one gesture, the
-        // "contradictory effects" in Hannah's report. `spent` is false on
-        // touch (no hover ever happened) and false for a keyboard press that
-        // did not dwell, so both of those still commit exactly once.
-        if (spent) return;
-        fire();
-      });
-      // Focus is hover's equal (PL-2.2): the colony lights for a keyboard
-      // exactly as it does for a pointer, which is also this control's
-      // visible focus response out in the scene. The ring on the zone itself
-      // (journey/site.css) is the DOM half of the same statement.
-      zEl.addEventListener('focus', () => { light(true); });
-      zEl.addEventListener('blur', () => { stopDwell(); spent = false; light(false); });
-      // A zone that goes off-frame or off-chapter mid-commit must not leave a
-      // timer running against an element nobody can reach.
-      z.dismiss = () => { stopDwell(); spent = false; };
-    } else {
-      zEl.addEventListener('pointerenter', (e) => {
-        if (e.pointerType === 'touch') return;
-        light(true);
-      });
-      zEl.addEventListener('pointerleave', (e) => {
-        if (e.pointerType === 'touch') return;
-        light(false);
-      });
-    }
-
-    hoverZones.push(z);
-    return z;
-  }
+  const zones = createHoverZones({
+    hotState,
+    owner: zonesOwner,
+    /* Indirected, not passed: the live region is constructed further down
+       (it is a DOM concern and belongs with the other hosts), and this owner
+       is built HERE because the host's insertion point is what fixes the
+       crown's place in the tab order. The same wrapper the hotspot registry
+       uses for the same reason. */
+    announce: (message) => announce(message),
+    host: zoneHost,
+    el,
+    sheetQuery,
+  });
+  const addHoverZone = zones.add;
 
   /* ==========================================================================
      THE DETAIL CARD (W3-A) — ANCHORED TO ITS NODE (Hannah, 2026-08-13)
@@ -1380,23 +769,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
      would have to give up. Hannah's report is about the desktop side card,
      and so is the fix.
      ========================================================================== */
-  /** Clearance between the node's own disc and the card's box. Wider than
-   *  POP_GAP (12) because the thing being cleared here is a lit face with an
-   *  ember ring and a fray, not a 9 px dot. */
-  const CARD_GAP = 16;
-  /** Hard minimum from any viewport edge. */
-  const CARD_MARGIN = 12;
-  /** Air around the persistent navigator, including its active-ring glow. */
+  /** Air around the persistent navigator, including its active-ring glow.
+   *  A PAD IS THE ASKER'S POLICY, not a property of the navigator: how much
+   *  room this thing needs beside that thing. The silhouette it is measured
+   *  from — including the 22 px the active marker paints outside its own box
+   *  — belongs to journey/layout/rail-geometry.js and is not restated here. */
   const RAIL_EXCLUSION_PAD = 14;
-  /** The active chapter marker paints a 22 px shadow outside its DOM box.
-   *  Profile controls need another 24 px of honest air outside that complete
-   *  painted silhouette, not merely outside `.j-rail-list`. */
-  const RAIL_ACTIVE_HALO_PX = 22;
-  const PROFILE_RAIL_CLEARANCE_PX = 24;
-  /** The card-specific words and contact filament run while `.j-card-enter`
-   *  is set. The shared shell's shorter `.j-detail-enter` lifetime ends from
-   *  its own animationend, independently of this 0.62 s filament window. */
-  const CARD_ENTER_MS = 700;
 
   // A real modal dialog: role + aria-modal + a title that labels it, focus
   // moved in on open, TRAPPED while open, and returned to the trigger on close
@@ -1405,97 +783,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   // The grab handle for the bottom-sheet form (PL-1.3). Purely a pointer
   // affordance — the keyboard's route out is Escape and the close button — so
   // it is hidden from AT rather than announced as a mystery control.
-  const { card, grip: cardGrip, close: cardClose, body: cardBody } = createCard();
-  cardClose.addEventListener('click', () => onClose());
-  let returnFocus = null;
-  let cardIsOpen = false;       // the TRUTH; `card.hidden` lags it by one fade
-  let fadeTimer = null;
-
-  /* ==========================================================================
-     THE CARD'S TWO TIERS (2026-08-14, Hannah)
-     ==========================================================================
-     > "Remove the current separate hover state. The existing click state
-     >  should become the hover state instead… available immediately when
-     >  entering the section… On de-hover, return immediately to the default
-     >  state. Clicking should no longer be required to reveal this state."
-
-     The card was a single, MODAL tier: click to open, focus moved in and
-     TRAPPED, `claimInput(card, { modal: true })`, and journey.js's `detail`
-     state faded every chip out ("the frame belongs to the detail"). None of
-     that can survive contact with a pointer: a panel that steals focus every
-     time a mouse crosses a face is unusable, and a reveal that hides the
-     sixteen chips would hide the very chip holding it open — the hover would
-     destroy its own cause, one frame later, forever.
-
-     So the card grows exactly the two tiers the POPOVER has had since e20f7ff,
-     and for the same reasons. Nothing here is a new idea; it is the popover's
-     contract applied one vessel up.
-
-       TRANSIENT — pointer hover or keyboard focus. Driven by the same `hot`
-       state that lights the chip, through syncCard(), so hover and focus get
-       the identical reveal with nothing said about pointer type. It is NOT a
-       dialog and does not claim to be one: `role`/`aria-modal`/`aria-labelledby`
-       come off, the chip points at the panel's prose with `aria-describedby`
-       (the popover's own mechanism), the box is `pointer-events: none` so it
-       can never be the thing you are hovering, and it carries no controls at
-       all — the ✕ is hidden, because de-hover is the close. Focus does not
-       move. Input is not claimed, so the wheel still scrubs the journey
-       underneath it. `journey.detail` is NOT set, which is what keeps the
-       chips alive and the field hoverable.
-
-       PINNED — click / Enter / Space / a deep link / an inbound route. The
-       shipped modal contract, unchanged to the letter: `role="dialog"` +
-       `aria-modal="true"`, focus to the ✕, the trap, `claimInput` modal,
-       `aria-expanded` true on its chip, Escape closing and returning focus.
-
-     WHICH NODES get the card at all is decided by CONTENT, not by id — the
-     same split previewFor() already draws. A node with a `short` line
-     discloses BESIDE its chip in the popover; a node without one (Owned's
-     sixteen contributors, whose whole content is a name, a role and a blurb)
-     discloses in the card. No chapter or node id appears in this file.
-
-     WHAT DID NOT MOVE ONTO HOVER, and why:
-
-       · `journey.detail` / `modalDetail`. See above — it is self-cancelling,
-         and "the frame belongs to the detail" is a statement a transient
-         reveal has no business making.
-       · The focus trap, the focus move and the modal input claim. A trap with
-         no deliberate act behind it is a trap the visitor never asked for and
-         cannot predict; and a hover that claimed input would stop the page
-         scrolling under a resting mouse.
-       · `aria-expanded`. It tracks the COMMITTED state only (see pinnedNode
-         below), exactly as it does for the popover — a hover reveal is not a
-         disclosure the visitor has opened.
-
-     WHAT DID move onto hover, beyond the panel itself: the chapter's own
-     SELECTED treatment (notifySelect -> portraits.setSelected, the ember-rim
-     and strand response). Hannah asked for "the full current click-state
-     treatment", and that light is part of it. It is the visual half of
-     selection, so it rides the visual tier; `aria-expanded` is the semantic
-     half, so it rides the committed one. */
-  let cardPinned = false;       // committed, vs. a transient hover/focus reveal
-  let cardNodeId = null;        // whose content is rendered in the box
-  let cardDismissed = null;     // node whose card Escape (or a close) took away
-  let cardDescIds = '';         // the prose ids the chip points `aria-describedby` at
-  /* WHAT RE-ARMS A DISMISSED CARD, and why it is not simply "the chip goes
-     cold" (which is the whole of the popover's rule).
-
-     Closing a PINNED card hands the sixteen chips back on the same tick — they
-     were `visibility: hidden` while the dialog owned the frame. Chrome
-     recomputes pointer boundary events after that, so a pointer resting on the
-     face it just closed receives a synthetic `pointerleave` + `pointerenter`
-     pair with no movement behind it. Under the popover's rule that leave reads
-     as "the visitor left the chip", clears the dismissal, and the enter one
-     frame later puts the panel straight back: Escape closes a dialog and a
-     hover reveal appears in its place, which is the same "Escape that visibly
-     does nothing" popDismissed exists to prevent. The popover never meets this
-     because its chips are never hidden.
-
-     So a POINTER dismissal is re-armed by the pointer actually leaving the
-     chip — tested against live hit geometry on a real `pointermove`, which a
-     visibility change does not produce. A KEYBOARD dismissal has no pointer to
-     test and is re-armed by the chip going cold, exactly as the popover's is. */
-  let cardDismissBtn = null;    // the chip a POINTER dismissal is parked on, or null
+  const cardShell = createCard();
+  const { card } = cardShell;
+  cardOwner.listen(cardShell.close, 'click', () => onClose());
 
   /* a11y debt #5: a polite live region. Retargeting an open card (one hotspot
      straight to the next) replaces the dialog's contents while focus is
@@ -1503,231 +793,58 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
      reader user is silently reading the wrong node. This says what happened.
      It is only used for the retarget/no-trigger cases; a normal open moves
      focus into the dialog, which announces itself. */
-  const { announce } = createLiveRegion();
+  const { announce } = createLiveRegion({ owner });
 
-
-  // Focus trap. The card's own controls are the whole world while it is open,
-  // so Tab cycles inside it instead of walking out into a nav the dialog has
-  // just declared inert. Shift+Tab wraps the other way.
-  card.addEventListener('keydown', (e) => {
-    // Only a COMMITTED card traps. A transient reveal holds no focus and has
-    // no controls to cycle, so there is nothing here to trap and trapping it
-    // would strand a keyboard visitor inside a panel they never opened.
-    if (e.key !== 'Tab' || !cardIsOpen || !cardPinned) return;
-    const items = [...card.querySelectorAll('a[href], button:not([disabled])')]
-      .filter(n => n.offsetParent !== null || n === cardClose);
-    if (!items.length) return;
-    const first = items[0], last = items[items.length - 1];
-    const at = document.activeElement;
-    if (e.shiftKey && (at === first || !card.contains(at))) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && (at === last || !card.contains(at))) { e.preventDefault(); first.focus(); }
+  const cardTier = createCardTier({
+    shell: cardShell, owner: cardOwner, hotspots, hotState, reduceMotion,
+    sheetQuery, rail, selection, focusReturn, popover, announce,
+    /* Placement stays in this module: where a box goes on screen is a question
+       about the frame's projection and the navigator's measured exclusion
+       zone, and the vessel knows only WHICH node it belongs to and WHEN to
+       ask. */
+    place: placeCard,
+    onClose, isDetailOpen,
   });
 
-  /* ---------------- bottom sheet: drag to dismiss (PL-1.3) ----------------
-     Pointer-driven, so it is one code path for finger, pen and (on a hybrid
-     machine) mouse. The sheet follows the pointer 1:1 while dragging — direct
-     manipulation, not decorative motion — and the RELEASE is where
-     prefers-reduced-motion is honoured: the spring back / slide out becomes an
-     instant snap, because that is the part that is animation rather than the
-     visitor's own hand.
+  /* ---------------- the frame's projection ----------------
+     The one thing the placement solve cannot work out for itself: the
+     frame's projection, bound to the settled camera, and the scale that
+     turns a world radius into pixels. Published once per frame by
+     journey/ui/frame-projection.js, so the card is placed from EXACTLY the
+     geometry the chips were placed from on the same frame — one source of
+     truth, no second projection path to drift out of step. It was a mutable
+     `createUI` binding rewritten by `update()`; it is now a frozen snapshot
+     with one write site, which is U05's shape and for U05's reason. */
+  const projection = createFrameProjection({ projectStable });
 
-     Dismissal is distance OR flick velocity, so a short sharp swipe works and
-     a slow drag that changes its mind does not. */
-  const sheetGesture = createSheetGesture({
-    card,
-    grip: cardGrip,
-    reduceMotion,
-    isOpen: () => cardIsOpen,
-    onClose,
+  /* The navigator's measured silhouette, owned by one module and published
+     once per repaint (journey/layout/rail-geometry.js). Nothing below this
+     line queries rail DOM or reads its geometry: update() refreshes the
+     snapshot at the one instant the rail has finished painting itself for
+     the frame, and both consumers — the profile mask and the card's
+     placement — derive their own padded box from that one measurement.
+
+     Built from `rail.root` rather than taken off the rail object because the
+     rail handed in by a harness is a hand-built double, exactly as the
+     `rail.destroy` guard above allows for. */
+  const railGeom = createRailExclusion({ root: rail.root });
+
+  /* The two per-frame owners `update()` composes. They are constructed here,
+     beside the snapshot they read, and they are handed the registry arrays BY
+     IDENTITY — `hotspots` is `hotState.nodes`, and both owners iterate the
+     very array `addHotspot` publishes into. */
+  const railMask = createRailMask({
+    hotspots, railGeom, chapters, chapterIds: RUNTIME_CHAPTER_IDS,
   });
-
-  /* ---------------- chapter SELECTION hook (W4-E) ----------------
-     Hover already reaches the geometry: journey.js gives every hotspot an
-     `onHot` that calls the owning chapter's setHot(id, on), so a pointer or a
-     focus lights the real node. Selection had no such path — chapters
-     implement a selected state (Owned's ember-rim treatment, via
-     owned-portraits' setSelected) and nothing in the live journey ever called
-     it. This is the symmetric half of setHot.
-
-     One pair of calls covers every path because journey.js funnels ALL opens
-     through openCard() and ALL closes through closeCard(): pointer click,
-     Enter/Space, deep link (placeAt -> openDetail), an inbound route
-     (handleRoute), Escape, a press outside, and the scroll-intent close.
-     Nothing else needs to know about selection.
-
-     Chapter modules are reached through window.journey's public handle,
-     because journey.js is read-only in this lane and does not pass them to
-     createUI(). */
-  let selectedNode = null;
-  /* The COMMITTED disclosure — a pinned popover or a pinned card — as opposed
-     to `selectedNode`, which is the node currently wearing the chapter's
-     selected LIGHT and is set by a transient hover reveal too. The two were
-     one variable until the card grew its transient tier (2026-08-14): the
-     visual selection follows the reveal, `aria-expanded` follows the commit,
-     and conflating them would have announced every passing mouse as an opened
-     disclosure. */
-  let pinnedNode = null;
-
-  function chapterModuleFor(nodeId) {
-    const h = hotspots.find(x => x.id === nodeId);
-    const mods = (typeof window !== 'undefined' && window.journey) ? window.journey.chapters : null;
-    return h && mods ? mods[h.chapter] || null : null;
-  }
-
-  function notifySelect(nodeId, on) {
-    const mod = chapterModuleFor(nodeId);
-    if (!mod) return;
-    // Preferred: the chapter contract's own per-node setter, exactly mirroring
-    // setHot(id, on). Chapters should grow this.
-    if (typeof mod.setSelected === 'function') { mod.setSelected(nodeId, on); return; }
-    // Bridge, until they do: chapters/owned.js already returns its `portraits`
-    // field, and that field implements an index-based setSelected that had no
-    // caller. This branch retires itself the moment the contract method lands.
-    const pf = mod.portraits;
-    if (pf && typeof pf.setSelected === 'function' && typeof pf.indexOf === 'function') {
-      const idx = pf.indexOf(nodeId);
-      if (idx >= 0) pf.setSelected(on ? idx : -1);
-    }
-  }
-
-  /** a11y debt #5: exactly the hotspot whose disclosure is COMMITTED reports
-   *  expanded. Driven off `pinnedNode`, so it is correct for every commit path
-   *  — click, key, deep link, inbound route — and stays false through a
-   *  transient hover/focus reveal, which is not a disclosure the visitor has
-   *  opened. (It read `selectedNode` until 2026-08-14, when that variable
-   *  became the visual selection and started following hover.) */
-  function syncExpanded() {
-    for (const h of hotspots) {
-      h.btn.setAttribute('aria-expanded', h.id === pinnedNode ? 'true' : 'false');
-    }
-  }
-
-  /** Commit the popover for `h`: it stays until Escape, a scroll intent,
-   *  another node, or a press outside. journey.js drives this through
-   *  openCard() below, so every close behaves exactly as it does for the
-   *  card. */
-  function pinPop(h, trigger) {
-    if (cardIsOpen) closeCard();          // one vessel at a time
-    const retarget = popPinned && popNode !== h;
-    popPinned = true;
-    popDismissed = null;
-    showPop(h);
-    // an armed chip has been acted on — the second tap was the commit
-    clearArmed();
-    if (selectedNode && selectedNode !== h.id) notifySelect(selectedNode, false);
-    selectedNode = h.id;
-    pinnedNode = h.id;
-    notifySelect(h.id, true);
-    syncExpanded();
-    returnFocus = trigger || returnFocus;
-    // Focus STAYS on the chip. It is the disclosure control, it is still on
-    // screen, and the popover sits next to it in the DOM — so Tab reaches the
-    // link without a focus move to unwind on close. This is the non-modal
-    // counterpart of the card's focus trap, not an omission of one.
-    if (trigger) trigger.focus({ preventScroll: true });
-    else announce(`${h.preview.title}. ${h.preview.short}`);
-    if (retarget) announce(`${h.preview.title}. ${h.preview.short}`);
-    return true;
-  }
-
-  /* ---------------- the card's anchor ----------------
-     `frameGeom` is the one thing placeCard() cannot work out for itself: the
-     camera and the frame's projection scale. update() owns both and rewrites
-     this closure every frame, which also means the card is placed from
-     EXACTLY the geometry the chips were placed from on the same frame — one
-     source of truth, no second projection path to drift out of step.
-     openCard() can therefore place the card on the tick it opens, before the
-     first paint, using the last frame's geometry (sub-pixel stale at worst,
-     and the next frame corrects it). */
-  let frameGeom = null;
-  let cardAnchor = null;        // the hotspot whose node the card belongs to
-  let cardEnterTimer = null;
-  let profileRailDebug = null;
-
-  /** The navigator is animated and responsive, so its exclusion zone must be
-   *  measured from the painted list rather than reconstructed from CSS
-   *  constants. Mission's under-copy layout is intentionally not reserved. */
-  function railExclusion(pad = RAIL_EXCLUSION_PAD, includeActiveHalo = false) {
-    if (!rail.root || rail.root.dataset.layout !== 'chapter') return null;
-    const list = rail.root.querySelector('.j-rail-list');
-    if (!list) return null;
-    const r = list.getBoundingClientRect();
-    /* The responsive column/fan uses transformed, out-of-flow slots, so the
-       list itself legitimately has a 0×0 box. Union the painted slots instead
-       of treating that box as proof that the navigator is absent. */
-    const painted = [...list.querySelectorAll('.j-rail-slot')].flatMap((el) => {
-      const b = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return b.width && b.height && cs.display !== 'none' && cs.visibility !== 'hidden'
-        && Number(cs.opacity || 1) > 0.01 ? [b] : [];
-    });
-    if (r.width && r.height) painted.push(r);
-    if (!painted.length) return null;
-    let left = Math.min(...painted.map(b => b.left));
-    let right = Math.max(...painted.map(b => b.right));
-    let top = Math.min(...painted.map(b => b.top));
-    let bottom = Math.max(...painted.map(b => b.bottom));
-    if (includeActiveHalo) {
-      const ring = rail.root.querySelector('.j-rail-active-ring');
-      if (ring) {
-        const a = ring.getBoundingClientRect();
-        if (a.width && a.height) {
-          left = Math.min(left, a.left - RAIL_ACTIVE_HALO_PX);
-          right = Math.max(right, a.right + RAIL_ACTIVE_HALO_PX);
-          top = Math.min(top, a.top - RAIL_ACTIVE_HALO_PX);
-          bottom = Math.max(bottom, a.bottom + RAIL_ACTIVE_HALO_PX);
-        }
-      }
-    }
-    return {
-      left: left - pad,
-      right: right + pad,
-      top: top - pad,
-      bottom: bottom + pad,
-    };
-  }
-
-  function rectHits(a, b) {
-    return !!b && a.right > b.left && a.left < b.right
-      && a.bottom > b.top && a.top < b.bottom;
-  }
-
-  /** Where the card's subject is on screen this frame, and how big it draws.
-   *  null when there is no anchor at all; `behind` when the node is on the
-   *  far side of the lens, which is the one case with no honest direction to
-   *  point in. Off-frame but in front is NOT null — the point is clamped to
-   *  the frame edge, so the card meets the visitor at the edge the person is
-   *  beyond rather than jumping back to a corner that means nothing. */
-  function anchorPoint() {
-    if (!cardAnchor || !frameGeom || typeof cardAnchor.world !== 'function') return null;
-    const w = cardAnchor.world();
-    if (!w) return null;
-    const g = frameGeom;
-    const v = projectStable(w.clone(), g.camera);
-    if (v.z > 1) return { behind: true };
-    let r = 24;
-    if (cardAnchor.radius) {
-      const wr = cardAnchor.radius() || 0;
-      if (wr > 0) r = wr * (window.innerHeight * 0.5) / (Math.max(0.05, g.viewDepth(w)) * g.tanHalf);
-    }
-    // The same ceiling the hit pads take: a foreground face that fills a
-    // sixth of the frame does not get to push the card a sixth of the frame
-    // away from itself.
-    r = Math.max(14, Math.min(56, r));
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const x = (v.x * 0.5 + 0.5) * vw;
-    const y = (-v.y * 0.5 + 0.5) * vh;
-    const cx = Math.min(Math.max(x, CARD_MARGIN + r), Math.max(CARD_MARGIN + r, vw - CARD_MARGIN - r));
-    const cy = Math.min(Math.max(y, CARD_MARGIN + r), Math.max(CARD_MARGIN + r, vh - CARD_MARGIN - r));
-    return { x: cx, y: cy, r, offFrame: cx !== x || cy !== y };
-  }
+  const chips = createHotspotFrame({ hotspots, blocks, sheetQuery });
 
   /** Place the card against its node. A no-op for the sheet, which owns its
    *  own geometry (PL-1.3), and for a card with no anchor to speak of, which
    *  keeps the pre-2026-08-13 flank position as its honest fallback. */
-  function placeCard() {
-    if (!cardIsOpen || card.classList.contains('sheet')) return;
-    const a = anchorPoint();
+  function placeCard(cardAnchor) {
+    if (card.classList.contains('sheet')) return;
+    const view = { w: window.innerWidth, h: window.innerHeight };
+    const a = anchorPoint(cardAnchor, projection.snapshot(), view);
     if (!a || a.behind) {
       // No direction to point in. Sit on the flank exactly where the card sat
       // before this pass — a deep link to a node the current pose does not
@@ -1735,713 +852,139 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       // card at an arbitrary edge.
       const p0 = card.getBoundingClientRect();
       card.dataset.side = 'flank';
-      card.style.transform = `translate(${Math.round(window.innerWidth * 0.966 - p0.width)}px, ${Math.round((window.innerHeight - p0.height) / 2)}px)`;
+      card.style.transform = `translate(${Math.round(view.w * 0.966 - p0.width)}px, ${Math.round((view.h - p0.height) / 2)}px)`;
       card.style.removeProperty('--j-card-fx');
       card.style.removeProperty('--j-card-fy');
       return;
     }
     const p = card.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const railBox = railExclusion();
-    const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-    const xCentred = clamp(a.x - p.width / 2, CARD_MARGIN,
-      Math.max(CARD_MARGIN, vw - CARD_MARGIN - p.width));
-    const yCentred = clamp(a.y - p.height / 2, CARD_MARGIN,
-      Math.max(CARD_MARGIN, vh - CARD_MARGIN - p.height));
-
-    // The ladder. Each rung is admitted only if the whole box fits, and each
-    // of the four is DISJOINT from the node's disc by construction — so the
-    // clamp on the other axis can never slide the card over its own subject.
-    //
-    // BESIDE-FIRST (2026-08-18, Hannah: "the name should show next to the
-    // image", "make the card feel cohesive with it"). The old ladder tried
-    // above/below first, which floated the label into the copy over the
-    // person's head; a name reads as belonging to a face when it stands
-    // BESIDE it, museum-label fashion. Right before left because the frame's
-    // reading direction is left-to-right: face, then name.
-    const aboveY = a.y - a.r - CARD_GAP - p.height;
-    const belowY = a.y + a.r + CARD_GAP;
-    const rightX = a.x + a.r + CARD_GAP;
-    const leftX = a.x - a.r - CARD_GAP - p.width;
-    const fits = (x, y) => x >= CARD_MARGIN && y >= CARD_MARGIN
-      && x + p.width <= vw - CARD_MARGIN && y + p.height <= vh - CARD_MARGIN
-      && !rectHits({ left: x, right: x + p.width, top: y, bottom: y + p.height }, railBox);
-    const choices = [
-      ['right', rightX, yCentred],
-      ['left', leftX, yCentred],
-      ['above', xCentred, aboveY],
-      ['below', xCentred, belowY],
-    ];
-    const fit = choices.find(([, x0, y0]) => fits(x0, y0));
-    let side, x, y;
-    if (fit) {
-      [side, x, y] = fit;
-    } else {
-      // Nowhere fits whole — a card taller than the room above AND below and
-      // wider than the room either side. Take the roomier of above/below and
-      // clamp into the frame: staying READABLE and on-screen outranks staying
-      // clear, and this is the only rung that can overlap.
-      const roomAbove = a.y - a.r, roomBelow = vh - (a.y + a.r);
-      side = roomAbove >= roomBelow ? 'above' : 'below';
-      x = xCentred;
-      y = clamp(side === 'above' ? aboveY : belowY, CARD_MARGIN,
-        Math.max(CARD_MARGIN, vh - CARD_MARGIN - p.height));
-      // Last-resort clamping still honours the chrome lane. Prefer lifting
-      // above it; if the card is too tall, move wholly to its right.
-      if (railBox && rectHits({ left: x, right: x + p.width, top: y, bottom: y + p.height }, railBox)) {
-        const lifted = railBox.top - CARD_GAP - p.height;
-        if (lifted >= CARD_MARGIN) y = lifted;
-        else x = Math.min(Math.max(railBox.right + CARD_GAP, CARD_MARGIN),
-          Math.max(CARD_MARGIN, vw - CARD_MARGIN - p.width));
-      }
-    }
-
-    card.dataset.side = side;
-    card.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-    // Where the node is IN THE CARD'S OWN BOX, so the contact filament can be
-    // a short segment pointing at the person rather than a rule along the
-    // whole edge. It matters most in exactly the case the edge rule would
-    // fail: a node near a frame edge whose card has been clamped sideways, so
-    // the card's centre is no longer over its subject.
-    card.style.setProperty('--j-card-fx', `${clamp(a.x - x, 12, Math.max(12, p.width - 12)).toFixed(1)}px`);
-    card.style.setProperty('--j-card-fy', `${clamp(a.y - y, 12, Math.max(12, p.height - 12)).toFixed(1)}px`);
+    const placed = resolveCardPlacement(a, p, view,
+      railBox(railGeom.snapshot(), RAIL_EXCLUSION_PAD));
+    const { fx, fy } = filamentOffset(a, placed, p);
+    card.dataset.side = placed.side;
+    card.style.transform = `translate(${Math.round(placed.x)}px, ${Math.round(placed.y)}px)`;
+    card.style.setProperty('--j-card-fx', `${fx.toFixed(1)}px`);
+    card.style.setProperty('--j-card-fy', `${fy.toFixed(1)}px`);
   }
-
-  /** The entry uses the shared shell lamp plus the contact filament on the
-   *  edge that faces the node. Armed only on a FRESH open —
-   *  a retarget from one contributor straight to the next re-arms it,
-   *  because that IS a fresh subject. */
-  function runCardEntry() {
-    if (cardEnterTimer) clearTimeout(cardEnterTimer);
-    if (card.classList.contains('j-card-enter') || card.classList.contains('j-detail-enter')) {
-      card.classList.remove('j-card-enter', 'j-detail-enter');
-      void card.offsetWidth;
-    }
-    card.classList.add('j-card-enter');
-    if (!reduceMotion.matches) card.classList.add('j-detail-enter');
-    cardEnterTimer = setTimeout(() => {
-      cardEnterTimer = null;
-      card.classList.remove('j-card-enter');
-    }, CARD_ENTER_MS);
-  }
-
-  function stopCardEntry() {
-    if (cardEnterTimer) { clearTimeout(cardEnterTimer); cardEnterTimer = null; }
-    card.classList.remove('j-card-enter', 'j-detail-enter');
-  }
-
-  const finishCardShellEntry = (e) => {
-    if (e.target === card && e.animationName === 'j-detail-arrive') {
-      card.classList.remove('j-detail-enter');
-    }
-  };
-  card.addEventListener('animationend', finishCardShellEntry);
-
-  /** Set the panel's ARIA and its controls to match the tier it is currently
-   *  showing in. One place, so the two tiers cannot disagree — and so the
-   *  downgrade path (a pinned card released while its chip is still hot, which
-   *  leaves a transient reveal behind) is the same code as a fresh reveal. */
-  function applyCardTier() {
-    card.classList.toggle('transient', !cardPinned);
-    if (cardPinned) {
-      card.setAttribute('role', 'dialog');
-      card.setAttribute('aria-modal', 'true');
-      if (cardBody.querySelector('#j-card-h')) card.setAttribute('aria-labelledby', 'j-card-h');
-    } else {
-      // A transient panel is an annotation, not a dialog, and saying otherwise
-      // would be a lie to AT — the same statement `.j-pop` makes by having no
-      // role at all and describing its chip instead.
-      card.removeAttribute('role');
-      card.removeAttribute('aria-modal');
-      card.removeAttribute('aria-labelledby');
-    }
-    // A transient card carries no controls: the ✕ is hidden by CSS (de-hover
-    // is the close), and a link — which no contributor has, but a deep-linked
-    // node without a `short` could — leaves the tab order exactly as the
-    // popover's does until the visitor commits.
-    const link = cardBody.querySelector('.j-card-link');
-    if (link) link.tabIndex = cardPinned ? 0 : -1;
-    // The chip describes itself with the panel's prose while that panel is
-    // transient — popShort's mechanism, one vessel up. Guarded by value so it
-    // can never clobber the popover's own describedby on some other chip.
-    for (const h of hotspots) {
-      const want = !cardPinned && cardIsOpen && h.id === cardNodeId && cardDescIds;
-      if (want) h.btn.setAttribute('aria-describedby', cardDescIds);
-      else if (h.btn.getAttribute('aria-describedby') === cardDescIds) h.btn.removeAttribute('aria-describedby');
-    }
-  }
-
-  /** Show the card for `nodeId` in the given tier. `openCard` (pinned) and
-   *  `revealCard` (transient) are the two doors; everything they share is
-   *  here, so a hover reveal and a click open are the same box, the same
-   *  placement, the same entry and the same content by construction. */
-  function mountCard(nodeId, { pinned, trigger }) {
-    // Nodes that carry a popover are disclosed BESIDE their chip, never in the
-    // card — see the POPOVER block above for why the card is not also offered.
+  /** WHICH vessel discloses `nodeId`, and the rule that only one may.
+   *
+   *  Nodes that carry a popover are disclosed beside their chip and never in
+   *  the card. Anything still using the card (contributor profiles) takes the
+   *  frame back from a pinned popover on the way in — without restoring focus,
+   *  because the card opening behind it is about to take focus itself and
+   *  handing it to the chip first would be a visible flicker to nowhere.
+   *
+   *  This is the whole of what the two vessels know about each other, and it
+   *  lives here because the choice is about CONTENT — this module's subject,
+   *  and neither vessel's. */
+  function mountDisclosure(nodeId, { pinned, trigger }) {
     const ph = hotspots.find(x => x.id === nodeId && x.preview);
-    if (ph) return pinned ? pinPop(ph, trigger) : false;
-    // anything still using the card (contributor profiles) takes the frame back
-    if (pinned && popPinned) unpinPop({ restoreFocus: false });
-    const node = CONTENT.nodes[nodeId]
-      || CONTENT.contributors.find(c => c.id === nodeId);
-    if (!node) return false;
-    const retarget = cardIsOpen && cardNodeId !== nodeId;
-    // A reveal is FRESH when the box is landing on a node it was not already
-    // showing, or when it was shut — showPop()'s own test, so a tier change on
-    // the same subject (hover, then click to pin) re-uses the panel in place
-    // instead of replaying the shell entry at rest.
-    const fresh = !cardIsOpen || cardNodeId !== nodeId;
-    const d = node.spotlight || node.card
-      // Contributor rows have no card block; they are label material, not
-      // prose. The role rides as `tag` (2026-08-18, Hannah: "the artist/core
-      // thing should feel more like a tag") — a pill under the name rather
-      // than a paragraph pretending the role is a sentence.
-      || (node.role ? { title: node.name, tag: node.role, avatar: node.avatar, body: [node.blurb].filter(Boolean) } : null)
-      || { title: node.label, body: [node.short] };
-    if (fresh) {
-      cardBody.textContent = '';
-      const h = el('h3', 'j-card-h', d.title || node.label);
-      h.id = 'j-card-h';
-      // The person's avatar, left of the name (2026-08-18, Hannah — mobile).
-      // Decorative and aria-hidden: the name IS the accessible identity. CSS
-      // shows it only in the sheet form — the side card already stands next
-      // to the real face, so a thumbnail there would say it twice.
-      if (d.avatar && d.avatar.url) {
-        const av = el('i', 'j-card-ava');
-        av.setAttribute('aria-hidden', 'true');
-        av.style.backgroundImage = `url("${d.avatar.url}")`;
-        av.style.backgroundSize = `${d.avatar.cols * 100}% ${d.avatar.rows * 100}%`;
-        av.style.backgroundPosition =
-          `${(d.avatar.col / (d.avatar.cols - 1)) * 100}% ${(d.avatar.row / (d.avatar.rows - 1)) * 100}%`;
-        h.prepend(av);
-      }
-      cardBody.appendChild(h);
-      // The prose, and only the prose, is what the chip points at while the
-      // panel is transient: the title duplicates the chip's own accessible
-      // name, exactly the reason `.j-pop`'s description is its short line
-      // alone. Ids are assigned here so the set is rebuilt with the content.
-      const ids = [];
-      const addProse = (cls, text) => {
-        const p = el('p', cls, text);
-        p.id = `j-card-d${ids.length}`;
-        ids.push(p.id);
-        cardBody.appendChild(p);
-      };
-      // The role tag, right under the name. It joins the describedby prose —
-      // "Knowledge Sharer" is exactly what a chip's description should open
-      // with — but as a pill, not a paragraph.
-      if (d.tag) {
-        const tg = el('span', 'j-card-tag', d.tag);
-        tg.id = `j-card-d${ids.length}`;
-        ids.push(tg.id);
-        cardBody.appendChild(tg);
-      }
-      if (d.claim) addProse('j-card-claim', d.claim + (d.claimDetail ? ' — ' + d.claimDetail : ''));
-      for (const para of (d.body || [])) addProse('j-card-p', para);
-      if (d.status) addProse('j-card-status', d.status);
-      cardDescIds = ids.join(' ');
-      if (d.link) {
-        const a = el('a', 'j-card-link', d.link.label);
-        a.href = d.link.href || '#';
-        cardBody.appendChild(a);
-      }
-      cardNodeId = nodeId;
-    }
-    // A close that is still fading owns neither the DOM nor the input.
-    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
-    card.classList.remove('j-card-exit');
-    // The bottom-sheet decision is taken per OPEN, from the live pointer /
-    // viewport condition — the same per-interaction rule as the touch model.
-    // Only a PINNED card can be a sheet: the transient tier is hover-and-focus
-    // only and never reached on a coarse pointer (see cardTarget), so a sheet
-    // form for it would be an unreachable state.
-    card.classList.toggle('sheet', pinned && sheetQuery.matches);
-    card.classList.remove('dragging');
-    if (fresh) card.style.transform = '';
-    if (fresh && cardBody.scrollTop) cardBody.scrollTop = 0;
-    card.hidden = false;
-    card.inert = false;
-    cardIsOpen = true;
-    cardPinned = pinned;
-    cardDismissBtn = null;
-    // WHOSE card this is, for placeCard(). A node with no hotspot (a deep
-    // link into a chapter that is not the current one) anchors to nothing and
-    // takes the flank fallback.
-    cardAnchor = hotspots.find(x => x.id === nodeId) || null;
-    applyCardTier();
-    // Place before arming the entry so the contact filament's data-side and
-    // coordinates are correct on its first painted frame.
-    placeCard();
-    // A card arriving from `hidden` (display:none) has no rendered start state
-    // for the opacity transition to run FROM. Force ONE synchronous style
-    // flush, then add `.open` in the same tick — deferring to rAF instead
-    // would make the card's visibility depend on the frame loop, and a
-    // throttled or background tab would open a dialog that never paints.
-    void card.offsetHeight;
-    card.classList.add('open');
-    // A retarget is a fresh SUBJECT, so it gets a fresh entry: the card has
-    // just travelled across the frame to a different person, and arriving
-    // silently at the new one is the thing this pass exists to prevent.
-    // The shared entry never translates the shell, so the bottom sheet can
-    // use it too without fighting its drag-to-dismiss transform. Its contact
-    // filament remains suppressed because a sheet is not node-anchored.
-    if (fresh) runCardEntry();
-    // retargeting an open card (one hotspot straight to the next) must release
-    // the previous node before lighting the new one. BOTH tiers do this: the
-    // chapter's selected light is the visual half of the reveal, and Hannah
-    // asked for the full click-state treatment on hover.
-    if (selectedNode && selectedNode !== nodeId) notifySelect(selectedNode, false);
-    selectedNode = nodeId;
-    notifySelect(nodeId, true);
-    pinnedNode = pinned ? nodeId : null;
-    syncExpanded();
-    if (!pinned) return true;
-    // ---- everything below is the COMMITTED tier only ----
-    // While it is open the card owns its own wheel, touch and travel keys:
-    // internal scrolling works despite scroll.js's window-capture
-    // preventDefault, a finger on the sheet can never scrub the journey, and
-    // arrows neither travel nor close it (a11y debt #1).
-    claimInput(card, { modal: true });
-    // a touch-armed hotspot has been acted on; the frame belongs to the card
-    clearArmed();
-    // a retarget keeps the ORIGINAL trigger as the focus return only if the
-    // new open supplied none (a deep link / hashchange); an explicit trigger
-    // always wins, so Escape lands on the control the visitor last used.
-    returnFocus = trigger || returnFocus;
-    cardClose.focus();
-    // Focus does not MOVE on a retarget (it was already inside the dialog) and
-    // there is nothing to move it from on a deep link, so neither case
-    // announces itself. Say what is now showing (a11y debt #5).
-    if (retarget || !trigger) announce(`${d.title || node.label}. Details.`);
-    return true;
+    if (ph) return pinned ? popover.pin(ph, trigger) : false;
+    if (pinned && popover.isPinned()) popover.unpin({ restoreFocus: false });
+    return cardTier.mount(nodeId, { pinned, trigger });
   }
 
   /** The committed open. journey.js's only door, unchanged in signature and
    *  in everything it promises. */
   function openCard(nodeId, trigger) {
-    return mountCard(nodeId, { pinned: true, trigger });
+    return mountDisclosure(nodeId, { pinned: true, trigger });
   }
 
-  /** The single place that decides what the TRANSIENT card shows —
-   *  popTarget()/syncPop() folded into one, because this tier has only one
-   *  question to ask and no deferred hide to re-ask it after.
-   *
-   *  Deliberately WITHOUT the popover's POP_HIDE_MS: that delay exists so a
-   *  pointer can cross the POP_GAP from chip to popover and reach its link,
-   *  and a transient card has no link to reach and is `pointer-events: none`.
-   *  The answer here is immediate in both directions, which is what "available
-   *  immediately… return immediately to the default state" asks for. */
-  /** Remember that THIS reveal was dismissed, and what has to happen before
-   *  the node may reveal again.
-   *
-   *  The question is "what is still holding this panel open?", and there are
-   *  exactly three answers. A POINTER on the face: park the dismissal on that
-   *  chip, re-armed by a real move off it. KEYBOARD focus on the chip: re-armed
-   *  by the chip going cold, which is the popover's rule. NEITHER — Escape on a
-   *  card that was opened by Enter and moved focus into the dialog — and then
-   *  there is nothing to suppress at all, because the reveal's own cause is
-   *  already gone; recording a dismissal there would strand the node, since the
-   *  cold transition that clears it has already been and gone.
-   *
-   *  The pointer test is GEOMETRY, not `h.hover` and not `elementFromPoint`:
-   *  while a pinned card is open its chip is `visibility: hidden`, so the hover
-   *  flag has already been dropped by a synthetic leave and the element is not
-   *  hit-testable — yet the pointer is physically still on the face and will
-   *  get a synthetic enter the moment the chips come back. `sx`/`sy` hold the
-   *  last placed position and `padLast` the last live pad radius, so the pad
-   *  the visitor is aiming at answers even while nothing is drawn there. */
-  function dismissCard() {
-    cardDismissBtn = null;
-    cardDismissed = null;
-    if (!cardNodeId) return;
-    const h = hotspots.find(x => x.id === cardNodeId);
-    if (!h) return;
-    const onIt = !!(lastPointer && h.padLast > 0
-      && Math.hypot(lastPointer.x - h.sx, lastPointer.y - h.sy) <= h.padLast);
-    if (!onIt && !h.focused) return;
-    cardDismissed = cardNodeId;
-    cardDismissBtn = onIt ? h.btn : null;
-  }
-
-  /* The pointer half of that re-arm. A `pointermove` is the one signal a
-     visibility change cannot fake, and the test is the live hit model itself —
-     `elementFromPoint`, so the chip's own hit pad decides, exactly as it does
-     for every other pointer question in this file. */
-  let lastPointer = null;
-  document.addEventListener('pointermove', (e) => {
-    lastPointer = { x: e.clientX, y: e.clientY };
-    if (!cardDismissBtn) return;
-    const at = document.elementFromPoint(e.clientX, e.clientY);
-    if (at && cardDismissBtn.contains(at)) return;
-    cardDismissBtn = null;
-    cardDismissed = null;
-    syncCard();
-  }, { passive: true });
-
-  function syncCard() {
-    // A COMMITMENT is never re-asserted, and never taken away, by a hover. The
-    // guard is not just precedence: re-running the committed mount would take
-    // focus and re-announce the dialog every time a pointer moved.
-    if (cardPinned) return;
-    // TOUCH HAS NO HOVER. On a coarse pointer or a phone-width viewport there
-    // is no transient tier at all — a tap goes straight to the committed card
-    // (the PL-1.3 bottom sheet). See the click handler in addHotspot().
-    const hot = sheetQuery.matches ? null : hottestCard();
-    // A dismissed reveal stays dismissed while its chip is still hot; leaving
-    // the chip re-arms it (refresh()).
-    if (hot && cardDismissed !== hot.id) { mountCard(hot.id, { pinned: false }); return; }
-    if (cardIsOpen) hideCard();
-  }
-
-  /* a11y debt #4: closeCard used to remove `.open` and set `hidden` in the
-     same tick. `[hidden]` is display:none, so the element left the box tree
-     before a single frame of the 0.3s opacity transition could run — the fade
-     was authored, paid for in CSS, and never once seen. The visual close is
-     now allowed to play, and `hidden` follows it. Everything that makes the
-     card FUNCTIONALLY closed (input ownership, tab order, a11y tree,
-     selection, focus return) still happens on the same tick, so nothing can
-     ever interact with a ghost. */
-  function finishClose() {
-    fadeTimer = null;
-    if (cardIsOpen) return;                 // reopened mid-fade: leave it alone
-    card.classList.remove('open', 'j-card-exit');
-    card.hidden = true;
-    card.style.transform = '';
-    card.style.removeProperty('--j-card-fx');
-    card.style.removeProperty('--j-card-fy');
-    card.removeAttribute('data-side');
-    card.classList.remove('sheet', 'dragging');
-  }
-
-  /** Release the pinned popover. The visual may live on as a transient reveal
-   *  if the pointer or focus is still on the chip — closing the DISCLOSURE and
-   *  hiding the box are different statements, and syncPop() settles which. */
-  function unpinPop({ restoreFocus = true } = {}) {
-    if (!popPinned) return;
-    popPinned = false;
-    popLink.tabIndex = -1;
-    if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
-    if (pinnedNode && popNode && pinnedNode === popNode.id) pinnedNode = null;
-    syncExpanded();
-    // A card opening right behind this one is about to take focus itself, so
-    // handing it back to the chip first would be a visible flicker to nowhere.
-    if (restoreFocus) {
-      if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
-      returnFocus = null;
-    }
-    syncPop();
-  }
-
-  /** Take the box away, in whichever tier it is showing. The VISUAL close —
-   *  it says nothing about who dismissed it or where focus should land, which
-   *  is what lets the transient tier reuse it wholesale. */
-  function hideCard() {
-    if (!cardIsOpen) return;
-    sheetGesture.cancelRelease();
-    cardIsOpen = false;
-    cardPinned = false;
-    // The entry is dropped before the shared exit is armed, so the two shell
-    // animations can never compete for opacity or border colour.
-    stopCardEntry();
-    cardAnchor = null;
-    card.inert = true;
-    releaseInput(card);
-    sheetGesture.reset();
-    if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
-    pinnedNode = null;
-    syncExpanded();
-    applyCardTier();            // drops the chip's aria-describedby with it
-    cardNodeId = null;
-    cardDescIds = '';
-    // Reduced motion has no fade to protect (journey/site.css drops the transition),
-    // so it closes on the tick, exactly as before.
-    if (reduceMotion.matches) finishClose();
-    else {
-      card.classList.add('j-card-exit');
-      const closeMs = card.classList.contains('sheet') && card.style.transform
-        ? CARD_DRAG_FADE_MS : CARD_FADE_MS;
-      fadeTimer = setTimeout(finishClose, closeMs);
-    }
-  }
-
+  /** The committed close, and journey.js's only door for it. journey.js closes
+   *  "the detail" without caring which vessel it was, so both are told and
+   *  each declines if it was not the one showing. */
   function closeCard() {
-    // journey.js closes "the detail" without caring which vessel it was; this
-    // is the popover's half of that one call.
-    unpinPop();
-    if (!cardIsOpen) return;
-    const wasPinned = cardPinned;
-    /* A deliberate close must not be undone by a pointer that never left the
-       face. Without this, Escape (or the ✕, or a press outside) would drop the
-       card and syncCard would put it straight back as a hover reveal on the
-       very next call — "an Escape that visibly does nothing", the exact fault
-       popDismissed was added to prevent. Cleared when the chip goes cold, so
-       moving off the face and back works again; see refresh(). */
-    dismissCard();
-    // inert BEFORE the focus return: a fading card is out of the tab order and
-    // out of the a11y tree from the first frame of the fade.
-    card.inert = true;
-    hideCard();
-    // Only a committed card ever took focus, so only a committed card has any
-    // to give back.
-    if (wasPinned) {
-      if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
-      returnFocus = null;
-    }
+    popover.unpin();
+    cardTier.close();
   }
 
-  document.addEventListener('keydown', (e) => {
+  owner.listen(document, 'keydown', (e) => {
     if (e.key !== 'Escape') return;
-    // A TRANSIENT card is nobody's route state, exactly as a transient popover
-    // is not: Escape takes the reveal away without unwinding journey.js's
-    // detail (there is none), and remembers not to re-show it while the chip
-    // stays hot. Leaving the chip re-arms it.
-    if (cardIsOpen && !cardPinned) {
+    // A TRANSIENT reveal is nobody's route state, in either vessel: Escape
+    // takes it away without unwinding journey.js's detail (there is none), and
+    // remembers not to re-show it while the chip stays hot. Leaving the chip
+    // re-arms it; see refresh().
+    if (cardTier.isOpen() && !cardTier.isPinned()) {
       e.preventDefault();
-      dismissCard();
-      hideCard();
+      cardTier.dismiss();
+      cardTier.hide();
       return;
     }
-    if (cardIsOpen) { e.preventDefault(); onClose(); return; }
+    if (cardTier.isOpen()) { e.preventDefault(); onClose(); return; }
     // A PINNED popover unwinds through journey.js like the card does, so the
     // detail state stays consistent. Escape must also suppress the TRANSIENT
     // reveal on the way out: focus is still on the chip (that is where a
-    // non-modal disclosure leaves it), so without this the popover would
-    // unpin and immediately re-appear as a hover/focus reveal — an Escape
-    // that visibly does nothing. Leaving the chip re-arms it; see refresh().
-    if (popPinned) {
+    // non-modal disclosure leaves it), so without this the popover would unpin
+    // and immediately re-appear as a hover/focus reveal — an Escape that
+    // visibly does nothing.
+    if (popover.isPinned()) {
       e.preventDefault();
-      if (popNode) popDismissed = popNode.id;
+      popover.dismissShown();
       onClose();
       return;
     }
-    // A TRANSIENT popover is nobody's route state — Escape just takes the
-    // reveal away, and remembers not to re-show it while the chip stays hot
-    // (otherwise hover/focus would put it straight back and Escape would look
-    // broken). Leaving the chip re-arms it; see refresh().
-    if (popNode && pop.classList.contains('open')) {
+    if (popover.isShowing()) {
       e.preventDefault();
-      popDismissed = popNode.id;
-      hidePop();
+      popover.dismissShown();
+      popover.hide();
     }
   });
 
   /* ---------------- per-frame ---------------- */
 
-  // W3-B (gap e): copy choreography. The COPY_BANDS say WHERE copy may live;
-  // this layer decides WHEN. Copy releases the moment travel begins (fast
-  // temporal fade driven by scrub speed, even inside its own band) and
-  // re-anchors only once the camera has settled — a slow breathe-in gated on
-  // |dp/dt|, so a fast pass through a rest never flashes its copy, and a
-  // deliberate arrival gets its text only after the composition has made its
-  // negative space. dt === 0 (deep-link placement / hidden-tab capture) snaps
-  // straight to the target so captures are deterministic.
-  const eased = { mission: 0 };
-  for (const id in COPY_BANDS) eased[id] = 0;
-  let lastP = null;
-  let pSpeed = 0;             // smoothed |dp/dt|, p per second
+  /* THE COPY CHOREOGRAPHY AND THE ARRIVAL ENVELOPE now live in
+     journey/ui/copy-arrival.js (order U04). What moved is the whole machine:
+     the eased opacities, the travel-speed signal, the direct-navigation
+     ticket, the jump-entry envelope, the hero's arrival shelf, and the two
+     painters. What stayed is this file's job — composing it and handing it
+     its frame.
 
-  /* ---------------- the nav-jump copy entry (Hannah, 2026-08-07) ----------
-     Route progress still snaps in one dt = 0 tick, but journey.js now passes
-     the camera flight's continuously presented progress as `travelP`, so the
-     ordinary scroll speed/settle rule below sees the flight. The dedicated
-     arrival envelope remains responsible for the destination copy's authored
-     lead and handoff; it is not a substitute travel clock.
+     `step()` is given every input it uses. It reads no ambient state from
+     this closure, which is the point: `update()` was the "transition
+     function" that six of this region's mutable bindings were passing G2 on,
+     and a 653-line transition is the clause being satisfied rather than met
+     (D159). Each of those bindings now has a named transition of its own,
+     or two writes. */
+  const copy = createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceMotion });
+  const { prepareCopyEntry, armCopyEntry, cancelCopyEntry, setCopyEntryPlay } = copy;
 
-     The fix is NOT a second opacity channel laid over the first. Two writers
-     on one style is exactly how a jump ends up leaving a block half-faded by
-     the scroll rule, so the envelope below drives `eased` ITSELF and is
-     defined to finish at the same value the scroll rule was heading for. When
-     it lets go, `eased[id] === target` already, so the scroll rule resumes on
-     the next frame with nothing to correct and nothing to re-animate.
+  /* ==========================================================================
+     update() — THE FIXED-ORDER COMPOSITION (order U06)
 
-     `easedPrev` is what makes the OUTGOING copy behave too. placeAt() runs a
-     dt = 0 frame before journey.js can tell us anything, and dt = 0 means
-     "snap" — correctly, for a deep link or a capture. arm() undoes that one
-     snap by restoring the last TRAVELLED frame's values, which leaves the
-     chapter we are leaving at the opacity it actually had. It then releases on
-     the ordinary COPY_OUT_K rule (~0.15 s), the same release a scrub gives it.
+     This was a 480-line body, 36 statements, depth 5, `composed: false`, and
+     it owned eight mutable bindings including the tree's last two `WIDE`
+     ones. It is now a sequence of sub-owner calls, and the ORDER IS THE
+     SUBJECT — every line below is here rather than there for a reason a
+     reader can check.
 
-     See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
-  const easedPrev = { ...eased };
-  let arrive = null;   // { id, t, lead, dur, own, started, motions }
-  const arrivalMotion = createArrivalMotion({ blocks, reduceMotion });
+     ---- WHY THIS ORDER ----
 
-  // Ordinary click arrivals begin quietly over the final quarter of the
-  // camera's PRESENTED path, then hand to the normal speed/settle breathe.
-  // Both numbers are spatial-phase values, not wall-clock timing.
-  const FLIGHT_COPY_LEAD = 0.76;
-  const FLIGHT_COPY_LAND_OPACITY = 0.38;
-  const FLIGHT_HERO_LEAD = 0.64;
-  const FLIGHT_HERO_LAND_OPACITY = 0.74;
-  let directCopyFlight = null;
-  let directCopyId = null;
-  let directCopyFrom = 0;
-  let directCopyCarry = null; // { id, floor, atP } until scroll target catches it
-  let copyFrameDebug = null;
-  let railHeroGatePrev = null;
-  let railHeroCarry = 0;
+     1. POLICY, once, on the first frame the chapter modules are reachable.
+     2. DETAIL, because everything after it asks whether the frame belongs to
+        something else. A pinned popover makes journey.js report a detail open
+        — it is route state either way — but it is NOT modal: it sits beside a
+        chip that must stay on screen under it, and it never claims the frame.
+        So everything below that means "a dialog owns the page" asks for the
+        MODAL detail, not merely an open one. The `&&` is load-bearing: with
+        no detail open, `popover.isPinned()` is never called.
+     3. RAIL, which PAINTS the navigator for this frame. Everything that
+        measures the rail must come after it, and nothing that writes may come
+        between it and the measurement in step 6.
+     4. COPY, which owns the eased opacities every gate below reads.
 
-  /* The block envelope already owns copy opacity. Giving the heading, body
-     and action row their own opacity keyframes multiplies two fades together:
-     on mobile the authored rise is almost over before the product becomes
-     visible, so the words read as a late pop. Keep one opacity authority and
-     drive only the child rise here, from the SAME capped scene clock as the
-     envelope/camera. Paused WAAPI effects are a compact way to retain the
-     authored easing without allowing CSS wall time to run ahead during a
-     first-draw stall. The pseudo-element's quiet bed-light remains CSS-owned;
-     it carries no text and cannot mask the choreography. */
-  function startArriveMotion(a) {
-    arrivalMotion.start(a);
-  }
+     Then the frame's DOM work, and the read/write barrier that governs it:
 
-  function syncArriveMotion(a) {
-    arrivalMotion.sync(a);
-  }
+     5. MEASURE — every DOM read, one pass. Interleaving a read with the
+        writes in step 8 would force a reflow per chip.
+     6. PROJECT and MASK — pure arithmetic, then the ONE rail measurement, at
+        the one instant the navigator's painted geometry is settled. Still on
+        the read side of the barrier.
+     7. PLACE, DODGE, PAD — every DOM write.
+     8. ZONES, then the two disclosure vessels.
 
-  function clearArriveMotion(a) {
-    arrivalMotion.clear(a);
-  }
-
-  /** Keep the chapter copy's quiet line-rise on the same reversible value as
-   *  its scroll-authored block opacity. This is deliberately not an animation
-   *  clock: a stopped, reversed or interrupted journey freezes/retraces these
-   *  transforms with the opacity that is already on screen. The lead fractions
-   *  are the existing `.j-arrive` order (heading, sub, action); opacity remains
-   *  owned only by the block envelope, so the fades are never multiplied. */
-  const copyRiseNodes = new WeakMap();
-  function paintCopyRise(block, s) {
-    let stages = copyRiseNodes.get(block);
-    if (!stages) {
-      stages = [
-        [block.querySelector('.j-h'), 0.12],
-        [block.querySelector('.j-sub'), 0.26],
-        ...[...block.querySelectorAll('.j-act')].map((node) => [node, 0.40]),
-      ];
-      copyRiseNodes.set(block, stages);
-    }
-    for (const [node, lead] of stages) {
-      if (!node) continue;
-      const phase = smoothA((s - lead) / Math.max(1e-6, 1 - lead));
-      const rise = 0.16 * (1 - phase);
-      if (rise < 0.0005) node.style.removeProperty('transform');
-      else node.style.transform = `translateY(${rise.toFixed(4)}em)`;
-    }
-  }
-
-  /** The one place a copy block's eased opacity reaches the DOM.
-      (Until the 2026-08-09 navigation redux this multiplied the epilogue's
-      block by `epilogueRetire` so it could hand the lower frame to the
-      arriving footer. The footer is gone — its content lives in the rail's
-      site-map panel — so the epilogue copy now simply holds through the
-      end-hold, which its own band (hi: 2) always said it could.) */
-  function paintCopy(id, s) {
-    if (id === 'mission') {
-      if (!heroBlock) return;
-      heroBlock.style.opacity = s;
-      heroBlock.style.pointerEvents = s > 0.5 ? '' : 'none';
-      // pointer-events already left; visibility is the same statement for the
-      // keyboard and for AT (the hero CTA was focusable and readable at every
-      // chapter). '' at the Mission pose = the untouched hero.
-      heroBlock.style.visibility = s > 0.002 ? '' : 'hidden';
-    } else if (blocks[id]) {
-      blocks[id].style.opacity = s;
-      blocks[id].style.visibility = s > 0.002 ? 'visible' : 'hidden';
-      paintCopyRise(blocks[id], s);
-      // A chapter's action pair is the only INTERACTIVE thing in the copy
-      // layer, so it is the only thing for which "mostly faded out" is not
-      // good enough. `visibility` above covers the last 0.2% of the fade; a
-      // block sitting at 0.08 through a scrub is still a live click target
-      // and still a tab stop without this. Same statement the nav makes about
-      // itself: the hit model and the tab order agree with the picture.
-      const row = actionRows[id];
-      if (row) {
-        const rowLive = s > 0.5;
-        if (row.inert === rowLive) row.inert = !rowLive;
-      }
-    }
-  }
-
-  /** Copy entry for a chapter the camera is currently blending onto.
-   *  `blendDur` is journey.js's live camera-blend duration in seconds — the
-   *  entry is placed inside it, not alongside it. */
-  function armCopyEntry(id, blendDur) {
-    if (!(id in eased)) return;
-    for (const k in easedPrev) eased[k] = easedPrev[k];   // undo placeAt's snap
-    eased[id] = 0;
-    // …and undo it on screen too, in this same task. placeAt() has ALREADY
-    // painted the destination at full opacity by the time journey.js can call
-    // us, so leaving the correction to the next animator frame ships one
-    // rendered frame of exactly the pop this exists to remove. Measured: a
-    // 16 ms flash of the whole block at opacity 1 before the envelope took it
-    // back to 0.
-    for (const k in eased) paintCopy(k, eased[k]);
-    const lead = blendDur * COPY_JUMP_LEAD;
-    const dur = blendDur + COPY_JUMP_COPY_TAIL_S - lead;
-    endArrive();                                   // a jump can overtake a jump
-    // THE DEPARTURE IS TIMED AGAINST THE MOVE TOO (2026-08-13 — the loop's
-    // seam). The arrival has been placed inside the blend since d1ecc23; the
-    // release was left on the ordinary COPY_OUT_K scrub rate, which is
-    // proportionate to an ordinary 1.2 s jump and is not proportionate to the
-    // wrap's 4.00 s lap: measured, the Final block was at 0 by 530 ms, with
-    // the camera 0.3 units into a 68-unit move — the words evaporated off a
-    // frame that had not moved, and 2.1 s of empty copy layer followed before
-    // the hero's arrived. `from` is the last TRAVELLED frame's opacity, and
-    // the block now releases across `lead` — the same window the incoming one
-    // spends waiting — so the two are one handover rather than two animations
-    // with a hole between them. It ends at 0, which is the value the scroll
-    // rule is already heading for, so the hand-back is a no-op exactly as the
-    // entry's is.
-    const from = {};
-    for (const k in easedPrev) if (k !== id) from[k] = easedPrev[k];
-    arrive = { id, t: 0, lead, dur, own: true, from, play: 1, started: false, motions: [] };
-    const b = blocks[id];
-    if (b) {
-      /* The child choreography must not start on CSS wall time while the
-         shared scene-clock envelope is still waiting. Mobile first-draw
-         stalls advance CSS but cap scene dt, which previously let the words
-         finish behind an opacity-zero parent. update() adds `.j-arrive` when
-         the envelope itself crosses `lead`; startArriveMotion then keeps the
-         text rise phase-locked to that same clock. */
-      b.style.setProperty('--j-in-wait', '0ms');
-      b.style.setProperty('--j-in', `${Math.round(dur * 1000)}ms`);
-      // Leave it unstarted until the scene clock reaches the visible phase.
-      b.classList.remove('j-arrive');
-    }
-  }
-
-  /** The visitor took the wheel: journey.js has dropped the camera blend, so
-   *  the copy stops being timed against an arrival that is no longer coming.
-   *  Only the OPACITY authority is handed back — the block's inner keyframes
-   *  are left to finish, because every one of them ends at its resting style
-   *  and cutting them short is the only way to make them visible as a cut. */
-  function cancelCopyEntry() { if (arrive) arrive.own = false; }
-
-  /** The wrap's lap has been steered (journey.js steerWrapBlend): the entry
-   *  runs on the same clock as the lap — armed on its frame, stepped by its
-   *  same dt — so it REVERSES with it rather than being dropped. Backwards,
-   *  the one envelope plays the whole handover in reverse: the arriving
-   *  block backs out along its own curve, the departed blocks rise home
-   *  along theirs, and both reach exactly the pre-wrap frame as the rewound
-   *  lap lands (the two clocks hit zero together, so the landing snap is a
-   *  no-op). Dropping it instead (cancelCopyEntry) hands opacity to the
-   *  scroll rule, and the scroll rule reads p — which a wrap parks at the
-   *  DESTINATION for the whole lap — so it painted the copy of the section
-   *  the camera was flying AWAY from and held it up through the entire
-   *  retrace (Hannah, 2026-08-16: "the text shows up even before I've
-   *  actually scrolled to that section, and then it stays"). */
-  function setCopyEntryPlay(play) { if (arrive) arrive.play = play < 0 ? -1 : 1; }
-
-  /** The entry is over — spent, abandoned, or overtaken. Drops the class as
-   *  well as the state: `both` fill means a stale `.j-arrive` would leave
-   *  three elements holding a finished animation for the rest of the session.
-   *  Harmless to look at (every keyframe ends at the resting style, which is
-   *  the whole contract) and still wrong to leave lying around. */
-  function endArrive() {
-    if (!arrive) return;
-    clearArriveMotion(arrive);
-    arrive = null;
-  }
-
+     Steps 5 and 6 are separated for that barrier alone: `hotspots.measure()`
+     and `hotspots.place()` are one owner's two phases, and the rail's read
+     sits between them because it, too, is a read. */
   function update(p, chapterId, camera, dt = 0,
     {
       cameraStateDisagree = false,
@@ -2449,723 +992,84 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       railFlight = null,
       travelP = p,
     } = {}) {
-    // one-shot, on the first frame the chapter modules are reachable
-    if (policyPending) resolveLabelPolicies();
-    // A pinned popover makes journey.js report a detail open — it is route
-    // state either way — but it is NOT modal: it sits beside a chip that must
-    // stay on screen under it, and it never claims the frame. So everything
-    // below that means "a dialog owns the page" asks for the MODAL detail, not
-    // merely an open one.
+    policies.resolve();
+    /* TWO LINES, NOT ONE, AND THE SPELLING IS PINNED. U06 collapsed these
+       into a single expression — same calls, same short-circuit, same value —
+       and `tools/test-detail-close-focus.mjs` D8 went red: it asserts this
+       predicate TEXTUALLY, here and in the card's synchronous rail release,
+       so that the close path can never land on a state the next frame would
+       undo. The spelling was restored rather than the assertion rewritten,
+       because that suite is another order's and the contract it guards is
+       real. It is nonetheless a D144-class pin — a spelling no gate owns
+       semantically — and it should become one regex over one expression when
+       its owner next touches it.
+
+       THE RELEASE FUNCTION IS NOT NAMED ABOVE, DELIBERATELY. That same suite
+       counts the token's textual occurrences to prove the release has exactly
+       one call site, so a comment that spells it lands in the count as a
+       third one. Naming it here cost two D4 assertions on the first attempt.
+       Same measured hazard `destroy()` records at the bottom of this file. */
     const detailNow = isDetailOpen();
-    const modalDetail = detailNow && !popPinned;
-    // The side navigator: reveal latch, resting symbol, current entry and the
-    // tab-order state, all decided in one place (journey/rail.js).
-    rail.update(p, { modalDetail, cameraStateDisagree, railWrap, railFlight });
-    /* A mobile profile disclosure is a translucent bottom sheet. Leaving the
-       navigator painted beneath it makes the active halo and glyphs show
-       through the card even though modalDetail has correctly removed their
-       pointer access. Withhold the rail visually for exactly the sheet's open
-       lifetime; desktop cards remain alongside the live navigator and use the
-       measured placement exclusion below. */
-    if (rail.root) {
-      rail.root.style.visibility = cardIsOpen && card.classList.contains('sheet')
-        ? 'hidden' : '';
-    }
-
-    if (dt > 0 && lastP !== null) {
-      pSpeed += (Math.abs(travelP - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
-    } else if (dt === 0 && !railFlight) {
-      // True placements have no travel. A direct click also performs two
-      // synchronous placement passes, but its railFlight already identifies
-      // the continuous coordinate that the next painted frame will resume;
-      // keep the live speed through an interruption instead of inventing a
-      // one-frame stop between two camera/rail flights.
-      pSpeed = 0;
-    }
-    lastP = travelP;
-    // moving fast releases copy even inside its band; arriving slow lets it in
-    const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
-    const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
-
-    /* Detect the authoritative ticket by identity. A replacement click gets
-       a fresh phase=0 ticket and captures the opacity already painted for its
-       new destination; nothing is reset in the click task. When an ordinary
-       flight lands, retain only its partial-opacity floor until the existing
-       scroll target rises to meet it. That prevents a lead-in from dipping
-       back out while pSpeed's settle tail decays. A Mission ticket means a
-       direct RETURN and gets the stronger hero curve below; boot has no
-       railFlight, so its authored entrance remains entirely untouched. */
-    if (railWrap) {
-      // The cyclic seam has its own reversible copy ticket. A carried floor
-      // from a preceding ordinary click must not hold the wrap's outgoing
-      // chapter above zero.
-      directCopyFlight = null;
-      directCopyId = null;
-      directCopyFrom = 0;
-      directCopyCarry = null;
-    } else if (railFlight && railFlight !== directCopyFlight) {
-      directCopyFlight = railFlight;
-      directCopyId = chapterId;
-      directCopyFrom = directCopyId ? eased[directCopyId] || 0 : 0;
-      directCopyCarry = null;
-    } else if (!railFlight && directCopyFlight) {
-      if (directCopyId) directCopyCarry = {
-        id: directCopyId,
-        floor: eased[directCopyId] || 0,
-        /* The last presented flight sample can land a few 1e-5 short of the
-           exact rest before endCamBlend retires its ticket. Anchoring carry
-           to that sample made the next exact destination frame look like
-           fresh travel: the floor cleared, copy fell with the still-hot speed
-           tail, then rose again. The ticket's target is the semantic landing
-           coordinate and therefore the only stable handoff point. */
-        atP: Number.isFinite(directCopyFlight.targetP)
-          ? directCopyFlight.targetP
-          : travelP,
-      };
-      directCopyFlight = null;
-      directCopyId = null;
-      directCopyFrom = 0;
-    }
-
-    // Advance the jump entry before the loop reads it. It dies on a placement
-    // frame (a capture or deep link must still snap), and when the visitor has
-    // scrolled somewhere else entirely — the arrival it was timed against is
-    // then over in both cases.
-    if (arrive) {
-      if (dt === 0 || (chapterId !== arrive.id && arrive.own)) endArrive();
-      else {
-        arrive.t += dt * (arrive.play || 1);
-        if (arrive.t >= arrive.lead + arrive.dur) endArrive();
-        // ...or rewound past its own start (a steered wrap): the handover has
-        // fully unwound and the from-state is back on screen, so it retires
-        // there exactly as it retires at the other end.
-        else if (arrive.t <= 0) endArrive();
-      }
-    }
-    if (arrive && arrive.own && !arrive.started && arrive.play > 0 && arrive.t >= arrive.lead) {
-      startArriveMotion(arrive);
-    }
-    if (arrive) syncArriveMotion(arrive);
-    // The camera blend runs on smootherstep (journey.js); the copy uses the
-    // same C2 ease so the two read as one movement rather than two.
-    let arriveE = 0, leaveE = 0;
-    if (arrive && arrive.own) {
-      const f = clamp01((arrive.t - arrive.lead) / arrive.dur);
-      arriveE = f * f * f * (f * (f * 6 - 15) + 10);
-      // the release runs across the lead — same C2 ease, same clock
-      const g = clamp01(arrive.t / Math.max(arrive.lead, 1e-6));
-      leaveE = g * g * g * (g * (g * 6 - 15) + 10);
-    }
-
-    const copyBandsDebug = {};
-    for (const id in eased) {
-      // `p` is parked at the destination during a direct click. `travelP` is
-      // the coordinate the camera and horizontal rail are actually presenting
-      // on this frame, and is identical to p for real scroll and placements.
-      // Reading the bands from it prevents destination copy from appearing on
-      // the click frame and gives click travel the exact same reversible
-      // release/settle choreography as scrolling.
-      const bandTarget = bandOpacity(travelP, COPY_BANDS[id]);
-      const scrollTarget = bandTarget * travelHold;
-      let target = scrollTarget;
-      if (directCopyCarry && directCopyCarry.id === id) {
-        // Hold only while still at the destination composition. Real travel
-        // away must restore the ordinary outgoing fade immediately—even while
-        // still inside Mission's wide fully-open band—rather than carrying
-        // this floor into another chapter.
-        if (Math.abs(travelP - directCopyCarry.atP) > 1e-4 || bandTarget < 0.995) {
-          directCopyCarry = null;
-        }
-        else {
-          target = Math.max(target, directCopyCarry.floor);
-          if (scrollTarget >= directCopyCarry.floor - 0.001) directCopyCarry = null;
-        }
-      }
-      let s = eased[id];
-      if (railFlight && directCopyId === id) {
-        const phase = Math.max(0, Math.min(1, Number(railFlight.phase) || 0));
-        const isHeroReturn = id === 'mission';
-        const onset = isHeroReturn ? FLIGHT_HERO_LEAD : FLIGHT_COPY_LEAD;
-        const landOpacity = isHeroReturn
-          ? FLIGHT_HERO_LAND_OPACITY
-          : FLIGHT_COPY_LAND_OPACITY;
-        const lead = smoothA((phase - onset) / (1 - onset));
-        const landing = Math.max(directCopyFrom, landOpacity);
-        s = directCopyFrom + (landing - directCopyFrom) * lead;
-      } else if (arrive && arrive.own && id === arrive.id) s = target * arriveE;
-      // a block the jump is LEAVING: released on the move's clock, but only
-      // while it is still above where the scroll rule would have it — so this
-      // can lower a block and never raise one, and a block whose band is
-      // already open (the destination's neighbours during a scrub-interrupted
-      // jump) is untouched.
-      else if (arrive && arrive.own && arrive.from[id] > 0 &&
-               arrive.from[id] * (1 - leaveE) > target) s = arrive.from[id] * (1 - leaveE);
-      // A real placement/capture snaps. A nav click also invokes two dt=0
-      // passes, but railFlight means the visible coordinate has not moved;
-      // preserve the opacity/transform already on screen through that task.
-      else if (dt === 0 && !railFlight) s = target;
-      else if (target < s) s += (target - s) * Math.min(1, dt * COPY_OUT_K);
-      else s += (target - s) * Math.min(1, dt * COPY_IN_K * settled);
-      if (s < 0.001 && target === 0) s = 0;
-      eased[id] = s;
-      copyBandsDebug[id] = { bandTarget, scrollTarget, target, eased: s };
-      // The snapshot the next arm() restores from is the last frame that
-      // actually TRAVELLED — a dt = 0 placement must not overwrite it, since
-      // undoing that very snap is the whole point of keeping it.
-      if (dt > 0) easedPrev[id] = s;
-      // Mission is painted once, below, after the rail has returned the gate
-      // derived from the very docking coordinate it painted this frame.
-      if (id !== 'mission') paintCopy(id, s);
-    }
-    // Mission's section strip and copy are one composition. The rail returns
-    // a pure arrival gate from its live --nav-y coordinate: the copy remains
-    // internally continuous, but cannot become visible before the strip is
-    // making its final approach under either scroll or direct navigation.
-    const railHeroGate = rail.setHeroEase(eased.mission);
-    const heroGate = Number.isFinite(railHeroGate) ? railHeroGate : 1;
-    if (railHeroGatePrev !== null) {
-      if (heroGate > railHeroGatePrev + 1e-5) {
-        // Arrive substantially with the strip, then let the ordinary copy
-        // breathe supply the final 20%. This is a progress-derived shelf, not
-        // a timer, so reversal lowers it on the same frame.
-        railHeroCarry = Math.max(railHeroCarry, heroGate * 0.8);
-      } else if (heroGate < railHeroGatePrev - 1e-5) {
-        railHeroCarry = 0;
-      }
-    }
-    if (eased.mission >= railHeroCarry - 0.001) railHeroCarry = 0;
-    const heroPaint = Math.min(heroGate, Math.max(eased.mission, railHeroCarry));
-    paintCopy('mission', heroPaint);
-    railHeroGatePrev = heroGate;
-    copyFrameDebug = {
-      travelP, pSpeed, travelHold, settled,
-      flightPhase: railFlight
-        ? Math.max(0, Math.min(1, Number(railFlight.phase) || 0))
-        : null,
-      directId: directCopyId,
-      directFrom: directCopyFrom,
-      carry: directCopyCarry ? { ...directCopyCarry } : null,
-      heroGate,
-      heroPaint,
-      heroCarry: railHeroCarry,
-      bands: copyBandsDebug,
-    };
-
-    // hotspots: they belong to the RESTING composition, so they follow the
-    // eased copy state (never the raw band), arrive AFTER the copy has
-    // re-anchored, one per HOTSPOT_STAGGER_MS in narrative order (gap g),
-    // and never show while a detail is open (the frame belongs to the detail)
+    const modalDetail = detailNow && !popover.isPinned();
     const detail = modalDetail;
-    const now = performance.now();
-    // Pill widths, measured in ONE pass before any transform is written this
-    // frame — interleaving the read with the writes below would force a
-    // reflow per chip. A chip is only measured while it is NOT flipped (the
-    // flip is a mirror, not a resize — row-reverse plus swapped padding is the
-    // same width — so the measurement is valid in either state). It is
-    // re-measured every frame rather than cached because a width taken on the
-    // first frame, before the stylesheet and the webfont have settled, reads
-    // short, and a flip computed from a short width puts the DOT off the
-    // frame instead of the label.
-    for (const h of hotspots) { h.pillW = h.btn.offsetWidth; h.pillH = h.btn.offsetHeight; }
-    // px per world unit at a given depth, for the hit pads below. The
-    // denominator is the VIEW-SPACE depth, not the radial distance: an
-    // off-axis node is nearer the image plane than its distance suggests
-    // (cos 38 deg at |ndc x| 0.9), and sizing a pad by distance would make it
-    // ~20% too small at exactly the edge of the frame where it matters most.
-    const tanHalf = Math.tan(camera.fov * Math.PI / 360);
-    const cm = camera.matrixWorld.elements;
-    const cpx = cm[12], cpy = cm[13], cpz = cm[14];
-    const fx = -cm[8], fy = -cm[9], fz = -cm[10];
-    const viewDepth = (v) => (v.x - cpx) * fx + (v.y - cpy) * fy + (v.z - cpz) * fz;
-    // Published for placeCard(), which pins a DOM box to a world point and so
-    // must read the SAME camera and the same projection scale the chips read
-    // on this frame, through the same jitter-free projection.
-    frameGeom = { camera, tanHalf, viewDepth };
-    const profileRailBox = railExclusion(PROFILE_RAIL_CLEARANCE_PX, true);
-    /* Compute the contributor mask once, immediately after rail.update() has
-       docked the navigator for this very frame. The same Set drives both the
-       WebGL portrait layers and the invisible DOM hit discs, so neither can
-       trail the other by one paint during Owned entry/exit. */
-    const ownedRailColliding = new Set();
-    const profileRailNodes = [];
-    if (profileRailBox) {
-      for (const h of hotspots) {
-        if (h.chapter !== 'owned' || !h.radius || typeof h.world !== 'function') continue;
-        const ow = h.world();
-        if (!ow) continue;
-        const ov = projectStable(ow.clone(), camera);
-        if (ov.z > 1) continue;
-        const ox = (ov.x * 0.5 + 0.5) * window.innerWidth;
-        const oy = (-ov.y * 0.5 + 0.5) * window.innerHeight;
-        const wr = h.radius() || 0;
-        const rr = wr > 0
-          ? wr * (window.innerHeight * 0.5) / (Math.max(0.05, viewDepth(ow)) * tanHalf)
-          : 0;
-        const cx = Math.max(profileRailBox.left, Math.min(ox, profileRailBox.right));
-        const cy = Math.max(profileRailBox.top, Math.min(oy, profileRailBox.bottom));
-        const distance = Math.hypot(ox - cx, oy - cy);
-        if (rr > 0 && distance < rr) ownedRailColliding.add(h.id);
-        profileRailNodes.push({ id: h.id, x: ox, y: oy, r: rr, distance });
-      }
-    }
-    const ownedRailExcluded = ownedRailColliding;
-    profileRailDebug = {
-      box: profileRailBox ? { ...profileRailBox } : null,
-      colliding: [...ownedRailColliding],
-      excluded: [...ownedRailExcluded],
-      nodes: profileRailNodes,
-    };
-    const ownedChapter = (typeof window !== 'undefined' && window.journey?.chapters)
-      ? window.journey.chapters.owned : null;
-    if (ownedChapter?.portraits?.setRailExcluded) {
-      ownedChapter.portraits.setRailExcluded(ownedRailExcluded);
-    }
-    /* Reserve collision space for a chapter's full scene-timed label set
-       before its first label becomes visible. Without this, each later
-       sibling joined the collision pass only when its own reveal crossed the
-       visibility gate, so an already-visible label (notably Arca on mobile)
-       jumped upward to make room. The copy ease starts before any node label
-       is allowed to appear, giving the pass a quiet frame in which to settle
-       the complete layout. Keep the reservation until every sibling has
-       faded out so departure cannot reflow either. */
-    const reservedLabelChapters = new Set();
-    for (const h of hotspots) {
-      if (h.reveal && !detail && ((eased[h.chapter] || 0) > 0.015 || h.a > 0.015)) {
-        reservedLabelChapters.add(h.chapter);
-      }
-    }
-    for (const h of hotspots) {
-      /* A chip with its own `reveal` follows the SCENE, not the copy: the
-         chapter reports 0..1 for this node (Connect: the hub's own ignition,
-         pure in p, so a reverse scrub withdraws the label with its light) and
-         the chip stands up with it — mid-band, mid-scrub, long before the
-         copy re-anchors, which is exactly what the eased-copy gate exists to
-         prevent for resting-composition chips and exactly wrong for a label
-         naming an event the visitor is watching. The copy band keeps one
-         duty: its CLOSE edge (lo opened to the -1 sentinel) still takes the
-         chip down into the next chapter, so departure matches the copy-gated
-         chips' byte for byte. travelHold is deliberately absent from this
-         path — a label that waits for the wheel to stop has already missed
-         its light. */
-      const gate = h.reveal
-        ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
-        : (eased[h.chapter] || 0);
-      // Inspire's light envelope is authoritative for its annotation too.
-      // Other scene-reveal chips (notably Connect) retain their shipped 72%
-      // threshold; Connect maps the remainder directly through revealScrub.
-      let want = gate > (h.revealDirect ? 0 : 0.72) && !detail;
-      const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
-      let w = (want || reserveLayout) ? h.world() : null;
-      w = want ? holdAnchor(h, w, dt) : w;
-      let sx = 0, sy = 0;
-      h.hitRaw = 0;
-      if (w) {
-        const v = projectStable(w.clone(), camera);
-        // Behind the camera, or too near the frame edge to be placeable.
-        // A chip with a HIT PAD gets the wider bound: the old 0.92/0.90 was
-        // sized for a pill that had to carry a readable label from its dot,
-        // but a pad chip's target is the dot's own circle and the pill flips
-        // or nudges around it. It mattered — Owned's arc reaches |ndc x| 0.912
-        // by construction, 0.008 from silently having no hotspot at all.
-        const bx = h.radius ? 0.97 : 0.92;
-        const by = h.radius ? 0.94 : 0.9;
-        if (v.z > 1 || Math.abs(v.x) > bx || Math.abs(v.y) > by) {
-          w = null;
-        } else {
-          sx = (v.x * 0.5 + 0.5) * window.innerWidth;
-          sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
-          // The WebGL portrait layers and their DOM control share the mask
-          // calculated above. Keeping this lookup here (instead of repeating
-          // the geometry test) makes their visibility atomic within the rAF.
-          if (h.chapter === 'owned' && ownedRailExcluded.has(h.id)) w = null;
-          // The chapter's editorial copy owns its area of the frame: a
-          // hotspot that projects into it is suppressed rather than drawn on
-          // top of the text. Hit model stays honest - a suppressed hotspot is
-          // also removed from the tab order, so keyboard and pointer agree.
-          // W3-B: the test has HYSTERESIS (enter at +8 px, leave at +26 px) —
-          // the organism's ambient sway moves projections a few px per
-          // second, and a single margin made borderline labels strobe.
-          const cb = blocks[h.chapter];
-          if (w && cb && cb.style.visibility === 'visible') {
-            const r = cb.getBoundingClientRect();
-            const m = h.sup ? 26 : 8;
-            h.sup = sx > r.left - m && sx < r.right + m && sy > r.top - m && sy < r.bottom + m;
-            if (h.sup) w = null;
-          } else h.sup = false;
-        }
-      }
-      want = want && !!w;
-      // What the FRAME can place, cached for the index's reachability rule
-      // below. Deliberately `want` and not `vis`: `vis` is still climbing
-      // through the arrival stagger for a second after a landing, and counting
-      // that would have latched an index open on a desktop that places
-      // everything perfectly well.
-      h.placeable = want;
-      h.layoutPlaceable = (want || reserveLayout) && !!w;
-      if (want) {
-        /* THE ARRIVAL STAGGER, and why a hover-only chip is not in it
-           (2026-08-14, Hannah: "no ~5-second delay before it becomes active").
 
-           The stagger is a REVEAL choreography: the chapter's labels arrive one
-           per HOTSPOT_STAGGER_MS in narrative order, so a frame does not gain
-           five pills at once. It is authored for chips that DRAW something at
-           rest — Inspire's three, Connect's three — and for those it is exactly
-           right and is untouched below.
+    rail.update(p, { modalDetail, cameraStateDisagree, railWrap, railFlight });
+    // The sheet's visual withholding of the rail — one writer, shared with the
+    // close path so the two can never disagree (syncRailVisibility, above).
+    cardTier.syncRailVisibility();
+    copy.step({ chapterId, dt, travelP, railWrap, railFlight });
 
-           A `labelOnHover` chip draws NOTHING at rest. The injected label-policy
-           rule is `.j-hot.label-hover > * { opacity: 0 }` — dot, label and pad
-           alike — so for Owned's sixteen faces the staggered `h.a` ramp is an
-           opacity envelope on an object with nothing visible inside it. What it
-           does have is consequences: `h.a` gates `.vis` (visibility and
-           pointer-events), the hit pad's SIZE (the second pass below skips any
-           chip at a <= 0.015), and `tabIndex`. So on this chapter the stagger
-           was choreographing nothing and delaying everything.
+    chips.measure();
+    const geom = projection.publish(camera);
+    const excluded = railMask.refresh({ geom });
 
-           Measured before, nav jump into Owned at 1440x900: first chip live at
-           996 ms (the copy gate, which is the chapter's arrival and is correct),
-           LAST chip live at 3253 ms — 15 x 150 ms of stagger on top, and longer
-           on a scroll entry, which is the delay Hannah is describing. It was
-           harmless while hover only lit a node; it is the difference between
-           a live section and a dead one now that hover is the disclosure.
-
-           So the fix is not to the constant — 150 ms is right for the chips it
-           was written for — but to WHO IS IN THE QUEUE. A chip with no resting
-           mark has no arrival to stage, so it arms on the frame it becomes
-           placeable. Owned's sixteen come up together, which is also what the
-           picture already does: the sixteen FACES are drawn by the chapter's
-           own fade, all at once, and never were staggered. */
-        // A `reveal` chip is likewise not in the queue: its cadence is the
-        // scene's own (Connect's lights land seconds apart), and 150 ms of
-        // stagger on top of that is noise — worse, it is ORDERED by
-        // registration (importance), which is not the order the lights land.
-        if (h.revealDirect) {
-          // No UI clock here: Inspire already owns its per-item cadence.
-          // Mirroring the source also keeps reverse scrubs truthful.
-          h.armAt = null;
-          h.a = gate;
-        } else if (h.revealScrub) {
-          // Preserve Connect's authored 72% readiness floor while making the
-          // marker above it a pure function of the same node-light envelope.
-          // No independent dt tail may outlive the core it annotates.
-          h.armAt = null;
-          h.a = smoothA(clamp01((gate - 0.72) / 0.28));
-        } else {
-          if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
-          if (dt === 0) h.a = 1;
-          else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
-        }
-      } else {
-        h.armAt = null;
-        if (h.revealDirect || h.revealScrub || dt === 0) h.a = 0;
-        else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
-      }
-      if (h.layoutPlaceable) {
-        let tx;
-        if (h.iconTab) {
-          /* A centred tab changes the truthful local anchor from x=11 to the
-             marker's midpoint. Re-derive translate-x from the measured width
-             so the icon — not merely the button box — still lands exactly on
-             the projected world node. The shape is symmetric, so edge-flip
-             has no visual or geometric job here. */
-          if (h.flipped) {
-            h.flipped = false;
-            h.btn.classList.remove('flip');
-          }
-          tx = sx + 11 - h.pillW * 0.5;
-        } else {
-          // Edge flip: the ordinary pill runs RIGHT of its dot, so a node near
-          // the right edge mirrors the label while leaving the dot on the node.
-          const over = sx + h.pillW - 11 - (window.innerWidth - 12);
-          const flip = (h.flipped ? over > -14 : over > 0) && sx - h.pillW + 21 > 0;
-          if (flip !== h.flipped) { h.flipped = flip; h.btn.classList.toggle('flip', flip); }
-          tx = flip ? sx + 21 - h.pillW : sx;
-        }
-        // Narrow viewports can leave a pill that fits on NEITHER side (a
-        // 232px label anchored at x 160 of 375). Nudge it in, but never far:
-        // past ~26px the dot stops reading as sitting on its node, and a
-        // truthful dot with a clipped tail beats a chip pointing at nothing.
-        const lo = 15, hi = window.innerWidth - 4 - h.pillW + 11;
-        const want2 = hi >= lo ? Math.min(Math.max(tx, lo), hi) : tx;
-        tx += Math.max(-26, Math.min(26, want2 - tx));
-        // The transform itself is written AFTER the loop, once every placed
-        // pill's rect is known — see the PILL COLLISION DODGE pass below.
-        h.pendX = tx;
-        // The pad is placed against the NODE, in the button's own coordinates,
-        // so the flip above and the nudge above it move the label and leave
-        // the target where the thing is drawn. (`margin: -11px 0 0 -11px` on
-        // .j-hot is why the node sits at local (sx - tx + 11, 11).)
-        if (h.radius) {
-          const worldR = h.radius() || 0;
-          if (worldR > 0) {
-            const d = Math.max(0.05, viewDepth(w));
-            h.hitRaw = worldR * (window.innerHeight * 0.5) / (d * tanHalf);
-          }
-          h.hitEl.style.setProperty('--j-hit-x', `${(sx - tx + 11).toFixed(1)}px`);
-        }
-        h.sx = sx; h.sy = sy;
-      }
-      const vis = h.a > 0.015;
-      if (h.iconTab) {
-        /* THE INITIATIVE MARKER'S INNER ARRIVAL. `h.a` is already the one
-           truthful reveal clock: it begins after this hotspot's existing
-           chapter stagger, follows a scene-supplied reveal when there is one,
-           reverses on departure, and snaps on dt=0 placements. Derive the
-           little shell / pictograph / name sequence from that value rather
-           than starting a CSS animation or timer when `.vis` changes. That
-           keeps hover completely out of the lifecycle (it cannot replay the
-           entry), and leaves the button's transform exclusively available to
-           the world-placement and collision-dodge pass below. */
-        const shellIn = smoothA(clamp01(h.a / 0.68));
-        const iconIn = smoothA(clamp01((h.a - 0.04) / 0.74));
-        const labelIn = smoothA(clamp01((h.a - 0.16) / 0.84));
-        h.btn.style.setProperty('--j-hot-shell-in', shellIn.toFixed(3));
-        h.btn.style.setProperty('--j-hot-shell-y', `${((1 - shellIn) * 2).toFixed(2)}px`);
-        h.btn.style.setProperty('--j-hot-icon-in', iconIn.toFixed(3));
-        h.btn.style.setProperty('--j-hot-icon-y', `${((1 - iconIn) * 4).toFixed(2)}px`);
-        h.btn.style.setProperty('--j-hot-icon-scale', (0.92 + iconIn * 0.08).toFixed(3));
-        h.btn.style.setProperty('--j-hot-label-in', labelIn.toFixed(3));
-        h.btn.style.setProperty('--j-hot-label-y', `${((1 - labelIn) * 3).toFixed(2)}px`);
-      }
-      h.btn.style.opacity = h.a;
-      h.btn.classList.toggle('vis', vis);
-      // Roving tab order: exactly the hotspots of the chapter at rest, in
-      // narrative registration order, are tabbable. Off-chapter, suppressed
-      // (behind copy), off-frame, mid-fade or detail-open hotspots all leave.
-      // tabIndex is the live half; `.j-hot:not(.vis)` is visibility:hidden, so
-      // a faded hotspot is out of the a11y tree as well as out of Tab.
-      h.btn.tabIndex = want && vis ? 0 : -1;
-      if (want && vis) h.btn.removeAttribute('aria-hidden');
-      else h.btn.setAttribute('aria-hidden', 'true');
-    }
-
-    /* PILL COLLISION DODGE (2026-08-10). With every anchor now a static
-       world point (see the 2026-08-10 addendum on the hover hold above), two
-       resting pills can sit in permanent overlap: at 375x812 Inspire's lip
-       anchors project 125 px apart while Arca's pill runs 168 px, so its tail
-       lay across ArtCompute's dot (measured 43 x 11 px of rect overlap, the
-       label text passing ~1 px above the dot). For ordinary ember pills the
-       LABEL moves while the dot is pinned back onto its node by the
-       compensating --j-dot-dy translate. A joined icon-tab is deliberately
-       indivisible: its tab rises with its capsule while the invisible hit pad
-       alone uses --j-dot-dy to remain on the world node. Chips are processed
-       bottom-of-frame first, each resolved
-       against the already-final pills below it, which makes the pass exact in
-       one sweep for any chain that raises upward. Pure in this frame's
-       geometry — no eased state, so dt = 0 places the dodged frame outright
-       and a ?p= deep link is bit-stable. It applies in every state — hover
-       included — because with static anchors the dodge is itself static, so
-       nothing ever shifts under a pointer; labelOnHover chips (Owned's
-       faces) carry no resting pill, so they neither dodge nor cause one, and
-       cross-chapter pairs never co-place (the copy gate is exclusive). */
-    const placed = hotspots.filter(h => h.layoutPlaceable && !h.labelOnHover);
-    placed.sort((a, b) => b.sy - a.sy);          // bottom of the frame first
-    const resolved = [];
-    for (const h of placed) {
-      let dy = 0;
-      const x0 = h.pendX - 11, x1 = x0 + h.pillW;
-      for (const f of resolved) {
-        if (f.chapter !== h.chapter) continue;
-        const fx0 = f.pendX - 11, fx1 = fx0 + f.pillW;
-        if (x1 <= fx0 || fx1 <= x0) continue;
-        const fTop = f.sy - 11 - f.dodgeY;
-        const myBot = h.sy - 11 - dy + h.pillH;
-        const need = myBot + HOTSPOT_DODGE_GAP - fTop;
-        if (need > 0) dy = Math.min(dy + need, HOTSPOT_DODGE_MAX);
-      }
-      h.dodgeY = dy;
-      resolved.push(h);
-    }
-    for (const h of hotspots) {
-      if (!h.placeable) continue;
-      h.btn.style.transform = `translate(${h.pendX}px, ${(h.sy - h.dodgeY).toFixed(1)}px)`;
-      if (h.dodgeY !== h.dodgePrev) {
-        h.dodgePrev = h.dodgeY;
-        if (h.dodgeY) h.btn.style.setProperty('--j-dot-dy', `${h.dodgeY.toFixed(1)}px`);
-        else h.btn.style.removeProperty('--j-dot-dy');
-      }
-    }
-
-    /* HIT PAD SIZING, second pass — writes only, so it costs no reflow.
-       A pad is as big as its node draws, with two limits:
-         · it may never reach more than 48% of the way to the nearest other
-           live pad, or two neighbours would fight over the same pixels and
-           the answer would depend on DOM order rather than on aim;
-         · a floor of 15 px, because a far node still has to be catchable —
-           22 px (a 44 px target) under the same media query PL-1.4 uses, so
-           the pad carries the touch minimum the pill no longer does there —
-           and a ceiling of 56 px, because a foreground face that fills a
-           sixth of the frame does not get to own a sixth of the pointer. */
-    const padFloor = sheetQuery.matches ? 22 : 15;
-    const padded = hotspots.filter(h => h.hitRaw > 0 && h.a > 0.015);
-    for (const h of padded) {
-      let cap = 56;
-      for (const o of padded) {
-        if (o === h) continue;
-        cap = Math.min(cap, Math.hypot(o.sx - h.sx, o.sy - h.sy) * 0.48);
-      }
-      h.hitR = Math.max(padFloor, Math.min(h.hitRaw, cap));
-      // The last LIVE pad radius, kept after the pad is torn down. dismissCard()
-      // needs to ask "is the pointer on that face?" while the chip is hidden
-      // under a pinned card, which is exactly when `hitR` has been zeroed.
-      h.padLast = h.hitR;
-      h.hitEl.style.setProperty('--j-hit', `${(h.hitR * 2).toFixed(1)}px`);
-    }
-    for (const h of hotspots) {
-      if (h.hitRaw > 0 && h.a > 0.015) continue;
-      if (h.hitR !== 0) { h.hitR = 0; h.hitEl.style.setProperty('--j-hit', '0px'); }
-    }
-
-    /* HOVER ZONES: scene-owned hover targets with no chip (report C). Same
-       gate, none of the chip machinery — and deliberately NOT the steady
-       projection the chips above use.
-
-       2026-08-12: a zone is a pointer target with no pixels (`.j-hotzone` sets
-       geometry, visibility and pointer-events, and paints nothing at all), so
-       taking the TAA jitter out of it buys nothing anyone can see — while
-       measurably costing a frozen golden. Owned's crown zone is a 203.8 px
-       circle in `.j-hotzones`, a position:fixed inset:0 layer stacked over the
-       canvas; steadying it moved that layer's child by 0.2 px
-       (translate(113px, -5.1px) -> -4.9px) and shifted owned@430x932 by MAE
-       0.13/255 spread over the WHOLE frame — a compositor rounding artifact,
-       not a scene change (camera matrices, fog, pose and every lens uniform
-       were dumped in both builds and are bit-identical). Bisected to exactly
-       this line: chips steady + zones raw restores all ten goldens to 0.00.
-
-       So the zone keeps the raw projection and keeps its sub-pixel tremor. It
-       is a 0.65 px wobble on a 204 px target, which cannot flicker a hover in
-       practice, and it is invisible by construction. If a zone ever grows
-       something that paints, this is the line that has to change — and the
-       golden it moves is the reason it did not change today. */
-    for (const z of hoverZones) {
-      const gate = eased[z.chapter] || 0;
-      let live = gate > 0.72 && !detail;
-      if (live) {
-        const w = z.world();
-        const v = w ? w.clone().project(camera) : null;
-        if (!v || v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) live = false;
-        else {
-          const d = Math.max(0.05, viewDepth(w));
-          // The floor carries PL-1.4's 44 px touch minimum under the same
-          // media query the hit pads use, now that a zone can be pressed.
-          // Measured, it never binds: the crown projects to r 123 (1440x900),
-          // 109 (1280x800), 89 (375x812) and the 140 cap (430x932).
-          const zFloor = sheetQuery.matches ? 22 : 18;
-          const r = Math.max(zFloor, Math.min(140, z.radius * (window.innerHeight * 0.5) / (d * tanHalf)));
-          const zx = (v.x * 0.5 + 0.5) * window.innerWidth;
-          const zy = (-v.y * 0.5 + 0.5) * window.innerHeight;
-          z.el.style.transform = `translate(${(zx - r).toFixed(1)}px, ${(zy - r).toFixed(1)}px)`;
-          z.el.style.width = z.el.style.height = `${(r * 2).toFixed(1)}px`;
-          z.r = r;
-        }
-      }
-      if (live !== z.live) {
-        z.live = live;
-        z.el.classList.toggle('vis', live);
-        if (!live) {
-          // A zone leaving the frame takes its commit state with it: no timer
-          // left running against an element nobody can reach, and no half-
-          // spent visit waiting for a pointer that has gone.
-          if (z.dismiss) z.dismiss();
-          if (z.hot) { z.hot = false; z.onHot(false); }
-        }
-      }
-    }
-
-    // The popover is anchored to a chip that is itself world-tracked, so it has
-    // to be re-placed every frame or it would lag the organism's sway. If its
-    // chip has left the frame (travel, suppression behind copy, a modal card),
-    // the popover goes with it — an annotation with nothing to annotate.
-    if (popNode) {
-      if (!popNode.btn.classList.contains('vis')) hidePop();
-      else placePop();
-    }
-
-    // The card is anchored to a node that is itself world-tracked, so it is
-    // re-placed every frame for the same reason the popover is: the organism
-    // sways, and a box pinned to a face has to sway with it or the two come
-    // apart. Unlike the popover it is NEVER hidden when its subject leaves
-    // the frame — the card is a modal disclosure with a focus trap and a
-    // route state behind it, and taking it away from under a visitor's
-    // keyboard because the camera drifted would be a far worse fault than a
-    // card that has run out of things to point at. anchorPoint() clamps to
-    // the frame edge instead, and falls back to the flank only when the node
-    // is behind the lens entirely.
-    //
-    // A TRANSIENT card is the exception, and for the popover's reason rather
-    // than against it (2026-08-14): it holds no focus, owns no input and is
-    // nobody's route state, so it IS an annotation, and an annotation whose
-    // subject has left the frame has nothing to annotate. A chip that goes
-    // non-`.vis` mid-hover — travel, suppression behind the copy block, a
-    // chapter change — does not reliably fire `pointerleave` on the way out,
-    // so without this the panel could outlive the face it points at.
-    if (cardIsOpen) {
-      if (!cardPinned && cardAnchor && !cardAnchor.btn.classList.contains('vis')) {
-        if (cardAnchor.hot) { cardAnchor.hover = false; cardAnchor.refresh(); }
-        else hideCard();
-      } else placeCard();
-    }
-  }
-
-  // An orientation change or a window resize across the 720px line while a
-  // card is open re-forms it in place rather than leaving a side card on a
-  // phone-width viewport until the next open.
-  if (typeof sheetQuery.addEventListener === 'function') {
-    sheetQuery.addEventListener('change', () => {
-      if (!cardIsOpen) return;
-      // A transient card has no sheet form to re-form INTO — the tier is
-      // switched off on a coarse pointer / narrow viewport — so crossing the
-      // line simply takes the reveal away. The next hover on the wider side
-      // brings it back.
-      if (!cardPinned) { if (sheetQuery.matches) hideCard(); return; }
-      card.classList.toggle('sheet', sheetQuery.matches);
-      // The anchored form writes its placement as an INLINE transform, which
-      // outranks `.j-card.sheet { transform: none }`. Re-forming into a sheet
-      // therefore has to hand the transform back, or the sheet arrives
-      // wearing the side card's translate. (The other direction needs
-      // nothing: the next frame's placeCard() writes one.)
-      if (sheetQuery.matches) {
-        card.style.transform = '';
-        card.style.removeProperty('--j-card-fx');
-        card.style.removeProperty('--j-card-fy');
-        card.removeAttribute('data-side');
-      }
+    chips.place({
+      p, dt, detail, chapterId, railFlight,
+      copyEase: copy.ease, excluded, geom, now: performance.now(),
     });
+    zones.frame({ detail, copyEase: copy.ease, geom });
+
+    popover.frame();
+    cardTier.frame();
   }
+
+  cardTier.watchViewport();
+
 
   return {
-    update, addHotspot, addHoverZone, openCard, closeCard, rail,
-    armCopyEntry, cancelCopyEntry, setCopyEntryPlay,
+    update, addHotspot, addHoverZone, openCard, closeCard, rail, announce,
+    prepareCopyEntry, armCopyEntry, cancelCopyEntry, setCopyEntryPlay,
     /** A chapter's live eased copy opacity (0..1) — the one signal that
      *  means "the intro is playing": settle-gated on a scroll arrival, the
      *  armCopyEntry envelope on a nav jump, fast release when travel
      *  begins. Read by journey.js as Inspire's landing-cascade gate (the
      *  chapter's 5c block), never written from outside. */
-    copyEase: (id) => eased[id] || 0,
+    copyEase: copy.ease,
     /** QA: the chapter whose copy is mid-entry, or null. */
-    get arrivingChapter() { return arrive ? arrive.id : null; },
+    get arrivingChapter() { return copy.arrivingChapter; },
     /** QA: the existing scroll-style smoothed |dp/dt| travel signal. Direct
      *  clicks feed it their camera-phase coordinate, never parked route p. */
-    get travelSpeed() { return pSpeed; },
+    get travelSpeed() { return copy.travelSpeed; },
     /** QA: exact screen-space classifier inputs from the most recent frame. */
-    get profileRailDebug() { return profileRailDebug; },
+    get profileRailDebug() { return railMask.debug; },
     /** QA: one atomic read of the copy authorities used in the latest rAF. */
-    get copyDebug() { return copyFrameDebug; },
-    get cardOpen() { return cardIsOpen; },
+    get copyDebug() { return copy.debug; },
+    get cardOpen() { return cardTier.isOpen(); },
     /** QA: is that card COMMITTED (click / key / route), or a transient
      *  hover-and-focus reveal? — the card's half of `popPinned`. */
-    get cardPinned() { return cardPinned; },
+    get cardPinned() { return cardTier.isPinned(); },
     /** QA: whose card the box is currently showing, or null. */
-    get cardNode() { return cardIsOpen ? cardNodeId : null; },
+    get cardNode() { return cardTier.isOpen() ? cardTier.nodeId() : null; },
     /** QA: is the card currently in its bottom-sheet form? */
-    get cardIsSheet() { return card.classList.contains('sheet'); },
+    get cardIsSheet() { return cardTier.isSheet(); },
     /** QA: the touch-armed (first-tap) hotspot id, or null. */
-    get armedNode() { return armed ? armed.id : null; },
+    get armedNode() { const a = hotState.armed(); return a ? a.id : null; },
     /** QA: the node whose popover is showing, or null. */
-    get popNode() { return popNode && pop.classList.contains('open') ? popNode.id : null; },
+    get popNode() { return popover.shownId(); },
     /** QA: is that popover pinned (committed) rather than a hover reveal? */
-    get popPinned() { return popPinned; },
+    get popPinned() { return popover.isPinned(); },
     card,
-    pop,
+    pop: popover.element,
     hotspots,
   };
 }

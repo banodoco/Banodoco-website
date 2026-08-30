@@ -43,11 +43,17 @@ import { createFinalSky } from './sky.js';
 import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
+import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
+import {
+  PURPOSE_NAV_POCKET_STRENGTH,
+  purposeNavPocket,
+} from '../../layout/final-composition.js';
 
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
   group.visible = false;
   group.userData.jFinal = true;   // QA handle: budget A/Bs isolate this leg
+
   sceneApi.scene.add(group);
 
   // sceneApi: makeUniforms harvests the HERO's own tap-pulse trio off its live
@@ -144,6 +150,12 @@ export function createFinal(sceneApi) {
   const onOver = (e) => {
     if (amount > 0.5 && e.target.closest && e.target.closest(CTA_SEL)) fireCta();
   };
+  /* THE CHAPTER'S GLOBAL HOOKS (lifecycle.md §6.4). These two are the only
+     things this chapter attaches OUTSIDE its own scene graph, and they stay
+     attached for the life of the document — this is a load-once page and
+     nothing tears a chapter down. They are the two chapter-installed global
+     hooks tools/test-render-baseline.mjs's raw-registration manifest counts
+     under this file. */
   document.addEventListener('pointerover', onOver);
   document.addEventListener('focusin', onOver);
 
@@ -352,13 +364,32 @@ export function createFinal(sceneApi) {
      `rise` starts fading it out (uAmount leaves 1.0 at 1452 ms, reaches 0 at
      1535 ms; the reveal today finishes at ~1168 ms). The up-wrap gives 1.450 s
      between the chapter becoming visible and the lap landing, with the
-     convergence tail legal after that. The seven gaps already wider than the
-     target keep their shipped cost (0.502 s), the sixteen narrower ones cost
-     LADDER_GAP_S each, the run below the first rung costs 40 ms at RATE_FAST,
-     and the run above the last rung 169 ms at the shipped rate. At
-     LADDER_GAP_S = 0.040 that totals 1.351 s — inside the tighter of the two
-     windows with ~33 ms in hand. At 0.045 it is 1.431 s and does not fit.
-     Measured, not guessed.
+     convergence tail legal after that. The gaps already wider than the target
+     keep their shipped cost, the narrower ones cost LADDER_GAP_S each, and the
+     runs below the first rung and above the last one are paid at RATE_FAST and
+     at the shipped rate. Measured, not guessed.
+
+     THE ARITHMETIC AS FIRST WRITTEN (2026-08-14) READ: seven gaps wider than
+     the target at 0.502 s, sixteen narrower, 40 ms below the first rung and
+     169 ms above the last, totalling 1.351 s — ~33 ms inside the tighter
+     window — with 0.045 costing 1.431 s and NOT fitting. That is the
+     PRE-RE-CUT accelerando, and it is kept here because the 33 ms is the
+     reason this paragraph exists: the fit really was that tight once.
+
+     AMENDED 2026-08-26 (CONV-02), ON THE RUNGS THAT SHIP. The 2026-08-16
+     re-cut noted below re-authored both tables, so the split moved: of the 23
+     gaps, TWELVE are wider than the target and keep their shipped cost
+     (0.562 s) and ELEVEN are narrower and cost LADDER_GAP_S each (0.440 s).
+     The run below the first rung is 74 ms at RATE_FAST and the run above the
+     last is 90 ms at the shipped rate — both measured on the SHIFTED lookup
+     (see below: the rate is read half a reveal width behind the driver, so
+     the fast run is LADDER[0] + REVEAL_W/2 long, not LADDER[0]). At
+     LADDER_GAP_S = 0.040 that totals 1.1655 s — 219 ms inside the tighter
+     window, not 33 — and 0.045 now costs 1.224 s and DOES fit. The limiters
+     survived the re-cut unchanged precisely because they read the rungs from
+     the build; this budget was restated by hand and did not. Recomputed on
+     every run by tools/test-declared-conversions.mjs (LD-FIT), which pins the
+     1.1655 s against the two window measurements above.
 
      AND THE STAGING IS ALREADY IN THE ORDER. Hannah asks for "the ring goes
      and then all the mushrooms come in or go away after that", and the ladder
@@ -473,7 +504,14 @@ export function createFinal(sceneApi) {
   // limiters stay: they are what pace a BLEND/GLIDE arrival in time, and
   // reading the rungs from the build is what let them survive the re-cut
   // unchanged. Neither RATE_MIN nor ARRIVE_RATE_MIN binds on the new
-  // ladder (tightest gap 0.023 pull needs 0.575 and 0.177 respectively).
+  // ladder (tightest gap 0.0224 pull needs 0.560 and 0.172 respectively).
+  // The three figures were rounded to 0.023 / 0.575 / 0.177 when this note
+  // was written and are corrected 2026-08-26 (CONV-02): the tightest pair on
+  // the nominal table is world.js's 0.9276 and 0.9500, and 0.0224 divided by
+  // LADDER_GAP_S and by ARRIVE_GAP_S is what each floor is being asked for.
+  // The CLAIM was and is true — 0.560 > RATE_MIN and 0.172 > ARRIVE_RATE_MIN,
+  // and the same holds at the worst field jitter ring.js can deal (0.0193,
+  // asking 0.483 and 0.148). LD-FLOORS recomputes both every run.
   const LADDER = ring.seats.filter(s => s.tier <= 3).map(s => s.reveal)
     .sort((a, b) => a - b);
   /** Pull units per second for the blend driver at `u`.
@@ -662,6 +700,12 @@ export function createFinal(sceneApi) {
        slab exists to hide (the underground cords, hyphae and front) is the
        bed's own geometry and fades with it, so there is never a frame with
        strokes to hide and no slab to hide them.
+       [SUPERSEDED, report #32 (2026-08-26). The second sentence was false at
+       every interior value of `bed`, and measurably so. The strokes ride the
+       bed as an AMPLITUDE; the slab rides it as a stipple THRESHOLD. "Fades
+       with it" is true of the strokes and not of the occluder — at bed 0.5 the
+       strokes are half as bright and the slab is half ABSENT. See SOIL_LEAD
+       below for the measurement and the correction.]
 
      WHEN IT ARMS. Only a move with room, by exactly the arithmetic `027f969`
      already established — `RETIRE_SPAN * dur > BAND_S`. The longest ordinary
@@ -673,16 +717,142 @@ export function createFinal(sceneApi) {
    *  for the floor (§39). 0.80 puts the two curves at most 0.28 apart, around
    *  the middle of the band, and exactly together at both ends. */
   const SKY_FULL = 0.80;
+  /** THE OCCLUDER MUST LEAD THE LIGHT IT HIDES (report #32, 2026-08-26 —
+   *  Hannah: "some of the underground networks become visible temporarily
+   *  during the transition through the loop from end to beginning AND VICE
+   *  VERSA").
+   *
+   *  THE FAULT. `terrain.setAmount(bed)` handed ONE float to two different
+   *  kinds of thing. The underground colony — cords, hyphae, the growth front,
+   *  the aggregates, the cut face — are additive strokes whose fragment output
+   *  ends `* uOpacity * uAmount * fogF` (world.js), so `bed` is an AMPLITUDE
+   *  for them: at bed = b they draw at b of full. The slab that hides them is
+   *  not blended at all; it is an opaque depth-writing mesh with a hashed
+   *  stipple, `if (h > uSoilOn) discard` (terrain-soil.js), so `bed` is a
+   *  COVERAGE for it: at uSoilOn = b a fraction (1 - b) of the occluder's
+   *  PIXELS is simply gone. The product is the leak:
+   *
+   *      visible buried light  =  (1 - b) * b  of full,   peak 0.25 at b = 0.5
+   *
+   *  — nowhere near zero anywhere in the interior, and zero only at the two
+   *  ends the §31 note was measured at. Direction-symmetric by construction,
+   *  which is exactly the "and vice versa" in the report, and it is why the
+   *  buried network reads across the whole floor mid-lap while the rest frame
+   *  it is travelling between shows none of it.
+   *
+   *  MEASURED, on a real wheel-driven wrap frozen mid-flight and toggled in
+   *  page (evidence hero-wrap-entry/, probe-sweep.mjs). Forcing uSoilOn = 1 at
+   *  the captured pose — the rest frame's own solid occluder, every stroke
+   *  left at the brightness the lap gave it — removes:
+   *
+   *      down-lap  t 1215 ms  bed 0.674   21 834 px  (1.69% of frame)
+   *      down-lap  t 1816 ms  bed 0.289   23 481 px  (1.81%)
+   *      up-lap    t 3107 ms  bed 0.273   31 033 px  (2.40%)
+   *      up-lap    t 3511 ms  bed 0.487   29 040 px  (2.24%)
+   *
+   *  and what it removes IS the buried colony: the same pixels the 2/4 cords
+   *  (y -3.46..-1.05), 2/5 hyphae (y -5.77..-0.04) and 2/7 front (y -1.7..-0.2)
+   *  toggles remove one at a time. All four trials at lap p95 frame gap
+   *  17-19 ms (the connect-skip trust criterion is <= 50).
+   *
+   *  THE CORRECTION. Coverage leads amplitude: the slab is SOLID by the time
+   *  the strokes are worth hiding, and spends its whole stipple ramp down at
+   *  the dark end of the band where there is nothing to leak.
+   *
+   *      uSoilOn = min(1, bed / SOIL_LEAD)
+   *
+   *  · Both ends are the shipped arithmetic EXACTLY: bed = 1 gives 1 (the
+   *    Final rest, both Final goldens and every ?capture= freeze, where
+   *    bed = eff = amount = 1) and bed = 0 gives 0 (the retired chapter). Only
+   *    the interior moves, and the interior is the whole defect.
+   *  · The residual leak is bounded by SOIL_LEAD / 4 — 0.05 against the
+   *    shipped 0.25, a 5x reduction — and it sits at bed <= 0.20, where the
+   *    entire terrain is at a fifth of its light.
+   *  · D16's reason for the stipple is kept. The slab still arrives and leaves
+   *    pixel-by-pixel rather than with group.visible, and it is not a pop:
+   *    measured on the retire, `bed` spends 433 ms inside [0, 0.20] (crossings
+   *    0.20 at 1982 ms, 0.001 at 2415 ms from the wrap frame), so the dissolve
+   *    still runs ~26 frames at 60 Hz for TAA to integrate.
+   *  · NOTHING ELSE MOVES. This changes one uniform on one occluder. `bed`,
+   *    `eff`, `skyv`, the haze sprites, the canopy and every body keep the
+   *    values they had, so §27's approved approach-kindle in the last ~1.4 s of
+   *    the up-lap is untouched — proved by uniform trace, not by assertion
+   *    (evidence hero-wrap-entry/kindle-parity.json).
+   *  · uBuried is unaffected: it is camera-pure and takes the slab away from a
+   *    lens that is under it, which is a different question from this one. */
+  const SOIL_LEAD = 0.20;
+  function soilCoverOf(b) { return b >= SOIL_LEAD ? 1 : b / SOIL_LEAD; }
   let bedSpread = false;
+  /** THE SPREAD'S OWN SPAN (the epilogue race, 2026-08-26 — Hannah: "when I
+   *  scroll DOWN from the bottom BEFORE all the mushrooms in the epilogue
+   *  section have fully loaded, the ROOT of the main mushroom becomes visible
+   *  and the spores from the other mushrooms reappear").
+   *
+   *  §31's bed/sky curves divide `shownPull` by the FULL band (PULL_MAX /
+   *  SKY_FULL), which is only continuous with the `eff` they take over from
+   *  when the blend arms at one of the band's ENDS. Every path measured when
+   *  §31 shipped did arm at an end. A wrap fired MID-ARRIVAL — the ladder
+   *  still kindling, `shownPull` mid-band — armed the spread at bed =
+   *  smoothstep(shownPull/PULL_MAX) against an eff of 1: measured on a real
+   *  wheel-driven wrap departing at pull 0.626, the bed uniform stepped
+   *  1 → 0.7989 in ONE frame on the arm frame (probe-epilogue.mjs, evidence
+   *  epilogue-race/), and the step grows the earlier the wrap fires.
+   *
+   *  So the spread is normalised to the band THIS blend actually spends:
+   *  the greater of where the driver stands and where it is going, latched
+   *  on the blend's arming edge and held through steering re-announcements
+   *  (a steer must not re-normalise mid-flight — that would be the same
+   *  one-frame step moved to the steer frame). Every full-band path latches
+   *  exactly PULL_MAX, so bed = smoothstep(shownPull/PULL_MAX) bit-for-bit
+   *  and the shipped wraps, goldens and G-gates are unchanged by
+   *  construction. Only a mid-band departure — the defect — differs: its bed
+   *  arms at 1, continuous with eff, and closes on 0 with the driver. */
+  let spreadSpan = PULL_MAX;
 
   /** Seconds the SHIPPED blend clock takes to cross the whole band. Integrated
-   *  off `blendRate` so it can never disagree with it. */
-  const BAND_S = (() => {
-    const N = 4096, du = PULL_MAX / N;
+   *  off `blendRate` so it can never disagree with it — and kept as a
+   *  CUMULATIVE table so the cost of any PARTIAL band [0, u] is read from the
+   *  same integration rather than re-derived (see bandSTo below; the epilogue
+   *  race, 2026-08-26). BAND_S is the table's last entry, bit-identical to the
+   *  scalar sum this replaced (same summands, same order). */
+  const BAND_N = 4096;
+  const BAND_COST = (() => {
+    const du = PULL_MAX / BAND_N;
+    const cum = new Float64Array(BAND_N + 1);
     let s = 0;
-    for (let i = 0; i < N; i++) s += du / blendRate((i + 0.5) * du);
-    return s;
+    for (let i = 0; i < BAND_N; i++) {
+      s += du / blendRate((i + 0.5) * du);
+      cum[i + 1] = s;
+    }
+    return cum;
   })();
+  const BAND_S = BAND_COST[BAND_N];
+  /** Seconds the shipped blend clock takes to cross [0, u] — the cost of the
+   *  light actually outstanding when a departure begins at `shownPull` = u.
+   *  bandSTo(PULL_MAX) === BAND_S exactly (the table's own last entry). */
+  function bandSTo(u) {
+    const x = Math.max(0, Math.min(1, u / PULL_MAX)) * BAND_N;
+    const i = Math.floor(x);
+    if (i >= BAND_N) return BAND_COST[BAND_N];
+    return BAND_COST[i] + (BAND_COST[i + 1] - BAND_COST[i]) * (x - i);
+  }
+  /** bandSTo's INVERSE — the driver value whose outstanding light costs `s`
+   *  seconds. Read from the SAME cumulative table by the same piecewise-linear
+   *  rule, so the pair can never disagree about the curve; the round trip is
+   *  exact to one bucket, PULL_MAX / BAND_N = 2.7e-4 of pull. It exists for
+   *  `floorPullOf` below and for nothing else. */
+  function bandInv(s) {
+    if (!(s > 0)) return 0;
+    if (s >= BAND_COST[BAND_N]) return PULL_MAX;
+    let lo = 0, hi = BAND_N;
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if (BAND_COST[m] <= s) lo = m; else hi = m;
+    }
+    const seg = BAND_COST[hi] - BAND_COST[lo];
+    const f = seg > 0 ? (s - BAND_COST[lo]) / seg : 0;
+    return ((lo + f) / BAND_N) * PULL_MAX;
+  }
 
   // null = "adopt the camera-pure value on the next tick" (boot).
   let shownPull = null;
@@ -690,7 +860,10 @@ export function createFinal(sceneApi) {
   let lagging = false;              // armed by a blend; cleared on convergence
   let retiring = false;             // this blend is LEAVING the epilogue
   let retireScale = 1;              // 1 = the shipped clock, exactly
+  let retireCost = 0;               // bandSTo(here) — the light THIS retire carries
   let retireEff = 1;                // monotone fade, latched while retiring
+  let floorHold = null;             // monotone restore, latched while retiring
+  let lastReach = 1;                // the floor dim this chapter last RENDERED
 
   /* ---- WHICH DEAL THE REVEAL READS (2026-08-16, Hannah's eighth pass:
      the entry "should feel like starting from the front and working
@@ -754,6 +927,12 @@ export function createFinal(sceneApi) {
      carriers fall to a whisper. The scene-level ambient mote cloud (the
      fake-DOF bokeh balloons in the near field) dims out entirely and is
      retired below 12% — Connect's raster lesson. */
+  const heroGroundDim = createHeroGroundDimClaim(sceneApi, {
+    keeps: [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25],
+    pointThreshold: 0.12,
+  });
+  // Final also borrows the scene-level ambient mote cloud. It is not shared
+  // with Connect, so it remains a local exact-restoration channel.
   const heroDim = [];
   let heroDimReady = false, heroDimActive = false;
   function addDim(o, keep) {
@@ -766,16 +945,6 @@ export function createFinal(sceneApi) {
   function collectHeroGround() {
     if (heroDimReady) return;
     heroDimReady = true;
-    const gg = sceneApi.groups && sceneApi.groups.ground;
-    if (gg) {
-      // same predicate + order the hero itself uses (§ intro sequencing):
-      // [web, myc, mossPts, pools, roots, ribbon, beads]
-      const withWin = gg.children.filter(o => o.material &&
-        ((o.material.uniforms && o.material.uniforms.uWin) ||
-         (o.material.userData && o.material.userData.uWin)));
-      const KEEP = [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25];
-      withWin.forEach((o, i) => addDim(o, KEEP[i] ?? 0.20));
-    }
     // ambient mote/bokeh cloud: a direct scene child, never the shed
     for (const o of sceneApi.scene.children) {
       if (o.isPoints && o !== sceneApi.groups.spores) addDim(o, 0.0);
@@ -783,6 +952,21 @@ export function createFinal(sceneApi) {
   }
   function applyHeroDim(reach) {
     heroDimActive = reach > 0.001;
+    heroGroundDim.set(reach);
+    if (sceneApi.setGroundNavPocket) {
+      const dpr = window.devicePixelRatio || 1;
+      const pocket = purposeNavPocket({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      sceneApi.setGroundNavPocket({
+        x: pocket.x * dpr,
+        y: pocket.y * dpr,
+        halfWidth: pocket.halfWidth * dpr,
+        halfHeight: pocket.halfHeight * dpr,
+        amount: reach * PURPOSE_NAV_POCKET_STRENGTH,
+      });
+    }
     for (const d of heroDim) {
       const f = 1 - reach * (1 - d.keep);
       if (d.u) d.u.value = d.base * f;
@@ -790,7 +974,62 @@ export function createFinal(sceneApi) {
       d.o.visible = d.vis && (d.o.isPoints ? f > 0.12 : true);
     }
   }
+  /** THE FLOOR'S RESTORATION HAS TO BE FITTED TOO (the epilogue race's
+   *  residue, 2026-08-26 — TEMPO-01's TL2).
+   *
+   *  The epilogue fix normalised the retire's CLOCK (`retireScale`) and the
+   *  bed/sky SPREAD (`spreadSpan`), and both live on this chapter's own
+   *  uniforms. The hero ground web and the ambient mote cloud do not: they are
+   *  `sceneApi.groups.ground` and a scene-level Points cloud, driven from here
+   *  through `reach`, whose ramp is an ABSOLUTE slice of the band — smoothstep
+   *  over pull [0.25, 0.70] — authored against a full-band departure. The cure
+   *  never reached it, and it is the whole residual:
+   *
+   *    a fitted retire crosses [here -> 0] in `window` whatever `here` is, so
+   *    the driver stands at u after a fraction 1 - bandSTo(u)/bandSTo(here) of
+   *    the window. That fraction is a function of `here`. The ramp's fixed
+   *    thresholds are therefore crossed EARLIER the less light the departure
+   *    carries — measured on the injected clock (tools/tempo-run.mjs): the mote
+   *    cloud lit 1433 ms into a full-band lap and 883 ms into a mid-band one,
+   *    550 ms of pure state-dependence with no constant in it at all.
+   *
+   *  So the ramp reads the driver in the departure's OWN cost coordinate,
+   *  re-expressed as the full band: `bandSTo(u) * BAND_S / retireCost` is the
+   *  cost this frame would have stood at on a full-band departure at the same
+   *  point of the window, and `bandInv` turns it back into a driver value. The
+   *  ramp itself — its two constants and its smoothstep — is UNTOUCHED; only
+   *  the coordinate it is read in is fitted, which is the same move
+   *  `retireScale` and `spreadSpan` already are.
+   *
+   *  · A FULL-BAND DEPARTURE IS BIT-IDENTICAL BY CONSTRUCTION, not by
+   *    measurement: `retireCost === BAND_S` exactly there (the table's own last
+   *    entry), and that case returns `u` before any arithmetic runs. So does
+   *    every path with no fitted retire on it — the scrub, ?p=, ?pose=, the
+   *    frozen ?capture=, every arriving move, and every blend too short to
+   *    reach the fitting (`window > BAND_S`). All ten goldens are untouched.
+   *  · IT READS `retireCost`, NOT `spreadSpan`, so the ramp and the clock are
+   *    fitted to the SAME `here` on a steering re-announcement, where the two
+   *    deliberately differ (a spread must not re-normalise mid-flight; a clock
+   *    must re-fit to the light still outstanding).
+   *  · IT IS LATCHED MONOTONE, for the reason `retireEff` is, AND THE LATCH IS
+   *    SEEDED FROM THE FRAME THAT WAS ACTUALLY DRAWN. Remapping moves the
+   *    driver UP at the arm — to PULL_MAX, by construction — and a wrap fired
+   *    below pull 0.70 departs a floor that is already partly restored, so an
+   *    unlatched ramp would re-DIM it in one frame and then restore it again:
+   *    the arm-frame step of report #32, moved onto the floor. A latch seeded
+   *    at 1 would not catch that — 1 is above every value the step could climb
+   *    to — so it is seeded at `lastReach`, the dim this chapter RENDERED on
+   *    the frame before the arm. The floor therefore cannot go backwards
+   *    inside a departure at any departure pull, and the onset can only ever
+   *    be LATER than the full-band one, never earlier. */
+  function floorPullOf(u) {
+    if (!(retiring && retireScale < 1)) return u;   // the shipped ramp, untouched
+    if (!(retireCost > 0) || retireCost >= BAND_S) return u;   // full band: bit-for-bit
+    return bandInv(bandSTo(u) * (BAND_S / retireCost));
+  }
   function restoreHeroDim() {
+    heroGroundDim.clear();
+    if (sceneApi.setGroundNavPocket) sceneApi.setGroundNavPocket();
     for (const d of heroDim) {
       if (d.u) d.u.value = d.base;
       else d.m.opacity = d.base;
@@ -971,9 +1210,12 @@ export function createFinal(sceneApi) {
     // 0.0000 in both directions (G6).
     let bed = eff, skyv = eff;
     if (bedSpread && blending && shownPull !== null) {
-      const b = Math.max(0, Math.min(1, shownPull / PULL_MAX));
+      // Normalised to the span THIS blend spends (spreadSpan — latched at the
+      // arming edge, PULL_MAX on every full-band path so these two lines are
+      // the shipped arithmetic bit-for-bit there; see the spreadSpan note).
+      const b = Math.max(0, Math.min(1, shownPull / spreadSpan));
       bed = b * b * (3 - 2 * b);
-      const s = Math.max(0, Math.min(1, shownPull / SKY_FULL));
+      const s = Math.max(0, Math.min(1, shownPull / (SKY_FULL * (spreadSpan / PULL_MAX))));
       skyv = s * s * (3 - 2 * s);
     }
     // Still gated by the arm — `rise` says where the lens is, not which
@@ -1079,8 +1321,16 @@ export function createFinal(sceneApi) {
     // pullback, reverses with it, restores exactly on retire
     collectHeroGround();
     collectShedFog();
-    const reachT = Math.max(0, Math.min(1, (pull - 0.25) / 0.45));
-    const reach = eff * reachT * reachT * (3 - 2 * reachT);
+    // ...on the driver FITTED to this departure, and latched monotone. Both
+    // are floorPullOf's, and its note has the whole reason.
+    const reachT = Math.max(0, Math.min(1, (floorPullOf(pull) - 0.25) / 0.45));
+    let reach = eff * reachT * reachT * (3 - 2 * reachT);
+    if (retiring && retireScale < 1) {
+      if (floorHold === null) floorHold = lastReach;
+      if (reach < floorHold) floorHold = reach;
+      reach = floorHold;
+    }
+    lastReach = reach;
     applyHeroDim(reach);
     applyShedFog(reach);
     uniforms.uAmount.value = eff;
@@ -1197,7 +1447,10 @@ export function createFinal(sceneApi) {
     // chapter arm's (§31) — they cannot share the shader uniform, so they take
     // the same float by hand. Off a blend `bed` IS `eff`, so this line is the
     // line it has always been.
-    terrain.setAmount(bed);
+    // ...but the slab takes the bed as a COVERAGE, not as an amplitude, and
+    // that is a different curve: it must be solid before the buried colony is
+    // bright enough to read through its holes (report #32 — see SOIL_LEAD).
+    terrain.setAmount(bed, soilCoverOf(bed));
     // ...and so are the mist sprites, which sit outside the shared uniforms and
     // take the float by hand for the same reason terrain's haze does (§37).
     sky.update(t, skyv);
@@ -1239,7 +1492,18 @@ export function createFinal(sceneApi) {
     return best ? new THREE.Vector3(best.x, best.gy + best.h * 0.82, best.z) : null;
   })();
 
+  /** The focal source for the lens: the travelling front when it runs,
+   *  else the static nearest-member hint at the rest.
+   *
+   *  Hoisted out of the descriptor literal (C05 slice B) so the declared
+   *  `focus` capability and the legacy `focusWorld` member are the SAME
+   *  expression rather than two copies that can drift. Called, never bound:
+   *  `focus.world()` receives the capability object as `this`, not the
+   *  chapter, so a `this.focusWorld()` form would throw. */
+  function focusWorld() { return frontWorld() || REST_FOCUS; }
+
   return {
+    id: 'final',
     group,
     nodeIds: [],   // the epilogue has no detail state by design (adr-d6)
     /** T4 streaming seam. */
@@ -1259,9 +1523,13 @@ export function createFinal(sceneApi) {
      *  step with scroll.js. See the `gliding` branch in the animator. */
     setGliding(on) { gliding = !!on; },
     setBlending(on, dstCamX, durS) {
+      const wasBlending = blending;
       blending = !!on;
       if (!blending) {
-        retiring = false; retireScale = 1; retireEff = 1; bedSpread = false; return;
+        retiring = false; retireScale = 1; retireCost = 0; retireEff = 1;
+        floorHold = null; bedSpread = false;
+        spreadSpan = PULL_MAX;
+        return;
       }
       if (typeof dstCamX === 'number') blendPull = pullOf(dstCamX);
       /* A DEPARTURE IS A MOVE WHOSE DESTINATION IS DARKER THAN THIS FRAME, and
@@ -1272,7 +1540,18 @@ export function createFinal(sceneApi) {
       const here = shownPull === null ? pullOf(sceneApi.camera.position.x) : shownPull;
       retiring = blendPull < here - 1e-4;
       retireEff = 1;
+      floorHold = null;
       retireScale = 1;
+      retireCost = 0;
+      /* The spread's span is latched on the ARMING edge only (see spreadSpan's
+         note): the band this blend spends is from where the driver stands to
+         where it is going, whichever is farther out. A steering
+         re-announcement (blending already true) keeps the latched span —
+         re-normalising mid-flight would be the arm-frame step relocated to
+         the steer frame. Full-band paths latch exactly PULL_MAX. */
+      if (!wasBlending) {
+        spreadSpan = Math.min(PULL_MAX, Math.max(here, blendPull, 1e-3));
+      }
       /* THE BED'S SPREAD IS ARMED BY THE MOVE'S LENGTH AND NOTHING ELSE (§31)
          — the same "has it room" arithmetic the retire uses, and deliberately
          NOT gated on `retiring`, because the bed steps in both directions.
@@ -1283,7 +1562,39 @@ export function createFinal(sceneApi) {
         && RETIRE_SPAN * durS > BAND_S;
       if (retiring && typeof durS === 'number' && durS > 0) {
         const window = RETIRE_SPAN * durS;
-        if (window > BAND_S) retireScale = BAND_S / window;
+        /* THE RETIRE IS FITTED TO THE LIGHT IT ACTUALLY CARRIES (the epilogue
+           race, 2026-08-26). `BAND_S / window` fits the FULL band's cost into
+           the window — correct only when the departure begins fully lit,
+           which every path measured when §27 shipped did. A wrap fired
+           MID-ARRIVAL (the ladder still kindling, `here` mid-band) kept that
+           full-band scale over a half-band distance, so the whole departure
+           choreography — lights-out, the bed, the sky, the hero ground-web
+           and root restore with its mote visibility threshold, the chapter's
+           own close — compressed into the first third of the lap, over open
+           view. Measured on a real wheel-driven wrap departing at pull 0.626
+           (probe-epilogue.mjs, evidence epilogue-race/): reveal at zero
+           1633 ms, chapter closed 1653 ms, hero web/roots restored to full by
+           ~1.19 s, the mote cloud popping visible at 546 ms — against 2.33 s
+           / ~2.3 s / ~1.5 s / ~1.4 s on a full-band wrap, whose timings were
+           derived so everything lands as the colony leaves frame (~2.4 s).
+
+           `bandSTo(here)` is the cost of the light actually outstanding, read
+           from the same integration as BAND_S, so the retire spends
+           RETIRE_SPAN of the move REGARDLESS of how much light it starts
+           with: time = bandSTo(here) / (bandSTo(here) / window) = window.
+           A full-band departure has bandSTo(here) === BAND_S bit-exactly
+           (the table's last entry), so every previously-measured wrap is
+           unchanged by construction. The ARM condition above and the
+           bedSpread arm stay on BAND_S — the full band is still what decides
+           whether a move has room, so no non-wrap blend can newly reach this
+           code (§27's "unchanged by arithmetic, not by hope"). */
+        /* `retireCost` is kept beside the scale it derives, so `floorPullOf`
+           can read the SAME `here` this clock was fitted to rather than
+           re-deriving one that a steer would have moved under it. */
+        if (window > BAND_S) {
+          retireCost = bandSTo(here);
+          retireScale = retireCost / window;
+        }
       }
     },
     /** Deep-link / frozen-capture snap (journey.js placeAt contract): jump
@@ -1331,7 +1642,24 @@ export function createFinal(sceneApi) {
     frontWorld,
     /** The focal source for the lens: the travelling front when it runs,
      *  else the static nearest-member hint at the rest. */
-    focusWorld() { return frontWorld() || REST_FOCUS; },
+    focusWorld,
+    /* ---- DECLARED DESCRIPTOR (journey/chapter-contract.js) --------------
+       Core: id/group/counts/setArmed/armed/snap/snapLanding, all above.
+
+       ONE capability, and only one. The epilogue has no nodes, no hover
+       zones and no selection channel, so `visibility`, `interaction` and
+       `selection` are not declared at all — an unimplemented capability is
+       an absent key, not a null one. (The declare-the-key-even-if-null rule
+       applies INSIDE a capability, and to the core; a whole capability opts
+       in by being present.)
+
+       journey.js's pickChapterFocus reads `focus` on the Final leg. The root
+       `focusWorld` member STAYS because it IS this function and QA browser
+       scripts read it off the published `window.journey.chapters` handle;
+       both spellings run the same hoisted function. */
+    focus: {
+      world() { return focusWorld(); },
+    },
     /** FN-3.1 — closing-CTA hook. Donor trigger names preserved. */
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */

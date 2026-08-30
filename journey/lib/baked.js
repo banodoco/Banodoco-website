@@ -259,7 +259,26 @@ export async function fetchBakedAssets(fetchImpl = fetch) {
 }
 
 // ---- the background fetch (shipped path, module-load time) ------------
-
+//
+// F06/D4 CLASSIFICATION (2026-08-21): this IIFE is a PAGE-LIFETIME SINGLETON,
+// not a journey-owned cancellable loader. It runs exactly once at module-load
+// time, takes no per-caller identity, and is never restarted or aborted —
+// `manifest`/`bins` below are bare module-top-level state, the same shared
+// cache for every importer for the life of the page (there is one journey
+// per page load here; nothing in this codebase unmounts and remounts the
+// journey within a single page lifetime the way a chapter mounts/unmounts).
+// Evidence: `tools/test-portrait-baked.mjs` B5/B5-neg (C04) proves two
+// separate `import()` call sites resolving the same specifier receive the
+// IDENTICAL module namespace object and share exactly ONE manifest fetch +
+// ONE bin fetch — real singleton semantics, not merely equal values. A
+// cancellable-loader shape would need a factory/instantiation point and an
+// abort/dispose hook; this module exposes neither, and adding either now
+// would be the structural change this order is forbidden from making.
+// Precedent: U01a/U01d classified their own import-time self-starts as KEPT
+// (not retired) for the same reason — no requirement forces the other
+// verdict here either. See journey/lib/baked.js's block comment above for
+// the "how it flows" design this classification is consistent with, and
+// tools/test-baked-lifecycle.mjs for this order's own standalone proof.
 export const ready = (async () => {
   if (LIVEBUILD) {
     // The one console line that answers "which am I looking at?" (2026-08-17,

@@ -209,7 +209,7 @@ export function createFinalSky(sceneApi, uniforms) {
         counts: { spores: S.spores, treeSegs: S.treeSegs },
         sprites: S.sprites,
       };
-    } catch (e) {
+    } catch {
       return null;
     }
   })();
@@ -783,7 +783,6 @@ export function createFinalSky(sceneApi, uniforms) {
     {
       const y = bakedSprites ? bakedSprites[si].y : 3.6;
       const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
-      si++;
       addSprite(lx, y, lz, 26, 8, 0.44, 0.042, drift);
     }
   }

@@ -5,6 +5,7 @@
     "flags.js",
     "hero.css",
     "index.html",
+    "inspire-exits.js",
     "main.js",
     "robots.txt",
     "serve.py",
@@ -19,7 +20,7 @@
     },
     {
       "path": "content",
-      "include": ["content.js", "contributors.js"]
+      "include": ["connect-nodes.js", "content.js", "contributors.js"]
     },
     {
       "path": "journey",
@@ -49,12 +50,14 @@
   ],
   "required": [
     "index.html",
+    "inspire-exits.js",
     "404.html",
     "main.js",
     "release-revision.txt",
     "serve.py",
     "static/index.html",
     "ownership/index.html",
+    "content/connect-nodes.js",
     "journey/index.html",
     "journey-v6/index.html",
     "static/geom/manifest.json",
