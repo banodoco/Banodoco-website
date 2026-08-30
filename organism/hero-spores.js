@@ -699,6 +699,11 @@ function createPreload() {
     // zero-slack ceiling flat.
     void el.offsetWidth;
     el.style.opacity = '1';
+    // The sequencing this module exists for is only a claim until somebody
+    // can measure it. This mark sits beside index.html's 'hero-entry-start'
+    // and journey/boot/handoff.js's 'hero-intro-start', so a cold-load trace
+    // reads copy -> atmosphere -> mushroom off one timeline.
+    performance.mark('hero-spores-live');
 
     onResize = () => {
       if (!state.live) return;
