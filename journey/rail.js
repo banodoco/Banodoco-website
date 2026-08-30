@@ -1438,6 +1438,16 @@ export function createRail({ onNav } = {}) {
     // table, so the journey cannot be scrubbed out from under the reader.
     // (journey/scroll.js, INPUT OWNERSHIP.)
     claimInput(menu, { modal: true });
+    // AND THE SCRIM, which is the other half of the same modal surface. It is
+    // a sibling div, not a descendant (see its construction above), and
+    // ownership is ancestor containment (journey/ownership.js ownerOf) — so a
+    // wheel or a drag on the visible backdrop resolved to NO owner and scrubbed
+    // the journey behind the open panel. The keys were already safe, because
+    // onKey asks modalLive() rather than ownerOf(); this is the pointer half of
+    // the same guarantee, and it is a claim rather than a modal-wide bail in
+    // transport so that the detail card's "first scroll intent closes it" rule
+    // (GB-3.6), which is also a modal owner, keeps working.
+    claimInput(scrim, { modal: true });
     // The rail is behind the panel and belongs to nobody while it is open.
     root.inert = true;
     collapse();
@@ -1453,6 +1463,7 @@ export function createRail({ onNav } = {}) {
     menu.classList.remove('open');
     scrim.classList.remove('open');
     releaseInput(menu);
+    releaseInput(scrim);
     menuBtn.setAttribute('aria-expanded', 'false');
     // inert BEFORE the focus return: a fading panel is out of the tab order
     // and out of the a11y tree from the first frame of the fade.
