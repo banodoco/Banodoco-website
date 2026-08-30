@@ -361,6 +361,69 @@ const makeCopyArrival = (nodes = Object.fromEntries(copyBlocks.map(id => [id, fa
     'copy playback follows both directions without a replacement envelope');
 }
 
+// THE LAUNCH WINDOW IS ONE TRANSACTION. beginFlight() raises `transitioning`
+// and `cameraStateDisagree` and installs the rail ticket at phase 0;
+// beginBlend() is what gives the flight a clock that can ever lower them
+// again. A throw between the two — the duration policy refuses a non-finite
+// base, which an already-NaN camera reaches — used to leave both flags up for
+// the life of the page, and the director defers every responsive setView()
+// while `transitioning` is true and replays none of them. Executed rather than
+// read, because the property is that dropCamBlend() is a VALID rollback for a
+// flight that never got a blend: it must lower what beginFlight raised without
+// a camBlend to work from.
+{
+  const transitioning = [];
+  const stub = () => ({ clone: stub });
+  const controller = createTransitionController({
+    input: { claimNow: () => null },
+    sceneApi: { camera: { position: stub() }, controls: { target: stub() } },
+    director: {
+      owned: true,
+      setTransitioning(on) { transitioning.push(on); },
+      applyHeroPose() {}, restoreHero() {},
+    },
+    lens: { setLookOverride() {} },
+    ui: { cancelCopyEntry() {}, setCopyEntryPlay() {} },
+    chapters: {},
+    guarded: (_name, fn) => fn(),
+    chapterAt: () => ({ id: 'mission' }),
+    placeAt() {}, paintHero() {},
+    heroShownNow: () => 0, heroPresenceNow: () => 0,
+  });
+  const ticket = { fromP: 0, targetP: 0.26, phase: 0 };
+  controller.beginFlight({
+    railWrap: null, railFlight: ticket, chapterEntry: { id: 'inspire' },
+  });
+  assert.equal(controller.cameraStateDisagree, true,
+    'beginFlight raises the state/camera disagreement before any blend exists');
+  assert.deepEqual(transitioning, [true],
+    'beginFlight brackets the camera authority for the whole flight');
+  assert.equal(controller.blend, null,
+    'the window under test is exactly the one where the flight has no clock');
+  controller.dropCamBlend();
+  assert.equal(controller.cameraStateDisagree, false,
+    'the rollback lowers the disagreement a blend-less flight raised');
+  assert.deepEqual(transitioning, [true, false],
+    'the rollback hands the camera authority back, so resize re-framing lives');
+  assert.equal(controller.railFlight, null,
+    'the rollback drops the ticket the launch left frozen at phase 0');
+  assert.equal(controller.chapterEntry, null,
+    'the rollback drops the navigation-only chapter clock with it');
+}
+
+// ...and the shipped path takes it. The three anchors are the transaction's
+// three moments: opened before the flags are raised, committed only once the
+// blend owns a clock, rolled back on every other way out.
+assert.match(journeySource,
+  /let launched = false;\n\s*try \{\n\s*transition\.beginFlight\(/,
+  'the jump opens its transaction before it raises the flight flags');
+assert.match(journeySource,
+  /transition\.beginBlend\(\{[\s\S]*?\n\s*launched = true;/,
+  'the transaction commits only once the blend owns a clock that can end it');
+assert.match(journeySource,
+  /\n\s*\} finally \{\n\s*if \(!launched\) transition\.dropCamBlend\(\);\n\s*\}/,
+  'an unlaunched jump rolls the flight flags and its ticket back');
+
 function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP, dir) {
   const copy = makeCopyArrival();
   copy.step({ chapterId: sourceId, dt: 0, travelP: sourceP });
