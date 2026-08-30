@@ -818,113 +818,157 @@ export function boot(opts = {}) {
     // synchronous placement so the eventual arm fades from screen truth even
     // when the source rest was itself established by a dt === 0 placement.
     if (wrap) guarded('ui', () => ui.prepareCopyEntry(chapterId));
-    transition.beginFlight({
-      railWrap: wrapTicket,
-      railFlight: wrap ? null : { fromP: railFromP, targetP, phase: 0 },
-      chapterEntry: routeFaithful
-        ? null
-        : startChapterEntry(chapterId, chapters[chapterId], guarded),
-    });
-    placeAt(targetP, { snap: false });
-    /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
-       every other nav jump; only its PATH is authored, because the shortest
-       one says the wrong thing. Measured on the shipped route, the ride's own
-       azimuths are Mission -13.8deg, Inspire +115.0, Connect +61.8, Owned
-       +72.1, Final -79.6 — a NET -65.8deg from first rest to last. Final ->
-       Mission the short way is therefore +65.8deg: numerically minimal, and it
-       reads as the ride's net rotation being UNDONE, which is precisely the
-       rewind the brief rules out. Continuing instead in the sense the ride was
-       last travelling (Owned -> Final is -151.7deg, the largest leg on the
-       route) costs -294.2deg and brings the total to exactly -360: the camera
-       arrives at the hero pose having gone around the organism ONCE. That is
-       what closing the circle means here, and it is a property of the route's
-       own numbers rather than a taste call.
-         `bow` swings the lap wide before it draws in — the ride ends far out
-       (r 14.97) and begins close (r 11.53), so a plain lerp would tighten
-       monotonically the whole way and the return would read as an approach
-       rather than a lap. `rise` lifts it over the cap and sets it back down.
-       Both are sin(PI e) on the position's own ease, so both start and end at
-       zero velocity (see arcLerp).
-         The duration is the same law, with the same 0.85 s floor, given the
-       reach it needs: the wrap's arc is ~68 units against ~15.6 for the
-       longest ordinary jump, so the shipped cap would run it 4x faster than
-       any other transition — a whip, not a considered move. */
-    const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
-    const bow = wrap ? WRAP_BOW : 0, rise = wrap ? WRAP_RISE : 0;
-    // A route-faithful flight is priced by the route path it actually rides
-    // (buildRoutePace above), not by the cylindrical arc it no longer follows
-    // — the same "measured along the path actually travelled" rule the
-    // arcLerp rewrite stated for every other jump. Both give the capped
-    // 1.20 s on the shipped first leg (arc ~20+, route 24.0), so the shipped
-    // duration is unchanged; they differ only for a mid-leg overtake.
-    const routePace = routeFaithful ? buildRoutePace(railFromP, targetP) : null;
-    const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
-    const baseDuration = wrap
-      ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
-      : 0.85 + 0.35 * Math.min(len / 20, 1);
-    const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
-    // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
-    // p, so a jump threw the whole world's depth to the destination's ramp on
-    // the click frame while the camera still stood at the origin: measured on
-    // Mission -> Final, the Mission pose rendered 3.6/255 brighter the instant
-    // the click landed — the hero's own 7 -> 20 replaced by the epilogue's
-    // 13.75 -> 60.3, so everything the Mission composition fogs to black came
-    // up out of the dark and then travelled. Same fault as the reveal, in the
-    // one parameter that is not geometry. Both ends are read here, not per
-    // frame: p does not move during a jump, so the destination ramp is a
-    // constant, and reading it live would feed the blend back into itself at
-    // p = 0 exactly as the position once did (the M4 stuck camera).
-    const fogN1 = fog ? fog.near : 0, fogF1 = fog ? fog.far : 0;
-    // ...and so does THE GRADE, for exactly the same reason and read at
-    // exactly the same two moments (2026-08-13 — the loop's seam; see the
-    // `override` block in lens.js). look0 is captured above, before placeAt,
-    // because it is what is on screen; look1 is read here, after placeAt has
-    // let lens.update() write the destination's per-leg curve.
-    const look1 = lens.lookOf(journey.progress);
-    transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
-      az1, bow, rise, look0, look1, look: { ...look1 },
-      // The lap's reverse gear (wrap only): the scroll direction that asked
-      // for this move, the rest it departed — where a rewound lap places the
-      // journey when it gets back (steerWrapBlend / landWrapHome) — and the
-      // destination pose's camera x, kept so a steer can re-announce the
-      // chapters' blend contract with whichever end the lap now lands at.
-      wrapDir: wrap, homeP: wrapTicket ? wrapTicket.homeP : 0,
-      routeFaithful, routeFromP: railFromP, routeTargetP: targetP, routePace,
-      presentedP: routeFaithful ? railFromP : null,
-      dstX: cam.position.x });
-    // cam.position is the DESTINATION pose here — placeAt above let the
-    // director write it, and az1/len are already measured against it. A
-    // chapter whose reveal is paced (not merely gated) by the camera needs to
-    // know where the move ENDS, not only that a move is running: see Final's
-    // BLEND_REVEAL_RATE, which spends the reveal over the move instead of over
-    // whatever fraction of it the path happens to spend crossing the band.
-    // ...and HOW LONG it has to get there. `dstCamX` alone answers "where does
-    // this move end", which is enough to pace an ARRIVAL: the arriving chapter
-    // is clamped by the camera on its way up, so the move's own landing sets
-    // the deadline. A DEPARTURE has no such clamp — the leaving chapter is
-    // free-running downward — so without the duration it can only guess, and
-    // the guess it has been making is the ladder's own clock, which spends the
-    // whole field in the first third of the lap (26-scroll-loop.md §26).
-    // On the route-faithful first leg the chapters already consume frameP,
-    // exactly as they do under scroll. Advertising a destination-parked
-    // camera disagreement here would reintroduce nav-only reveal behaviour.
-    if (!routeFaithful) transition.setBlending(true, cam.position.x, dur);
-    // The destination's copy is timed against THIS move, not against the click
-    // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
-    // The duration is only knowable here, after placeAt has let the director
-    // write the destination pose, which is why the hand-off is one call at the
-    // end of the jump rather than a constant in ui.js. See the copy-entry
-    // block there, and COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S.
-    // Ordinary clicks now expose their camera-authored `travelP` to the copy
-    // layer, so its existing scroll bands and speed/settle envelope can own the
-    // whole handoff. A cyclic wrap has no monotone section coordinate across
-    // its hidden seam and therefore keeps the dedicated reversible ticket.
-    if (wrap) guarded('ui', () => ui.armCopyEntry(chapterId, dur));
-    // ...and the hero's own furniture is timed against the same move, for the
-    // same reason and on the same envelope. It is the third member of the
-    // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
-    // the only one that had never been given a ticket.
-    if (wrap) transition.armHeroEntry(chapterId, dur);
+    /* THE LAUNCH IS ONE TRANSACTION (2026-08-30). beginFlight() raises
+       `transitioning` and `cameraStateDisagree` and installs the rail ticket;
+       beginBlend() is what finally gives the flight a clock that can ever
+       lower them again. Everything BETWEEN the two could throw — placeAt's
+       two synchronous frames, the arc and pace measurement, the duration law,
+       the destination grade — and nothing rolled the raise back. One throw in
+       that window therefore cost the SESSION rather than the click: the two
+       flags stayed up for as long as the page lived, and with
+       `transitioning` stuck the director defers every responsive setView()
+       and replays none of them, so the framing never answers a resize again.
+       The rail keeps a departure-visibility ticket frozen at phase 0 beside
+       it, and the journey's state has already been placed at the destination.
+
+       The one throw this path states outright is the duration policy refusing
+       a non-finite base — reachable only from a camera that is already NaN,
+       which means the window's real cost is converting a silent corruption
+       into a permanent strand. That is the worse of the two failures, and it
+       is the one a rollback removes.
+
+       dropCamBlend() IS the rollback, because it is the same ending the
+       cancelled-blend path already takes: flags down, ticket and entry clock
+       dropped, the chapters told the move is over and reconciled at the
+       landing, the copy envelope handed back to its own rule. The state stays
+       where placeAt put it, so what the visitor gets is the jump landing
+       directly — the identical degradation stepCamBlend's own catch takes
+       when the compositor throws mid-flight, and for the same reason.
+
+       AND IT CATCHES RATHER THAN RE-RAISING, which is not tidiness. A control
+       click is dispatched from journey/rail.js, and that listener has work
+       AFTER its navigate() call — the touch path blurs the item it just
+       collapsed. Letting the throw out of here would skip it and leave the
+       pressed row holding focus, so the fault would cost a second, visible
+       thing on the way out. The announcement is console.error, which the
+       browser ring reads exactly as it reads an uncaught one. */
+    let launched = false;
+    try {
+      transition.beginFlight({
+        railWrap: wrapTicket,
+        railFlight: wrap ? null : { fromP: railFromP, targetP, phase: 0 },
+        chapterEntry: routeFaithful
+          ? null
+          : startChapterEntry(chapterId, chapters[chapterId], guarded),
+      });
+      placeAt(targetP, { snap: false });
+      /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
+         every other nav jump; only its PATH is authored, because the shortest
+         one says the wrong thing. Measured on the shipped route, the ride's own
+         azimuths are Mission -13.8deg, Inspire +115.0, Connect +61.8, Owned
+         +72.1, Final -79.6 — a NET -65.8deg from first rest to last. Final ->
+         Mission the short way is therefore +65.8deg: numerically minimal, and it
+         reads as the ride's net rotation being UNDONE, which is precisely the
+         rewind the brief rules out. Continuing instead in the sense the ride was
+         last travelling (Owned -> Final is -151.7deg, the largest leg on the
+         route) costs -294.2deg and brings the total to exactly -360: the camera
+         arrives at the hero pose having gone around the organism ONCE. That is
+         what closing the circle means here, and it is a property of the route's
+         own numbers rather than a taste call.
+           `bow` swings the lap wide before it draws in — the ride ends far out
+         (r 14.97) and begins close (r 11.53), so a plain lerp would tighten
+         monotonically the whole way and the return would read as an approach
+         rather than a lap. `rise` lifts it over the cap and sets it back down.
+         Both are sin(PI e) on the position's own ease, so both start and end at
+         zero velocity (see arcLerp).
+           The duration is the same law, with the same 0.85 s floor, given the
+         reach it needs: the wrap's arc is ~68 units against ~15.6 for the
+         longest ordinary jump, so the shipped cap would run it 4x faster than
+         any other transition — a whip, not a considered move. */
+      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
+      const bow = wrap ? WRAP_BOW : 0, rise = wrap ? WRAP_RISE : 0;
+      // A route-faithful flight is priced by the route path it actually rides
+      // (buildRoutePace above), not by the cylindrical arc it no longer follows
+      // — the same "measured along the path actually travelled" rule the
+      // arcLerp rewrite stated for every other jump. Both give the capped
+      // 1.20 s on the shipped first leg (arc ~20+, route 24.0), so the shipped
+      // duration is unchanged; they differ only for a mid-leg overtake.
+      const routePace = routeFaithful ? buildRoutePace(railFromP, targetP) : null;
+      const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
+      const baseDuration = wrap
+        ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
+        : 0.85 + 0.35 * Math.min(len / 20, 1);
+      const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
+      // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
+      // p, so a jump threw the whole world's depth to the destination's ramp on
+      // the click frame while the camera still stood at the origin: measured on
+      // Mission -> Final, the Mission pose rendered 3.6/255 brighter the instant
+      // the click landed — the hero's own 7 -> 20 replaced by the epilogue's
+      // 13.75 -> 60.3, so everything the Mission composition fogs to black came
+      // up out of the dark and then travelled. Same fault as the reveal, in the
+      // one parameter that is not geometry. Both ends are read here, not per
+      // frame: p does not move during a jump, so the destination ramp is a
+      // constant, and reading it live would feed the blend back into itself at
+      // p = 0 exactly as the position once did (the M4 stuck camera).
+      const fogN1 = fog ? fog.near : 0, fogF1 = fog ? fog.far : 0;
+      // ...and so does THE GRADE, for exactly the same reason and read at
+      // exactly the same two moments (2026-08-13 — the loop's seam; see the
+      // `override` block in lens.js). look0 is captured above, before placeAt,
+      // because it is what is on screen; look1 is read here, after placeAt has
+      // let lens.update() write the destination's per-leg curve.
+      const look1 = lens.lookOf(journey.progress);
+      transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
+        az1, bow, rise, look0, look1, look: { ...look1 },
+        // The lap's reverse gear (wrap only): the scroll direction that asked
+        // for this move, the rest it departed — where a rewound lap places the
+        // journey when it gets back (steerWrapBlend / landWrapHome) — and the
+        // destination pose's camera x, kept so a steer can re-announce the
+        // chapters' blend contract with whichever end the lap now lands at.
+        wrapDir: wrap, homeP: wrapTicket ? wrapTicket.homeP : 0,
+        routeFaithful, routeFromP: railFromP, routeTargetP: targetP, routePace,
+        presentedP: routeFaithful ? railFromP : null,
+        dstX: cam.position.x });
+      // Past this line the flight owns a clock that can end it, so the
+      // rollback below stands down and the tail arms the copy and the hero.
+      launched = true;
+      // cam.position is the DESTINATION pose here — placeAt above let the
+      // director write it, and az1/len are already measured against it. A
+      // chapter whose reveal is paced (not merely gated) by the camera needs to
+      // know where the move ENDS, not only that a move is running: see Final's
+      // BLEND_REVEAL_RATE, which spends the reveal over the move instead of over
+      // whatever fraction of it the path happens to spend crossing the band.
+      // ...and HOW LONG it has to get there. `dstCamX` alone answers "where does
+      // this move end", which is enough to pace an ARRIVAL: the arriving chapter
+      // is clamped by the camera on its way up, so the move's own landing sets
+      // the deadline. A DEPARTURE has no such clamp — the leaving chapter is
+      // free-running downward — so without the duration it can only guess, and
+      // the guess it has been making is the ladder's own clock, which spends the
+      // whole field in the first third of the lap (26-scroll-loop.md §26).
+      // On the route-faithful first leg the chapters already consume frameP,
+      // exactly as they do under scroll. Advertising a destination-parked
+      // camera disagreement here would reintroduce nav-only reveal behaviour.
+      if (!routeFaithful) transition.setBlending(true, cam.position.x, dur);
+      // The destination's copy is timed against THIS move, not against the click
+      // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
+      // The duration is only knowable here, after placeAt has let the director
+      // write the destination pose, which is why the hand-off is one call at the
+      // end of the jump rather than a constant in ui.js. See the copy-entry
+      // block there, and COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S.
+      // Ordinary clicks now expose their camera-authored `travelP` to the copy
+      // layer, so its existing scroll bands and speed/settle envelope can own the
+      // whole handoff. A cyclic wrap has no monotone section coordinate across
+      // its hidden seam and therefore keeps the dedicated reversible ticket.
+      if (wrap) guarded('ui', () => ui.armCopyEntry(chapterId, dur));
+      // ...and the hero's own furniture is timed against the same move, for the
+      // same reason and on the same envelope. It is the third member of the
+      // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
+      // the only one that had never been given a ticket.
+      if (wrap) transition.armHeroEntry(chapterId, dur);
+    } catch (err) {
+      console.error('[journey] the jump did not launch — it lands directly:', err);
+    } finally {
+      if (!launched) transition.dropCamBlend();
+    }
   }
 
   /* THE DETAIL NO LONGER HAS A HISTORY ENTRY (2026-08-11 — the URL is not a
