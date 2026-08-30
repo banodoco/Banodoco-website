@@ -178,7 +178,18 @@ function viewFor(mode) {
     // is the trap: a higher target renders the scene lower). The further
     // 0.40 drop (2026-08-27) lifts the phone specimen about 22px so its body
     // reads centrally while the stalk remains aligned with the Equip control.
-    v.targetY = 3.45 + 1.2 * t;
+    // 3.45 -> 3.09 (2026-08-30): the same deadspace had reopened at the TOP.
+    // Judged on rendered 430x932 / 390x844 frames against the two pieces of
+    // furniture the silhouette is balanced between — the sub's last baseline
+    // (y 360) and the navigator's icon row (y 783) — the shipped pose left a
+    // 59px black band under the copy while the root flare was buried in the
+    // lit ground. The ladder was shot at 0 / +12 / +23 / +35px of lift: +35
+    // closes the gap under the copy to 24px and reads top-heavy, +12 still
+    // carries visible dead air, and +23 (this value) puts a deliberate 36px
+    // of air under the copy AND a clean dark band between the flare and the
+    // row. Horizontal composition is untouched — panX and the Equip stalk
+    // alignment are a different axis and were not re-solved here.
+    v.targetY = 3.09 + 1.2 * t;
     v.camZ = 11.5 + 1.3 * t;
   }
   /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
