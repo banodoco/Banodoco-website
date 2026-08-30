@@ -968,6 +968,79 @@ export function createInspire(sceneApi) {
     }
   }
 
+  /* ================================================================
+     5d. THE ARRIVAL SHIMMER (2026-08-30, brief §2E). As each ember
+         kindles, one soft band of extra light climbs that exit's
+         already-lit spore lane — bottom to top through the dust the
+         item stands under — then falls back to ambient. It rides the
+         spore seat's surge channel: brightness-only, on dots the lane
+         already lights, so no dot moves, none is added, and a frame
+         whose band amplitude is 0 writes nothing at all (the quiet
+         path stays byte-exact; that is the seat's own contract).
+         AUTHORED IN SECONDS, advanced on the animator's dt. The
+         purpose is wall-clock — a charge crossing the column in under
+         a second — and seconds is the unit that survives a viewport
+         change. Only the TRIGGER rides the cascade envelope above: a
+         wave launches on the frame its ember's land envelope leaves
+         zero, so ordering, replay and reversal are inherited whole
+         from the copy gate. A fresh nav visit re-earns the cascade
+         (beginEntry zeroes the envelopes) and therefore re-earns the
+         waves; a launched wave always completes on its own clock and
+         re-arms only once spent AND its envelope has returned to
+         zero, so a rapid away/back inside one travel neither snaps a
+         band mid-column nor strands one lit. A settled dt = 0
+         placement trips the trigger but holds the wave at its first
+         instant, where the attack still reads 0 — frozen captures
+         stay ambient by construction.
+         The band's centre travels the seat's arc coordinate s (0..1
+         along each exit's chain). The braided rise — the visible
+         column — begins at s 0.22 (resident) / 0.42 (migrants) per
+         the seat's chain staging; each start sits under its rise so
+         the band's upper skirt meets the lip as the amplitude opens,
+         and the sweep ends past 1 so the bump leaves through the
+         lane's own tip fade instead of parking on it. */
+  const SURGE_TRAVEL_S = 1.05;   // launch -> the band clears the tip
+  const SURGE_ATTACK_S = 0.22;   // amplitude ease-in: a charge, never a pop
+  const SURGE_RELEASE_S = 0.45;  // amplitude ease-out, inside the travel
+  const SURGE_AMP = 1.0;         // the seat's own shimmer ceiling carries taste
+  const SURGE_HALF_W = 0.24;     // arc half-width — soft, indistinct edges
+  const SURGE_ARC0 = [0.10, 0.30, 0.30]; // per EXIT_SLOT: under each rise base
+  const surgeT = [-1, -1, -1];   // seconds since launch; < 0 = armed
+  const surgePrev = [0, 0, 0];   // land envelope, previous frame (edge detect)
+  const surgeSpec = [0, 1, 2].map(() => ({ amp: 0, front: 0, width: SURGE_HALF_W }));
+  const _surge = [null, null, null];
+  function driveSurge(dt) {
+    let any = false;
+    for (let i = 0; i < 3; i++) {
+      const a = land[i].a;
+      if (surgeT[i] >= 0) {
+        surgeT[i] += dt;         // a launched wave completes on its own clock
+        if (surgeT[i] >= SURGE_TRAVEL_S && a <= 0) surgeT[i] = -1; // spent + reset gate = re-armed
+      } else if (a > 0 && surgePrev[i] <= 0) {
+        // The ember KINDLES -> launch. An envelope that arrives already
+        // complete (live placeAt / ?p=, the QA default gate, a settled
+        // dt = 0 frame) performed no entrance, so it earns no wave: mark
+        // it spent instead — the exact policy the cascade itself has on
+        // those paths, where every ember stands at its gate's own
+        // resolution with no clocks mid-flight.
+        surgeT[i] = a >= 0.999 ? SURGE_TRAVEL_S : 0;
+      }
+      surgePrev[i] = a;
+      const w = surgeT[i];
+      if (w < 0 || w >= SURGE_TRAVEL_S) { _surge[i] = null; continue; }
+      let u = w / SURGE_TRAVEL_S;
+      u = u * u * (3 - 2 * u);   // eased launch and arrival, the site's own C1
+      let up = w / SURGE_ATTACK_S; up = up > 1 ? 1 : up;
+      let dn = (SURGE_TRAVEL_S - w) / SURGE_RELEASE_S; dn = dn > 1 ? 1 : dn;
+      const spec = surgeSpec[i];
+      spec.front = SURGE_ARC0[i] + (1 + SURGE_HALF_W - SURGE_ARC0[i]) * u;
+      spec.amp = SURGE_AMP * (up * up * (3 - 2 * up)) * (dn * dn * (3 - 2 * dn));
+      _surge[i] = spec;
+      any = true;
+    }
+    return any;
+  }
+
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
@@ -1445,6 +1518,7 @@ export function createInspire(sceneApi) {
     // auto-active) reads from, so the whole handoff is continuous in p
     computeEff();
     driveLand();                   // landing cascade from the shared copy gate (5c)
+    const surgeOn = driveSurge(dt); // arrival shimmer riding the cascade (5d)
     let anyVisible = false;
     effActive = resolveActive();
     // rim delta currents: guide strands extend with the walking spore front
@@ -1557,6 +1631,7 @@ export function createInspire(sceneApi) {
     sporeSeat.drive({
       eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
       regions: shedRegions, grad: _grad,
+      surge: surgeOn ? _surge : null,
     });
 
     group.visible = anyVisible;
@@ -1634,6 +1709,12 @@ export function createInspire(sceneApi) {
     /** QA handle: the spore-system driver seat (per-dot conv/brightness
      *  feed; ?tkdbg adds perf + animator-order probes). */
     _sporeSeat: sporeSeat,
+    /** QA handle: the arrival shimmer's live state (5d) — per-exit seconds
+     *  since launch (< 0 = armed) and the specs as driven this frame. */
+    _surgeState() {
+      return { t: surgeT.slice(), land: land.map((l) => l.a),
+               specs: _surge.map((s) => s && { ...s }) };
+    },
     /** MASTER TASTE DIAL (see the block comment at module scope). Sets the
      *  live TRANSFORM scalar, clamped 0..1, via ../../dial.js — which
      *  persists it through flags.js's getTransformStorage/setTransformStorage
