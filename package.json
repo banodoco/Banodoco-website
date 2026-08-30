@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "eslint .",
     "cycles": "madge --circular --warning --extensions js,mjs --webpack-config madge.webpack.cjs main.js journey organism ownership content tools",
-    "test": "node tools/scroll-touch-gates.mjs && node tools/test-connect-motion.mjs && node tools/test-chapter-entry.mjs && node tools/test-static-content.mjs && node tools/test-intro-clock.mjs && node tools/test-initial-render-target-size.mjs && node tools/test-baked-manifest.mjs && python3 tools/test-gate-rebuild.py && python3 tools/test-gate-capture.py && node tools/test-serve-range.mjs && node tools/test-gate-browser-smoke.mjs && node tools/browser-smoke.mjs",
+    "test": "node tools/scroll-touch-gates.mjs && node tools/test-connect-motion.mjs && node tools/test-chapter-entry.mjs && node tools/test-static-content.mjs && node tools/test-intro-clock.mjs && node tools/test-initial-render-target-size.mjs && node tools/test-baked-manifest.mjs && python3 tools/test-gate-rebuild.py && python3 tools/test-gate-capture.py && node tools/test-serve-range.mjs && node tools/test-browser-smoke-lifecycle.mjs && node tools/test-gate-browser-smoke.mjs && node tools/browser-smoke.mjs",
     "check": "npm run lint && npm run cycles && npm test"
   },
   "devDependencies": {
