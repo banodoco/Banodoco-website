@@ -266,8 +266,17 @@ function basisOf(view) {
   let fx = view.tgtX - view.camX, fy = view.tgtY - view.camY, fz = -view.camZ;
   const fl = Math.hypot(fx, fy, fz) || 1;
   fx /= fl; fy /= fl; fz /= fl;
-  // right = normalize(forward x worldUp)
-  let rx = fz, ry = 0, rz = -fx;          // cross(f, (0,1,0)) = (fz, 0, -fx)
+  /* right = normalize(forward x worldUp), AND THE SIGN IS THE WHOLE FILE.
+     This shipped as (fz, 0, -fx) — the NEGATED cross product — and because
+     `up` below is derived from `right`, both axes came out flipped and the
+     adopted field was POINT-REFLECTED THROUGH THE SCREEN CENTRE. Measured
+     on the seam frame at 1440x900: the on-screen band jumped 87px DOWN and
+     98px right, individual particles moved a median 974px, and the drift
+     reversed from +21.2px/1.5s (left to right) to -21.2px (right to left)
+     — the owner's report, both halves of it, from one minus sign. Corrected,
+     the two projections of the same particle agree to 0.000px at desktop,
+     430x932 and 744x1133 alike. See the parity note in project(). */
+  let rx = -fz, ry = 0, rz = fx;          // cross(f, (0,1,0)) = (-fz, 0, fx)
   const rl = Math.hypot(rx, ry, rz) || 1;
   rx /= rl; ry /= rl; rz /= rl;
   // up = right x forward
@@ -878,6 +887,16 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
   pts.frustumCulled = false;
   const buf = pts.geometry.attributes.position;
 
+  /* THE PARITY THIS FUNCTION OWES, stated because nothing else states it and
+     it failed silently once. `basisOf` returns the camera's OWN axes, so a
+     particle at view-plane offsets (a, b) and depth d lands in camera space
+     at exactly (a, b, -d) — and the scene's perspective camera then divides
+     by d * tanHalfFov, which is the preload VERT's own `halfH`. The two
+     renderers therefore put the same particle on the same pixel, and the
+     seam moves nothing. Break the basis (a sign, a swapped axis, a stale
+     fov) and NOTHING ERRORS: the field simply re-composes somewhere else the
+     instant the mushroom arrives. The invariant to check after any edit here
+     is per-particle screen parity, not that the band still looks composed. */
   function project() {
     const arr = buf.array;
     for (let i = 0; i < F.n; i++) {
