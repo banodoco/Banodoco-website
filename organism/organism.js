@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
+import { heroSpores, createHeroSporeField } from './hero-spores.js';
 import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
 import { createRandomGeometryHelpers } from './random.js';
@@ -1890,6 +1891,29 @@ const { animators, addAnimator } = animationLifecycle;
 ctx.animators = animators;
 ctx.addAnimator = addAnimator;
 
+/* ---- THE TEXT-SIDE SPORES WERE ALREADY HERE (Lane B, 2B/2C) ----------
+   organism/hero-spores.js has been drifting a sparse band of descending
+   spores across the hero copy since long before this module finished
+   downloading — it rides its own <script type="module"> in index.html and
+   imports nothing heavier than a leaf, so it paints while `three` is
+   still on the wire. Adopting its LIVE field here (same particles, same
+   offsets, same phase, same integrator) is what makes this moment read as
+   the scene GAINING the mushroom instead of swapping one particle system
+   for another: the preload canvas cross-fades out over the same beat this
+   Points fades in, and no particle moves across the seam.
+
+   THREE THINGS ABOUT THIS POSITION, all load-bearing:
+     · after ctx.addAnimator exists, because the field registers one;
+     · before the _timeUniforms traverse below, so its twinkle gets the
+       shared clock like every other point cloud;
+     · before setupIntro, whose scene.children destructuring wants `motes`
+       and `spores` as the first two uWin-bearing children — this object
+       is added third and is therefore invisible to that pair.
+   It takes no draw window on purpose. The intro inks the MUSHROOM into
+   this air; the air is not something the mushroom draws. */
+const HERO_SPORE_FADE_S = 0.9;
+createHeroSporeField(ctx, heroSpores.handOff(HERO_SPORE_FADE_S), HERO_SPORE_FADE_S);
+
 // Collected once — a full scene.traverse() per frame just to poke a uniform
 // is pure overhead once the graph is final.
 const _timeUniforms = [];
@@ -1957,6 +1981,56 @@ registerTrackers(ctx);
 // 'intro-draw' animator lands last in the hero's registration order.
 // Returns the intro lifecycle handle exposed on the public API (M5).
 const introApi = setupIntro(ctx);
+
+/* ---- THE MYCELIUM WAS ALREADY THERE; THE MUSHROOM LIGHTS IT (2C) -----
+   The ground's own ink CONVERGES — every floor vertex is re-keyed by
+   distance from the base, outermost first, so the web streams inward and
+   arrives at the foot of the stem exactly as the stalk fires upward
+   (organism/intro.js convergeDraw). That is the network being DRAWN. What
+   it never carried is the network being ENERGISED, and biologically the
+   energy runs the other way: the fruiting body draws on a mycelium that
+   was already in the soil, and the surge spreads laterally OUT from the
+   point of contact.
+
+   That surge already exists in this file. PULSE_GLSL is a multiplicative
+   brightness ring — 1.0 at rest, >1.0 inside a travelling front — bound
+   into every ground material at :468-470, :528-530 and :646-648, advanced
+   by 'tap-pulse' above and parked the moment it decays. A floor tap has
+   used it since the beginning. So this is a CALL SITE, not new shader
+   work: the same wave the finger raises, raised instead by the stalk
+   landing, from the stem's own contact point.
+
+   uPulseP (2.35, 0.30, 1.15) against the floor tap's (2.6, 0.33, 1.4):
+   a touch slower and a touch quieter than a finger, because a mushroom
+   arriving is not a knock. Range falloff 0.30 carries it out past the
+   root flare while exp(-1.15 t) retires it inside ~3.5 s — so a MINORITY
+   of paths brighten as the front passes them and the rest simply finish
+   inking behind it. Nothing here is a top-to-bottom reveal, and nothing
+   here holds a brightness afterwards; the wave leaves the ground exactly
+   where the intro's own draw left it.
+
+   0.296 is not a taste value — it is intro.js's WINDOWS table, the first
+   frame of `stemVerts`, i.e. the frame the stalk begins to rise. Held to
+   one shot by the animator retiring itself, and never armed at all when
+   the intro is skipped (?nointro / ?capture / reduced motion park drawU
+   at 2 before the first frame), which is what keeps every frozen capture
+   and every reduced-motion visitor free of it. */
+const STEM_CONTACT_DRAW_U = 0.296;
+addAnimator('stem-contact-pulse', () => {
+  // `started` is false for every path that has no rising stalk to answer:
+  // the deferred frame before releaseIntro(), ?introat's pinned pose, and
+  // intro = 0 (?nointro / ?capture / prefers-reduced-motion), where drawU
+  // is parked at 2 from the first frame and this retires without firing.
+  if (!introApi.started) {
+    if (drawU.value > 1) animators.delete('stem-contact-pulse');
+    return;
+  }
+  if (drawU.value < STEM_CONTACT_DRAW_U) return;
+  pulseC.value.set(0, groundY(0, 0), 0);
+  pulseT.value = 0;
+  pulseP.value.set(2.35, 0.30, 1.15);
+  animators.delete('stem-contact-pulse');
+});
 
 // Deterministic freeze (M5, ?capture=): while frozen, every animator sees
 // t = the latched value and dt = 0 — one shared clock is the ONLY time
