@@ -9,17 +9,51 @@
 // merely wires its trigger events. Styles moved to hero.css +
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
-import { createScene } from './organism/organism.js';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF } from './flags.js';
-// The journey's film grade, created at scene init rather than at journey boot
-// — see THE GRADE IS ON FROM THE FIRST FRAME below. Static import: the module
-// graph behind it (route/constants/ease) is small shared infrastructure.
-import { createLens } from './journey/lens.js';
-// The baked-geometry fetch starts the moment this import evaluates — early in
-// the intro, so it has ~7s of runway before the chapter builds could want it.
-// Awaited (bounded) in journey/boot/handoff.js's loadJourney, which is handed
-// the promise rather than starting its own — see the note in its header.
-import { ready as bakedGeomReady } from './journey/lib/baked.js';
+/* THREE.JS IS NO LONGER IN THIS FILE'S STATIC GRAPH (Lane B, 2B), and the
+   three lines below are what used to put it there. Measured: the eager
+   graph behind main.js was 1,796,214 bytes, of which 1,304,820 is
+   three.module.js — and the module body could not run until all of it had
+   arrived and evaluated. Everything this file wires for the visitor waited
+   behind that: the error channel, the skip link, the reduced-motion style
+   suppression, the ?introat hook, and the logo's capture-phase click, which
+   is the one hero control index.html's own entry barrier does not already
+   hold a press for. What remains static is ~60 KB of leaves.
+
+   REMOVING organism.js ALONE WOULD HAVE BOUGHT 15.8% AND NOTHING ELSE:
+   lens.js and baked.js each carry `import * as THREE from 'three'` of their
+   own, so the 1.27 MB came straight back. All three had to move together or
+   none of them was worth moving.
+
+   WHAT IT COSTS, MEASURED, BECAUSE A SPLIT IS NOT FREE. A dynamic import is
+   invisible to the preload scanner, so the heavy roots are now discovered
+   when this body runs rather than when this file is parsed. On a 6x CPU /
+   2 Mbps cold load that puts the mushroom about a second later on a
+   fifty-six second load, and the page's own listeners about fifty-three
+   seconds earlier. Both numbers are in the lane's evidence.
+
+   MODULEPRELOAD WAS TRIED AND REJECTED, twice, and the reason is worth
+   leaving here so nobody re-adds it as an obvious win. Hints for three.js
+   and the organism restore the parallel fetch — and cost NINE SECONDS of
+   first paint at 400 kbps, because a preload hint outranks nothing and this
+   page's three render-blocking stylesheets are 330 KB. `fetchpriority=low`
+   on the same hints still cost six. Bandwidth at the bottom of the range is
+   not a scheduling problem and cannot be hinted away: the CSS has to land
+   before anything is on screen at all.
+
+   The baked-geometry fetch still starts the moment its module evaluates,
+   which is now here rather than during import resolution; it keeps its
+   runway before the chapter builds could want it, and is awaited (bounded)
+   in journey/boot/handoff.js's loadJourney, which is handed the promise
+   rather than starting its own — see the note in its header.
+
+   The journey's film grade (journey/lens.js) is created at scene init
+   rather than at journey boot — see THE GRADE IS ON FROM THE FIRST FRAME
+   below. */
+const organismModuleP = import('./organism/organism.js');
+const lensModuleP = import('./journey/lens.js');
+const bakedModuleP = import('./journey/lib/baked.js');
+const bakedGeomReady = bakedModuleP.then((m) => m.ready);
 /* THE FOUR OWNERS THIS FILE COMPOSES (B01). Everything that is left below is
    the page's own wiring — listeners, query params, the hero's furniture — and
    every machine this file used to inline now has a name and a header:
@@ -87,6 +121,22 @@ const entryQueue = createEntryQueue();
      BOUNDED   installed and later taken back off by the module that owns
                it. There is exactly ONE, and it is the intro input capture,
                now in journey/boot/handoff.js beside its own remover.
+
+   PAGE NOW MEANS TWO MOMENTS, NOT ONE (Lane B, 2B). "Installed once when
+   this module evaluates" used to be a single instant, because the whole
+   1.8 MB static graph resolved before the first statement ran. The heavy
+   roots are dynamic imports now and there is one top-level await in the
+   middle of this file, so the register splits either side of it:
+     · BEFORE the await, on ~60 KB of leaves — the two window error hooks,
+       the skip link, the ?introat load hook, and the explore CTA and logo
+       clicks, which were lifted above it precisely so a home control does
+       not wait on three.js to answer a press.
+     · AFTER it, once a scene exists — the canvas's two webglcontext hooks
+       (they need the canvas), the resize hook, the callouts' five sites
+       (they light regions of a specimen), and the serif keydown.
+   Every one is still installed exactly once and never taken back off, and
+   the class of each is unchanged. What moved is WHEN, and for five of them
+   that is the whole of this order's user-visible effect.
 
    THE REGISTER — 16 listener sites, by class:
 
@@ -199,8 +249,90 @@ if (introAt !== null) {
   });
 }
 
+/* THE PAGE'S OWN HERO CONTROLS ARE WIRED BEFORE THE SCENE IS WAITED ON
+   (Lane B, 2A). These two blocks used to sit several hundred lines below,
+   after `if (sceneApi)` had already run — which was invisible while the
+   organism was a static import, because nothing in this file ran until the
+   whole 1.8 MB graph had. Now that the scene is awaited, everything after
+   the await inherits that wait, and a home control that answers a press
+   only once three.js has landed is the exact defect index.html's entry
+   barrier was added to close for the rail. Nothing about either listener
+   changed; they moved, and the move is the point.
+   ---------------------------------------------------------------- */
+// The left CTA remains live while the right side is the empty WebGL frame.
+// Capture it before journey.js's later bubble listener so an early click is a
+// queued normal jump, never a temporary #/inspire URL write or a lost press.
+// A press before the journey module has booted goes to the entry queue
+// (journey/boot/entry-queue.js), which holds the intent the browser used to
+// hold for us in the URL and asks boot to start departing at once.
+const exploreCta = document.querySelector('.ui .cta');
+if (exploreCta) {
+  exploreCta.addEventListener('click', (e) => {
+    if (window.journey) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    entryQueue.request('inspire');
+  }, true);
+}
+
+/* THE LOGO IS A HOME CONTROL (2026-08-12, Hannah: "Make clicking the logo in
+   the top left also travel to the hero view.")
+
+   THROUGH THE JOURNEY, NOT THROUGH THE URL. 239d6c7 removed hash routing
+   outright — the ride writes nothing and the visitor's first Back still leaves
+   the site — so this cannot be an href that navigates. It goes through
+   window.journey.flyTo, the same handle the rail's tiles and the two hero
+   callouts above already use, which means it inherits the whole jump for free
+   and by construction rather than by re-implementation: the cylindrical arc
+   (043a1f2), the destination copy keyed off the arrival (d1ecc23), the
+   destination chapter suppressed through the blend (a8d4518), and the rail's
+   active mark following chapterAt(p) on the next frame.
+
+   NO isTouch GATE, unlike the callouts. Those two are gated because on touch
+   their tags do something else entirely (they arm the region highlight); the
+   logo has no second job. A home control is a home control on every device,
+   and the keyboard gets it for nothing — this is a real <a> and Enter fires
+   `click`, so pointer, touch and keyboard all arrive down this one path.
+
+   ALREADY AT THE HERO — nothing extra is guarded here, and it took measuring
+   to be sure of that rather than assuming it either way.
+   The worry is real in principle: a jump hides the destination chapter's copy
+   for the whole camera blend (a8d4518) and fades it in on arrival (d1ecc23),
+   so a jump that travels almost nowhere would blank the hero copy you are
+   already reading and hand it back a second later. Shot with the hero block's
+   opacity sampled every 40ms, that is exactly what a click at p = 0.02 does:
+   1.00 straight to 0.00, still 0.00 two seconds later.
+   It is also not a state this site can be in. The scroll surface RESTS ONLY AT
+   CHAPTER POSES — wheeled in from a cold load it settles at 0.0000 (10 and 16
+   notches, hero copy still 1.00) or at 0.2600 in Inspire (24 notches and up),
+   with nothing in between; p = 0.02 exists only under the QA ?p= flag, and the
+   surface was actively settling out of it while it was being measured. So
+   "already at the hero" always means p = 0 exactly, where directJumpTo's own
+   1e-4 refusal fires first. Measured at the hero: camera position unchanged to
+   four decimals with zero spread across the whole window, fov unchanged, hero
+   copy pinned at 1.000, URL still clean. The press is a true no-op — which is
+   the right answer for a home control you are already home in, and it costs no
+   special case. If the ride ever gains free scrolling, this is the note to
+   come back to. */
+const logoLink = document.querySelector('.logo');
+if (logoLink) {
+  logoLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.journey) window.journey.flyTo('mission');
+    else entryQueue.request('mission', { fast: false });
+  });
+}
+
+/* THE ONE PLACE THIS FILE WAITS. Everything above runs on ~60 KB of
+   leaves; everything below needs a scene, so it needs three.js, and a
+   top-level await is the honest way to say that — the statement order the
+   rest of this file is written in survives unchanged, and no reader has to
+   trace a callback to find out what still runs and when.
+   A rejected module lands in the same catch as a thrown createScene, and
+   the visitor gets the same note. */
 let sceneApi = null;
 try {
+  const { createScene } = await organismModuleP;
   sceneApi = createScene({
     ...heroMode.viewFor(heroMode.current()),
     container: document.getElementById('stage'),
@@ -293,7 +425,7 @@ if (sceneApi) {
   // (organism.js's documented semantics), so boot's real spine inherits this
   // position ahead of everything journey-side.
   sceneApi.addAnimator('journey', () => {});
-  try { createLens(sceneApi); }
+  try { (await lensModuleP).createLens(sceneApi); }
   catch (err) { console.error('[glowshroom] lens failed to start — the grade will arrive with the journey instead', err); }
 }
 
@@ -666,70 +798,6 @@ if (sceneApi) {
       // the easing camera on its own
       railRefresh();
     }, 150);
-  });
-}
-
-// The left CTA remains live while the right side is the empty WebGL frame.
-// Capture it before journey.js's later bubble listener so an early click is a
-// queued normal jump, never a temporary #/inspire URL write or a lost press.
-// A press before the journey module has booted goes to the entry queue
-// (journey/boot/entry-queue.js), which holds the intent the browser used to
-// hold for us in the URL and asks boot to start departing at once.
-const exploreCta = document.querySelector('.ui .cta');
-if (exploreCta) {
-  exploreCta.addEventListener('click', (e) => {
-    if (window.journey) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    entryQueue.request('inspire');
-  }, true);
-}
-
-/* THE LOGO IS A HOME CONTROL (2026-08-12, Hannah: "Make clicking the logo in
-   the top left also travel to the hero view.")
-
-   THROUGH THE JOURNEY, NOT THROUGH THE URL. 239d6c7 removed hash routing
-   outright — the ride writes nothing and the visitor's first Back still leaves
-   the site — so this cannot be an href that navigates. It goes through
-   window.journey.flyTo, the same handle the rail's tiles and the two hero
-   callouts above already use, which means it inherits the whole jump for free
-   and by construction rather than by re-implementation: the cylindrical arc
-   (043a1f2), the destination copy keyed off the arrival (d1ecc23), the
-   destination chapter suppressed through the blend (a8d4518), and the rail's
-   active mark following chapterAt(p) on the next frame.
-
-   NO isTouch GATE, unlike the callouts. Those two are gated because on touch
-   their tags do something else entirely (they arm the region highlight); the
-   logo has no second job. A home control is a home control on every device,
-   and the keyboard gets it for nothing — this is a real <a> and Enter fires
-   `click`, so pointer, touch and keyboard all arrive down this one path.
-
-   ALREADY AT THE HERO — nothing extra is guarded here, and it took measuring
-   to be sure of that rather than assuming it either way.
-   The worry is real in principle: a jump hides the destination chapter's copy
-   for the whole camera blend (a8d4518) and fades it in on arrival (d1ecc23),
-   so a jump that travels almost nowhere would blank the hero copy you are
-   already reading and hand it back a second later. Shot with the hero block's
-   opacity sampled every 40ms, that is exactly what a click at p = 0.02 does:
-   1.00 straight to 0.00, still 0.00 two seconds later.
-   It is also not a state this site can be in. The scroll surface RESTS ONLY AT
-   CHAPTER POSES — wheeled in from a cold load it settles at 0.0000 (10 and 16
-   notches, hero copy still 1.00) or at 0.2600 in Inspire (24 notches and up),
-   with nothing in between; p = 0.02 exists only under the QA ?p= flag, and the
-   surface was actively settling out of it while it was being measured. So
-   "already at the hero" always means p = 0 exactly, where directJumpTo's own
-   1e-4 refusal fires first. Measured at the hero: camera position unchanged to
-   four decimals with zero spread across the whole window, fov unchanged, hero
-   copy pinned at 1.000, URL still clean. The press is a true no-op — which is
-   the right answer for a home control you are already home in, and it costs no
-   special case. If the ride ever gains free scrolling, this is the note to
-   come back to. */
-const logoLink = document.querySelector('.logo');
-if (logoLink) {
-  logoLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (window.journey) window.journey.flyTo('mission');
-    else entryQueue.request('mission', { fast: false });
   });
 }
 
