@@ -279,19 +279,107 @@ export function buildPortraitField({
     [0.82, -0.79, 5.9, 0.45],
   ];
 
-  // The frame, aspect and table every placement read below composes against.
-  // One trio, chosen from the band the viewport is in — a landscape build is
-  // bit-identical to what this file always produced (siteFrame IS restFrame),
-  // and a portrait build is the authored tall-frame arc through the same
-  // placement law, separation pass, clearance rule and repair loop.
+  /* THE REST RANGE — how big a face is allowed to end up, and how near it is
+     allowed to rest (2026-08-30).
+
+     Reported, from two ends: on a phone the faces are too small to put a
+     finger on; on an iPad Mini held upright one of them swells until it owns
+     the frame. Neither is a scale bug. The portrait arc is composed in NDC at
+     the LIVE aspect, so all three tall frames draw the same picture —
+     measured, every face's share of frame height is identical at 430x932,
+     744x1133 and 1024x1366 to four decimals. What differs between them is
+     only how many CSS pixels a frame height buys.
+
+     Two numbers say what is wrong with that picture — measured on the shipped
+     field at the Owned rest, and read against the landscape composition, the
+     approved one and the one the bake records:
+
+       · SPREAD. Landscape runs 0.055 to 0.138 of frame height, ratio 2.5.
+         The portrait arc runs 0.044 to 0.190, ratio 4.3. Its floor draws
+         41 px on a 430x932 phone: under a fingertip, and under the 44 px the
+         hit pad is floored to in journey/ui/hotspot-frame.js — so the target
+         and the thing the visitor can see stop agreeing about where a person
+         is. Its ceiling draws 177 px, 41% of that phone's width.
+
+       · DEPTH. The near rank is authored at depth 5.5-6.0 and SETTLES at
+         3.64-4.50: the separation pass and the >=3.0-unit camera-path
+         clearance rule below both push, and in a tall frame the arc is narrow
+         enough in world x that they push hard. That drop matters because of a
+         coupling nothing here declared. The plane shader's defocus band is
+         `smoothstep(2.2, 5.0, dist)`, and it does not only SOFTEN what it
+         catches — it INFLATES it, multiplying `size` by up to (1 + nb0). A
+         face seated at 3.6 therefore draws half again its own footprint, as
+         an out-of-focus smear with no person in it. The landscape table never
+         reaches the band (nearest rest depth 5.60), which is why this had
+         never been seen. It is the whole of the iPad Mini report.
+
+     So: a floor under the lens, and a range the arc's own spread is FITTED
+     to — not clipped against, for the reason measured at the fit itself.
+
+       minDepth  no face rests inside the lens's own defocus band. One that
+                 lands there is slid BACK ALONG ITS OWN GAZE RAY to the band's
+                 far edge, which preserves its authored NDC position exactly —
+                 the arc is the composition, and this may no more move a face
+                 sideways than the void nudge may.
+       minFrac   the smallest face is still something a finger can find, and
+       maxFrac   the nearest is a foreground note rather than the subject.
+
+     THE COORDINATE, AND ITS CONVERSION. Both ends are FRAME-HEIGHT FRACTIONS,
+     not pixels: `size / (depth * tan(fov/2))`, which is exactly
+     `projectedCssPx / viewportHeightPx`. They have to be. recompose() is
+     handed an ASPECT and nothing else — chapters/owned/index.js reads the
+     rail dock's viewport and divides — so a placement that read
+     window.innerHeight would answer one thing for a fresh load at 430x932 and
+     another for a drag that arrives there, and the fresh-build equality that
+     is this file's whole reference oracle would stop holding. The conversion
+     is one multiplication, and here is what these ends deliver at the review
+     frames:
+
+         frame        minFrac -> px   maxFrac -> px
+         430x932           56              118
+         744x1133          68              151
+         1024x1366         82              186
+         1440x900        not fitted — see below
+
+     The ceiling is what the fit delivers; step 4 of the pass below may take a
+     face under it where the frame is too tight to hold two that big apart.
+     The floor is not negotiable in the same way: nothing shrinks past it,
+     because a face under it is a face a finger cannot find.
+
+     WHY LANDSCAPE IS NOT FITTED. It does not need to be: measured, every
+     landscape face already sits inside 0.055..0.138. And it must not be. A
+     landscape page serves its placement from static/geom/owned.bin (the baked
+     read above, which portrait builds skip by construction), so a law that
+     re-sized the live landscape build would put the live path and the baked
+     path into disagreement about the same viewport — and only after a band
+     crossing, which is the least testable moment there is. The range is one
+     range: landscape keeps it by authorship, portrait is held to it here. */
+  function restRangeFor(portrait, aspect) {
+    if (!portrait) return null;
+    // The ceiling opens with the frame. A wider tall frame has width to spend,
+    // so its near note may take more of the height without owning the picture;
+    // a phone has none, so it may not. Linear across the portrait band's own
+    // clamp (leg.js fieldFor: 0.40 .. 0.875), so a drag through the band moves
+    // the ceiling continuously and no face steps.
+    const t = clamp((aspect - 0.40) / (0.875 - 0.40), 0, 1);
+    return { minDepth: 5.0, minFrac: 0.060, maxFrac: 0.125 + 0.015 * t };
+  }
+
+  // The frame, aspect, table and range every placement read below composes
+  // against. One quartet, chosen from the band the viewport is in — a
+  // landscape build is bit-identical to what this file always produced
+  // (siteFrame IS restFrame, and restRange is null), and a portrait build is
+  // the authored tall-frame arc through the same placement law, separation
+  // pass, clearance rule and repair loop, held to the range above.
   //
   // Re-chosen, not patched, when the viewport crosses the band boundary
-  // (recompose()): the three move together or not at all, because a table
+  // (recompose()): the four move together or not at all, because a table
   // read through the other band's frame is precisely the defect this file
   // carried until 2026-08-25.
   let SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
   let siteFrame = portraitField ? restFramePortrait : restFrame;
   let siteAspect = portraitField ? portraitAspect : 1.6;
+  let restRange = restRangeFor(portraitField, siteAspect);
 
   // Rest reachability repair (the grey-box gap, fixed by construction and
   // then VERIFIED here): every routable node must project into the rest
@@ -483,6 +571,210 @@ export function buildPortraitField({
         if (restOk(nd)) break;
       }
       enforceClearance(nd);
+    }
+
+    /* THE REST RANGE, APPLIED (see restRangeFor above for what it is and why
+       its ends are frame fractions). Last, and over every node, because both
+       halves are functions of where a node ENDED UP and every pass above
+       moves nodes — the separation pass most of all. */
+    if (restRange) {
+      const TANV_REST = Math.tan(0.5 * siteFrame.fov * Math.PI / 180);
+      // 1. OUT OF THE DEFOCUS BAND. Scaling a node's whole offset from the
+      //    lens by one factor leaves its ndc x and y exactly where they were
+      //    authored, because they and the depth divide by the same number —
+      //    the face moves along the ray it is already seen down, and nowhere
+      //    else. Clearance is re-asserted because a node that moves at all
+      //    has to answer the >=3.0 rule again.
+      for (const nd of nodes) {
+        const rel = nd.pos.clone().sub(siteFrame.pos);
+        const z = rel.dot(siteFrame.fwd);
+        if (!(z > 0.05) || z >= restRange.minDepth) continue;
+        nd.pos.copy(siteFrame.pos).addScaledVector(rel, restRange.minDepth / z);
+        clampUnder(nd.pos, 0.35 + nd.size);
+        enforceClearance(nd);
+      }
+      /* 2. THE PROJECTED SIZE — the arc's OWN spread, fitted to the range.
+         One affine map in frame-height fractions, so the sixteen keep their
+         order and keep the ratios between their gaps; what changes is the
+         span they occupy.
+
+         NOT A CLAMP, and the difference was measured rather than argued.
+         `clamp(frac, min, max)` per node is the obvious law and it pins every
+         outlier to the same value: at 430x932 it landed the whole near rank
+         on exactly 118.3 px and the whole far rank on exactly 55.9 px — half
+         the field in two piles of identical coins, which is the reading the
+         size jitter above exists to prevent. A fit has no collapse: it is
+         increasing everywhere, so no two faces that differed stop differing.
+         The price is that every face's size depends on the two extremes of
+         the field rather than on itself alone. That is a composition-wide
+         normalisation, which is what fitting a picture to a frame is. */
+      function fitSizes() {
+        let fMin = Infinity, fMax = -Infinity;
+        const seen = nodes.map((nd) => {
+          const pr = projectInto(siteFrame, nd.pos, siteAspect);
+          const f = pr.z > 0.05 ? nd.size / (pr.z * TANV_REST) : 0;
+          if (f > 0) { if (f < fMin) fMin = f; if (f > fMax) fMax = f; }
+          return { f, z: pr.z };
+        });
+        // A field with no spread to fit is left alone rather than collapsed
+        // onto one end of the range: placement cannot produce one, and a
+        // divide that would answer 0/0 must not answer "every face is the
+        // smallest".
+        if (!(fMax - fMin > 1e-6)) return;
+        const k = (restRange.maxFrac - restRange.minFrac) / (fMax - fMin);
+        for (let i = 0; i < nodes.length; i++) {
+          const nd = nodes[i], { f, z } = seen[i];
+          if (!(f > 0)) continue;
+          nd.size = (restRange.minFrac + (f - fMin) * k) * z * TANV_REST;
+          // a face the fit GREW asks the soil lid for more headroom than the
+          // placement above gave it; the underground clamp is re-asked with
+          // the size the node actually ships at rather than the one it was
+          // placed with.
+          clampUnder(nd.pos, 0.35 + nd.size);
+        }
+      }
+      fitSizes();
+
+      /* 3. THE FRAME-SPACE SEPARATION PASS — the one that measures where the
+         crowding is (2026-08-30).
+
+         The world-space pass further up is size-blind and distance-blind by
+         design: "a per-pair jittered minimum so spacing never settles into an
+         even chain", 1.7-2.1 world units for every pair. That minimum means
+         nothing consistent on screen. At the portrait rest, 1.7 units is 40%
+         of the frame height at depth 5 and 15% of it at depth 13, so the pass
+         polices the far ranks it does not need to and lets the near rank —
+         the faces with all the visual weight — sit on top of one another.
+
+         Measured at 744x1133 before this pass: sites 13 and 14, 138 and 151
+         px across, with 130 px between their centres. Two discs that large,
+         that close, read as one mass, which is how the frame was reported.
+         The cause is upstream and it is worth naming because it is invisible
+         from the table: the portrait arc's bottom two ranks are authored
+         inside the navigator's band — a strip across the bottom of the frame,
+         ndc y <= -0.755 nominal, running +-0.74 wide on a phone and +-0.51 on
+         a tablet — which refuses SEVEN of the sixteen sites at 430x932, five
+         at 1024x1366 and three at 744x1133. navBandRefuses refuses the seat,
+         and the repair ladder's only move is to shrink the authored ndc
+         toward the frame centre in 6% steps — so a refused face does not find
+         another seat, it walks up the arc's own axis until the ladder runs
+         out and is left at attempt 7, at 58% of its authored radius. Sites
+         13 and 14, authored at ndc x -0.28 and +0.32, both land within 0.2 of
+         site 10 at +0.04. The pile is the ladder's residue.
+
+         Fixing the ladder was tried and rejected on measurement: it is a
+         one-dimensional search and the admissible region is an annulus with
+         the navigator punched out of its bottom. Lifting along y alone (the
+         only direction that leaves a bottom strip) walks the bottom rank
+         straight into the rank above it — measured at 430x932, sites 11 and
+         15 ended 14 px apart, worse than what it fixed.
+
+         So the separation is done where it can see the answer: in the frame,
+         between the DISCS AS DRAWN, after they have been sized. Every pair
+         must stand at least 1.2 mean diameters apart, and the push is inside
+         the frame plane, at each face's own depth, so it changes where a face
+         is and never how big it is. A push that would carry a face out of the
+         chip layer's margins or into the navigator's band is undone rather
+         than taken: this may improve the composition, never break it.
+
+         EVERY pair, not only the big ones. The rule was first gated to faces
+         wider than a tenth of the frame height, those being the ones carrying
+         the weight, and measured, that gate let the worst case in the field
+         straight through: face 6 (73 px) and face 13 (109 px) came to rest
+         16 px apart at 430x932 and 4 px apart at 744x1133 — one disc inside
+         another, which no pair of small faces ever managed. The gate bought
+         nothing anyway: written against the MEAN diameter, 1.20 x mean is
+         identically 0.60 x (dia + dia) — "the two discs clear each other with
+         a fifth of a radius to spare" — which is already the right question
+         for a big face beside a small one, and a slack one between two small
+         ones.
+
+         Coordinates are FRAME HEIGHTS, and the aspect cancels out of them
+         exactly — screen x in frame heights is 0.5 * rx / (z * tanv), with no
+         aspect term left — so this is the same measurement at every viewport
+         in the band, and deterministic from the aspect like everything else
+         here. */
+      const SEP_RATIO = 1.26;     // centre gap / mean diameter; ships >= 1.20
+      const screenOf = (nd) => {
+        const rel = nd.pos.clone().sub(siteFrame.pos);
+        const z = rel.dot(siteFrame.fwd);
+        if (!(z > 0.05)) return null;
+        const q = 1 / (z * TANV_REST);
+        return { x: 0.5 * rel.dot(siteFrame.right) * q, y: 0.5 * rel.dot(siteFrame.up) * q, z, dia: nd.size * q };
+      };
+      const slide = (nd, z, dx, dy) => {
+        const before = nd.pos.clone();
+        const w = 2 * z * TANV_REST;
+        nd.pos.addScaledVector(siteFrame.right, dx * w).addScaledVector(siteFrame.up, dy * w);
+        clampUnder(nd.pos, 0.35 + nd.size);
+        enforceClearance(nd);
+        if (!restOk(nd)) nd.pos.copy(before);
+      };
+      function separate() {
+        for (let pass = 0; pass < 6; pass++) {
+          let moved = false;
+          for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const a = screenOf(nodes[i]), b = screenOf(nodes[j]);
+              if (!a || !b) continue;
+              const want = SEP_RATIO * (a.dia + b.dia) * 0.5;
+              const dx = a.x - b.x, dy = a.y - b.y;
+              const d = Math.hypot(dx, dy);
+              if (d >= want || d < 1e-5) continue;
+              const m = (want - d) * 0.5, ux = dx / d, uy = dy / d;
+              slide(nodes[i], a.z, ux * m, uy * m);
+              slide(nodes[j], b.z, -ux * m, -uy * m);
+              moved = true;
+            }
+          }
+          if (!moved) return;
+        }
+      }
+      /* SEPARATE AND FIT ARE ONE FIXED POINT, NOT TWO STEPS. The slide changes
+         depths wherever clampUnder or the clearance rule has to answer for it,
+         which changes what the fit produces, which changes the diameters the
+         rule is about. Running them once each leaves the gaps measured against
+         sizes that no longer exist: measured, one round shipped 1.14 at
+         430x932 and 1.19 at 744x1133 against a 1.26 target — both under the
+         1.20 the target exists to clear. Alternating to a fixed point is the
+         whole fix, and it settles inside three rounds. */
+      for (let round = 0; round < 3; round++) { separate(); fitSizes(); }
+
+      /* 4. WHERE THE FRAME HAS NO ROOM TO MOVE TWO FACES APART, IT HAS NO
+         ROOM FOR THEM TO BE THAT BIG.
+
+         The pass above can only offer a face a seat that is still admissible;
+         a push that would carry it past the chip layer's margins or into the
+         navigator's band is handed back. On the narrowest frame in the band
+         that limit is real and it binds: at 430x932 sites 10 and 15 have
+         nowhere left to go, and settled at 1.14 of their mean diameter
+         against a rule of 1.20. Moving them is out of the question and
+         leaving them is the defect, so the third variable pays — which is
+         the whole point of rebalancing distance, scale and distribution
+         together rather than reaching for one of them.
+
+         The give is a pure scale-down, never a scale-up, bounded below by
+         minFrac so a face can never be shrunk out of a fingertip's reach:
+         a crowded pair keeps its seats and gives back the overlap. */
+      for (let pass = 0; pass < 4; pass++) {
+        let shrank = false;
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = screenOf(nodes[i]), b = screenOf(nodes[j]);
+            if (!a || !b) continue;
+            const want = SEP_RATIO * (a.dia + b.dia) * 0.5;
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d >= want || !(want > 1e-9)) continue;
+            const s = d / want;
+            for (const [nd, m] of [[nodes[i], a], [nodes[j], b]]) {
+              const floor = restRange.minFrac * m.z * TANV_REST;
+              const next = Math.max(floor, nd.size * s);
+              if (next < nd.size - 1e-9) { nd.size = next; shrank = true; }
+            }
+          }
+        }
+        if (!shrank) break;
+      }
     }
     return nodes;
   }
@@ -1492,8 +1784,12 @@ export function buildPortraitField({
      geometry (~1700 line vertices, ~40 KB across four attributes) and hands
      the outgoing one back. Measured on this machine, under headless Chrome
      with ANGLE/Metal: 57 ms for the first crossing on a page (cold JIT),
-     ~4 ms warm. The settle in owned/index.js is what keeps that to ONE
-     crossing per gesture however far the window is dragged.
+     ~4 ms warm — and 8.2 ms warm (p95 30, max 53) since the rest range and
+     its frame-space separation joined placeNodes() on 2026-08-30, which is
+     an O(n^2) sweep over sixteen nodes run to a fixed point. Re-measure this
+     line when you add a pass; it is the only place the cost is written down.
+     The settle in owned/index.js is what keeps it to ONE crossing per gesture
+     however far the window is dragged.
 
      WHY NOT A CAPACITY BUFFER AND A DRAW RANGE, which would have made the
      allocation once-ever: because tools/test-render-baseline.mjs D1 pins, as
@@ -1536,6 +1832,7 @@ export function buildPortraitField({
     SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
     siteFrame = portraitField ? restFramePortrait : restFrame;
     siteAspect = portraitField ? portraitAspect : 1.6;
+    restRange = restRangeFor(portraitField, siteAspect);
 
     /* 1. THE SIXTEEN, RE-PLACED. The node OBJECTS are written THROUGH, never
        replaced: the dealer, the remixer, `worldOf`/`radiusOf`/`indexOf` and
