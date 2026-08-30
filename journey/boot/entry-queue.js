@@ -44,7 +44,7 @@ export function createEntryQueue() {
   let pending = null;
   let hook = null;
 
-  return {
+  const api = {
     /** What is queued, without draining it. Boot reads this to decide
      *  whether a load that has just finished should hand off fast, and
      *  whether the departure gets its immediate visual acknowledgement. */
@@ -71,4 +71,29 @@ export function createEntryQueue() {
      *  when that machine is built. */
     whenRequested(fn) { hook = fn; },
   };
+
+  /* THE PREBOOT DOOR. The queue's five callers are all in main.js, and
+     main.js does not run until three.js and the organism have arrived —
+     1.7s at 1440x900 on this host, 6.7s at 430x932, past 25s on a throttled
+     cold load. For that whole window the only navigation the visitor can see
+     is index.html's preboot rail shell, and until this landed a press on it
+     did nothing at all.
+     The shell's own listener (index.html's cold-load entry barrier) cannot
+     import this module, so it leaves the chapter on a bare global and this
+     line adopts it — the same one-chapter, last-press-wins, drained-once
+     protocol as `request`, arriving through the one door instead of a second
+     one. Replacing the global with the sink is what closes the seam: a press
+     after this constructor runs but before the live rail is built goes
+     straight to `request` with nothing buffered in between.
+     No `fast: true` here. This runs at main.js's module scope, before the
+     boot machine has installed its hook, so an accelerated departure has
+     nobody to ask; loadJourney's own `entryQueue.peek()` branch is what turns
+     an adopted intent into a fast handoff, and it is already written. */
+  const buffered = typeof globalThis.__banodocoEntry === 'string'
+    ? globalThis.__banodocoEntry
+    : null;
+  globalThis.__banodocoEntry = (chapter) => api.request(chapter);
+  if (buffered) api.request(buffered, { fast: false });
+
+  return api;
 }
