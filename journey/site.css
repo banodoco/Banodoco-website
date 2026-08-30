@@ -4921,6 +4921,26 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   box-shadow: 0 0 22px rgba(230, 175, 70, 0.2);
 }
 
+/* THE TABLET BAND GETS ITS OWN SEAT (2026-08-30, round 2 of the owner's
+   parity report). hero.css's ≤900 portrait pass gave the nav its own
+   padding (1.6rem), which floats the logo ink's centre at 46.0px — but the
+   ring kept falling through to the DESKTOP rule above, whose 2.1rem seat
+   was computed against the desktop nav. Measured ink at 744x1133, 768x1024
+   AND 820x1180: logo centre 46.0, ring centre 56.0 — a 10px stagger on a
+   frame whose centred composition (CTA gone, copy on the axis) is exactly
+   where a stagger reads worst. Portrait is centre-parity territory (the
+   phone block below made that call first, on the owner's own report), so
+   the ring's BOX centre goes to the logo's INK centre: 46 - 44/2 = 24px.
+   Landscape ≤900 keeps the desktop nav padding, so it keeps the desktop
+   seat — hence orientation: portrait here, same band as hero.css's rule. */
+@media (min-width: 621px) and (max-width: 900px) and (orientation: portrait) {
+  .j-rail .j-rail-menu,
+  .j-rail:not(.j-rail-column) .j-rail-menu,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
+    top: 24px;
+  }
+}
+
 @media (max-width: 620px) and (orientation: portrait) {
   .j-rail .j-rail-menu,
   .j-rail:not(.j-rail-column) .j-rail-menu,
