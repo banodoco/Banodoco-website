@@ -260,8 +260,15 @@ check('R15', 'organism/spores.js really carries both pinned lines, once each',
 // Inspire exit contract. That is a real source change with the same authored
 // values and explicit slot identities, so the whole-file hash moves exactly
 // once here and remains an invariant against the next unclaimed edit.
+//
+// RE-BASELINED 2156a5aa...c589b9c -> 4e108a17...6e2e1e2e: the driver seat's
+// drive() gained one optional `surge` key (a per-exit arc bump folded into
+// the plume-brightness feed). +26/-3 in organism/spores.js, all of it below
+// the two lines R15 pins, which is why R15's [781]/[679] are NOT re-baselined
+// alongside it — this is the whole-file hash moving for a real source change,
+// not a line-number pin complying with one.
 check('R16', 'organism/spores.js sha256', sporePin.fileSha256,
-  '2156a5aa9626c1e9dccd2ed97f9dfb50f303f995483fb2e2f7c342244c589b9c');
+  '4e108a172f9c205105f67711b40ac997c7736b352669be8a3fb724a16e2e1e2e');
 check('R17', 'RNG stream count', report.rng.streams.length, 5);
 
 /* ================================================================== *
