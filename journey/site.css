@@ -4789,8 +4789,30 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    equals the logo's from the left (54.4px desktop, 6vw phone) — measured
    both sides, both frames.
 
-   VERTICAL PARITY IS OF THE TOP EDGES, NOT THE CENTRES, and that is the
-   part worth writing down. Three things decide it:
+   VERTICAL PARITY WAS OF THE TOP EDGES AND IS NOW OF THE CENTRES — on
+   phones. The reasoning that chose tops is kept below because it is still
+   the reasoning that governs DESKTOP, and because the number it produced
+   was wrong in a way worth naming:
+
+   · THE RESIDUAL BELOW IS MEASURED OFF THE WRONG OBJECT. "7.8px on phone"
+     is the gap between the ring's centre and the .logo BOX's centre, and
+     the box is 28.4px while the drawing inside it is 34px — the mark
+     deliberately overflows its box (see hero.css's .logo note, which is
+     what holds navBottom). Measured on the rendered 430x932 and 390x844
+     frames from the actual lit pixels, both marks' INK: tops identical,
+     centres 5.0px apart, bottoms 10.0px apart. The real residual was 5.0.
+   · SO THE OWNER'S 2026-08-30 REPORT AND THIS BLOCK AGREE, and only the
+     direction of the last correction changed: the mark "reads slightly too
+     high" beside the ring. The phone fix is in hero.css's ≤620 `nav` rule
+     — 5px of padding moved from the bottom of the row to the top, which
+     lands the two INK centres on one line and leaves navBottom untouched.
+     Shot at 0 / 5 / 8 / 10px: 0 is the reported fault, 8 and 10 carry the
+     mark visibly BELOW the ring (10 is bottom-edge parity), 5 is the only
+     one where neither object reads as the higher.
+   · The ring is still not shrunk, and "the same size" is still honoured as
+     the touch box rather than the ink. Only the seat moved.
+
+   The three things that decided TOP parity, which still describe desktop:
 
    · The owner's own reference render is the tie-breaker, because it holds
      both marks in one picture. Measured off it (nav-target-with-labels,
@@ -4806,13 +4828,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      the correction it asks for is downward — and top alignment moves the
      ring DOWN from centre parity. Two independent signals agree.
 
-   SO THE OFFSET IS NOT ZERO, on purpose: the menu's centre finishes 5.5px
-   (desktop) / 7.8px (phone) BELOW the logo ink's centre. That residual is
+   SO THE DESKTOP OFFSET IS NOT ZERO, on purpose: the menu's centre finishes
+   5.5px below the logo's, measured against the .logo BOX. That residual is
    just the ring being the taller object with its top on the same line —
    the previous cut drove it to zero against the logo's LINE BOX (whose
    extra 5-7px is invisible descender space) and put the ring's top 2px
-   (desktop) / 5px (phone) above the logo's, the wrong way for every signal
-   above.
+   above the logo's, the wrong way for every signal above. Desktop is
+   UNCHANGED by the 2026-08-30 phone pass and has had no report of its own.
 
    The mobile block lives HERE, after the base rule, because an earlier
    ≤620 override was silently losing this cascade — measured live with the

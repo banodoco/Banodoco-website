@@ -929,7 +929,18 @@
      RESPONSIVE — mobile portrait
      ============================================================ */
   @media (max-width: 620px) and (orientation: portrait) {
-    nav { padding: 1.3rem 6vw; }
+    /* THE LOGO DROPS 5px ON PHONES (2026-08-30, owner: the mark "reads
+       slightly too high" beside the menu control). It is taken back out of
+       the BOTTOM padding on purpose: nav's height is the number that holds
+       navBottom at 70.03125, and the .logo note below records why that edge
+       may not move — it is the top of the band Inspire's portrait camera is
+       balanced against, so growing the row would stale a camera field to fix
+       a header. Measured on rendered 430x932 / 390x844 frames, both marks'
+       ACTUAL INK (not their boxes): the drop is exactly the residual between
+       the two ink centres, so the mark now sits concentric with the ring —
+       34px of ink centred in the ring's 44. See the parity docblock in
+       journey/site.css, which this supersedes and which carries the ladder. */
+    nav { padding: calc(1.3rem + 5px) 6vw calc(1.3rem - 5px); }
     /* HEIGHT is the .pill's computed 28.44px at this query, the number that
        holds navBottom at 70.03125 — same contract .pill-ic keeps below. The
        MARK steps 40 -> 34 (-15%), close to the step the word it replaced took
