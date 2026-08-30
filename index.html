@@ -131,12 +131,28 @@
       <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
     </nav>
 
-    <!-- First-paint twin of the journey rail. It is visual-only and inert;
-         the live component replaces it in-place as soon as the lightweight
-         journey module arrives. Keeping this tiny shell in the document lets
-         the navigation share the hero copy's actual entry animation instead
-         of appearing after chapter/GPU preparation. -->
-    <nav class="j-rail j-rail-preboot on" data-layout="mission" aria-hidden="true" inert>
+    <!-- First-paint twin of the journey rail. The live component replaces it
+         in-place as soon as the lightweight journey module arrives. Keeping
+         this tiny shell in the document lets the navigation share the hero
+         copy's actual entry animation instead of appearing after chapter/GPU
+         preparation.
+
+         IT ANSWERS A PRESS. The shell used to be `inert`, so between the hero
+         copy's reveal and the live rail's arrival the only navigation on the
+         page looked available and was not: measured on this host, a press on
+         Connect at the moment the copy became legible was swallowed with no
+         effect at all, and the window it was swallowed in was 1.7s at
+         1440x900, 6.7s at 430x932 and longer than 25s under a 6x CPU / 400kbps
+         cold load, because the live rail cannot exist until main.js's whole
+         static graph (three.js and the organism) has arrived. The barrier
+         script below hands a press to the same entry queue the CTA, the logo
+         and the two hero callouts already use while the journey is preparing
+         (journey/boot/entry-queue.js) — so the shell is now a control that
+         holds the visitor's intent, not a picture of one. The slots stay out
+         of the tab order (aria-hidden, and no focusable child): the shell is
+         removed at the swap, and a focusable element that vanishes under a
+         keyboard visitor is a worse promise than none. -->
+    <nav class="j-rail j-rail-preboot on" data-layout="mission" aria-hidden="true">
       <div class="j-rail-inner">
         <ul class="j-rail-list">
           <li class="j-rail-active-ring" aria-hidden="true"></li>
@@ -193,6 +209,39 @@
         body.classList.remove('hero-entry-pending');
         body.classList.add('hero-entry-ready');
         performance.mark('hero-entry-start');
+      });
+
+      /* ...AND THE SHELL ANSWERS A PRESS FROM THIS SAME MOMENT. The reveal
+         above is the readiness boundary for the PICTURE; without this it was
+         not one for the CONTROL. The listener is here, inline, rather than in
+         main.js, because main.js does not run until its whole static graph
+         has arrived — which is the very window this closes.
+
+         It holds the intent exactly the way the browser used to hold it in
+         the URL and the way the CTA, the logo and the two hero callouts hold
+         it today: one chapter, last press wins, drained once at activation.
+         The press never writes the address bar (nothing on this site does).
+         Two tiles are skipped by construction. `equip` is a placeholder with
+         no route — the same refusal journey/rail.js makes for it. `mission`
+         is where the shell already stands, and asking for an accelerated
+         departure to where you are standing is the case main.js's logo
+         control measured and declined; queueing it would only cut the intro
+         short to arrive nowhere.
+
+         The buffer is a bare global because journey/boot/entry-queue.js —
+         which owns this protocol and adopts what is here — is several seconds
+         of module loading away. Once that module exists it replaces the
+         buffer with its own sink, so a press after main.js's module scope has
+         run goes straight in with no second door. */
+      rail.addEventListener('click', (e) => {
+        const slot = e.target.closest && e.target.closest('.j-rail-slot[data-chapter]');
+        if (!slot) return;
+        const chapter = slot.dataset.chapter;
+        if (!chapter || chapter === 'equip' || chapter === 'mission') return;
+        e.preventDefault();
+        const sink = window.__banodocoEntry;
+        if (typeof sink === 'function') sink(chapter);
+        else window.__banodocoEntry = chapter;
       });
     })();
   </script>

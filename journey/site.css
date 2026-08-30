@@ -227,8 +227,18 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      visible)`, not `:focus-within`, so a click-focused link neither keeps
      folded tiles hit-testable nor holds the fan (keyboard focus does both,
      deliberately). */
-  .j-rail:not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
+  .j-rail:not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible)):not(.j-rail-preboot)
     .j-rail-slot:not(.now) .j-rail-item { pointer-events: none; }
+  /* THE PREBOOT SHELL IS FLAT, SO THE FOLD DOES NOT APPLY TO IT. Nothing is
+     stacked behind anything here — index.html authors all five tiles in their
+     final places and no JS ever adds `j-rail-hot` to this shell, so the rule
+     above would hold four of the five tiles unpressable for the whole window
+     the shell is the page's only navigation. The tiles are spans rather than
+     links (the shell is aria-hidden and out of the tab order — see the note
+     in index.html), so their hit areas have to be turned on here rather than
+     falling out of the `a.j-rail-item` pair above. Purely a HIT-MODEL change:
+     no paint rule reads `.j-rail-preboot`, so first paint is byte-identical.  */
+  .j-rail-preboot .j-rail-item { pointer-events: auto; }
 
   .j-rail-mark {
     position: relative;
