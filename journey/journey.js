@@ -531,8 +531,10 @@ export function boot(opts = {}) {
   // frame loop already isolates whole animators, but everything below runs
   // INSIDE the one 'journey' animator — an exception in a single chapter's
   // drive() would otherwise disable scroll, nav and copy along with it.
-  // guarded() latches per name: first throw logs the error once and disables
-  // that subsystem; every later call is skipped; the rest of the frame runs.
+  // guarded() latches per name, but not on the first throw (R3): it keeps
+  // calling a subsystem through occasional failures, resets on success, and
+  // only disables it — every later call skipped, rest of the frame runs —
+  // after a few consecutive throws in a row. See journey/failure-guard.js.
   // (Constructed here rather than beside applyFrame: the transition
   // controller below is its first consumer.)
   const guarded = createFailureGuard();
