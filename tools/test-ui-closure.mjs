@@ -679,7 +679,15 @@ pin('A5', 'main.js still reads the published global three times — OUT OF SCOPE
       'main.js :: if (window.journey) window.journey.flyTo(chapter);',
     ],
     codeOcc: 5,
-    prose: ['main.js :: window.journey.flyTo, the same handle the rail\'s tiles and the two hero'],
+    /* THE PROSE LINE RE-KEYED, 2026-08-30, and only the prose half moved: the
+       three code sites and their five occurrences are character-for-character
+       unchanged. The logo control's paragraph used to read "the two hero
+       callouts above"; the Equip promotion made the third callout navigate
+       through the same handle, and Lane B had already lifted this block above
+       the callout loop, so the sentence became wrong in both of its terms and
+       now reads "the three hero callouts below". A prose mention re-worded is
+       the one kind of change this member is allowed to see on its own. */
+    prose: ['main.js :: window.journey.flyTo, the same handle the rail\'s tiles and the three hero'],
     proseOcc: 1,
   },
   'design.md section 11 Q1 names these three explicitly; closing the handle is D13, and B04 owns it. This row is ALSO the live foreign positive control for A1/A2/A3 — the scanner demonstrably finds code sites in a file that has them');

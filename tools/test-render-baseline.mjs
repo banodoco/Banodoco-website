@@ -733,16 +733,38 @@ const lcSites = (call) => report.lifecycle.perCall.find((c) => c.call === call).
    unchanged. See docs/code-health/DISPOSAL-REMOVED.md. */
 /* Click-only touch travel adds the platform cancellation partner beside
    touchend so an interrupted gesture cannot leave its blocked state armed. */
-/* M6 68 -> 71 (Lane B). THREE attaches, and all three arrive WITH their
-   removers, so M18's zero-slack imbalance ceiling below is unmoved at 60 —
+/* M6 68 -> 69, THE SUM OF TWO CAMPAIGNS' DELTAS. Lane B and the Equip
+   promotion both re-baselined this counter from 68, from different bases;
+   they were integrated on 2026-08-30 and the pin below is the merged tree's
+   own measurement, not either lane's number. Both accountings are kept
+   because each one names sites the other never saw: +3 - 2 = +1.
+
+   +3, LANE B. Three attaches, and all three arrive WITH their removers, so
+   M18's zero-slack imbalance ceiling below is unmoved by this half —
    which is the row that would have caught an unpaired one.
      organism/hero-spores.js  resize          re-reads the hero composition
                                               for the new breakpoint
      organism/hero-spores.js  visibilitychange parks its own loop
      organism/animation.js    visibilitychange gates the composer while the
                                               document is hidden
-   The matching removals are folded into M7's floor below. */
-wave('M6', 'addEventListener sites', lc.addEventListenerSites, 71);
+   The matching removals are folded into M7's floor below.
+
+   -2, THE EQUIP PROMOTION, and both removed sites are in main.js's
+   hero-callout loop. Equip stopped being a deferred placeholder, so the two
+   registrations that existed only to answer its absence went with it: a
+   click handler whose whole body was `e.preventDefault()`, keeping the tag
+   from navigating, and a hoverless-device toggle that lit the specimen's
+   stem and revealed "coming soon" because a finger had no other way to reach
+   that label. NOTHING IS ADDED — the EQUIP tag now takes the same
+   `el.querySelector('.tag')` click site the INSPIRE and CONNECT callouts
+   already shared inside the same loop, so the delta is -2 and not -2+1.
+   tools/test-page-lifetime.mjs's B1 pin carries the two removed site texts
+   verbatim; it is the per-site half of this count.
+
+   M18 BELOW TAKES ONLY THE EQUIP HALF, 60 -> 58, for the same reason: Lane
+   B's three attaches are paired and move the gap by nothing, while the two
+   deletions were unpaired and narrow it by exactly two. */
+wave('M6', 'addEventListener sites', lc.addEventListenerSites, 69);
 // D36: WHERE the rAF sites are, as a file-level map. File-level rather than
 // per-site because a line number shifts on unrelated edits, and rAF call text
 // is often a bare `requestAnimationFrame(tick)` that repeats across files.
@@ -910,8 +932,17 @@ manifestFloor('M9', 'every recorded cancelAnimationFrame site still exists',
 // slack is again zero. docs/code-health/DISPOSAL-REMOVED.md.
 // RAISED 59 -> 60, 2026-08-27: transport's page-lifetime touchcancel partner
 // clears the same state as touchend after an OS/browser-cancelled contact.
+// RATCHETED 60 -> 58 at the 2026-08-30 Equip seam, consuming the advisory the
+// same edit raised. The two deleted hero-callout attaches (see M6) had no
+// teardown partner — nothing in this tree does — so deleting them narrowed the
+// gap by exactly two. Leaving the ceiling at 60 would have banked that as
+// headroom for two future un-torn-down attaches, which is the one thing this
+// ratchet exists to refuse. Lane B landed in the same 2026-08-30 integration
+// and moves this row by NOTHING: its three new attaches (see M6) each arrive
+// with a remover, so they raise both terms of the difference equally. 58 is
+// the merged tree's measured gap, not a sum taken on faith.
 ceiling('M18', 'listener attach/detach imbalance never widens',
-  lc.addEventListenerSites - lc.removeEventListenerSites, 60);
+  lc.addEventListenerSites - lc.removeEventListenerSites, 58);
 // RATCHETED 11 -> 10 by order R02 (organism/intro.js — the ramp rAF is now
 // cancelled). Lowering a ceiling when the tree improves is the maintenance
 // this class requires: leaving it at 11 would silently re-permit the leak R02

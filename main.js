@@ -98,7 +98,7 @@ const entryQueue = createEntryQueue();
    `tools/test-page-lifetime.mjs`, which scans this file's text and drives
    the two regions that can be driven out of a browser.
 
-   B01 MOVED ONE SITE OUT OF THIS FILE AND NOT THE OTHER FIFTEEN, and the
+   B01 MOVED ONE SITE OUT OF THIS FILE AND NOT THE OTHER THIRTEEN, and the
    line it drew is the one this register already describes. Every PAGE and
    GATED registration below is page wiring and stayed here, because that is
    what this file is for. The single BOUNDED registration — the intro input
@@ -132,13 +132,14 @@ const entryQueue = createEntryQueue();
        clicks, which were lifted above it precisely so a home control does
        not wait on three.js to answer a press.
      · AFTER it, once a scene exists — the canvas's two webglcontext hooks
-       (they need the canvas), the resize hook, the callouts' five sites
+       (they need the canvas), the resize hook, the callouts' three sites
        (they light regions of a specimen), and the serif keydown.
    Every one is still installed exactly once and never taken back off, and
    the class of each is unchanged. What moved is WHEN, and for five of them
    that is the whole of this order's user-visible effect.
 
-   THE REGISTER — 16 listener sites, by class:
+   THE REGISTER — 14 listener sites, by class (16 until 2026-08-30; the
+   callout entry below carries the two the Equip promotion deleted):
 
      PAGE      window error / unhandledrejection — the error CHANNEL is
                journey/boot/scene-note.js's; these two sites hand it each
@@ -151,12 +152,15 @@ const entryQueue = createEntryQueue();
      PAGE      the window resize hook and its debounce timer
      PAGE      the explore CTA's capture-phase click
      PAGE      the logo link's click
-     PAGE      the three callouts' mouseenter / mouseleave, the EQUIP tag's
-               preventDefault, the INSPIRE / CONNECT tag navigation, and the
-               hoverless-device EQUIP toggle. FIVE SITES, but they sit
-               inside a loop over three callouts, so the live registration
-               count is larger than the site count and a census that
-               conflates the two is wrong in this file specifically.
+     PAGE      the three callouts' mouseenter / mouseleave and their tag
+               navigation. THREE SITES — it was five until 2026-08-30, when
+               Equip stopped being deferred and gave up both of its special
+               cases (a preventDefault-only click and a hoverless-device
+               toggle) for the same tag navigation the other two already
+               had. The three sit inside a loop over three callouts, so the
+               live registration count is larger than the site count and a
+               census that conflates the two is wrong in this file
+               specifically.
      PAGE      the `b` serif-A/B keydown. SEE THE FINDING BELOW.
      BOUNDED   the intro input capture — one site, six event types, taken
                back off by stopIntroInputCapture() on every exit path. IN
@@ -281,16 +285,20 @@ if (exploreCta) {
    THROUGH THE JOURNEY, NOT THROUGH THE URL. 239d6c7 removed hash routing
    outright — the ride writes nothing and the visitor's first Back still leaves
    the site — so this cannot be an href that navigates. It goes through
-   window.journey.flyTo, the same handle the rail's tiles and the two hero
-   callouts above already use, which means it inherits the whole jump for free
+   window.journey.flyTo, the same handle the rail's tiles and the three hero
+   callouts below already use, which means it inherits the whole jump for free
    and by construction rather than by re-implementation: the cylindrical arc
    (043a1f2), the destination copy keyed off the arrival (d1ecc23), the
    destination chapter suppressed through the blend (a8d4518), and the rail's
    active mark following chapterAt(p) on the next frame.
 
-   NO isTouch GATE, unlike the callouts. Those two are gated because on touch
-   their tags do something else entirely (they arm the region highlight); the
-   logo has no second job. A home control is a home control on every device,
+   NO isTouch GATE, AND NOTHING ON THE HERO HAS ONE ANY MORE. This paragraph
+   used to contrast the logo with the callouts, one of which did something
+   else entirely on touch: EQUIP's tag armed the region highlight instead of
+   navigating, because it had no chapter to navigate to. Equip shipped on
+   2026-08-30 and that gate went with it, so all four hero controls now act on
+   the first press on every device — which is what this paragraph was arguing
+   for. A home control is a home control on every device,
    and the keyboard gets it for nothing — this is a real <a> and Enter fires
    `click`, so pointer, touch and keyboard all arrive down this one path.
 
@@ -304,13 +312,21 @@ if (exploreCta) {
    1.00 straight to 0.00, still 0.00 two seconds later.
    It is also not a state this site can be in. The scroll surface RESTS ONLY AT
    CHAPTER POSES — wheeled in from a cold load it settles at 0.0000 (10 and 16
-   notches, hero copy still 1.00) or at 0.2600 in Inspire (24 notches and up),
+   notches, hero copy still 1.00) or at the Inspire rest (24 notches and up),
    with nothing in between; p = 0.02 exists only under the QA ?p= flag, and the
    surface was actively settling out of it while it was being measured. So
    "already at the hero" always means p = 0 exactly, where directJumpTo's own
    1e-4 refusal fires first. Measured at the hero: camera position unchanged to
    four decimals with zero spread across the whole window, fov unchanged, hero
-   copy pinned at 1.000, URL still clean. The press is a true no-op — which is
+   copy pinned at 1.000, URL still clean.
+   TWO NOTES ON THE READINGS ABOVE, both 2026-08-30. The Inspire rest was
+   written here as 0.2600; Equip's arrival re-timed it to 0.2000 and the
+   literal has been replaced by the name, because the CLAIM is "it rests at a
+   chapter pose", not "it rests at that number". And the wheel readings can no
+   longer be reproduced on this tree at all — travel is click-only now, so a
+   cold load takes 40 notches and stays at 0.0000 (re-run 2026-08-30). They
+   are kept as the dated measurement that settled the question, not offered as
+   something to repeat. The press is a true no-op — which is
    the right answer for a home control you are already home in, and it costs no
    special case. If the ride ever gains free scrolling, this is the note to
    come back to. */
@@ -803,19 +819,12 @@ if (sceneApi) {
 
 // hovering a callout gently lights its region of the specimen
 if (sceneApi) {
-  const isTouch = matchMedia('(hover: none)').matches;
   for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
     const el = document.getElementById(id);
     el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));
     el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));
 
-    // EQUIP has no chapter yet (deferred) — its tag keeps the "coming soon"
-    // reveal but must never navigate.
-    if (id === 'co-equip') {
-      el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
-    }
-
-    // INSPIRE / CONNECT enter the journey at that chapter. Until 2026-08-11 the
+    // ALL THREE enter the journey at that chapter. Until 2026-08-11 the
     // NAVIGATION WAS THE HREF: these two tags were made real `#/<chapter>` links
     // in a089e40 and the hash router picked the resulting hashchange up — which
     // is precisely the URL write Hannah asked to remove. They navigate through
@@ -825,49 +834,51 @@ if (sceneApi) {
     // "open in new tab", and a tab opened that way arrives as an inbound deep
     // link — placed on arrival, then cleaned.
     //
-    // ONE TAP ON EVERY DEVICE (2026-08-19): these two used to ride a touch-only
-    // "tap twice to travel" model — the first tap was the hover (light +
-    // reveal via .force), the second the click. That read as two taps where a
-    // tap should act, so INSPIRE/CONNECT now navigate on the FIRST tap exactly
-    // as the desktop click does; no isTouch gate. EQUIP keeps its toggle
-    // below — it has no chapter yet, so its tap has nothing to commit to and
-    // lights + reveals "coming soon" instead.
-    if (id === 'co-inspire' || id === 'co-connect') {
-      const chapter = id.slice(3);
-      el.querySelector('.tag').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (window.journey) window.journey.flyTo(chapter);
-        else entryQueue.request(chapter);
-      });
-    }
-
-    // EQUIP (touch): no chapter, so a tap toggles the lit state — the only way
-    // a finger reaches the "coming soon" reveal on a hoverless device.
-    if (isTouch && id === 'co-equip') {
-      const co = el.querySelector('.co');
-      const tag = el.querySelector('.tag');
-      tag.addEventListener('click', (e) => {
-        e.preventDefault();
-        const willForce = !co.classList.contains('force');
-        for (const other of document.querySelectorAll('.co')) other.classList.remove('force');
-        for (const [oid, oregion] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
-          sceneApi.setHighlight(oregion, oid === id && willForce);
-        }
-        if (willForce) co.classList.add('force');
-      });
-    }
+    // ONE TAP ON EVERY DEVICE (2026-08-19): INSPIRE and CONNECT used to ride a
+    // touch-only "tap twice to travel" model — the first tap was the hover
+    // (light + reveal via .force), the second the click. That read as two taps
+    // where a tap should act, so they navigate on the FIRST tap exactly as the
+    // desktop click does; no isTouch gate.
+    //
+    // AND EQUIP IS NOW THE THIRD OF THEM (2026-08-30). It had two special
+    // cases here for as long as it was deferred: a click handler that did
+    // nothing but preventDefault, so the tag could never navigate, and a
+    // hoverless-device toggle that lit the specimen's stem and revealed
+    // "coming soon" because a finger had no other way to reach a label that
+    // said the destination did not exist. Both are gone. The tag's href is
+    // `#/equip`, the chapter behind it is a camera arc around the specimen to
+    // the underside, and a hero press must buy that arc on every device — the
+    // toggle's whole subject was the absence, so keeping it would have been a
+    // second, quieter answer competing with the real one.
+    const chapter = id.slice(3);
+    el.querySelector('.tag').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.journey) window.journey.flyTo(chapter);
+      else entryQueue.request(chapter);
+    });
   }
 
   /* THE HERO'S ACTIVATION ENDS WHEN THE HERO LEAVES (2026-08-19).
      The journey owns the callout container's presence and hit model: on a
      departure paintHeroFurniture makes `.callouts` inert, and on a return it
-     removes inert once the set is genuinely live again. The touch-only EQUIP
-     affordance above owns a different piece of state, `.force`, plus the
-     corresponding specimen highlight. Neither was cleared by opacity/inert,
-     so a tap made before travelling could survive several chapters and
-     reappear as an already-open "coming soon" label on the next Mission
-     arrival. Mobile Safari can likewise retain focus on an element as an
-     ancestor becomes inert.
+     removes inert once the set is genuinely live again. What this sweep is
+     FOR is a second piece of state the container's own presence model does
+     not reach: the specimen highlight the three mouseenter handlers above
+     arm, which opacity and inert leave lit — so a hover taken just before
+     travelling could carry a glowing region several chapters deep.
+
+     `.force` is swept alongside it, and since 2026-08-30 that arm has one
+     writer left. It was written by the touch-only EQUIP affordance that
+     stood here while Equip was deferred, and a tap made before travelling
+     could survive as an already-open "coming soon" label on the next Mission
+     arrival — the report this whole block answered. That affordance is gone
+     with the deferral, so the only `.force` left is QA's own ?lit, which the
+     guard below already exempts. The sweep stays: it costs one selector on a
+     lifecycle edge, and a hero control that ever arms `.force` again inherits
+     the fix rather than re-reporting the defect.
+
+     Mobile Safari can likewise retain focus on an element as an ancestor
+     becomes inert.
 
      Observe the lifecycle boundary already authored by journey.js rather than
      infer it from scroll position or animation timing. Clear on departure and
