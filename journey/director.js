@@ -31,6 +31,7 @@ import { CHAPTERS, REST_STOPS, TERMINAL_P, restProgress } from './route.js';
 import { FOG_RAMP, HANDHELD, SEAM_FOG_DIPS } from './constants.js';
 import { applyPortrait } from './portrait.js';
 import { CAMERA as INSPIRE_CAM } from './chapters/inspire/camera.js';
+import { CAMERA as EQUIP_CAM, EQUIP } from './chapters/equip/camera.js';
 import { CAMERA as CONNECT_CAM } from './chapters/connect/camera.js';
 import { CAMERA as OWNED_CAM } from './chapters/owned/camera.js';
 import { CAMERA as FINAL_CAM } from './chapters/final/camera.js';
@@ -63,18 +64,23 @@ export const HERO = {
 };
 
 // The arrival gesture lands ON the Inspire rest; below this p the base path
-// is the gesture. From there to the Connect rest the base path is a SECOND
-// analytic gesture — connect/camera.js approach(), the 2026-08-10 "one
-// movement" re-shape (Hannah: the Inspire -> Connect travel must read like
-// the hero -> Inspire arrival — one gesture, not a swing then a zoom). From
-// the Connect rest to the Owned rest it is a THIRD — owned/camera.js
-// dive(), the 2026-08-11 re-shape of the same complaint on the next leg
-// ("3 movements but it should be 1.5"): one arc that steepens continuously
-// into the soil. Above that, the keyed spline. All derived from the
-// manifest; the four parameterisations join with matching zero velocity at
-// every rest (each gesture ends on zero-slope ramps, and the rest keys are
-// holds with zero tangents).
+// is the gesture. From there to the Equip rest the base path is a SECOND
+// analytic gesture — equip/camera.js arc(), the 2026-08-30 fly-around: one
+// continuous turn from the stream-side rim to the underside, carrying the
+// arrival's own shape (every channel on one shared trapezoid). From the
+// Equip rest to the Connect rest it is a THIRD — connect/camera.js
+// approach(), the 2026-08-10 "one movement" re-shape (Hannah: the travel
+// into Connect must read like the hero -> Inspire arrival — one gesture,
+// not a swing then a zoom), composed from the EQUIP rest now that Equip
+// stands between the two. From the Connect rest to the Owned rest it is a
+// FOURTH — owned/camera.js dive(), the 2026-08-11 re-shape of the same
+// complaint on the next leg ("3 movements but it should be 1.5"): one arc
+// that steepens continuously into the soil. Above that, the keyed spline.
+// All derived from the manifest; the five parameterisations join with
+// matching zero velocity at every rest (each gesture ends on zero-slope
+// ramps, and the rest keys are holds with zero tangents).
 const ARRIVAL_END = restProgress('inspire');
+const ARC_END = restProgress('equip');
 const APPROACH_END = restProgress('connect');
 const DIVE_END = restProgress('owned');
 
@@ -87,7 +93,7 @@ const DIVE_END = restProgress('owned');
 // still shape each other's tangents, so the path through a seam is the same
 // curve it always was.
 const CHAPTER_CAMERAS = {
-  inspire: INSPIRE_CAM, connect: CONNECT_CAM, owned: OWNED_CAM, final: FINAL_CAM,
+  inspire: INSPIRE_CAM, equip: EQUIP_CAM, connect: CONNECT_CAM, owned: OWNED_CAM, final: FINAL_CAM,
 };
 
 const KEYS = CHAPTERS.flatMap((c) => {
@@ -185,8 +191,13 @@ const _pose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 }
  *  not read from globals, so capture tooling can request any composition. */
 export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6, viewportWidth = Infinity) {
   if (p < ARRIVAL_END) INSPIRE_CAM.arrival(p / ARRIVAL_END, out, hero);
-  else if (p < APPROACH_END) {
-    CONNECT_CAM.approach((p - ARRIVAL_END) / (APPROACH_END - ARRIVAL_END), out);
+  else if (p < ARC_END) {
+    EQUIP_CAM.arc((p - ARRIVAL_END) / (ARC_END - ARRIVAL_END), out);
+  } else if (p < APPROACH_END) {
+    // The approach's DEPARTURE POSE is passed in rather than imported by the
+    // leg itself: the gesture's shape belongs to Connect, but which rest it
+    // leaves from belongs to the route, and since 2026-08-30 that is Equip's.
+    CONNECT_CAM.approach((p - ARC_END) / (APPROACH_END - ARC_END), out, EQUIP);
   } else if (p < DIVE_END) {
     OWNED_CAM.dive((p - APPROACH_END) / (DIVE_END - APPROACH_END), out);
   } else keyedPose(p, out);

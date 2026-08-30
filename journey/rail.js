@@ -269,9 +269,12 @@ const RAIL_RESTS = CHAPTERS.map(c => restProgress(c.id));
    consumers share one object) rather than being CHAPTERS in manifest order.
    Two divergences exist, both authored:
 
-     · `equip` is an item with NO chapter — a placeholder whose whole
-       behaviour is its answer ("Coming soon"). It is not a link, it never
-       reads active, and it is absent from the site-map panel.
+     · a PLACEHOLDER is an item with NO chapter — its whole behaviour is its
+       answer ("Coming soon"). It is not a link, it never reads active, and it
+       is absent from the site-map panel. `equip` was the one shipped example
+       and stopped being one on 2026-08-30; the branch stays because the row
+       is still not the chapter list and content/content.js can still declare
+       one.
      · `owned` is a chapter with NO item — reached from the Epilogue's
        Ownership action and from the panel. While the visitor rides through
        it, the ring travels the Connect->Epilogue connector and NO item
@@ -725,9 +728,14 @@ export function createRail({ onNav } = {}) {
      absorbed, and Purpose remains full-size as the way back. The duplicate
      parent retained below is permanently hidden for DOM compatibility.
 
-     Manifesto deliberately reuses Equip's exact unavailable-item contract:
-     a non-link span, not in the tab order, whose label swaps to Soon on hover
-     and whose touch answer is the same timed `.j-rail-note` state. */
+     Manifesto is the site's one UNAVAILABLE ITEM, and it is now the only
+     one: a non-link span, not in the tab order, whose label swaps to Soon on
+     hover and whose touch answer is the same timed `.j-rail-note` state. The
+     contract was written for Equip and Manifesto adopted it; Equip became a
+     chapter on 2026-08-30 and Manifesto kept it, unchanged. Nothing here is
+     shared CODE with the row's placeholder branch — the classes and the
+     1600 ms answer are duplicated deliberately, which is why promoting Equip
+     could not reach this. */
   const purposeTree = el('div', 'j-rail-purpose-tree');
   purposeTree.setAttribute('role', 'group');
   purposeTree.setAttribute('aria-label', 'Purpose sections');
@@ -783,7 +791,8 @@ export function createRail({ onNav } = {}) {
   manifestoItem.setAttribute('aria-label', 'Manifesto, Soon');
   const manifestoMark = el('span', 'j-rail-mark');
   // The whole-specimen mark is appropriate here: the manifesto describes
-  // the purpose as a whole, while its unavailable semantics remain Equip's.
+  // the purpose as a whole, and its unavailable semantics are the ones stated
+  // at the block above.
   manifestoMark.appendChild(buildSymbol('mission'));
   manifestoMark.appendChild(reticle());
   manifestoItem.appendChild(manifestoMark);
@@ -949,7 +958,7 @@ export function createRail({ onNav } = {}) {
       items: itemsFor('inspire'),
     },
     {
-      id: 'equip', symbol: 'equip', number: 2, heading: 'Equipping',
+      id: 'equip', route: 'equip', symbol: 'equip', number: 2, heading: 'Equipping',
       items: [
         {
           id: 'equip-teaser-one', label: 'Quark',
@@ -2013,8 +2022,10 @@ export function createRail({ onNav } = {}) {
          its index fraction, so the ring rides the Connect->Epilogue
          connector while the visitor rides the Owned leg;
        · the continuous chapter coordinate maps to px piecewise-linearly
-         between those anchors, so the ring crosses Equip's circle on the
-         Inspire->Connect leg without ever resting on it.
+         between those anchors. Until 2026-08-30 Equip's circle was one the
+         ring crossed on the Inspire->Connect leg without ever resting on it;
+         Equip is a chapter now and has its own anchor, and the interpolation
+         above exists for `owned`, which still has no row item at all.
 
      The same numbers are republished as custom properties on the root, so
      the stylesheet lays the circles out in exactly the frame JS paints in
@@ -2191,9 +2202,12 @@ export function createRail({ onNav } = {}) {
           past = entry.ci < horizontalPosition - 0.001;
         }
       }
-      // The placeholder keeps proximity 0 by construction: it can be
-      // CROSSED (the ring rides over its circle mid-leg) but never lit —
-      // gold is the journey's own colour and Equip has no journey yet.
+      // A PLACEHOLDER keeps proximity 0 by construction: it can be CROSSED
+      // (the ring rides over its circle mid-leg) but never lit — gold is the
+      // journey's own colour and a placeholder has no journey. Equip was the
+      // shipped example until 2026-08-30; it carries a `ci` now and takes the
+      // ordinary path above, which is the whole of what promoting it cost
+      // this function.
       const base = past ? GLYPH_COLOURS.past : GLYPH_COLOURS.future;
       const target = GLYPH_COLOURS.active;
       const rgb = base.rgb.map((channel, channelIndex) =>
@@ -2214,7 +2228,8 @@ export function createRail({ onNav } = {}) {
       if (i < ROW_N - 1) {
         // The connector runs between THIS circle's edge and the next one's.
         // Its bright fill follows the ring's own pixel, so completion is
-        // continuous across Equip and across the itemless Owned leg alike.
+        // continuous across a placeholder and across the itemless Owned leg
+        // alike.
         // The same responsive optical air used by every visible connector.
         const a = L.centres[i] + L.ringDia[i] / 2 + L.connectorAir;
         const b = L.centres[i + 1] - L.ringDia[i + 1] / 2 - L.connectorAir;

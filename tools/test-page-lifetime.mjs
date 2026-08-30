@@ -1001,11 +1001,18 @@ pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specif
        and the module's singleton is genuinely single. index.html is not in
        pageSources() and contributes nothing to either count; `multiForm`
        stays empty because the two names are the same specifier form, which
-       is precisely what it is asserting. */
-    referenced: 139,
+       is precisely what it is asserting.
+
+       RE-BASELINED again 139 -> 141 and 138 -> 140 at the 2026-08-30 Equip
+       wave, on the same protocol (the two campaigns integrated on one
+       branch, so both accountings above sum). The two new modules are
+       journey/chapters/equip/index.js and journey/chapters/equip/camera.js,
+       each referenced under exactly one bare specifier form — which is the
+       property this row asserts, and both zeros beside it are unchanged. */
+    referenced: 141,
     multiForm: [],
     cacheBusted: [],
-    scanned: 138,
+    scanned: 140,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 

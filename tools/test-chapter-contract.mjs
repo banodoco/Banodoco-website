@@ -438,8 +438,8 @@ check('I9 [validator] a runtime:false schema row requires no descriptor; a runti
   // Positive control on the same instrument: the four runtime rows do require
   // one, so the acceptance above is about `runtime: false` and nothing else.
   const runtimeIds = A([...RUNTIME_CHAPTER_IDS]);
-  assert.deepEqual(runtimeIds, ['inspire', 'connect', 'owned', 'final'],
-    'four runtime chapters, not five');
+  assert.deepEqual(runtimeIds, ['inspire', 'equip', 'connect', 'owned', 'final'],
+    'five runtime chapters since Equip (2026-08-30), and mission still not one of them');
   for (const id of runtimeIds) {
     assert.throws(() => validateChapterDescriptor(undefined, rowOf(id)), /has no descriptor/);
   }
@@ -566,6 +566,7 @@ function materialiseFocusPick() {
  *  every use (D45). */
 const SCHEMA_NODES = {
   inspire: ['artcompute', 'arca', 'tworp'],
+  equip: ['quark', 'brotchen'],
   connect: ['ados', 'hivemind', 'discord'],
   owned: Array.from({ length: 16 }, (_, i) => `contributor-${i}`),
 };
@@ -613,14 +614,17 @@ check('I3 [validator+materialised] capabilities are opt-in, and a null focus yie
     'the materialised body must be the capability-driven pick, not an empty extraction');
 
   // The REAL route thresholds, pinned as literals. Legs are `startOf(next) +
-  // 0.02`: inspire below 0.40, connect below 0.62, owned below 0.87, final
-  // otherwise (design.md §5.3's "shipped values 0.40 / 0.62 / 0.87").
-  assert.deepEqual(A(RUNTIME_CHAPTER_IDS.map((id) => startOf(id))), [0.14, 0.38, 0.6, 0.85],
+  // 0.02`: inspire below 0.28, equip below 0.40, connect below 0.62, owned
+  // below 0.87, final otherwise. (Equip joined the runtime set 2026-08-30 and
+  // took the front of Inspire's old span; the shipped values were 0.40 / 0.62 /
+  // 0.87 before it, and everything from 0.38 up is unmoved.)
+  assert.deepEqual(A(RUNTIME_CHAPTER_IDS.map((id) => startOf(id))), [0.14, 0.26, 0.38, 0.6, 0.85],
     'route data: if these move, the leg probes below move with them');
 
   const world = { x: 1, y: 2, z: 3 };
   const chapters = {
     inspire: fake('inspire', { _armed: true, focus: { world: () => world } }),
+    equip: fake('equip', { _armed: true, focus: { world: () => world } }),
     connect: fake('connect', { _armed: true, focus: { world: () => null } }),
     owned: F(() => fake('owned', { _armed: true, focus: null }),
       () => fake('owned', { _armed: true, focus: { world: () => world } })),
@@ -628,6 +632,7 @@ check('I3 [validator+materialised] capabilities are opt-in, and a null focus yie
   };
   const pick = (p) => pickFocus(chapters, p, startOf, RUNTIME_CHAPTER_IDS);
   assert.equal(A(pick(0.10)), world, 'inspire leg: the chapter is asked');
+  assert.equal(A(pick(0.32)), world, 'equip leg: the chapter is asked');
   assert.equal(A(pick(0.50)), null, 'connect leg: this chapter answers null');
   assert.equal(A(pick(0.70)), null, 'owned leg: focus: null stays null — the chapter is never asked');
   assert.equal(A(pick(0.95)), world, 'final leg');
@@ -673,6 +678,7 @@ function i4Body(reg) {
     inspire: fake('inspire', {
       visibility: visibility(F(() => [...SCHEMA_NODES.inspire], () => ['arca', 'artcompute', 'tworp'])),
     }),
+    equip: fake('equip', { visibility: visibility([...SCHEMA_NODES.equip]) }),
     connect: fake('connect', { visibility: visibility([...SCHEMA_NODES.connect]) }),
     owned: fake('owned', {
       visibility: visibility([...SCHEMA_NODES.owned]),
@@ -688,6 +694,7 @@ function i4Body(reg) {
   // RUNTIME_CHAPTER_IDS; within a chapter it is visibility.nodeIds order.
   assert.deepEqual(A(log), [
     'hotspot:inspire/artcompute', 'hotspot:inspire/arca', 'hotspot:inspire/tworp',
+    'hotspot:equip/quark', 'hotspot:equip/brotchen',
     'hotspot:connect/ados', 'hotspot:connect/hivemind', 'hotspot:connect/discord',
     'hotspot:owned/contributor-0', 'hotspot:owned/contributor-1', 'hotspot:owned/contributor-2',
     'hotspot:owned/contributor-3', 'hotspot:owned/contributor-4', 'hotspot:owned/contributor-5',
@@ -698,19 +705,19 @@ function i4Body(reg) {
     'zone:owned/root-crown', 'zone:owned/root-rim',
   ]);
   // D45 — the registrar's own loop cardinality, pinned to literals rather than
-  // left implicit in the array above. 22 hotspots, 2 zones, 24 entries.
+  // left implicit in the array above. 24 hotspots, 2 zones, 26 entries.
   assert.deepEqual(A([
     log.length,
     log.filter((e) => e.startsWith('hotspot:')).length,
     log.filter((e) => e.startsWith('zone:')).length,
     Object.keys(nodeChapter).length,
-  ]), [24, 22, 2, 22], 'the registrar iterated 22 nodes and 2 zones — pinned, not derived');
+  ]), [26, 24, 2, 24], 'the registrar iterated 24 nodes and 2 zones — pinned, not derived');
 
   // H5 stated as its own predicate, so the pin above is not the only guard.
   const lastHotspot = log.map((e) => e.startsWith('hotspot:')).lastIndexOf(true);
   const firstZone = log.findIndex((e) => e.startsWith('zone:'));
   assert.equal(A(firstZone > lastHotspot), true, 'zones must not jump the hotspot tab order');
-  assert.equal(A(firstZone), 22, 'the zone count and its position are pinned, not merely ordered');
+  assert.equal(A(firstZone), 24, 'the zone count and its position are pinned, not merely ordered');
 
   /* ---- F-2: THE `action: null` ARM IS NOW ASSERTED, NOT MERELY RUN -------
      R1: "the false arm of `z.action && interaction.trigger ? … : null` runs —
@@ -773,6 +780,7 @@ function i4Body(reg) {
   assert.throws(
     () => reg(fakeUi(badLog), {
       inspire: fake('inspire', { visibility: visibility(under) }),
+      equip: fake('equip', { visibility: visibility([...SCHEMA_NODES.equip]) }),
       connect: fake('connect', { visibility: visibility([...SCHEMA_NODES.connect]) }),
       owned: fake('owned', { visibility: visibility([...SCHEMA_NODES.owned]) }),
       final: fake('final'),
@@ -787,8 +795,8 @@ function i4Body(reg) {
     badLog.length,
     badLog.filter((e) => e.startsWith('hotspot:')).length,
     badLog.filter((e) => e.startsWith('zone:')).length,
-  ]), [21, 21, 0],
-  'the throw arrives AFTER the whole hotspot pass and BEFORE the zone pass — 2 + 3 + 16 hotspots, no zone');
+  ]), [23, 23, 0],
+  'the throw arrives AFTER the whole hotspot pass and BEFORE the zone pass — 2 + 2 + 3 + 16 hotspots, no zone');
 }
 
 check('I4 [executed] hotspots register in declaration order, and every zone registers after every hotspot', () => {
@@ -987,19 +995,22 @@ function i6Body(reg) {
         () => ({ nodeReveal: null, revealDirect: true }),
       )),
     }),
+    equip: fake('equip', { visibility: visibility([...SCHEMA_NODES.equip], { revealDirect: true }) }),
     connect: fake('connect', { visibility: visibility([...SCHEMA_NODES.connect], { revealScrub: true }) }),
     owned: fake('owned', { visibility: visibility([...SCHEMA_NODES.owned], { nodeRadius: () => 4 }) }),
     final: fake('final'),
   };
   reg(ui, chapters);
   // D45 — the loop ran over every node of every declaring chapter before the
-  // three samples below are read off it. 3 + 3 + 16.
-  assert.equal(A(seen.length), 22, 'the registrar iterated all 22 nodes');
+  // four samples below are read off it. 3 + 2 + 3 + 16.
+  assert.equal(A(seen.length), 24, 'the registrar iterated all 24 nodes');
   const ins = seen[0];
-  const con = seen[3];
-  const own = seen[6];
-  assert.deepEqual(A([ins.chapter, con.chapter, own.chapter]), ['inspire', 'connect', 'owned'],
-    'the three samples are one per declaring chapter, at pinned positions');
+  const equ = seen[3];
+  const con = seen[5];
+  const own = seen[8];
+  assert.deepEqual(A([ins.chapter, equ.chapter, con.chapter, own.chapter]),
+    ['inspire', 'equip', 'connect', 'owned'],
+    'the four samples are one per declaring chapter, at pinned positions');
 
   // H4 — owned has no nodeReveal, so its sixteen labels ride the chapter COPY
   // EASE. Forwarding null as any function makes h.reveal truthy and switches
@@ -1034,6 +1045,7 @@ function i10Body(reg) {
       selection: F(() => null, () => ({ setHot: (id, on) => hits.push(`${id}:${on}`), setSelected: null })),
       interaction: { zones: () => [{ id: 'plume', world: () => null, radius: 1, label: 'p', announce: null, action: null }], trigger: null },
     }),
+    equip: fake('equip', { visibility: visibility([...SCHEMA_NODES.equip]) }),
     connect: fake('connect', {
       visibility: visibility([...SCHEMA_NODES.connect]),
       selection: { setHot: (id, on) => hits.push(`${id}:${on}`), setSelected: null },
@@ -1044,7 +1056,7 @@ function i10Body(reg) {
   reg(ui, chapters);
 
   // D45 — both passes ran to completion before anything below is read.
-  assert.deepEqual(A([hotspots.length, zones.length]), [22, 1],
+  assert.deepEqual(A([hotspots.length, zones.length]), [24, 1],
     'the hotspot pass and the zone pass each ran, with pinned cardinality');
 
   // ui.js:1199 (z.onHot(on)) and ui.js:3101 call it BARE — an undefined value
@@ -1057,9 +1069,10 @@ function i10Body(reg) {
   assert.deepEqual(A(hits), [], 'calling it is a no-op when the chapter declares no selection');
 
   // Positive control: the neighbouring chapter DOES declare one, so the empty
-  // log above is a no-op and not an unwired harness. hotspots[3] is connect's
-  // first node — the pinned boundary I6 also uses.
-  hotspots[3].onHot(true);
+  // log above is a no-op and not an unwired harness. hotspots[5] is connect's
+  // first node — the pinned boundary I6 also uses (3 inspire + 2 equip before
+  // it since 2026-08-30).
+  hotspots[5].onHot(true);
   assert.deepEqual(A(hits), ['ados:true']);
 }
 
@@ -1111,7 +1124,7 @@ check('I11 [materialised] the prepared-chapter cache lives in the factory\'s CLO
   assert.ok(A(tail > head), 'the factory\'s closing brace was not found — the anchor has rotted');
   const factory = raw.slice(head, tail + 2);
 
-  const IDS = ['inspire', 'connect', 'owned', 'final'];
+  const IDS = ['inspire', 'equip', 'connect', 'owned', 'final'];
   const make = new Function(
     `let CHAPTER_BUILDERS;\n${factory.replace('export function ', 'function ')}\n`
     + 'return function make(b) { CHAPTER_BUILDERS = b; return createChapterRegistry(); };',
@@ -1137,7 +1150,7 @@ check('I11 [materialised] the prepared-chapter cache lives in the factory\'s CLO
   // returned an empty registry would give [0, ''] and could not be mistaken
   // for a pass.
   assert.deepEqual(A([calls.length, calls.join(','), Object.keys(built).join(',')]),
-    [6, 'inspire,connect,inspire,connect,owned,final', 'inspire,connect,owned,final'],
+    [7, 'inspire,equip,inspire,equip,connect,owned,final', 'inspire,equip,connect,owned,final'],
     'two registries must not share a prepared cache');
 });
 
@@ -1463,7 +1476,7 @@ function bodyOf(src, name) {
   throw new Error(`unbalanced body for ${name}`);
 }
 
-const SCAN_IDS = ['mission', 'inspire', 'connect', 'owned', 'final'];
+const SCAN_IDS = ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'];
 
 /** How many times each chapter id appears as a whole string literal. */
 function idLiteralCounts(src) {
@@ -1811,7 +1824,7 @@ check('T1 [static ratchet] chapter-id literals in journey/chapter-interactions.j
   // counts. A stale path, a renamed file or an emptied read sends the control
   // to zero and fails T1 instead of passing it forever.
   assert.deepEqual(A(counts), {
-    mission: 0, inspire: 0, connect: 0, owned: 0, final: 0,
+    mission: 0, inspire: 0, equip: 0, connect: 0, owned: 0, final: 0,
   }, 'slice C deleted every named branch: no chapter id survives in this file');
 
   // D46 (1) — INPUTS PIN. One file, and it is not empty.
@@ -1853,7 +1866,7 @@ check('T1 [static ratchet] chapter-id literals in journey/chapter-interactions.j
     .replace(/'(?:\\.|[^'\\])*'/g, "''")
     .replace(/"(?:\\.|[^"\\])*"/g, '""'));
   assert.deepEqual(A(emptied), {
-    mission: 0, inspire: 0, connect: 0, owned: 0, final: 0,
+    mission: 0, inspire: 0, equip: 0, connect: 0, owned: 0, final: 0,
   }, 'a string-stripping scan reports zero unconditionally — hence codeKeepStrings');
 });
 
@@ -1904,7 +1917,7 @@ check('T2 [static ratchet] the UI surface reads NO global and names NO chapter �
   // U03's note gives: the claim is about the SURFACE, and a ratchet that stops
   // scanning the file the code moved to reports zero about nothing.
   assert.deepEqual(A(counts), {
-    mission: 0, inspire: 0, connect: 0, owned: 0, final: 0,
+    mission: 0, inspire: 0, equip: 0, connect: 0, owned: 0, final: 0,
   });
   assert.equal(A(countOf(src, 'window.journey')), 0,
     'ui.js no longer reaches the chapter modules through the global handle');
@@ -2541,11 +2554,12 @@ function descriptorKeys(src, factory, where) {
 }
 
 const CHAPTER_FACTORY = {
-  inspire: 'createInspire', connect: 'createConnect', owned: 'createOwned', final: 'createFinal',
+  inspire: 'createInspire', equip: 'createEquip', connect: 'createConnect',
+  owned: 'createOwned', final: 'createFinal',
 };
 
-check('T4 [static] the four shipped chapters — core keys declared, and no capability declares a foreign member', () => {
-  assert.deepEqual(A(Object.keys(CHAPTER_FACTORY)), ['inspire', 'connect', 'owned', 'final'],
+check('T4 [static] the five shipped chapters — core keys declared, and no capability declares a foreign member', () => {
+  assert.deepEqual(A(Object.keys(CHAPTER_FACTORY)), ['inspire', 'equip', 'connect', 'owned', 'final'],
     'the extractor covers every runtime chapter — cardinality pinned, not derived');
   assert.deepEqual(A([...RUNTIME_CHAPTER_IDS]), Object.keys(CHAPTER_FACTORY),
     'and that list is the schema\'s own, cross-checked rather than copied from it');
@@ -2568,10 +2582,11 @@ check('T4 [static] the four shipped chapters — core keys declared, and no capa
     .map(([id, keys]) => [id, CORE_KEYS.filter((k) => keys.includes(k))]));
   assert.deepEqual(A(core), {
     inspire: ['id', 'group', 'counts', 'setArmed', 'armed', 'snap', 'snapLanding'],
+    equip: ['id', 'group', 'counts', 'setArmed', 'armed', 'snap', 'snapLanding'],
     connect: ['id', 'group', 'counts', 'setArmed', 'armed', 'snap', 'snapLanding'],
     owned: ['id', 'group', 'counts', 'setArmed', 'armed', 'snap', 'snapLanding'],
     final: ['id', 'group', 'counts', 'setArmed', 'armed', 'snap', 'snapLanding'],
-  }, 'slice B landed all seven core keys on all four chapters');
+  }, 'slice B landed all seven core keys on all five chapters — Equip arrived already conforming');
   // WAS (pre-slice-B): inspire ['group','counts','setArmed','armed','snap'],
   // the other three the same plus 'snapLanding'; no chapter declared `id`.
 
@@ -2583,12 +2598,16 @@ check('T4 [static] the four shipped chapters — core keys declared, and no capa
   // preserving journey.js's always-null focal hint for the Owned leg (§8.2-H9).
   const caps = Object.fromEntries(Object.entries(declared)
     .map(([id, keys]) => [id, CAPABILITY_KEYS.filter((k) => keys.includes(k))]));
+  // Equip declares `interaction: null` — an explicit statement that it offers
+  // no hover zone and no committed action, which the extractor reads as a
+  // declared KEY exactly as it reads owned's null `focus`.
   assert.deepEqual(A(caps), {
     inspire: ['focus', 'selection', 'visibility'],
+    equip: ['focus', 'interaction', 'selection', 'visibility'],
     connect: ['focus', 'selection', 'visibility'],
     owned: ['focus', 'interaction', 'selection', 'visibility'],
     final: ['focus'],
-  }, "design.md §3's table, as landed by slice B");
+  }, "design.md §3's table, as landed by slice B, plus Equip (2026-08-30)");
   // WAS (pre-slice-B): [] on all four.
 
   // And the member check itself, which since slice B has eleven real
@@ -2630,13 +2649,17 @@ check('T4 [static] the four shipped chapters — core keys declared, and no capa
   }
   // D45/D46 — the loop's cardinality and its inputs, both literal, both
   // asserted BEFORE anything is read off the collection they produced.
-  assert.equal(A(filesRead), 4, 'four chapter sources were read — the inputs, not the matches');
-  assert.equal(A(capsRead), 11, 'eleven capability declarations were visited: 10 literal + 1 stated absence');
+  assert.equal(A(filesRead), 5, 'five chapter sources were read — the inputs, not the matches');
+  assert.equal(A(capsRead), 15, 'fifteen capability declarations were visited: 13 literal + 2 stated absences');
 
   assert.deepEqual(A(memberIndex), {
     'inspire.focus': ['world'],
     'inspire.selection': ['setHot', 'setSelected'],
     'inspire.visibility': ['nodeIds', 'nodeWorld', 'nodeReveal', 'nodeRadius', 'labelPolicy',
+      'revealDirect', 'revealScrub', 'setExcludedNodes', 'bindCopyEase'],
+    'equip.focus': ['world'],
+    'equip.selection': ['setHot', 'setSelected'],
+    'equip.visibility': ['nodeIds', 'nodeWorld', 'nodeReveal', 'nodeRadius', 'labelPolicy',
       'revealDirect', 'revealScrub', 'setExcludedNodes', 'bindCopyEase'],
     'connect.focus': ['world'],
     'connect.selection': ['setHot', 'setSelected'],
@@ -2648,8 +2671,8 @@ check('T4 [static] the four shipped chapters — core keys declared, and no capa
       'revealDirect', 'revealScrub', 'setExcludedNodes', 'bindCopyEase'],
     'final.focus': ['world'],
   }, 'every member of every real capability, by name and in order');
-  assert.equal(A(Object.values(memberIndex).reduce((n, m) => n + m.length, 0)), 38,
-    'thirty-eight declared members across ten capabilities — the extractor found something');
+  assert.equal(A(Object.values(memberIndex).reduce((n, m) => n + m.length, 0)), 50,
+    'fifty declared members across thirteen capabilities — the extractor found something');
 
   // The membership relation itself, now that BOTH sides are pinned exactly:
   // the ten member lists above, and CAPABILITY_MEMBERS (all four lists pinned
@@ -2665,14 +2688,19 @@ check('T4 [static] the four shipped chapters — core keys declared, and no capa
   // site that declares it, as an exact value. A dead filter returns [] here.
   const narrowed = { ...CAPABILITY_MEMBERS, visibility: CAPABILITY_MEMBERS.visibility.filter((m) => m !== 'nodeIds') };
   assert.deepEqual(A(foreignOf(memberIndex, narrowed)),
-    ['inspire.visibility.nodeIds', 'connect.visibility.nodeIds', 'owned.visibility.nodeIds'],
+    ['inspire.visibility.nodeIds', 'equip.visibility.nodeIds', 'connect.visibility.nodeIds',
+      'owned.visibility.nodeIds'],
     'the filter can find something: it is not an assert-zero over a dead predicate');
 
-  // A stated absence is a fact to PIN, not a case to skip past. Exactly one
-  // exists: owned's focus, preserving journey.js's always-null focal hint for
-  // the Owned leg. A second one appearing is a design decision, not a detail.
-  assert.deepEqual(A(declaredNull), ['owned.focus'],
-    'exactly one capability is declared as a stated absence — design.md §8.2-H9 / §11-Q1');
+  // A stated absence is a fact to PIN, not a case to skip past. TWO exist,
+  // and each is a design decision recorded at its own site: owned's `focus`,
+  // preserving journey.js's always-null focal hint for the Owned leg
+  // (design.md §8.2-H9 / §11-Q1), and equip's `interaction` — Equip has no
+  // hover zone and no committed action, which is a claim about the chapter
+  // rather than an unfinished edge (2026-08-30). A THIRD one appearing is a
+  // design decision too, not a detail, and reds here.
+  assert.deepEqual(A(declaredNull), ['equip.interaction', 'owned.focus'],
+    'exactly two capabilities are declared as stated absences');
 });
 
 /** The top-level member names of one capability sub-literal on a descriptor. */
@@ -2942,9 +2970,18 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
 
   // D46 (2) — THE INPUTS PIN. Not the number of matches: the number of INPUTS.
   const files = Object.keys(CHAPTER_FACTORY).map((id) => `journey/chapters/${id}/index.js`);
-  assert.equal(A(files.length), 4, 'exactly four chapter modules are read');
-  assert.deepEqual(A(files.map((f) => read(f).length > 20000)), [true, true, true, true],
-    'and all four reads returned a real module, not an empty string');
+  assert.equal(A(files.length), 5, 'exactly five chapter modules are read');
+  // WHAT "A REAL MODULE" MEANS IS THE FACTORY, NOT THE BYTE COUNT (2026-08-30).
+  // This read `length > 20000`, a proxy that held only while every chapter was
+  // a large one. Equip's module is deliberately the smallest on the site — it
+  // builds no geometry, because its subject is the specimen itself — so the
+  // proxy went false on a module that is perfectly real. Assert the thing the
+  // extractor actually needs: each file declares the factory this suite is
+  // about to read out of it.
+  assert.deepEqual(
+    A(Object.keys(CHAPTER_FACTORY).map((id) => readChapter(id).includes(`export function ${CHAPTER_FACTORY[id]}(`))),
+    [true, true, true, true, true],
+    'and all five reads returned a module declaring its own factory, not an empty string');
 
   const members = shippedMemberBodies(readChapter);
 
@@ -2952,7 +2989,7 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   // route (T4 counts declared KEYS; this counts resolved BODIES). Two
   // extractors agreeing on 38 is a cross-check; one extractor asserting its
   // own output is not.
-  assert.equal(A(members.length), 38, 'thirty-eight member bodies were resolved — the loop was entered');
+  assert.equal(A(members.length), 50, 'fifty member bodies were resolved — the loop was entered');
 
   // D45, one level in. `members.length === 38` is satisfied by thirty-eight
   // PLACEHOLDERS as easily as by thirty-eight bodies, which is exactly what a
@@ -2962,8 +2999,13 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   // as its own placeholder text would be counted here and caught.
   const byShape = { method: 0, reference: 0, value: 0 };
   for (const m of members) byShape[m.shape]++;
-  assert.deepEqual(A(byShape), { method: 6, reference: 13, value: 19 },
-    'six inline methods, thirteen references to local declarations, nineteen data values');
+  // 6/13/19 -> 11/13/26 with Equip (2026-08-30). Its three real capabilities
+  // declare every member INLINE rather than as references to local function
+  // declarations — the chapter is small enough that a hoisted body per member
+  // would be indirection for its own sake — so it contributes five methods and
+  // seven values and no new references.
+  assert.deepEqual(A(byShape), { method: 11, reference: 13, value: 26 },
+    'eleven inline methods, thirteen references to local declarations, twenty-six data values');
   assert.deepEqual(A(members.filter((m) => /^<(?:method|shorthand)>$/.test(m.body)).map((m) => m.site)), [],
     'no member reached the scan as an unresolved placeholder');
 
@@ -2976,9 +3018,12 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   // `owned.visibility.nodeIds` is a reference to a `const` ARRAY, not to a
   // function. The pin objected. That is the third such correction in this
   // check alone.)
+  //
+  // 18 -> 23 with Equip (2026-08-30): its five inline capability methods are
+  // five more unexecuted bodies in the same residue.
   const isFunction = (m) => m.kind === 'method' || m.kind === 'reference-fn';
-  assert.equal(A(members.filter(isFunction).length), 18,
-    'eighteen of the thirty-eight members are function bodies — the F-3 residue, counted not estimated');
+  assert.equal(A(members.filter(isFunction).length), 23,
+    'twenty-three of the fifty members are function bodies — the F-3 residue, counted not estimated');
   assert.deepEqual(A(members.filter((m) => m.kind === 'reference-data').map((m) => m.site)),
     ['owned.visibility.nodeIds'],
     'and the one reference that is NOT a function is named, so the count above cannot drift silently');
@@ -2990,6 +3035,10 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
     'inspire.visibility.nodeIds', 'inspire.visibility.nodeWorld', 'inspire.visibility.nodeReveal',
     'inspire.visibility.nodeRadius', 'inspire.visibility.labelPolicy', 'inspire.visibility.revealDirect',
     'inspire.visibility.revealScrub', 'inspire.visibility.setExcludedNodes', 'inspire.visibility.bindCopyEase',
+    'equip.focus.world', 'equip.selection.setHot', 'equip.selection.setSelected',
+    'equip.visibility.nodeIds', 'equip.visibility.nodeWorld', 'equip.visibility.nodeReveal',
+    'equip.visibility.nodeRadius', 'equip.visibility.labelPolicy', 'equip.visibility.revealDirect',
+    'equip.visibility.revealScrub', 'equip.visibility.setExcludedNodes', 'equip.visibility.bindCopyEase',
     'connect.focus.world', 'connect.selection.setHot', 'connect.selection.setSelected',
     'connect.visibility.nodeIds', 'connect.visibility.nodeWorld', 'connect.visibility.nodeReveal',
     'connect.visibility.nodeRadius', 'connect.visibility.labelPolicy', 'connect.visibility.revealDirect',
@@ -3043,7 +3092,7 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   const mutated = shippedMemberBodies((id) => (id === 'final' ? poisoned : readChapter(id)));
   assert.deepEqual(A(mutated.filter((m) => thisIn(m.body) > 0).map((m) => m.site)), ['final.focus.world'],
     'one `this` planted in one shipped member is reported, at that member, by name');
-  assert.equal(A(mutated.length), 38, 'and the mutant moved the `this` count only — the manifest is unchanged');
+  assert.equal(A(mutated.length), 50, 'and the mutant moved the `this` count only — the manifest is unchanged');
 });
 
 check('T4b [instrument] the descriptor extractor reads both shipped shapes, and FAILS LOUDLY on any third', () => {
@@ -3213,7 +3262,7 @@ check('T4c [instrument] the identifier-shape scan rejects EVERY way of writing a
     shapes[id] = body[i] === '{' ? 'object-literal' : 'returned-identifier';
   }
   assert.deepEqual(A(shapes), {
-    inspire: 'object-literal', connect: 'object-literal',
+    inspire: 'object-literal', equip: 'object-literal', connect: 'object-literal',
     owned: 'object-literal', final: 'object-literal',
   }, 'no shipped chapter uses the identifier shape, so assertOnlyRead is unreachable from every REAL descriptor — if this fails, restore a real-file scan for the chapter named');
 });
@@ -3490,7 +3539,7 @@ check('LPS1 [instrument] this suite contains no assertion the failability sweep 
   // --prove-failure never enumerates it. Pinned as an EXACT VALUE rather than
   // an assert-zero — one site is legitimately unwrapped and is named here.
   const actuals = assertActuals(src);
-  assert.equal(A(actuals.length), 180, 'every assert site was located — cardinality pinned (D45; 178 before the Inspire exit contract added two explicit physical-slot assertions; 175 before DIET-02 restated C06-B4 as I11 — three sites: the slice anchor\'s uniqueness refusal, its rotted-tail refusal, and the two-registry claim itself; 101 before slice D, 122 before the C05C R1 repairs, 138 before slice E, 166 before QA-05 added five rows, 171 before PIN-01 added T3\'s cardinality and distinctness pins, 173 before the M14 onHot pin was converted from a three-line text site set to a parse-based statement-position census, which is ONE assertion replaced by TWO — the census and its non-empty-corpus control; 174 before U04 separated T2\'s delete-direction control from its claim, adding the fixture\'s own non-vacuity assertion)');
+  assert.equal(A(actuals.length), 181, 'every assert site was located — cardinality pinned (D45; 180 before Equip promoted T6\'s length proxy into a factory-declaration check, which is ONE assertion replaced by ONE and one new comparison; 178 before the Inspire exit contract added two explicit physical-slot assertions; 175 before DIET-02 restated C06-B4 as I11 — three sites: the slice anchor\'s uniqueness refusal, its rotted-tail refusal, and the two-registry claim itself; 101 before slice D, 122 before the C05C R1 repairs, 138 before slice E, 166 before QA-05 added five rows, 171 before PIN-01 added T3\'s cardinality and distinctness pins, 173 before the M14 onHot pin was converted from a three-line text site set to a parse-based statement-position census, which is ONE assertion replaced by TWO — the census and its non-empty-corpus control; 174 before U04 separated T2\'s delete-direction control from its claim, adding the fixture\'s own non-vacuity assertion)');
   const unwrapped = actuals.filter((a) => !a.actual.includes('A(') && !a.actual.includes('F('));
   assert.deepEqual(A(unwrapped.map((a) => a.actual)), ['runtimeIds'],
     'the one unwrapped actual is I9\'s, and it was wrapped by A() on the line that built it');

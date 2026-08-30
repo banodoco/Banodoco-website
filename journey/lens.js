@@ -205,9 +205,19 @@ const LOOK_BASE = { gain: 1.0, lift: 1.0, warm: 0.0, hal: 1.0, vig: 0.34, grain:
 // Key positions are route-relative (M4): each look belongs to a LEG, so a
 // re-timed route carries the grade with it. Shipped p-values unchanged
 // (0.00 / 0.38 / 0.44 / 0.60 / 0.68 / 0.85 / 0.975 / 1.00).
+//
+// EQUIP KEEPS THE IDENTITY, and the key below it is what makes the sentence
+// above this list still true. `endOf('inspire')` was 0.38 until Equip landed
+// between Inspire and Connect on 2026-08-30; it is 0.26 now, so the identity
+// key alone would have started the grade drifting toward Connect's look from
+// the Inspire rest onward and spent the whole fly-around inside a transition
+// nobody authored. A second identity key at `endOf('equip')` holds G2a flat
+// across the new chapter and leaves the shipped 0.38 -> 0.44 ramp exactly
+// where it was: the transition still belongs to the leg into Connect.
 const LOOK_KEYS = [
   { p: 0.00, ...LOOK_BASE },                                    // Mission (G2a)
   { p: endOf('inspire'), ...LOOK_BASE },                        // Inspire leg end (G2a)
+  { p: endOf('equip'), ...LOOK_BASE },                          // Equip leg end (G2a) — 0.38, the shipped edge
   // Connect: halation restrained — the free-edge polylines are the
   // brightest element (W4-B note a); everything else stays at identity so
   // the uBase/uEdge balance tuned against ACES holds (note b).

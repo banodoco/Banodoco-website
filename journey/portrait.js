@@ -27,7 +27,7 @@
 //   tgtRight target-only shift along view-right — the horizontal re-aim.
 //   fov      additive vertical-fov delta.
 //
-// The field is EXACTLY zero at and below the orbit start (p 0.040): below it
+// The field is EXACTLY zero at and below the orbit start: below it
 // the camera is the hero's pose verbatim, and in portrait the hero's own
 // responsive table (index.html VIEWS.mobile / .tablet) already IS the
 // approved Mission portrait composition (Plate II row 1: "portrait — live
@@ -65,15 +65,39 @@ export function portraitWeight(aspect) {
 // keep the travel honest (the slip-under must still slip UNDER the rim, the
 // stipe descent must stay outside the stipe — clearance there is ~0.5 world
 // units, so those legs run the field near zero and let it bloom at the rest).
-// p values reference director.js: ORBIT_P0 0.040, rests 0.26 / 0.5230 / 0.725 /
-// restProgress('final') (0.97 since §14), descent keys 0.6644–0.718 (the first
-// of those rides the leg since 2026-08-24 — see its own note).
+// p values reference director.js: the orbit start, then the rests, then the
+// descent keys 0.6644-0.718 (the first of those rides the leg since
+// 2026-08-24 — see its own note).
+//
+// THE ORBIT START IS A DECLARED CONVERSION, NOT A LITERAL (2026-08-30). It was
+// written 0.040 here and in the note above, which was the right number for as
+// long as the Inspire rest sat at p 0.26: the orbit's dead band is authored in
+// chapters/inspire/camera.js as ARRIVAL_DEAD, a FRACTION of the arrival, and
+// the product it forms with the live Inspire rest is 0.0308. Equip's arrival
+// moved that rest 0.26 -> 0.20 and the product 0.040 -> 0.0308 with it, so the
+// literal would have left 0.0092 of p — nearly a third of the dead band's own
+// width — of real orbit with the field still pinned at zero, which is the one
+// thing the note above says cannot happen.
+//
+// WHY THE FRACTION IS COPIED HERE RATHER THAN IMPORTED. chapters/inspire/
+// camera.js imports three.js, and this module is deliberately three-free so
+// that DOM-free suites (tools/test-connect-motion.mjs and friends) can import
+// it in Node; importing the constant would drag three into every one of them.
+// So the two ends are declared apart and PINNED AGAINST EACH OTHER in the pure
+// ring — tools/test-declared-conversions.mjs recomputes the product and reds if
+// either end moves without the other. That is the template
+// tools/test-rest-composition.mjs set for exactly this shape of split
+// (CONTRIBUTING.md §5), and it is what keeps this a conversion rather than a
+// duplicated magic number.
 const ZERO = { back: 1, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
+
+const ORBIT_DEAD_FRACTION = 0.15384615384615385;   // == chapters/inspire/camera.js ARRIVAL_DEAD
+const ORBIT_P0 = ORBIT_DEAD_FRACTION * restProgress('inspire');
 
 const KEYS = [
   // Mission + orbit head: zero — the hero's own mobile pose is the portrait
   // composition, and the orbit must lift off from it without a step.
-  { p: 0.040, ...ZERO },
+  { p: ORBIT_P0, ...ZERO },
 
   // INSPIRE (rest 0.26) — RE-AUTHORED for the D18 restage. The old field
   // (back 1.60, rise 0.60, tgtRight 1.05, fov +14) was composed for the az 78
@@ -143,7 +167,31 @@ const KEYS = [
   // centre the asymmetric stalk rather than its cap transform. Portrait was
   // already centred by measure, so retain only the matching +0.038 response
   // here (0.258 -> 0.296); the phone/tablet projection remains unchanged.
-  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.296, fov: 13 },
+  // RIDES THE ROUTE, not a literal (2026-08-30). This was `p: 0.260`, which is
+  // where the Inspire rest sat until Equip's arrival re-timed it to 0.20. The
+  // composition below is unchanged to the digit; only the p it is authored AT
+  // is now asked of route.js, which owns it. This file's two other keys made
+  // the same move in 2026-08-10 and 2026-08-09 for exactly this reason.
+  { p: restProgress('inspire'), back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.296, fov: 13 },
+
+  // EQUIP (rest restProgress('equip') — 0.32; the underside). The landscape
+  // rest stands 5.0 out from the stipe axis at eye 1.15 with fov 48, which is
+  // a WIDE composition: the whole gill fan spans the frame edge to edge. A
+  // tall frame's horizontal fov collapses, so the fan's two ends leave the
+  // picture and the pose stops being an underside and becomes a close-up of
+  // the throat. `back` is therefore the lever, exactly as it is at Inspire —
+  // dolly out until the fan fits the narrow axis — and the aim comes DOWN with
+  // it so the stalk keeps its full column under the fan rather than being
+  // cropped by the copy block, which sits low here (pos-bottomleft).
+  //
+  // The eye must stay under the rim or the pose loses the one thing it is for:
+  // the specimen's lowest cap geometry is at world y 2.47, and the dolly's own
+  // geometric lift is along the VIEW axis, which at this pose climbs. `rise`
+  // pays that back so the net eye height stays near the landscape 1.15 — the
+  // same "from below is bought by the eye, not the aim" finding the phone
+  // Inspire block below records, applied to the chapter that is entirely about
+  // being underneath.
+  { p: restProgress('equip'), back: 1.42, rise: -0.34, truck: 0, tgtUp: -0.42, tgtRight: 0, fov: 9 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
@@ -172,7 +220,15 @@ const KEYS = [
   // then accelerate through the visible ground-light intro. Carry the same
   // +0.80 into this travel key: the approved rest stays byte-identical, pitch
   // stays unchanged, and the reframe is distributed through one movement.
-  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')),
+  // RE-ANCHORED TO THE LEG IT DESCRIBES (2026-08-30). The fraction 0.652 and
+  // every value below are untouched; what changed is which leg the fraction is
+  // OF. This key is the ground-descent approach — the travel into Connect —
+  // and until Equip landed, that travel began at the Inspire rest. It begins
+  // at the Equip rest now (journey/director.js composes connect/camera.js's
+  // approach from there), so anchoring it to Inspire would have put the
+  // mid-travel key a third of the way back inside the fly-around, where the
+  // camera is doing the opposite of descending.
+  { p: restProgress('equip') + 0.652 * (restProgress('connect') - restProgress('equip')),
     back: 1.55, rise: 1.08, truck: 0, tgtUp: 1.10, tgtRight: -0.12, fov: 11 },
 
   // CONNECT (rest restProgress('connect') — 0.5230 since the 2026-08-10 stop
@@ -350,10 +406,16 @@ function tabletBand(aspect) {
   return smooth01((aspect - TABLET_ZERO_ASPECT) / (TABLET_FULL_ASPECT - TABLET_ZERO_ASPECT));
 }
 const TZERO = { back: 0, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
+// The delta is gone by the EQUIP rest, not by the mid-travel key (2026-08-30).
+// Both these bands bloom at the Inspire rest and decay to zero at their last
+// key; with Equip between the rests, decaying to the mid-travel key would have
+// left roughly half of Inspire's dolly-in still applied at the Equip rest — an
+// unauthored composition folded on top of an authored one. Equip's own key in
+// KEYS above is where its tablet/phone framing is decided.
 const TAB_KEYS = [
-  { p: 0.040, ...TZERO },
+  { p: ORBIT_P0, ...TZERO },
   { p: restProgress('inspire'), back: -0.50, rise: 0, truck: 0, tgtUp: 0.50, tgtRight: 0, fov: 0 },
-  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
+  { p: restProgress('equip'), ...TZERO },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -491,9 +553,10 @@ const TAB_KEYS = [
 // `tgtRight`, both of which re-aim the TARGET and leave pose.pos alone, so
 // az(p) is bit-identical to that scrub rather than merely close to it.
 const PHONE_KEYS = [
-  { p: 0.040, ...TZERO },
+  { p: ORBIT_P0, ...TZERO },
   { p: restProgress('inspire'), back: -0.66, rise: -0.40, truck: 0, tgtUp: 0.46, tgtRight: -0.05, fov: 2 },
-  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
+  // Zero at the Equip rest — see the TAB_KEYS note above.
+  { p: restProgress('equip'), ...TZERO },
 ];
 
 const FIELDS = ['back', 'rise', 'truck', 'tgtUp', 'tgtRight', 'fov'];

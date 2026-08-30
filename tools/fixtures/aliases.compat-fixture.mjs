@@ -47,6 +47,11 @@ assert.deepEqual(
   '[aliases fixture] normaliseNode signature drifted',
 );
 
+// `#/equip` joined this list on 2026-08-30 and NOTHING WAS WIRED TO MAKE IT
+// WORK, which is the fact worth recording: journey/state.js's parseHash tests
+// membership of CHAPTER_IDS and normalises anything else, so promoting Equip in
+// the schema made its deep link live by derivation alone.
+//
 // Every chapter's canonical nav URL — the format rail.js authors as
 // `#/${c.id}` (journey/rail.js:516,663) and the one journey.js's own comments
 // document for the detail route: `#/<chapter>/<node>`.
@@ -58,6 +63,10 @@ assert.deepEqual(CHAPTER_IDS.map((id) => ({ id, url: `#/${id}` })), [
   {
     "id": "inspire",
     "url": "#/inspire"
+  },
+  {
+    "id": "equip",
+    "url": "#/equip"
   },
   {
     "id": "connect",

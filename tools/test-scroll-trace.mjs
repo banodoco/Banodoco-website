@@ -106,10 +106,15 @@ function idleThenSample(rig, gapMs, emit) {
   for (let i = 0; i < 4; i++) rig.wheel(120, 16);
   rig.frame(16);
   const a2 = capture('A2', 'four-delta wheel stream: sample vs frame authority', rig);
+  // The armed target is the first rest, spelled from route.js rather than as
+  // `0.26`: that literal stopped being Inspire's rest when Equip re-timed the
+  // route (2026-08-30), and what this case is about is that a FRAME armed the
+  // resolution, not which p it armed.
+  const a2Arm = `intent.arm->${REST_STOPS[1]}`;
   L.same('A', 'A2 stream: decisions per step', decisionsOf(a2),
-    [['dir=1'], [], [], ['stream.on'], ['intent.arm->0.26']]);
+    [['dir=1'], [], [], ['stream.on'], [a2Arm]]);
   L.check('A', 'A2 the arm decision belongs to a FRAME, not a sample',
-    a2[4].id.startsWith('F') && a2[4].decisions.includes('intent.arm->0.26'), a2[4].id);
+    a2[4].id.startsWith('F') && a2[4].decisions.includes(a2Arm), a2[4].id);
   L.check('A', 'A2 the stream decision belongs to the 4th SAMPLE',
     a2[3].id === 'S4' && a2[3].decisions.includes('stream.on'), a2[3].id);
   L.check('A', 'A2 an armed resolution is not yet GLIDING: the finger still wins',
@@ -148,7 +153,7 @@ function idleThenSample(rig, gapMs, emit) {
   // A5. A frame with dt <= 0 returns the displayed position and decides
   // nothing. The early return precedes the frame-epoch write, so it does not
   // refresh the stall clock either.
-  rig.stop(); rig.reset(0.26);
+  rig.stop(); rig.reset(REST_STOPS[1]);
   L.check('A', 'A5 update(0) returns p and decides nothing',
     rig.scroll.update(0) === rig.scroll.progress && rig.scroll.resolving === false,
     rig.scroll.update(0));
@@ -265,11 +270,22 @@ function idleThenSample(rig, gapMs, emit) {
   // QA-02 P1: the expected side used to be `dither.map(() => 59)` — its
   // arity was derived from `dither` itself (the actual side), so cutting
   // the anchor set to 0 elements would still pass ([] === []). The anchor
-  // set is REST_STOPS.slice(1) (4 anchors) plus TERMINAL_P (1 anchor) = 5;
-  // pinned as a literal so the count itself is asserted, not assumed.
-  L.same('B', 'B5 every anchor above p = 0 flaps `gliding` on every frame',
-    dither.map((d) => d.flips), [59, 59, 59, 59, 59], { dither });
-  L.check('B', 'B5 ...including p = 1, where the position itself is bit-exact',
+  // set is REST_STOPS.slice(1) (5 anchors since Equip, 2026-08-30) plus
+  // TERMINAL_P (1 anchor) = 6; pinned as a literal so the count itself is
+  // asserted, not assumed.
+  // RE-RECORDED 2026-08-30: five 59s and a 0. The five REST anchors still flap
+  // exactly as O-2 describes; the terminal anchor stopped, and the stop is
+  // INCIDENTAL rather than a fix. Its span was already bit-exact zero — that is
+  // what the second check below has always said — so whether it flaps depends
+  // only on whether the round trip through the sampled inverse lands on the
+  // same double, and the Equip re-timing changed the page's total viewport
+  // heights and with it that grid. Nothing in scroll.js moved. Recorded this
+  // way rather than smoothed into a range because O-2 is an observation of a
+  // known artefact, and an observation that quietly changed shape is exactly
+  // what a re-record is for.
+  L.same('B', 'B5 every REST anchor above p = 0 flaps `gliding` on every frame',
+    dither.map((d) => d.flips), [59, 59, 59, 59, 59, 0], { dither });
+  L.check('B', 'B5 ...and p = 1 is bit-exact, which is why it is the one that can be still',
     dither.at(-1).anchor === TERMINAL_P && dither.at(-1).span < 1e-12,
     dither.at(-1).span);
 }
@@ -726,10 +742,20 @@ function idleThenSample(rig, gapMs, emit) {
   // ...and no amount of distance changes that on its own. The position rule
   // reads the DISPLAYED position, which is speed-limited to MAX_SCRUB_RATE, so
   // in the SNAP_ENGAGE_MS the gesture has left it can advance at most
-  // 0.45 x 0.160 = 0.072 of p — a tenth of this span. A replayed stream longer
-  // than the whole Mission -> Inspire road (6,524 px) therefore still resolves
-  // back to the rest it left. Strength has to arrive with a genuinely
-  // delivered post-boot sample. (OBSERVATION O-6.)
+  // 0.45 x 0.160 = 0.072 of p. A replayed stream longer than the whole
+  // Mission -> Inspire road therefore still resolves back to the rest it left.
+  // Strength has to arrive with a genuinely delivered post-boot sample.
+  // (OBSERVATION O-6.)
+  //
+  // THE MARGIN NARROWED ON 2026-08-30 AND THE DECLARATION IS RE-MEASURED, NOT
+  // WIDENED. The ceiling is a constant in p; the road it would have to cross is
+  // not, and Equip's re-timing took the Mission -> Inspire arrival from 0.26 of
+  // p to 0.20 (the same gesture over less route progress — the SCROLL it costs
+  // is unchanged, journey/structure.js's header explains the re-split). So the
+  // ceiling went from 28% of that road to 36% of it. The three behavioural
+  // cases above are what actually prove O-6 and all three still return home;
+  // the inequality below is the explanation, and it now states 36% rather than
+  // pretending the old 28% still holds.
   for (const total of [3000, 8000]) {
     rig.stop(); rig.reset(0);
     rig.scroll.primeBootWheelStream(stream(Array.from({ length: 5 }, () => total / 5)));
@@ -737,8 +763,9 @@ function idleThenSample(rig, gapMs, emit) {
       rig.settle(16000).p, 0, 1e-5);
   }
   L.check('F', 'F13 the ceiling that causes it: MAX_SCRUB_RATE x SNAP_ENGAGE_MS',
-    MAX_SCRUB_RATE * (SNAP_ENGAGE_MS / 1000) < 0.35 * (REST_STOPS[1] - REST_STOPS[0]),
-    +(MAX_SCRUB_RATE * (SNAP_ENGAGE_MS / 1000)).toFixed(4));
+    MAX_SCRUB_RATE * (SNAP_ENGAGE_MS / 1000) < 0.40 * (REST_STOPS[1] - REST_STOPS[0]),
+    +(MAX_SCRUB_RATE * (SNAP_ENGAGE_MS / 1000)
+      / (REST_STOPS[1] - REST_STOPS[0])).toFixed(4));
 
   /* F12. A rapid second touch contact is a new GESTURE at the exact physical
      boundary — before either idle window — and it is still minted as one. What
@@ -1059,10 +1086,15 @@ function idleThenSample(rig, gapMs, emit) {
   const wraps = [];
   const rig = createRig({ onWrap: (dir) => wraps.push(dir) });
 
+  // THE LAST REST IS ADDRESSED BY POSITION, NOT BY INDEX (2026-08-30). These
+  // three cases said `REST_STOPS[4]`, which was the last rest only while the
+  // route had five of them; Equip made it Owned's, and all three cases then
+  // exercised a mid-route anchor while their names still said "the last rest".
+  //
   // I1. A stream at the last rest wraps forward. The wrap decision is a FRAME
   // decision, the wall is raised at the displayed position, and the travel
   // direction survives the placement the host is about to perform.
-  rig.reset(REST_STOPS[4]);
+  rig.reset(REST_STOPS.at(-1));
   rig.record();
   for (let i = 0; i < 8; i++) pulse(rig, 200);
   const i1 = capture('I1', 'forward wrap from the last rest', rig);
@@ -1078,7 +1110,7 @@ function idleThenSample(rig, gapMs, emit) {
   // I2. A notch reader never wraps: the stream test still gates the seam, so
   // the end-hold is unchanged for anyone reading it a notch at a time.
   wraps.length = 0;
-  rig.stop(); rig.reset(REST_STOPS[4]);
+  rig.stop(); rig.reset(REST_STOPS.at(-1));
   for (let i = 0; i < 6; i++) { pulse(rig, 110); rig.settle(600); }
   L.check('I', 'I2 a notch-by-notch reader never wraps', wraps.length === 0, wraps.length);
 
@@ -1092,7 +1124,7 @@ function idleThenSample(rig, gapMs, emit) {
   // I4. With no onWrap host wired at all the seam never fires and the
   // end-hold behaves as the ordinary terminal anchor it was before the loop.
   const noWrap = createRig({ onWrap: false });
-  noWrap.reset(REST_STOPS[4]);
+  noWrap.reset(REST_STOPS.at(-1));
   for (let i = 0; i < 14; i++) pulse(noWrap, 200);
   L.near('I', 'I4 without an onWrap host the end-hold is an ordinary anchor',
     noWrap.settle(16000).p, TERMINAL_P, 1e-9);

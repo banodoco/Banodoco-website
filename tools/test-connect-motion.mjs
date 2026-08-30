@@ -8,7 +8,13 @@ import { restProgress, startOf } from '../journey/route.js';
 
 const inspireP = restProgress('inspire');
 const connectP = restProgress('connect');
-const midP = inspireP + 0.652 * (connectP - inspireP);
+// The mid-travel portrait key rides the leg INTO Connect at 0.652 of it, and
+// since 2026-08-30 that leg departs the Equip rest rather than the Inspire one
+// (journey/portrait.js carries the re-anchor and why). Re-derived here from the
+// same two ends the field uses, so the sample lands on the key rather than
+// 0.04 of p short of it.
+const equipP = restProgress('equip');
+const midP = equipP + 0.652 * (connectP - equipP);
 
 // The Connect camera must retain its plateau velocity through the visible
 // ground-light intro, then make one short exact landing at the rest.

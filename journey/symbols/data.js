@@ -32,8 +32,8 @@
 // owner's reference renders; the owner's design review the same day sent the
 // section icons BACK to this scene-derived set — the renders stopped being
 // authoritative on glyph design. The one mark the restage added for good is
-// `equip`, below, which has no chapter and answers to the owner's verbal
-// brief instead.)
+// `equip`, below, which answers to the owner's verbal brief instead — it
+// arrived as a placeholder's mark and, since 2026-08-30, names a chapter.)
 //
 //   mission   THE SPECIMEN, WHOLE. The hero frame is one mushroom standing on
 //             the mycelial ground: cap, gill rim, a stipe that flares into the
@@ -160,8 +160,11 @@ const SYMBOL_DEFINITIONS = {
       { p: 'M18.4 14.6 V17.2' },
     ],
   },
-  // Not a chapter's scene — the navigator's one placeholder (Equip, coming
-  // soon). Derived from the organism per the owner's brief: "a perspective
+  // EQUIP. Drawn before the chapter existed — it was the navigator's one
+  // placeholder mark — and it turned out to be the chapter's design brief:
+  // what the mark shows is exactly the pose the camera now settles on
+  // (chapters/equip/camera.js). Derived from the organism per the owner's
+  // own words: "a perspective
   // of the bottom of the mushroom's head looking up from the stalk, like an
   // extreme angle." The first draft drew the view DEAD-ON from under the
   // stalk — rim a near-circle, gills a full radial fan — and read as a
@@ -202,13 +205,15 @@ const SYMBOL_DEFINITIONS = {
   },
 };
 
+// EQUIP NO LONGER RIDES ALONG. Until 2026-08-30 there was a third entry here,
+// `['equip', SYMBOL_DEFINITIONS.equip]`, with the note that a placeholder has
+// no chapter in the schema to derive it from, so the map above could never
+// reach it. Equip is a chapter now and the map reaches it like every other
+// mark — leaving the explicit entry would have declared the same key twice
+// and, worse, would have kept a hand-maintained copy of something derived.
 export const SYMBOLS = Object.fromEntries([
   ...JOURNEY_SCHEMA.chapters.map(({ symbol }) => [symbol, SYMBOL_DEFINITIONS[symbol]]),
   [JOURNEY_SCHEMA.menuSymbol, SYMBOL_DEFINITIONS[JOURNEY_SCHEMA.menuSymbol]],
-  // The navigator's placeholder mark rides along explicitly: it has no
-  // chapter in the schema to derive it (that is the whole point of a
-  // placeholder), so the schema map above can never reach it.
-  ['equip', SYMBOL_DEFINITIONS.equip],
 ]);
 
 validateJourneyStructure(JOURNEY_SCHEMA, { symbols: SYMBOLS });
