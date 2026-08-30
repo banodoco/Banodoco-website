@@ -6,9 +6,13 @@ is the only build step that populates that directory.
 
 `tools/check.sh` exercises that packager on every safe aggregate check. It
 verifies the exact allowlisted file set, representative required URLs,
-forbidden paths, artifact-only `ORIGIN` substitution, a deployed revision
-marker, and a byte-for-byte roundtrip against the source checkout after that
-substitution.
+forbidden paths, `ORIGIN` substitution restricted to the five files
+DEPLOY.md's "Artifact-only origin substitution" section declares
+(`index.html`, `static/index.html`, `ownership/index.html`, `404.html`,
+`sitemap.xml`), a byte-for-byte match against the source checkout for every
+other selected file, a deployed revision marker, and that the declared
+placeholder set is still a subset of what the manifest actually selects (so
+a rename fails the build instead of shipping unsubstituted).
 `tools/release.sh` invokes that artifact/scene check once after the developer
 aggregate and before commit, so the reviewed tree is verified through the same
 packaging path that Railway runs after push; release does not perform a second
