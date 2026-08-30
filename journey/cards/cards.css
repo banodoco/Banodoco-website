@@ -1342,3 +1342,138 @@
     transition: none;
   }
 }
+
+/* ==================================================================== *
+ * THE WINDOW WITH NOTHING BEHIND IT YET — Equip's two initiatives.
+ * ====================================================================
+ * Quark and Brötchen are real destinations whose interiors do not exist,
+ * and this is that fact drawn rather than written. The shell is the SAME
+ * shell the six built cards use — accented name, house short line, the
+ * stage as the body, a door at the foot — and every one of those four
+ * parts is present. What is missing is legibility, deliberately: the
+ * description is out of focus, the stage is an abstract field where the
+ * artwork will be, and the door is a door SHAPE with no destination
+ * behind it (content/content.js gives these nodes no link, so the real
+ * `.j-pop-link` is hidden and nothing in the accessible tree pretends to
+ * lead anywhere).
+ *
+ * ONE THING STAYS SHARP, and it is the whole difference between
+ * "intriguing" and "broken": the small caption at the foot of the field.
+ * A blurred card with no legible word in it reads as a rendering failure;
+ * a blurred card that says IN DEVELOPMENT reads as a promise. It is also
+ * the only honest thing to hand a screen reader, which is why it is real
+ * text and not a background.
+ *
+ * There is no module in journey/cards/ for either node. The interior is
+ * this stylesheet's, keyed off `.j-pop-unbuilt` — see the third-state note
+ * in journey/ui/popover-tier.js for why a builder that draws nothing would
+ * have been the wrong shape.                                            */
+
+.j-pop[data-node="quark"]    { --card-accent: #f0c274; --uc-a: #f0c274; --uc-b: #7fb2a4; --uc-c: #c98a5e; }
+.j-pop[data-node="brotchen"] { --card-accent: #9fbcd0; --uc-a: #9fbcd0; --uc-b: #c9a2d8; --uc-c: #6f93a8; }
+/* Two more stable crops of the same underground organism, so the pair sit
+   in the same world as the six built cards rather than beside it. */
+.j-pop[data-node="quark"]    { --myc-x: 4px;  --myc-y: -4px; --myc-w: 103%; --myc-h: 101%; }
+.j-pop[data-node="brotchen"] { --myc-x: -5px; --myc-y: 3px;  --myc-w: 99%;  --myc-h: 105%; }
+
+/* THE DESCRIPTION IS PRESENT AND OUT OF FOCUS. The words are real, they
+   are the chip's own aria-describedby text, and a screen reader reads them
+   in full — only the pixels are withheld. */
+.j-pop.j-pop-unbuilt .j-pop-s {
+  filter: blur(2.9px);
+  opacity: 0.62;
+  user-select: none;
+}
+/* ...and a viewer who has asked for more contrast gets them back. An
+   unreadable line is a design statement to most people and an obstacle to
+   some, and the statement is worth less than the sentence. */
+@media (prefers-contrast: more) {
+  .j-pop.j-pop-unbuilt .j-pop-s { filter: none; opacity: 0.9; }
+}
+
+/* THE FIELD. Four soft colour masses over the house dark, blurred past any
+   readable form, with the card's own two accents in them so the abstraction
+   still belongs to this initiative and not to the other one. */
+.j-pop-stage.j-pop-unbuilt {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 3px;
+  background:
+    radial-gradient(48% 56% at 24% 32%, color-mix(in oklab, var(--uc-a) 92%, transparent) 0%, transparent 70%),
+    radial-gradient(44% 52% at 76% 28%, color-mix(in oklab, var(--uc-b) 82%, transparent) 0%, transparent 68%),
+    radial-gradient(56% 50% at 60% 80%, color-mix(in oklab, var(--uc-c) 74%, transparent) 0%, transparent 72%),
+    radial-gradient(38% 40% at 46% 54%, color-mix(in oklab, var(--uc-a) 40%, transparent) 0%, transparent 76%),
+    radial-gradient(75% 75% at 40% 58%, rgba(34, 21, 8, 0.72) 0%, rgba(11, 8, 3, 0.94) 100%);
+  filter: blur(13px) saturate(1.3) brightness(1.12);
+  transform: scale(1.06);          /* hide the blur's own soft edge inside the box */
+  transform-origin: 50% 50%;
+  overflow: hidden;
+}
+/* The blur is on the field, so the caption and the door ride a sibling layer
+   that is never blurred with it. */
+.j-pop-stage.j-pop-unbuilt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 4, 1, 0) 46%, rgba(6, 4, 1, 0.42) 100%);
+}
+.j-pop.j-pop-unbuilt .j-pop-frame {
+  position: relative;
+  /* The blurred short line's own soft edge would otherwise sit on the field's;
+     one line of air keeps the two out-of-focus surfaces legibly separate. */
+  margin-top: 0.18rem;
+}
+/* THE CAPTION — the one legible thing, and the reason the card reads as
+   intentional. Sits over the field's own foot, in the card's accent. */
+.j-pop.j-pop-unbuilt .j-pop-frame::after {
+  content: "IN DEVELOPMENT";
+  position: absolute;
+  left: 0.62rem;
+  bottom: 2.1rem;
+  z-index: 3;
+  font-size: 0.55rem;
+  letter-spacing: 0.26em;
+  color: var(--card-accent, var(--gold-bright));
+  opacity: 0.92;
+  pointer-events: none;
+}
+/* THE DOOR SHAPE. The same geometry `.j-pop-rich .j-pop-link` occupies —
+   a hairline, a label's worth of width, an arrow's worth of gap — with no
+   text, no href and no tab stop. It is the fourth part of the structure,
+   present and unreadable like the rest. */
+.j-pop.j-pop-unbuilt .j-pop-frame > .j-pop-stage + * { display: none; }
+.j-pop.j-pop-unbuilt::after {
+  content: "";
+  order: 3;
+  display: block;
+  height: 1.6rem;
+  margin: 0.55rem 0 0;
+  border-top: 1px solid rgba(217, 164, 65, 0.16);
+  background:
+    linear-gradient(90deg,
+      color-mix(in oklab, var(--card-accent) 34%, transparent) 0 42%,
+      transparent 42% 88%,
+      color-mix(in oklab, var(--card-accent) 44%, transparent) 88% 100%);
+  background-size: 100% 0.42rem;
+  background-position: 0 0.62rem;
+  background-repeat: no-repeat;
+  filter: blur(2.4px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* The field breathes, slowly, and only while the card is open — the same
+   rule the six built stages follow, and it parks under reduced motion with
+   everything else (the block at the top of this file). */
+@keyframes j-uc-drift {
+  0%   { transform: scale(1.06) translate3d(0, 0, 0); }
+  50%  { transform: scale(1.10) translate3d(-1.4%, -1.1%, 0); }
+  100% { transform: scale(1.06) translate3d(0, 0, 0); }
+}
+.j-pop.j-pop-open .j-pop-stage.j-pop-unbuilt,
+.j-pop:hover .j-pop-stage.j-pop-unbuilt {
+  animation: j-uc-drift 14s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-pop-stage.j-pop-unbuilt { animation: none !important; }
+}
