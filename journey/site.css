@@ -4244,6 +4244,37 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 }
 
 /* ---- the items --------------------------------------------------------- */
+/* ONE BRIGHTNESS, TWO WRITERS, AND THE POINTER'S HALF HAS A CLOCK OF ITS OWN
+   (2026-08-30 — the illumination dip).
+
+   The journey writes --glyph-r/g/b/alpha per frame from the row's own
+   coordinate; the pointer used to answer by REPLACING the whole colour with
+   --gold-bright at a selector that carried :not(.now):not(.active). Two
+   authorities over one channel, and the second one stops applying in the
+   middle of the first one's move — so the button went DARK while it was being
+   pressed. Measured at 1440x900 with the pointer parked on Connect through a
+   Mission -> Connect jump: relative luminance held at 0.7947 for the move's
+   first 1.13s and fell to 0.6510 on the single frame the slot gained `active`,
+   i.e. the tile dimmed 18% at the moment it became the destination, then took
+   another 0.66s to climb back. Letting go mid-move was worse: 0.7947 -> 0.4989
+   in one frame, a 37% collapse, and a cursor flicked on and off during a long
+   loop produced that step once per flick.
+
+   --glyph-hot is that second authority, expressed in the first one's terms. It
+   is a REGISTERED property, so it interpolates: the pointer's contribution
+   eases in and out on its own 0.22s clock and — this is the part a colour swap
+   could not do — an interruption starts from the value currently rendered,
+   because that is what transitioning a registered custom property means.
+   Composed with max() rather than by replacement, so the term can only ever
+   BRIGHTEN: an item the journey has already lit past gold (the arrived tile
+   rests at 246,208,126 against gold-bright's 240,200,119) is not pulled back
+   down by a hover, which is the #34 constraint below stated as arithmetic
+   instead of as a :not() pair.
+
+   The `transition: none` note that stood here is still true and still the
+   reason the ITEM's colour has no transition: the journey's half must not
+   chase the ring a second time. Only the pointer's term has a clock. */
+@property --glyph-hot { syntax: "<number>"; inherits: false; initial-value: 0; }
 .j-rail .j-rail-item,
 .j-rail:not(.j-rail-column) .j-rail-item {
   position: relative;
@@ -4253,18 +4284,32 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   justify-content: center;
   width: var(--item-d);
   height: var(--nav-major);
-  color: rgba(
-    var(--glyph-r, 202),
-    var(--glyph-g, 202),
-    var(--glyph-b, 198),
-    var(--glyph-alpha, 0.72)
+  --glyph-ink: rgb(
+    max(var(--glyph-r, 202), calc(var(--glyph-r, 202) + (240 - var(--glyph-r, 202)) * var(--glyph-hot)))
+    max(var(--glyph-g, 202), calc(var(--glyph-g, 202) + (200 - var(--glyph-g, 202)) * var(--glyph-hot)))
+    max(var(--glyph-b, 198), calc(var(--glyph-b, 198) + (119 - var(--glyph-b, 198)) * var(--glyph-hot)))
+    / max(var(--glyph-alpha, 0.72), calc(var(--glyph-alpha, 0.72) + (1 - var(--glyph-alpha, 0.72)) * var(--glyph-hot)))
   );
+  color: var(--glyph-ink);
   text-decoration: none;
   cursor: pointer;
   pointer-events: auto !important;
   /* Colour is a continuous, reversible function of the live journey
      coordinate; a transition here would chase the ring a second time. */
-  transition: none;
+  transition: --glyph-hot 0.22s ease;
+}
+/* The reduce block at the top of the mobile section already names
+   `.j-rail-item`, but only at (0,1,0); the rule above outranks it, so the
+   convention has to be restated here to hold. Same reasoning as that block's
+   own: the term ends at the element's resting style either way, so switching
+   its clock off leaves both states intact and instant. The dip this whole
+   note is about does not come back with it — max() is monotone in the term,
+   so a hovered peer BECOMING the current item cannot darken whether the
+   change is eased or instant. What a reduced-motion visitor loses is only the
+   ease on letting go mid-move. */
+@media (prefers-reduced-motion: reduce) {
+  .j-rail .j-rail-item,
+  .j-rail:not(.j-rail-column) .j-rail-item { transition: none; }
 }
 .j-rail .j-rail-soon-item { cursor: default; }
 
@@ -4386,15 +4431,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 }
 
 /* ---- colour: current, hover, and the pointer's resolved truth ---------- */
+/* The same composition as the base item, with the arrived tier's fallbacks.
+   It has to be the same one: this pair outranks the base rule, so a colour
+   written here WITHOUT the pointer's term is what used to drop a hovered
+   button 18% of its luminance on the single frame it gained `active` — the
+   move's own destination going dark under the finger that asked for it. */
 .j-rail .j-rail-slot:is(.now, .active) .j-rail-item,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot:is(.now, .active) .j-rail-item {
-  color: rgba(
-    var(--glyph-r, 240),
-    var(--glyph-g, 200),
-    var(--glyph-b, 119),
-    var(--glyph-alpha, 1)
+  --glyph-ink: rgb(
+    max(var(--glyph-r, 240), calc(var(--glyph-r, 240) + (240 - var(--glyph-r, 240)) * var(--glyph-hot)))
+    max(var(--glyph-g, 200), calc(var(--glyph-g, 200) + (200 - var(--glyph-g, 200)) * var(--glyph-hot)))
+    max(var(--glyph-b, 119), calc(var(--glyph-b, 119) + (119 - var(--glyph-b, 119)) * var(--glyph-hot)))
+    / max(var(--glyph-alpha, 1), calc(var(--glyph-alpha, 1) + (1 - var(--glyph-alpha, 1)) * var(--glyph-hot)))
   );
+  color: var(--glyph-ink);
 }
 /* The retired fan gave the nav-less Final slot a quieter "echo" voice at
    high specificity; in the row Epilogue is a peer, and rail.js no longer
@@ -4426,12 +4477,31 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    otherwise DIM an already-active ring from 0.95 to 0.85). `.at` rides
    with :hover and :focus-visible in every rule of this family, so keyboard
    and pointer stay visually equal (PL-2.2), and a transform-moved row
-   still answers a stationary cursor (rail.js, THE POINTER'S OWN TRUTH). */
-.j-rail:not(.j-rail-column) .j-rail-slot:not(.now):not(.active)
-  .j-rail-item:is(:hover, :focus-visible),
-.j-rail:not(.j-rail-column) .j-rail-slot.at:not(.now):not(.active)
-  .j-rail-item {
-  color: var(--gold-bright);
+   still answers a stationary cursor (rail.js, THE POINTER'S OWN TRUTH).
+
+   THE HUE HALF OF THIS IS NOW ARITHMETIC, not a pair of selectors. "Peers lift
+   to gold, the active item does not" was expressed as `:not(.now):not(.active)`
+   on the rule that replaced the colour — which meant the lift ENDED when a
+   peer became active, in the middle of the move that was making it active.
+   --glyph-hot composes with max() instead: a peer resting below gold is lifted
+   to it, an item the journey has already lit past gold is left alone, and
+   nothing has to know which of the two it is. The +4% scale below is
+   unchanged, and is still the active item's whole answer.
+
+   THE SELECTOR LIST IS LONG ON PURPOSE. Three older rules up in the retired
+   half-moon's block still paint this row's items by replacement on `.at` —
+   parchment for a peer, gold for the current one — at specificities up to
+   (0,6,0). Raising --glyph-hot alone left those winning, and the row went
+   near-white on hover: report #34's own symptom, restored by deleting the
+   rule that had been outranking it. Every one of those selectors is matched
+   here, at the same specificity and later in the file, so the composed ink is
+   what reaches the pixel by the ordinary cascade rather than by !important. */
+.j-rail:not(.j-rail-column) .j-rail-slot .j-rail-item:is(:hover, :focus-visible),
+.j-rail:not(.j-rail-column) .j-rail-slot.at .j-rail-item,
+.j-rail:not(.j-rail-column) .j-rail-slot.at:is(.active, .now) .j-rail-item,
+.j-rail:not(.j-rail-column) .j-rail-echo.at:not(.now) .j-rail-item {
+  --glyph-hot: 1;
+  color: var(--glyph-ink);
 }
 .j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active)
   .j-rail-item:is(:hover, :focus-visible) .j-rail-mark,
