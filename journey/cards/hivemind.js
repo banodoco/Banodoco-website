@@ -134,20 +134,11 @@ export default {
   build(stage) {
     stage.classList.add('hm');
 
-    // the title bar names the thing ONCE (round 2: the shell head is gone
-    // and the owner flagged the collective-memory line appearing twice) —
-    // the wordmark in the house gold, the one descriptor beside where the
-    // console's own title used to repeat it
-    const head = document.createElement('div');
-    head.className = 'hm-head';
-    const name = document.createElement('span');
-    name.className = 'hm-name';
-    name.textContent = 'HIVEMIND';
-    const tag = document.createElement('span');
-    tag.className = 'hm-tag';
-    tag.textContent = 'THE COMMUNITY’S COLLECTIVE MEMORY';
-    head.append(name, tag);
-
+    // Round 3: the round-2 title bar is gone — the restored shell head says
+    // HIVEMIND and carries the ONE thesis line (the owner's round-2 flag
+    // about the collective-memory line appearing twice stays honoured: no
+    // interior label repeats it). The console opens straight onto the
+    // replayed query, which is the personality the head introduces.
     const consoleEl = document.createElement('div');
     consoleEl.className = 'hm-console';
     consoleEl.setAttribute('aria-hidden', 'true');
@@ -185,8 +176,9 @@ export default {
     mascot.decoding = 'async';
     consoleEl.appendChild(mascot);
 
-    // the ending — the corpus as two compact chips, the door to the repo
-    // on the same band's right (round 2: tags, not a sentence)
+    // the record — the corpus as two compact chips (round 2: tags, not a
+    // sentence); round 3 gives the repo door the shared full-width foot
+    // below them, so Hivemind ends exactly where the other five do
     const foot = document.createElement('div');
     foot.className = 'hm-foot';
     const chips = document.createElement('div');
@@ -199,16 +191,16 @@ export default {
       chip.append(n, ` ${lab}`);
       chips.appendChild(chip);
     }
+    foot.append(chips);
     const door = document.createElement('a');
-    door.className = 'hm-door card-cta';
+    door.className = 'hm-door card-door card-cta';
     door.href = 'https://github.com/banodoco/hivemind';
     door.target = '_blank';
     door.rel = 'noopener noreferrer';
     door.tabIndex = -1;
     door.textContent = 'GITHUB →';
-    foot.append(chips, door);
 
-    stage.append(head, consoleEl, foot);
+    stage.append(consoleEl, foot, door);
 
     settle();   // parked on the first query's finished transcript
   },

@@ -45,27 +45,11 @@ export default {
   build(stage) {
     stage.classList.add('ac');
 
-    // band 1 — identity, in the terminal's own voice (round 2: the shell
-    // head is gone, so the stage names itself): wordmark in their green,
-    // the programme in one microline under it, steady status dot right
-    // (no pulse: a blinking dot would fake liveness their grant page
-    // never promises)
-    const header = document.createElement('div');
-    header.className = 'ac-header';
-    const ident = document.createElement('div');
-    ident.className = 'ac-ident';
-    const name = document.createElement('span');
-    name.className = 'ac-name';
-    name.textContent = 'ARTCOMPUTE';
-    const tag = document.createElement('span');
-    tag.className = 'ac-tagline';
-    tag.textContent = 'MICRO-GRANTS FOR OPEN RESEARCH';
-    ident.append(name, tag);
-    const dot = document.createElement('span');
-    dot.className = 'ac-dot';
-    header.append(ident, dot);
-
-    // band 2 — stat grid: three cells over a 1px hairline gap
+    // band 1 — stat grid: three cells over a 1px hairline gap. Round 3:
+    // the round-2 identity band (wordmark, tagline, status dot) is gone —
+    // the restored shell head says ARTCOMPUTE and carries the programme
+    // line, and the terminal opens straight onto its data, which is the
+    // personality the head introduces.
     const grid = document.createElement('div');
     grid.className = 'ac-grid';
     for (const s of STATS) {
@@ -81,7 +65,7 @@ export default {
       grid.appendChild(cell);
     }
 
-    // band 3 — the cycling ledger (their /grants list, newest first),
+    // band 2 — the cycling ledger (their /grants list, newest first),
     // under one micro-label so the row reads at a glance
     const ledgerLabel = document.createElement('span');
     ledgerLabel.className = 'ac-ledger-label';
@@ -110,14 +94,14 @@ export default {
 
     // the ending — their green CTA voice, a full-width terminal band
     const door = document.createElement('a');
-    door.className = 'ac-door card-cta';
+    door.className = 'ac-door card-door card-cta';
     door.href = 'https://artcompute.org/';
     door.target = '_blank';
     door.rel = 'noopener noreferrer';
     door.tabIndex = -1;
     door.textContent = 'REQUEST COMPUTE →';
 
-    stage.append(header, grid, ledgerLabel, ledger, door);
+    stage.append(grid, ledgerLabel, ledger, door);
     show(0);   // parked still: the newest grant, shown whether or not motion
                // is reduced
   },

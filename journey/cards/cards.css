@@ -94,31 +94,35 @@
   animation: j-mycelium-wake 0.62s ease-out both;
 }
 
-/* IDENTITY LIVES INSIDE THE WORLD (2026-08-30, round 2). Round 1 re-seated
-   the house block — accent name, house short line, one anchored door — as a
-   shared frame around every stage, and the owner's verdict was that the six
-   still read as the old cards with a new border applied. The rework goes the
-   other way: for a BUILT card the shell contributes no words at all. Each
-   stage carries its own identity in its own typography, its record as chips
-   and cells rather than sentences, and its own ENDING — an action or a
-   status band in that card's voice — so what the six share is a
-   compositional rhythm (identity, personality, record, ending) rather than
-   a shared header, and each part is set in that world's own material.
+/* ONE PARENT STRUCTURE, SIX INTERIORS (2026-08-31, round 3). Round 1 put
+   the whole house block around every stage and the six read as the old
+   cards with a new border; round 2 removed the shell's words entirely and
+   moved identity into each world, and the owner's verdict came back the
+   other way: the shared skeleton is what makes the six navigable — "each
+   of the cards should have a parent structure … the name and description
+   at the top and then the button below it at the bottom. It's important
+   that ALL of them share that in common."
 
-   The shell pieces stay in the DOM: the short line keeps double duty as the
-   chip's aria-describedby text (accname resolution includes display:none
-   references), and the unbuilt pair (quark, brotchen) still wear all four
-   shell parts — their whole design is the shell with the interior withheld —
-   so the hiding below scopes to built cards only. */
+   So the synthesis keeps both halves. The shell HEAD is back on every
+   card — accent-coloured name, house short line, same place and same type
+   on all six — and every card still closes on ONE full-width door band at
+   the foot. What round 2 won stays won INSIDE the window: the record as
+   chips and cells rather than sentences, no title said twice (the in-world
+   identity bands that duplicated the head are gone), each door keeping its
+   own label and accent voice (.card-door below), and the world-lit
+   surface. The shell's own generic link stays retired for built cards —
+   the door is the stage's, in its own voice, in the shell's place.
+
+   The short line keeps double duty as the chip's aria-describedby text
+   throughout, and the unbuilt pair (quark, brotchen) wear all four shell
+   parts exactly as before. */
 .j-pop.j-pop-rich {
   align-items: stretch;
   gap: 0;
 }
-.j-pop-rich:not(.j-pop-unbuilt) .j-pop-t,
-.j-pop-rich:not(.j-pop-unbuilt) .j-pop-s,
 .j-pop-rich:not(.j-pop-unbuilt) .j-pop-link { display: none; }
-/* The unbuilt pair keep the shell-head composition the third state was
-   drawn around: accented name, blurred short line, stage as the body. */
+/* Built and unbuilt alike keep the shell-head composition the third state
+   was drawn around: accented name, house short line, stage as the body. */
 .j-pop-rich .j-pop-t {
   order: 0;
   margin: 0.42rem 0.5rem 0.08rem;
@@ -212,6 +216,28 @@
    The shared .card-cta reveal machinery went with the corner doors. */
 .card-cta { text-decoration: none; }
 
+/* THE DOOR IS THE SHARED FOOT (round 3). The six endings keep their round-2
+   words and colours, but they stand in ONE place with ONE geometry: a
+   full-width band on the card's bottom edge — same padding, same tracked
+   micro-type, same quiet-until-reached-for behaviour — so the eye that has
+   learned one card's exit has learned them all. Each card's own rule keeps
+   only its voice: face, colour, hover, hairline tint. 2RP's status band
+   wears the same skeleton with nothing behind it, which is the point. */
+.card-door {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.52rem 0.6rem 0.58rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;               /* trailing-tracking comp, centred */
+  text-transform: uppercase;
+  transition: color 0.25s ease, background 0.25s ease;
+}
+
 /* Keep the contact filament above stage media. */
 .j-pop.j-pop-rich::before { z-index: 2; }
 
@@ -257,8 +283,14 @@
   inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  /* REST IS VIBRANT, exactly as the site's hero is — dimming is what
-     HOVER does to everyone else (their bg-black/70-style drop) */
+  /* REST IS TEMPERED (round 3). The site's hero rests fully vibrant, but
+     under the restored shell head the full-strength poster palette — the
+     acid green especially — read as a second header shouting over the
+     first. The art now rests a step dimmer and quieter, integrated into
+     the house dark, and earns its full colour back under the spotlight
+     (.lit below) — dimming further is still what HOVER does to everyone
+     else (their bg-black/70-style drop). */
+  filter: saturate(0.72) brightness(0.86);
   transition: filter 0.3s ease;            /* their duration-300 */
 }
 /* the figure's video panel surfaces only once frames are rendering —
@@ -275,6 +307,9 @@
   from { transform: scale(1.05) translateY(0); }
   to   { transform: scale(1.14) translateY(-2.5%); }
 }
+/* the spotlight buys the full palette back */
+.ag .ag-panel.lit img,
+.ag .ag-panel.lit .ag-video { filter: none; }
 .ag.ag-hovering .ag-panel:not(.lit) img,
 .ag.ag-hovering .ag-panel:not(.lit) .ag-video { filter: brightness(0.28) saturate(0.5); }
 
@@ -297,28 +332,19 @@
     0 0 6px rgba(0, 0, 0, 0.85),
     0 0 2px rgba(0, 0, 0, 1);
 }
-.ag-eyebrow {
-  font-family: 'Eubergine', 'Didot', Georgia, serif;
-  font-size: 0.5rem;
-  letter-spacing: 0.5em;                   /* their tracking-[0.5em] */
-  padding-left: 0.5em;                     /* their trailing-tracking comp */
-  transition: opacity 0.3s ease;
-  /* the tiny lines cross the brightest artwork; they get a deeper halo
-     than the wordmark or they vanish over poster three */
-  text-shadow:
-    0 1px 8px rgba(0, 0, 0, 1),
-    0 0 4px rgba(0, 0, 0, 1),
-    0 0 2px rgba(0, 0, 0, 1);
-}
-/* their "The"/"Prize" step aside while a figure holds the light */
-.ag.ag-hovering .ag-eyebrow { opacity: 0; }
-
 .ag-title {
   font-family: 'Eubergine', 'Didot', Georgia, serif;  /* their h1 face */
-  font-size: 2.05rem;
+  /* Under the shell head that already says ARCA GIDAN PRIZE, the in-art
+     wordmark steps down from headline to signature (round 3): smaller and
+     a touch translucent, it reads as part of the artwork's character — and
+     it stays, because the syllables ARE the site's hover instrument. The
+     THE/PRIZE eyebrows are gone with the same stroke; the head says PRIZE
+     now, and two saying it 40px apart was the duplication being cured. */
+  font-size: 1.72rem;
   letter-spacing: 0.12em;                  /* their tracking-[0.12em] */
   line-height: 0.9;                        /* their lineHeight .9 */
   white-space: nowrap;
+  opacity: 0.94;
 }
 .ag-syl {
   pointer-events: auto;                    /* the syllables ARE the hover zones */
@@ -328,22 +354,14 @@
 .ag-syl:nth-child(3) { margin-left: 0.3em; }  /* their w-[0.3em] word gap */
 .ag-syl.lit { color: #7b0b0b; transform: scale(1.1); }  /* their hover state */
 
-/* THE RECORD ENDS THE CARD (round 2): the caption plate under the artwork —
-   what it is in one tracked line, then three cells, the value in their own
-   Eubergine over a microlabel, hairlines between. */
+/* THE RECORD SITS UNDER THE ARTWORK (round 3): three cells on the ink
+   plate, the value in their own Eubergine over a microlabel, hairlines
+   between. The round-2 caption line above them is gone — it was the shell
+   head's short line word for word, and the head says it now. */
 .ag-foot {
   position: relative;
   background: #141414;
   font-family: 'Geosans Light', 'Inter', sans-serif;
-}
-.ag-desc {
-  margin: 0;
-  padding: 0.5rem 0.5rem 0.42rem;
-  text-align: center;
-  font-size: 0.52rem;
-  letter-spacing: 0.3em;
-  padding-left: calc(0.5rem + 0.3em);
-  color: rgba(245, 240, 235, 0.55);
 }
 .ag-band {
   display: grid;
@@ -371,17 +389,10 @@
   color: rgba(245, 240, 235, 0.5);
 }
 
-/* the ending — their cream on ink, centred, quiet until reached for */
+/* the ending — their cream on ink; geometry is .card-door's */
 .ag-door {
-  display: block;
-  padding: 0.5rem 0 0.55rem;
-  border-top: 1px solid rgba(245, 240, 235, 0.12);
-  text-align: center;
-  font-size: 0.56rem;
-  letter-spacing: 0.26em;
-  padding-left: 0.26em;
+  border-top-color: rgba(245, 240, 235, 0.12);
   color: rgba(245, 240, 235, 0.62);
-  transition: color 0.25s ease;
 }
 .ag-door:is(:hover, :focus-visible) { color: #f5f0eb; }
 
@@ -404,11 +415,10 @@
 
 /* artcompute — a terminal painting itself in, band by band, with the same
    steps() flicker the house link-strike uses */
-.j-pop-enter .ac-header { animation: card-fade 0.24s steps(2, end) both; }
-.j-pop-enter .ac-grid   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.12s; }
+.j-pop-enter .ac-grid   { animation: card-fade 0.26s steps(2, end) both; }
 .j-pop-enter .ac-ledger-label,
-.j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.26s; }
-.j-pop-enter .ac-door   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.4s; }
+.j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.14s; }
+.j-pop-enter .ac-door   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.28s; }
 
 /* ados — the window fades up, then the centred identity stack rises */
 .j-pop-enter .ad-media { animation: card-fade 0.5s ease both; }
@@ -424,7 +434,8 @@
 /* hivemind — the console lamp comes up (the typing itself is the real
    entrance, started by activate()), the stat footer after */
 .j-pop-enter .hm-console { animation: card-fade 0.35s ease both; animation-delay: 0.05s; }
-.j-pop-enter .hm-foot    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
+.j-pop-enter .hm-foot,
+.j-pop-enter .hm-door    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
 
 /* discord — header dot first, the topic rises, dots and door last */
 .j-pop-enter .dc-head { animation: card-fade 0.3s ease both; }
@@ -480,43 +491,15 @@
   pointer-events: none;
 }
 
-/* ---- band 1: identity (round 2 — the terminal names itself) ---- */
-.ac-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 0.7rem 0.85rem 0.6rem;
-}
-.ac-ident {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.ac-name {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.3em;               /* their wide wordmark tracking */
-  color: #39ff14;                      /* their neon green */
-}
-.ac-tagline {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.45);
-}
-.ac-dot {
-  width: 6px; height: 6px;
-  margin-top: 4px;
-  background: #39ff14;                 /* steady; no pulse = no fake liveness */
-}
-
-/* ---- band 2: stat grid (their gap-px hairline grid) ---- */
+/* ---- band 1: stat grid (their gap-px hairline grid). Round 3: the
+   round-2 identity band above it — wordmark, tagline, status dot — is
+   gone; the shell head says ARTCOMPUTE now, and the terminal opens
+   straight onto its data, which is its personality. ---- */
 .ac-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;                            /* hairline shows through */
   background: rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .ac-cell {
@@ -686,20 +669,19 @@
 }
 .ad-mark {
   font-family: 'Pilowlava', 'Arial Black', sans-serif;  /* their hero face */
-  font-size: 2rem;
+  /* Round 3: the shell head above the window already says ADOS, so the
+     in-art mark steps down a size and a step of opacity — kept, because
+     the Pilowlava mark over the event footage IS the site's identity, but
+     reading as the artwork's signature under the head, not a second head.
+     Its AI ART GATHERINGS eyebrow is gone with the same stroke — the
+     head's short line is the one descriptor this card gets. */
+  font-size: 1.72rem;
   line-height: 1;
-  color: #fff;
-}
-.ad-eyebrow {
-  font-size: 8px;
-  letter-spacing: 0.35em;          /* their tracking-[0.35em] subtitle */
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.7);    /* their white/70 */
+  color: rgba(255, 255, 255, 0.92);
 }
 /* the scrim is lightest at the top, so a halo keeps the mark legible over
    arbitrary poster art — same reasoning as arca's word shadow */
-.ad-mark,
-.ad-eyebrow {
+.ad-mark {
   text-shadow: 0 1px 10px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.7);
 }
 
@@ -738,22 +720,13 @@
   gap: 6px;
 }
 .ad-mark { order: 1; }
-.ad-eyebrow { order: 2; }
 .ad-center { order: 0; }
 
-/* THE ACTION ENDS THE CARD (round 2): the site's own eyebrow voice as a
-   full-width band under the window, quiet until reached for. */
+/* THE ACTION ENDS THE CARD (round 2): the site's own eyebrow voice, on the
+   shared foot; geometry is .card-door's. */
 .ad-door {
-  display: block;
-  padding: 0.5rem 0 0.55rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  text-align: center;
-  font-size: 8px;
-  letter-spacing: 0.3em;
-  padding-left: 0.3em;
-  text-transform: uppercase;
+  border-top-color: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.6);
-  transition: color 0.25s ease;
 }
 .ad-door:is(:hover, :focus-visible) { color: #fff; }
 
@@ -863,16 +836,15 @@
   text-align: center;
   pointer-events: none;
 }
-.rp-dek {
-  font-size: 7px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.62);
-}
 .rp-masthead {
-  font-size: 2.6rem;
+  /* Round 3: the shell head already says 2RP and carries the publication
+     line, so the round-2 dek above the mark is gone and the masthead —
+     which IS the artwork: the rotating face is the site's identity — steps
+     down half a size to read as the cover's mark under the head rather
+     than a second head. */
+  font-size: 2.25rem;
   line-height: 0.9;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.94);
   /* the face rotates per session (set inline in build); the halo keeps the
      white mark legible over arbitrary cover art */
   text-shadow:
@@ -882,15 +854,19 @@
 
 /* THE STATUS ENDS THE CARD (round 2): a letterpress band under the cover —
    the promise gets the same defined foot the other five give their doors,
-   so the unlaunched thing no longer trails off inside its own art. */
+   so the unlaunched thing no longer trails off inside its own art. Round 3:
+   it wears the shared .card-door skeleton (same band, same type) with the
+   compositor's rules flanking the words and nothing behind it — the one
+   foot on the family sheet that is a status, not an exit. */
 .rp-foot {
-  display: flex;
+  display: flex;                             /* over .card-door's block: the
+                                                flanking rules need a row */
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  padding: 0.55rem 0 0.6rem;
+  text-indent: 0;                            /* rules are symmetric; no comp */
   background: #120b06;                       /* warm print-ink ground */
-  border-top: 1px solid rgba(244, 228, 193, 0.16);
+  border-top-color: rgba(244, 228, 193, 0.16);
 }
 .rp-foot::before,
 .rp-foot::after {
@@ -900,10 +876,6 @@
   background: rgba(244, 228, 193, 0.28);     /* compositor's rules */
 }
 .rp-soon {
-  font-size: 8px;
-  letter-spacing: 0.34em;
-  padding-left: 0.34em;      /* trailing-tracking comp keeps it optically centred */
-  text-transform: uppercase;
   color: rgba(244, 228, 193, 0.78);          /* parchment on ink */
 }
 
@@ -924,32 +896,14 @@
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
 }
 
-/* the title bar names the thing once (round 2): wordmark plus the one
-   descriptor, stacked, in the console's own mono */
-.hm-head {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0.6rem 1rem 0.5rem;
-  border-bottom: 1px solid rgba(217, 164, 65, 0.15);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-}
-.hm-name {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  color: #d9a441;                       /* house gold */
-}
-.hm-tag {
-  font-size: 8px;
-  letter-spacing: 0.16em;
-  color: rgba(217, 164, 65, 0.55);      /* house gold, dimmed */
-}
-
+/* Round 3: the round-2 title bar — wordmark plus descriptor — is gone;
+   the shell head says HIVEMIND and carries the one thesis line, so the
+   console opens straight onto the replayed query, which is the
+   personality. */
 .hm-console {
   position: relative;                   /* the librarian's corner */
   flex: 1 1 auto;
-  padding: 0.55rem 1rem 0.2rem;
+  padding: 0.7rem 1rem 0.2rem;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 0.72rem;
   line-height: 1.55;
@@ -997,15 +951,15 @@
   overflow: hidden;
 }
 
-/* THE RECORD ENDS THE CARD (round 2): the corpus as two compact chips —
-   tag-like units, not a sentence — with the repo door on the same band.
-   A narrow pane wraps the chips above the door instead of clipping. */
+/* THE RECORD IS A CHIP BAND (round 2, kept): the corpus as two compact
+   chips — tag-like units, not a sentence. Round 3 moves the repo door out
+   of this band onto the shared full-width foot below it, so Hivemind ends
+   exactly where the other five do. */
 .hm-foot {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 0.4rem 0.6rem;
   padding: 0.45rem 1rem 0.5rem;
   border-top: 1px solid rgba(217, 164, 65, 0.15);
@@ -1028,12 +982,11 @@
   font-weight: 700;
   color: rgba(240, 200, 119, 0.92);     /* the number leads the tag */
 }
+/* the ending — house gold in the console's mono; geometry is .card-door's */
 .hm-door {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: #d9a441;                       /* house gold */
-  transition: color 0.25s ease;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  border-top-color: rgba(217, 164, 65, 0.15);
+  color: rgba(217, 164, 65, 0.8);       /* house gold, resting */
 }
 .hm-door:is(:hover, :focus-visible) { color: #f0c87a; }
 
@@ -1068,21 +1021,17 @@
   touch-action: pan-y;
 }
 
-/* the head names the card (round 2): wordmark left, feed status right */
+/* Round 3: the round-2 wordmark is gone from this row — the shell head
+   says DISCORD — and the live-status corner keeps the row alone, tucked
+   against the feed's top-right like a broadcast bug. */
 .dc-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.6rem;
-  padding: 0.6rem 1rem 0.35rem;
+  padding: 0.55rem 1rem 0.1rem;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   text-transform: uppercase;
-}
-.dc-name {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  color: #8891f2;                     /* blurple, lifted for small caps */
 }
 .dc-status {
   display: flex;
@@ -1181,21 +1130,12 @@
   padding: 0 0 0.5rem;
 }
 
-/* THE INVITE ENDS THE CARD (round 2): their blurple, full width, quiet
-   until reached for. */
+/* THE INVITE ENDS THE CARD (round 2): their blurple, quiet until reached
+   for; geometry is .card-door's. */
 .dc-door {
-  display: block;
-  padding: 0.5rem 0 0.55rem;
-  border-top: 1px solid rgba(88, 101, 242, 0.28);
-  text-align: center;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
-  padding-left: 0.26em;
-  text-transform: uppercase;
+  border-top-color: rgba(88, 101, 242, 0.28);
   color: rgba(136, 145, 242, 0.75);   /* blurple, lifted */
-  transition: color 0.25s ease, background 0.25s ease;
 }
 .dc-door:is(:hover, :focus-visible) {
   color: #a6adf7;
@@ -1237,18 +1177,10 @@
 
 /* ---- the endings (round 2): each stage closes in its own voice ------- */
 
-/* artcompute — their green CTA voice as the terminal's last band */
+/* artcompute — their green CTA voice; geometry is .card-door's */
 .ac-door {
-  display: block;
-  padding: 0.5rem 0.85rem 0.55rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: center;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  padding-left: calc(0.85rem + 0.22em);
+  border-top-color: rgba(255, 255, 255, 0.08);
   color: rgba(57, 255, 20, 0.65);
-  transition: color 0.25s ease, background 0.25s ease;
 }
 .ac-door:is(:hover, :focus-visible) {
   color: #39ff14;
