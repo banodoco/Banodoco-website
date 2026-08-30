@@ -16,8 +16,7 @@
  * `resolve()` (pure — what does this viewport measure as, right now),
  * `mount()` (publish the boot mode to <body>), `adopt(mode)` (the
  * transition: take the new mode, re-anchor the trackers, swap the
- * class). Readers: `current()`, `viewFor(mode)`, `tracks`,
- * `reframesWithinMode(mode)`.
+ * class). Readers: `current()`, `viewFor(mode)`, `tracks`.
  *
  * WHAT THIS IS NOT. It is NOT the viewport authority the replan reserves
  * `aspectProfile` in journey/frame/publication.js for. `getMode()`'s
@@ -199,7 +198,23 @@ function viewFor(mode) {
   /* The camera/target truck is the Mission boundary condition captured by the
      journey director. Consequently scroll and the route-faithful direct-click
      compositor depart from (and return to) this exact shifted pose, while the
-     analytic Inspire arrival still lands bit-exactly on its existing rest. */
+     analytic Inspire arrival still lands bit-exactly on its existing rest.
+
+     EVERY MODE'S POSE IS A LIVE FUNCTION OF innerHeight, INCLUDING THE TWO
+     THAT LOOK FIXED. The conversion below is correct and deliberate: a
+     perspective camera at a fixed vertical FOV sees the same world height at
+     every viewport size, so world-per-pixel is that span over innerHeight,
+     and dividing by it is what makes MISSION_RIGHT_PX deliver its authored
+     number of CSS PIXELS at any frame height. What that costs is a stale
+     pose: `panX` is spent in world units, so a viewport whose height changes
+     WITHOUT a breakpoint crossing leaves the camera holding an offset that
+     now projects to a different pixel count. Measured on tablet across the
+     iPad band (744 wide, 1024 -> 1366) the stale pose lands the stalk 9.0px
+     left of where a fresh load at 1366 puts it; compact across 560 -> 320 is
+     15.4px. This is why main.js's resize handler re-eases the camera on EVERY
+     resize and not only on a breakpoint crossing — a set naming a subset of
+     the modes lived here until 2026-08-30 and excluded exactly the two that
+     had no other height term to hide behind. */
   let missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
   if (mode === 'mobile') {
     /* The reviewed 63px shift aligns the stalk with Equip on tall phones
@@ -217,14 +232,6 @@ function viewFor(mode) {
   v.panX -= missionShiftPx * missionWorldPerPixel;
   return v;
 }
-
-/** The three modes whose composition keeps moving WITHIN the mode.
- *  `deskNarrow` and `mobile` interpolate on aspect in viewFor() above,
- *  and `desktop` rides the landscape balance field; the other two hold a
- *  fixed pose for the whole band. This is why a resize that does NOT
- *  cross a breakpoint still re-frames for exactly these three — the
- *  magic triple that used to sit inline in main.js's resize handler. */
-const REFRAMES_WITHIN_MODE = new Set(['desktop', 'deskNarrow', 'mobile']);
 
 const MODE_CLASSES = ['mode-desktop', 'mode-tablet', 'mode-mobile',
   'mode-compact', 'mode-deskNarrow'];
@@ -279,7 +286,6 @@ export function createHeroMode() {
     current: () => current,
     resolve: getMode,
     viewFor,
-    reframesWithinMode: (mode) => REFRAMES_WITHIN_MODE.has(mode),
     mount,
     adopt,
   };
