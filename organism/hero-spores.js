@@ -13,14 +13,26 @@
  * So the atmosphere is decoupled from the organism. This module has
  * exactly one import — journey/boot/hero-mode.js, which is a leaf with no
  * imports of its own — and it is loaded by its OWN <script type="module">
- * in index.html, ahead of main.js. It therefore paints as soon as ~27 KB
- * has arrived, in parallel with (not behind) the 1.8 MB the scene needs.
+ * in index.html, ahead of main.js. It therefore paints as soon as its own
+ * 57 KB has arrived (this file plus that leaf, uncompressed), in parallel
+ * with — not behind — the 1.8 MB the scene needs.
+ *
+ * AND THAT 57 KB IS NOT FREE, so it is stated here rather than discovered.
+ * Measured on a 6x CPU / 400 kbps cold load it puts first paint 1.25 s
+ * later, because this page's three render-blocking stylesheets are 330 KB
+ * and everything in the first batch shares the pipe. At 2 Mbps the same
+ * cost is 0.25 s. What it buys is the whole of the rest of that load: on
+ * the same 2 Mbps trace the spores are on screen at 2.2 s and the mushroom
+ * at 56.5 s, so the right-hand half of the frame stops being an empty
+ * rectangle for fifty-four seconds.
  *
  * THE TWO HALVES, AND THE ONE LAW BETWEEN THEM.
  *
- *   startPreload()          a dependency-free WebGL point-sprite layer on
- *                           its own canvas, above #stage. Lives only until
- *                           the scene exists.
+ *   heroSpores              a dependency-free WebGL point-sprite layer on
+ *                           its own canvas, above #stage — the singleton
+ *                           this module exports and self-starts. Lives only
+ *                           until the scene exists, then releases its
+ *                           context: there is no permanent second renderer.
  *   createHeroSporeField()  the SAME particles, rebuilt as a THREE.Points
  *                           inside the organism's scene through ctx's own
  *                           makePoints — so they inherit the bloom, the
