@@ -5009,3 +5009,74 @@ body.j-rail-on .j-hotspots { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .j-menu-primer-row, .j-menu-primer-c { transition: none !important; }
 }
+
+/* ============================================================
+   LANE C (2026-08-30 polish §3B) — THE PANEL BELONGS TO THE
+   SAME WORLD AS THE SCENE IT COVERS.
+   Cohesion, not decoration: the information architecture, the
+   density, the opaque ground and every claim in the .j-menu
+   block above are untouched. What changes is material —
+
+     · the scene's amber light leaks a few rem past the seam, so
+       the panel edge reads as a boundary IN the world rather
+       than a sheet on top of it;
+     · the cards' own mycelial network lies under the panel's
+       ground at sub-liminal contrast (a near-opaque wash over
+       the same SVG the popovers grow behind) — grain, spores
+       and mesh, felt more than seen. The panel stays fully
+       opaque: the wash bottoms out over a solid base colour,
+       so the 2026-08-09 "OPAQUE, deliberately" decision holds;
+     · the hairline dividers keep their weight but stop being
+       laser-straight in brightness — alpha wanders along each
+       line like a filament, two phases so adjacent rules never
+       ripple in step;
+     · the marks take the initiative picts' stroke weight and
+       amber bloom, one drawn-glyph voice for the whole outline
+       (the dark scene-contrast rim stays — it is invisible on
+       the panel ground and still earns its keep during the
+       open/close fade over the scene).
+   ============================================================ */
+.j-menu {
+  background:
+    linear-gradient(to right,
+      rgba(240, 175, 70, 0.05),
+      rgba(240, 175, 70, 0.016) 4rem,
+      rgba(240, 175, 70, 0) 8.5rem),
+    linear-gradient(rgba(11, 7, 2, 0.93), rgba(11, 7, 2, 0.955)),
+    url('../assets/cards/mycelial-underlay.svg') center / cover no-repeat,
+    #0b0702;
+}
+.j-menu-list > li {
+  border-image: linear-gradient(90deg,
+    rgba(217, 164, 65, 0.03), rgba(217, 164, 65, 0.2) 11%,
+    rgba(217, 164, 65, 0.09) 34%, rgba(217, 164, 65, 0.24) 52%,
+    rgba(217, 164, 65, 0.07) 72%, rgba(217, 164, 65, 0.19) 89%,
+    rgba(217, 164, 65, 0.04)) 1;
+}
+.j-menu-list > li:nth-child(even) {
+  border-image: linear-gradient(90deg,
+    rgba(217, 164, 65, 0.05), rgba(217, 164, 65, 0.16) 16%,
+    rgba(217, 164, 65, 0.25) 31%, rgba(217, 164, 65, 0.08) 54%,
+    rgba(217, 164, 65, 0.21) 77%, rgba(217, 164, 65, 0.05) 95%,
+    rgba(217, 164, 65, 0.12)) 1;
+}
+/* The phone panel is 100vw and the cover-fit network scales with it, so the
+   same wash reads a step brighter there; take it further down and let the
+   seam-light go with the seam (there is no scene beside a full-width sheet). */
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-menu {
+    background:
+      linear-gradient(rgba(11, 7, 2, 0.952), rgba(11, 7, 2, 0.968)),
+      url('../assets/cards/mycelial-underlay.svg') center / cover no-repeat,
+      #0b0702;
+  }
+}
+.j-menu-mark {
+  filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.32));
+}
+.j-menu-mark .j-sym path { stroke-width: 1.1; }
+/* the close ring answers like any lit node: a soft bloom, not a new shape */
+.j-menu-x:focus-visible { box-shadow: 0 0 14px rgba(240, 170, 60, 0.22); }
+@media (hover: hover) and (pointer: fine) {
+  .j-menu-x:hover { box-shadow: 0 0 14px rgba(240, 170, 60, 0.22); }
+}
