@@ -2179,6 +2179,25 @@ return {
    *  `freezeTime(0)` freezes at the t = 0 phase; `freezeTime(null)` resumes
    *  live time (no dt spike — the raw clock keeps being tracked). */
   freezeTime: animationLifecycle.freezeTime,
+  /** Gate the composer without stopping the frame loop: `false` skips the
+   *  per-frame render, `true` resumes it. The one caller is main.js's WebGL
+   *  context-loss pair — rendering into a lost context buys nothing and costs
+   *  a full frame each time. The clock, the animators and the rAF cadence are
+   *  deliberately left alone; organism/animation.js's gate carries the
+   *  measurement behind that choice. */
+  setRenderEnabled: animationLifecycle.setRenderEnabled,
+  /** Drop the TAA accumulation history so the next rendered frame starts a
+   *  fresh average instead of blending against whatever the pass last held.
+   *  A restored WebGL context has lost the history texture's CONTENTS but not
+   *  its dimensions, and only `setSize` clears `validHistory` — so this calls
+   *  it at the size already in force, which the vendored render target treats
+   *  as a no-op apart from the flag (it disposes only when a dimension
+   *  actually changes). Deliberately narrower than `viewport.sync()`, which
+   *  reaches the same flag by reallocating three render targets. */
+  invalidateFrameHistory() {
+    const db = renderer.getDrawingBufferSize(_taaDb);
+    taaPass.setSize(db.width, db.height);
+  },
   /** The spore SYSTEM handle (merge doc §3) — the same dots as
    *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
    *  chapter claims it with `setDriver({ exits })` and passes per-frame
