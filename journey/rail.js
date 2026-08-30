@@ -945,11 +945,11 @@ export function createRail({ onNav } = {}) {
       thesis: 'We’re working to help the open-source AI art ecosystem thrive',
     },
     {
-      id: 'inspire', route: 'inspire', symbol: 'inspire', number: 1, heading: 'By inspiring:',
+      id: 'inspire', route: 'inspire', symbol: 'inspire', number: 1, heading: 'Inspiring',
       items: itemsFor('inspire'),
     },
     {
-      id: 'equip', symbol: 'equip', number: 2, heading: 'By equipping:',
+      id: 'equip', symbol: 'equip', number: 2, heading: 'Equipping',
       items: [
         {
           id: 'equip-teaser-one', label: 'Quark',
@@ -964,7 +964,7 @@ export function createRail({ onNav } = {}) {
       ],
     },
     {
-      id: 'connect', route: 'connect', symbol: 'connect', number: 3, heading: 'By connecting:',
+      id: 'connect', route: 'connect', symbol: 'connect', number: 3, heading: 'Connecting',
       items: itemsFor('connect'),
     },
     {

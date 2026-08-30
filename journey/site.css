@@ -4915,3 +4915,19 @@ body.j-rail-on .j-hotspots { opacity: 1; }
   .j-rail .j-rail-under,
   .j-rail .j-rail-menu { transition: none !important; }
 }
+
+/* ============================================================
+   LANE C (2026-08-30 polish §3B.2) — THE CLOSING TITLE BREATHES
+   LIKE THE OPENING ONE.
+   The panel's two serif theses bookend the outline. The opening
+   statement holds a clear band of its own (nothing follows it
+   inside its section), while the closing thesis had Manifesto and
+   Ownership rows packed straight under its descender line — the
+   same authored paddings, read tighter because content follows
+   instead of a hairline. A little extra air under the final
+   title's own block restores the matched, optically-even band.
+   ============================================================ */
+.j-menu-list > li:last-child .j-menu-item { padding-bottom: 0.82rem; }
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-menu-list > li:last-child .j-menu-item { padding-bottom: 1rem; }
+}
