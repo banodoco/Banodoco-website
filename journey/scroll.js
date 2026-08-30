@@ -80,8 +80,15 @@ const DESKTOP_PACING = typeof matchMedia === 'function'
    ========================================================================== */
 export { claimInput, releaseInput } from './ownership.js';
 
+/* `subscribeBlindGap` is handed the model's OWN latch during attach() rather
+   than the model exposing that latch on its surface. The caller knows about a
+   second blind stretch this file cannot see — a WebGL context loss, during
+   which main.js gates the composer and the picture stops — and this is the
+   direction that keeps the root surface at the 26 members tools/test-road.mjs
+   F3 pins. It is also the honest shape: the model owns the latch, and the
+   caller owns knowing when a gap happened. */
 export function createScrollModel({ onIntent = null, onWrap = null,
-  onScrollAttempt = null } = {}) {
+  onScrollAttempt = null, subscribeBlindGap = null } = {}) {
   /* ========================================================================
      THE ROAD — the pure, clock-free pixel<->route mapping — is ./road.js.
      `segLens`, `kx`, `ky`, `km`, `invX`, `invY` and the four functions over
@@ -1613,21 +1620,26 @@ export function createScrollModel({ onIntent = null, onWrap = null,
     return clamp01(p);
   }
 
+  // Latch through a stretch the visitor could not see through. The next actual
+  // input consumes it as a real pause/new gesture, then normal visible-frame
+  // stall accounting resumes from this fresh epoch. Two events qualify and
+  // they are the same event to this model: a tab returning to visible, and a
+  // WebGL context coming back after the scene stopped painting into it.
+  function latchBlindGap() {
+    backgroundGap = true;
+    stallBank = 0;
+    stallClaimed = 0;
+    lastFrameAt = performance.now();
+  }
+
   function attach() {
     // The five travel listeners, in their shipped order (journey/transport.js).
     transport.attach();
     window.addEventListener('resize', measure);
     if (typeof document !== 'undefined' && document.addEventListener) {
-      document.addEventListener('visibilitychange', () => {
-        // Latch through the return-to-visible event. The next actual input
-        // consumes it as a real pause/new gesture, then normal visible-frame
-        // stall accounting resumes from this fresh epoch.
-        backgroundGap = true;
-        stallBank = 0;
-        stallClaimed = 0;
-        lastFrameAt = performance.now();
-      });
+      document.addEventListener('visibilitychange', latchBlindGap);
     }
+    if (subscribeBlindGap) subscribeBlindGap(latchBlindGap);
     measure();
     // Input can arrive before the first journey rAF (notably the wheel that
     // fast-forwards a cold intro). Give stall accounting a real epoch now;

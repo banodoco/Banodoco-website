@@ -327,6 +327,16 @@ export function boot(opts = {}) {
     // progress/placement engine used by direct chapter flights and QA, but
     // wheel, vertical touch and scroll keys stop at the transport boundary.
     onScrollAttempt: cueNavigation,
+    /* A LOST-AND-RESTORED CONTEXT IS A HIDDEN TAB AS FAR AS TRAVEL IS
+       CONCERNED. main.js gates the composer for the whole of a WebGL context
+       loss, so the visitor watches a frozen picture for as long as it lasts.
+       The journey animator keeps running behind it — which is what keeps dt
+       honest, and also why nothing downstream would otherwise notice the gap
+       at all: the stall bank sees ordinary frames throughout. So the latch is
+       taken on the visitor's experience, not on a measured overrun, exactly
+       as the return-to-visible latch is. A fling that was travelling when the
+       picture stopped does not resume when it comes back. */
+    subscribeBlindGap: (latch) => sceneApi.setRenderResumeHook(latch),
     // GB-3.6: an open detail consumes the first scroll intent; travel resumes
     // once the frame is clear.
     onIntent: () => {
