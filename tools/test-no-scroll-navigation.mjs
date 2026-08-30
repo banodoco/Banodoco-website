@@ -189,6 +189,46 @@ const prevented = () => {
   assert.deepEqual(r.calls.attempts, []);
 }
 
+/* A GESTURE ENDS WHEN ITS OWN FINGER LEAVES, NOT WHEN ANY FINGER DOES.
+   touchstart and touchmove already bail on a second finger so a pinch cannot
+   leak a delta into the ride; touchend did not, and closed the contact for
+   whichever finger happened to lift first. What this buys that nothing above
+   buys: every other touchend in this tree's suites is fired with an empty
+   `touches` and no `changedTouches` at all, so all of them are blind to the
+   two-finger case by construction. This is the only row that names the fingers.
+   Reported as a live defect: a normal drag that briefly becomes multi-touch
+   stops responding. */
+{
+  const r = rig({ blocked: false });
+  const A = { identifier: 1, clientY: 700 };
+  const B = { identifier: 2, clientY: 400 };
+  const move = (id, y) => r.fire('touchmove', {
+    target: {}, touches: [{ identifier: id, clientY: y }],
+    cancelable: true, preventDefault() {},
+  });
+
+  r.fire('touchstart', { target: {}, touches: [A] });
+  move(1, 660);
+  assert.equal(r.calls.touchMoves.length, 1, 'the first finger opens a live scrub');
+
+  r.fire('touchstart', { target: {}, touches: [A, B] });   // a pinch join: ignored
+  r.fire('touchend', { target: {}, touches: [A], changedTouches: [B] });
+  assert.equal(r.calls.touchEnds, 0,
+    "a second finger's lift must not close the tracked finger's contact");
+
+  move(1, 600);
+  assert.equal(r.calls.touchMoves.length, 2,
+    'the surviving finger keeps scrubbing after the other one lifts');
+
+  r.fire('touchend', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 1, "the tracked finger's own lift closes the contact");
+
+  // ...and the same for an OS/browser cancellation of the tracked contact.
+  r.fire('touchstart', { target: {}, touches: [A] });
+  r.fire('touchcancel', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 2, 'a cancellation naming the tracked finger still closes it');
+}
+
 // A navigation cue answers only a blocked gesture at rest. The flight entry
 // retires any cue that began immediately before a click, and the callback
 // itself refuses to start another while camera and chapter state disagree.
@@ -224,6 +264,16 @@ const railSource = readFileSync(new URL('../journey/rail.js', import.meta.url), 
 assert.match(railSource,
   /railHandoffState\(\{[\s\S]*?selectedChapterId: nowNext,[\s\S]*?cameraStateDisagree,[\s\S]*?\}\)/,
   'Ownership return CTA must be projected from the selected chapter and landed camera');
+/* The menu's scrim is a full-screen SIBLING of the panel, and ownership is
+   ancestor containment, so claiming the panel alone leaves the visible backdrop
+   unowned and a wheel or drag on it scrubs the journey behind the open dialog.
+   These two rows are presence, not behaviour — the behavioural half is the
+   browser ring, which is where a live scrim can be pointed at. They are here so
+   the claim cannot be deleted silently, and they fail loudly on a miss. */
+assert.match(railSource, /claimInput\(scrim[,)]/,
+  'the open menu must claim its scrim, or the backdrop scrubs the journey behind it');
+assert.match(railSource, /releaseInput\(scrim\)/,
+  'closing the menu must hand the scrim back to the journey');
 const handoffSource = readFileSync(new URL('../journey/boot/handoff.js', import.meta.url), 'utf8');
 const heroCssSource = readFileSync(new URL('../hero.css', import.meta.url), 'utf8');
 assert.doesNotMatch(handoffSource + heroCssSource, /intro-depart|intro-restore/,
