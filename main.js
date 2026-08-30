@@ -641,27 +641,26 @@ if (sceneApi) {
   railRefresh();
   sceneApi.addAnimator('rail', railApply);
 
-  /* RESIZE HAS TWO ANSWERS, AND ONLY ONE OF THEM IS A BREAKPOINT CROSSING.
-     `reframesWithinMode` names what used to be an inline triple here: three
-     of the five modes keep moving their composition INSIDE the band, so a
-     drag that never crosses a breakpoint still has to re-frame for them and
-     must not for the other two. The crossing case eases the camera FIRST and
-     adopts SECOND — the order the old applyMode() ran in, kept deliberately,
-     since adopt() re-anchors the trackers the easing camera is about to
-     project. */
+  /* EVERY RESIZE RE-FRAMES; ONLY SOME OF THEM ALSO CROSS A BREAKPOINT.
+     A `reframesWithinMode` set naming three of the five modes used to guard
+     the first call, on the reading that `tablet` and `compact` hold a fixed
+     pose across their band. They do not: viewFor()'s Mission truck converts
+     MISSION_RIGHT_PX through innerHeight for EVERY mode, and those two had no
+     other height term to hide behind, so they were the only two whose stale
+     pose nothing ever corrected (measured 9.0px on the iPad band, 15.4px in
+     compact — hero-mode.js's truck comment carries the arithmetic). With all
+     five reframing, the guard was true whenever it was reached and both
+     branches asked for the same easing, so there is one call.
+     THE ORDER IS STILL LOAD-BEARING: ease the camera FIRST and adopt SECOND —
+     the order the old applyMode() ran in, kept deliberately, since adopt()
+     re-anchors the trackers the easing camera is about to project. */
   let resizeTimer;
   addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       const mode = heroMode.resolve();
-      if (heroMode.reframesWithinMode(mode) && mode === heroMode.current()) {
-        sceneApi.setView(heroMode.viewFor(mode), 0.6);
-      }
-      if (mode !== heroMode.current()) {
-        // ease the camera between breakpoints instead of snapping
-        sceneApi.setView(heroMode.viewFor(mode), 0.6);
-        heroMode.adopt(mode);
-      }
+      sceneApi.setView(heroMode.viewFor(mode), 0.6);
+      if (mode !== heroMode.current()) heroMode.adopt(mode);
       // re-measure the rail metrics (nav inset, tag widths, .co scale
       // may all have changed with the breakpoint); the animator follows
       // the easing camera on its own
