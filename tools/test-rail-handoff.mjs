@@ -144,18 +144,65 @@ assert.equal(PHONE_FINAL_COMPOSITION_LIFT_PX, 30,
   'mobile Final keeps the fixed copy/navigation lift modest');
 assert.equal(PHONE_FINAL_SCENE_LIFT_PX, 72,
   'mobile Final gives its background camera a stronger independent lift');
-assert.equal(PURPOSE_NAV_POCKET_STRENGTH, 0.68,
-  'the narrow Purpose pocket clears crossing linework without blacking out the scene');
-assert.deepEqual(
-  purposeNavPocket({ width: 1440, height: 900 }),
-  { x: 720, y: 118, halfWidth: 170, halfHeight: 72 },
-  'desktop Purpose pocket stays compact around the centred child fork',
-);
-assert.deepEqual(
-  purposeNavPocket({ width: 390, height: 844 }),
-  { x: 195, y: 118, halfWidth: 136.5, halfHeight: 72 },
-  'phone Purpose pocket scales narrowly around the centred child fork',
-);
+assert.ok(PURPOSE_NAV_POCKET_STRENGTH > 0.7 && PURPOSE_NAV_POCKET_STRENGTH < 0.9,
+  'the Purpose pocket clears crossing linework without blacking out the scene');
+
+/* THE POCKET IS A COVERAGE PROPERTY, NOT A RECTANGLE (converted 2026-08-30).
+   Two deepEqual pins used to record this ellipse at 1440x900 and at 390x844.
+   They were green the whole time the absence STOPPED ABOVE THE FORK IT EXISTS
+   FOR: its full-strength core ended 69px above the frame's bottom edge while
+   the Ownership/Manifesto labels sit at ~46, so the field behind those labels
+   was at 99% of its brightness — at every laptop size, not only the 14-inch
+   one the owner reported. A coordinate cannot see that, because the fault was
+   never that the numbers had moved.
+   What the pocket is FOR is covering the instrument, so that is what is
+   asserted, and across every band the instrument has a seat in rather than at
+   the one viewport the old pins happened to name. The shader
+   (chapters/final/world.js STRAND_FRAG) holds full strength inside 0.68 of
+   the ellipse and ramps out by 1.08, so the CORE is the load-bearing span and
+   the outer edge is what must stay out of the composition. */
+const POCKET_CORE = 0.68;
+const POCKET_EDGE = 1.08;
+/* How far below the row's own centre line the child fork and its two labels
+   reach. rail.js builds the fork out of `major` (ring, drop, ring) and the
+   labels hang under it; this is that depth expressed against the same
+   number, so it tracks the bands instead of being a desktop pixel. */
+const forkReach = (major) => 2 * major + 22;
+const POCKET_VIEWPORTS = [
+  [1366, 768], [1440, 900], [1512, 982], [1600, 1000], [1680, 1050],  // laptops
+  [744, 1133], [768, 1024], [820, 1180],                              // tablets
+  [430, 932], [390, 844], [375, 667],                                 // phones
+];
+for (const [w, h] of POCKET_VIEWPORTS) {
+  const p = purposeNavPocket({ width: w, height: h });
+  const row = rowLayout(w, h);
+  // the seat the Purpose instrument actually occupies, measured from the
+  // bottom edge the shader's gl_FragCoord shares with it
+  const rowCentre = (h - row.centreY) + row.purposeLift;
+  const coreTop = p.y + POCKET_CORE * p.halfHeight;
+  const coreBottom = p.y - POCKET_CORE * p.halfHeight;
+  assert.equal(p.x, w / 2,
+    `${w}x${h}: the absence sits on the axis the child fork is centred on`);
+  assert.ok(coreTop >= rowCentre,
+    `${w}x${h}: the core reaches the row's own centre line `
+    + `(${coreTop.toFixed(1)} vs ${rowCentre})`);
+  assert.ok(coreBottom <= rowCentre - forkReach(row.major),
+    `${w}x${h}: the core reaches past the fork's labels `
+    + `(${coreBottom.toFixed(1)} vs ${(rowCentre - forkReach(row.major)).toFixed(1)})`);
+  assert.ok(p.y + POCKET_EDGE * p.halfHeight <= 0.30 * h,
+    `${w}x${h}: the absence stays in the navigator's band and never climbs `
+    + `into the composition (${(p.y + POCKET_EDGE * p.halfHeight).toFixed(1)} `
+    + `vs ${(0.30 * h).toFixed(1)})`);
+}
+/* A wide frame can also afford to span the instrument's ENDS, which is where
+   the near-vertical arteries cross it. A narrow one deliberately cannot — half
+   a row past the row on a 390 phone would be 79% of the frame — which is what
+   the width * 0.35 branch is for, and why this clause is scoped. */
+for (const [w, h] of POCKET_VIEWPORTS.filter(([w2]) => w2 >= 1024)) {
+  const p = purposeNavPocket({ width: w, height: h });
+  assert.ok(p.halfWidth >= rowLayout(w, h).width / 2 + 20,
+    `${w}x${h}: the absence covers the instrument's ends, where the arteries cross`);
+}
 assert.ok(cameraWorldUnitsForPixels({
   pixels: PHONE_FINAL_SCENE_LIFT_PX,
   distance: 16,
