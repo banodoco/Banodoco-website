@@ -54,7 +54,25 @@ const VIEWS = {
   // the specimen left until the ENSEMBLE reads centred — measured
   // at 768x1024: cap left rim 142, INSPIRE tag right 640, midpoint 391 at
   // panX 0.25; ~91.5 px/unit at this framing puts the optical centre at 0.45.
-  tablet:  { panX: 1.00, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
+  // 1.00 -> 0.32 (2026-08-30, owner on iPad Mini portrait: the hero mushroom
+  // is "off to one side" and the band should be recomposed like mobile rather
+  // than squeezed from desktop). NOTE THE COMMENT ABOVE ARGUED FOR 0.45 AND
+  // THE ROW SHIPPED 1.00 — the two had already parted company, and 1.00 is
+  // 55px further left than its own stated target. Re-solved against the
+  // referent the phone row uses, because that is the one the owner has stated
+  // twice: THE STALK SITS ON THE EQUIP CONTROL ("right in the middle of the
+  // Equip button ... the feng shui is important", 2026-08-27, mobile: 63).
+  // Measured at 744x1133 by the same column-luminance band that pins the
+  // phone, Equip's slot centre at x 372: panX 1.00 puts the stalk at 302
+  // (70px left, cap rim running off the left edge with 218px of empty right
+  // margin), 0.38 at 365, 0.32 at 372 exactly, 0.26 at 378. The plume still
+  // weights the right, and it now does the job the old comment wanted of it —
+  // counterweighting a cap whose raw margins are 161/125 — instead of being
+  // paid for twice. THE CORRECTION IS IN panX AND NOT IN MISSION_RIGHT_PX on
+  // purpose: the truck is authored in CSS pixels and converted through
+  // innerHeight, so a 69px truck would have carried four times the tablet
+  // band's height sensitivity for a composition that does not need any.
+  tablet:  { panX: 0.32, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
   // Prior optical centring pass (ending at panX +0.40): the previous
   // comment described a +0.55 centring target, but the value below had only
   // moved to +0.20. Closing part of that gap shifts the unified composition

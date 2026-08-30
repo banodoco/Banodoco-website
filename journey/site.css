@@ -1340,6 +1340,32 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        three small floating tags (Hannah's tablet note E). The pill measures
        itself at runtime (ui.js pillW), so a media-scoped size is safe. */
     .j-hot { font-size: 0.7rem; }
+    /* THE EPILOGUE COPY RIDES THE PURPOSE LIFT (2026-08-30, owner on iPad Mini
+       portrait: the final section's text block "sits too low"). The cause is
+       structural. Every bottom-anchored block reserves the navigator's band
+       with `--nav-centre-bottom + --nav-major / 2 + 30px`, but at Purpose the
+       row itself rises by `--purpose-rail-lift-max` and the base seat does not
+       know that, so the reservation is short by exactly that lift. Measured at
+       744x1133: the block's box bottom landed 22px BELOW the row's top — a
+       52px deficit against a rule that promises 30px of air.
+       THE INK DID NOT TOUCH, and that is why this reads as a composition note
+       and not a hit-target fault: the last sub line ended ~26px clear of the
+       row. (The phone band runs a negative BOX gap on purpose for the same
+       reason — its max-width 480 rule below pays part of the lift in its own
+       currency, --final-composition-lift + --final-copy-nav-air, and was
+       signed off on measured INK.) What the tablet band had was no rule at
+       all, so it was short by the whole lift rather than by a reviewed amount.
+       Paying it with the lift variable rather than a number keeps the two ends
+       answerable to each other: this is the CSS twin of rail-geometry.js's
+       `purposeLift`, so the copy rises by precisely what the row rises by and
+       the 30px contract holds by construction. Measured after: box gap +30.0
+       at 744x1133 AND at 768x1024. Shot against 0 / 48 / 72 / 96 — 72 starts
+       to float the block off its bottom anchor and 96 detaches it. */
+    .j-block.pos-bottomleft[data-chapter="final"] {
+      bottom: max(calc(9vh + var(--purpose-rail-lift-max)),
+                  calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
+                       + var(--purpose-rail-lift-max)));
+    }
   }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
   /* Owned's sub is centred prose now rather than a centred list, so it needs

@@ -318,6 +318,23 @@ const KEYS = [
 // Inspire tablet intent (both judged on the rendered 768x1024 frame):
 //   back  -0.18   1.50 -> 1.32: subject-distance 12.6 -> 11.1, the mushroom
 //                 reads ~13% larger — portrait height can carry the weight.
+//                 -0.18 -> -0.50 (2026-08-30, owner on iPad Mini portrait:
+//                 the second section should come closer, with mobile-like
+//                 presence, and be RECOMPOSED rather than scaled down from
+//                 desktop). 13% was not enough of a step: measured on the
+//                 rendered 744x1133 frame the shipped pose left the top third
+//                 of the screen carrying nothing but faint plume, which is the
+//                 same "too delicate" reading this block was opened to fix,
+//                 one form factor along. -0.50 takes subject-distance to ~9.9.
+//                 THE CEILING HERE IS THE SAME ONE THE PHONE HAS — the three
+//                 initiative labels must stay inside the frame without an
+//                 edge nudge. Measured at 744x1133: at -0.18 Arca sits at
+//                 x 123..233 and ArtCompute at 485..604; at -0.35, 97..208 and
+//                 506..625; at -0.50, 69..179 and 529..647 — 69px of left
+//                 margin and 97px of right still in hand, all three admitted.
+//                 The phone's -0.66 is NOT available here: it is only reachable
+//                 with the phone-portrait label-anchor pull in inspire/index.js
+//                 nodeWorld(), which this band does not get.
 //   tgtUp +0.50   aims higher, so the subject sits ~46 px LOWER in the tall
 //                 frame (0.0108 u/px at the tablet's distance and fov) —
 //                 closing the dead band between stem and headline from the
@@ -335,7 +352,7 @@ function tabletBand(aspect) {
 const TZERO = { back: 0, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
 const TAB_KEYS = [
   { p: 0.040, ...TZERO },
-  { p: restProgress('inspire'), back: -0.18, rise: 0, truck: 0, tgtUp: 0.50, tgtRight: 0, fov: 0 },
+  { p: restProgress('inspire'), back: -0.50, rise: 0, truck: 0, tgtUp: 0.50, tgtRight: 0, fov: 0 },
   { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
 ];
 
@@ -567,9 +584,21 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
   if (w <= 0) return pose;
   const o = offsetAt(p);
   // tablet band: fold the delta field straight into this frame's offsets so
-  // the application below stays one code path. tw is 0 for every phone and
-  // rides w, so it inherits portraitWeight's fade toward landscape.
-  const tw = tabletBand(aspect);
+  // the application below stays one code path. tw rides w, so it inherits
+  // portraitWeight's fade toward landscape.
+  // THE WIDTH GATE IS WHAT MAKES "ZERO THROUGH EVERY PHONE" TRUE. The block
+  // above says the two form factors are cleanly separated in ASPECT — phones
+  // <= ~0.47, portrait tablets 0.66-0.80 — and that is a fact about DEVICES,
+  // not about viewports. A 620x1000 window is aspect 0.62: inside the tablet
+  // ramp AND inside the phone width branch below, so both delta fields landed
+  // on the same frame and their `back` values summed. Measured at 620x1000
+  // while opening the tablet band up to -0.50: the stacked pose reached -1.07
+  // and CULLED ArtCompute outright, with Arca Gidan 8px off the left edge —
+  // the exact admission failure the phone block records as its own ceiling.
+  // Gating on the same <= 620 the phone branch uses makes the two fields
+  // disjoint BY CONSTRUCTION rather than by an assumption about device
+  // aspects, and restores all three labels at that viewport.
+  const tw = viewportWidth > 620 ? tabletBand(aspect) : 0;
   if (tw > 0) {
     const t2 = fieldAt(p, TAB_KEYS, _toff);
     o.back += t2.back * tw;
