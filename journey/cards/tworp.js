@@ -33,6 +33,12 @@ export default {
     stageEl = stage;
     stage.classList.add('rp');
 
+    // the cover is a bounded plate (round 2): media, scrim and masthead
+    // share one frame, and the launch status gets a real band below it so
+    // the card ends like the others instead of trailing off in the art
+    const media = document.createElement('div');
+    media.className = 'rp-media';
+
     const cover = document.createElement('img');
     cover.className = 'rp-cover';
     cover.src = `${CARD_ASSETS}/tworp/cover.jpg`;
@@ -66,17 +72,22 @@ export default {
       if (flicker) { clearInterval(flicker); flicker = null; }
     });
 
+    head.append(dek, mast);
+    media.append(cover, scrim, head);
+
+    // the ending — a letterpress status band, the one card that closes on
+    // a promise instead of a door. The short line already says "Coming
+    // soon." for AT, so the band stays decorative rather than
+    // double-announcing.
+    const foot = document.createElement('div');
+    foot.className = 'rp-foot';
+    foot.setAttribute('aria-hidden', 'true');
     const soon = document.createElement('span');
     soon.className = 'rp-soon';
     soon.textContent = 'COMING SOON';
-    // ui.js previewFor renders title/short/link only — never the card's status
-    // line — so the cover carries the promise. The short line already says
-    // "Coming soon.", so keep this decorative rather than double-announcing.
-    soon.setAttribute('aria-hidden', 'true');
+    foot.appendChild(soon);
 
-    head.append(dek, mast, soon);
-
-    stage.append(cover, scrim, head);
+    stage.append(media, foot);
   },
 
   activate() {

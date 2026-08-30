@@ -94,6 +94,12 @@ export default {
   build(stage) {
     stage.classList.add('ad');
 
+    // the event window is a bounded frame (round 2): media, scrim,
+    // identity stack and the ‹ › walker all live inside it, and the card
+    // then ends on its own band below rather than running to the edge
+    const frame = document.createElement('div');
+    frame.className = 'ad-frame';
+
     const media = document.createElement('div');
     media.className = 'ad-media';
     posterEl = document.createElement('img');
@@ -218,17 +224,18 @@ export default {
     // the walker arrows live on the SIDE EDGES at vertical middle (Hannah,
     // 2026-08-18: fixed in place, so they never move as captions change)
 
-    // the door, in the site's own eyebrow voice, top-right like its event
-    // tags; revealed on hover/pin by the shared card-cta rule
-    const cta = document.createElement('a');
-    cta.className = 'ad-cta card-cta';
-    cta.href = 'https://ados.events/';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'SEE EVENTS →';
+    frame.append(media, scrim, word, prev, next);
 
-    stage.append(media, scrim, word, prev, next, cta);
+    // the ending — the site's own eyebrow voice as a full-width band
+    const door = document.createElement('a');
+    door.className = 'ad-door card-cta';
+    door.href = 'https://ados.events/';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'SEE EVENTS →';
+
+    stage.append(frame, door);
 
     caption(0);
   },
