@@ -1891,16 +1891,17 @@ const { animators, addAnimator } = animationLifecycle;
 ctx.animators = animators;
 ctx.addAnimator = addAnimator;
 
-/* ---- THE TEXT-SIDE SPORES WERE ALREADY HERE (Lane B, 2B/2C) ----------
-   organism/hero-spores.js has been drifting a sparse band of descending
-   spores across the hero copy since long before this module finished
-   downloading — it rides its own <script type="module"> in index.html and
-   imports nothing heavier than a leaf, so it paints while `three` is
-   still on the wire. Adopting its LIVE field here (same particles, same
-   offsets, same phase, same integrator) is what makes this moment read as
-   the scene GAINING the mushroom instead of swapping one particle system
-   for another: the preload canvas cross-fades out over the same beat this
-   Points fades in, and no particle moves across the seam.
+/* ---- THE SEEDING STREAM WAS ALREADY HERE (Lane B, 2B/2C) -------------
+   organism/hero-spores.js has been dropping a sparse stream of spores
+   from the upper-left into the specimen's own ground since long before
+   this module finished downloading — it rides its own <script
+   type="module"> in index.html and imports nothing heavier than a leaf,
+   so it paints while `three` is still on the wire. Adopting its LIVE
+   field here (same particles, same offsets, same phase, same integrator)
+   is what makes this moment read as the MUSHROOM MATERIALISING UNDER THE
+   STREAM THAT WAS SEEDING ITS SPOT, instead of one particle system
+   swapping for another: the preload canvas cross-fades out over the same
+   beat this Points fades in, and no particle moves across the seam.
 
    THREE THINGS ABOUT THIS POSITION, all load-bearing:
      · after ctx.addAnimator exists, because the field registers one;
