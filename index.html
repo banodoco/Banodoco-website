@@ -60,6 +60,18 @@
   }
 }
 </script>
+<!-- THE ATMOSPHERE DOES NOT WAIT FOR THE ORGANISM. Its own module script,
+     discovered here rather than at the foot of <body>, because the whole
+     point is how early it can paint: this module imports nothing but a
+     leaf (journey/boot/hero-mode.js), so the descending spores are on
+     screen once ~27 KB has arrived, in parallel with the ~1.8 MB main.js
+     needs before it can draw a mushroom. Deferred like every module
+     script, so #stage exists by the time it runs; ahead of main.js in
+     document order, so it evaluates first. main.js imports THE SAME
+     specifier and therefore the same instance, and hands the live field
+     over to the scene when the scene exists — see organism/hero-spores.js.
+     Failing to load costs the page nothing: the hero is unchanged. -->
+<script type="module" src="./organism/hero-spores.js"></script>
 </head>
 <body class="scene-preparing hero-entry-pending">
   <!-- M5 a11y: skip link, first focusable element on the page. The canvas

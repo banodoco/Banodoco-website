@@ -5,6 +5,13 @@ export function createAnimationLifecycle({ beforeRender, render }) {
   const animators = new Map();
   let frozenT = null;
   let renderEnabled = true;
+  /* THE SECOND GATE ON THE SAME RENDER, AND IT IS A SEPARATE BINDING ON
+     PURPOSE. `renderEnabled` belongs to main.js's WebGL context-loss pair;
+     this one belongs to the document's visibility and is owned here. Two
+     booleans ANDed at the gate compose without either owner having to know
+     about the other — one shared flag would let a tab that came back into
+     view resume rendering into a context that is still lost. */
+  let pageVisible = true;
 
   /** Register a per-frame callback `fn(t, dt)` under `name`. Returns a
    *  handle: call it to remove exactly this registration. The handle is
@@ -77,16 +84,38 @@ export function createAnimationLifecycle({ beforeRender, render }) {
          hiccup lasting two seconds must not leave the site permanently
          softer. Animators keep running for the same reason: they are what
          keeps dt honest. */
-      if (renderEnabled) {
+      if (renderEnabled && pageVisible) {
         beforeRender();
         render();
       }
+    }
+    /* A HIDDEN TAB PAYS FOR NOTHING, and the gate is here rather than on the
+       rAF for the reason the comment above already gives at length: parking
+       the loop stops the shared clock being observed and the elapsed jump on
+       resume lands past the resolution governor's calibration window, which
+       then remembers a permanently softer page for this display. Every
+       current engine already suspends rAF for a hidden document, so on the
+       normal path this gate never fires. It exists for the paths where that
+       is not true — a window occluded but still scheduling, a bfcache entry
+       restored into a background tab, an engine that throttles to 1 Hz
+       instead of stopping — where the composer would otherwise charge a full
+       frame for a picture nobody is looking at. Registered inside start()
+       and taken back off by the stop handle below, so this file's attach and
+       detach counts move together. */
+    const doc = typeof document === 'undefined' ? null : document;
+    const onVisibility = () => { pageVisible = !doc.hidden; };
+    if (doc && doc.addEventListener) {
+      pageVisible = !doc.hidden;
+      doc.addEventListener('visibilitychange', onVisibility);
     }
     animate();
 
     return function stop() {
       if (stopped) return;
       stopped = true;
+      if (doc && doc.removeEventListener) {
+        doc.removeEventListener('visibilitychange', onVisibility);
+      }
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;

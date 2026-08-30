@@ -985,11 +985,27 @@ pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specif
        The intro-local clock extraction adds organism/intro-clock.js as one
        real runtime graph member and one newly resolved target key. No existing
        specifier changes form, so both discovered cardinalities rise by exactly
-       one while the two invariant sets remain empty. */
-    referenced: 138,
+       one while the two invariant sets remain empty.
+
+       RE-BASELINED referenced 138 -> 139 and scanned 137 -> 138 by Lane B
+       (2B), on the same protocol. The one accepted graph member is
+       organism/hero-spores.js — the text-side descending spore band, a
+       dependency-free WebGL layer plus the same field rebuilt inside the
+       scene. It contributes one scanned file and one distinct resolved
+       target key, so both cardinalities move together by exactly one.
+
+       AND IT IS NAMED FROM TWO PLACES, which is the case this area exists to
+       police, so it is stated: index.html carries `<script type="module"
+       src="./organism/hero-spores.js">` and organism/organism.js imports the
+       same path. Both resolve to ONE URL, so ESM's cache evaluates it once
+       and the module's singleton is genuinely single. index.html is not in
+       pageSources() and contributes nothing to either count; `multiForm`
+       stays empty because the two names are the same specifier form, which
+       is precisely what it is asserting. */
+    referenced: 139,
     multiForm: [],
     cacheBusted: [],
-    scanned: 137,
+    scanned: 138,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 

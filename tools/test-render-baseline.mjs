@@ -282,7 +282,24 @@ check('S7', 'PULSE_GLSL uniform names', chunk('PULSE_GLSL').uniforms, ['uPulseC'
 
 wave('S8', 'ShaderMaterial slot count', report.shaders.materialSlotCount, 48);
 check('S9', 'every slot resolved to source text', report.shaders.unresolvedSlotCount, 0);
-wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 10);
+/* ------------------------------------------------------------------ *
+ * RE-BASELINED BY LANE B (2026-08-30) — organism/hero-spores.js, the
+ * text-side descending spore band. Seven pins move for ONE new module and
+ * one two-line edit to organism/animation.js, and every delta below is
+ * that module's own; nothing else in the tree changed shape.
+ *
+ * WHAT THE MODULE IS, because that is what makes the deltas readable: a
+ * dependency-free WebGL point layer that paints the hero's atmosphere
+ * while `three` is still on the wire (index.html loads it on its own
+ * script tag ahead of main.js), and the same particles rebuilt as a
+ * THREE.Points inside the scene once the scene exists. It is the first
+ * module in this tree that talks to WebGL WITHOUT going through three,
+ * which is why it lands in three censuses that were built around three's
+ * own vocabulary — see S12/S14 and M1 for exactly how.
+ * ------------------------------------------------------------------ */
+// S10 10 -> 12: hero-spores.js's own VERT and FRAG. Two chunks, one module,
+// and they are the whole of this delta.
+wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 12);
 wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCount, 24);
 // S12/S13 — THE NAME MANIFESTS, not their size (coordinator decision D36, the
 // same conversion X3 records below and for the same reason).
@@ -327,7 +344,10 @@ wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCou
 const UNIFORM_NAMES_DECLARED = [
   'fogFar', 'fogNear', 'map', 'tDiffuse', 'tHistory', 'time', 'uAberration', 'uActive',
   'uActiveAmt', 'uAdosHubAlong', 'uAdosShift', 'uAmount', 'uAnon', 'uArrive', 'uArriveSpan',
-  'uBase', 'uBaseA', 'uBuried', 'uCellAP', 'uClampY', 'uCol', 'uCol2', 'uColDeep', 'uColGold',
+  // Lane B: hero-spores.js's four. They are RAW-GL uniforms, set through
+  // gl.getUniformLocation/gl.uniform3f rather than a three material's
+  // `uniforms` block, which is why S14 below gains them as residue too.
+  'uAspect', 'uBase', 'uBaseA', 'uBgEncoded', 'uBgLinear', 'uBuried', 'uCellAP', 'uClampY', 'uCol', 'uCol2', 'uColDeep', 'uColGold',
   'uColHot', 'uColor', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
   'uExit', 'uExposure', 'uFade', 'uFadeOn', 'uFar', 'uFlow', 'uFocusOn', 'uFocusUv',
   'uFogDensity', 'uFogFar', 'uFogNear', 'uFrom', 'uFront', 'uFrontOn', 'uGain', 'uGrain',
@@ -339,8 +359,8 @@ const UNIFORM_NAMES_DECLARED = [
   'uPulseC', 'uPulseColor', 'uPulseHead', 'uPulseOn', 'uPulseP', 'uPulseT', 'uPulseWidth',
   'uQuiet', 'uQuietTier', 'uReach', 'uRes', 'uResolution', 'uRevIn', 'uRim', 'uRouteAmp',
   'uScale', 'uSelAmt', 'uSelIdx', 'uSize', 'uSoft', 'uSoilCol', 'uSoilOn', 'uSolid', 'uSurge',
-  'uSwap', 'uSwapFlare', 'uSwapSpan', 'uTime', 'uTipW', 'uTrace', 'uTraceAmp', 'uTwinkle',
-  'uVarA', 'uVarB', 'uVarC', 'uVarD', 'uVarM', 'uVarMI', 'uVignette', 'uW', 'uWaveAmt',
+  'uSwap', 'uSwapFlare', 'uSwapSpan', 'uTanHalfFov', 'uTime', 'uTipW', 'uTrace', 'uTraceAmp',
+  'uTwinkle', 'uVarA', 'uVarB', 'uVarC', 'uVarD', 'uVarM', 'uVarMI', 'uVignette', 'uW', 'uWaveAmt',
   'uWaveC', 'uWaveR', 'uWaveW', 'uWell', 'uWidth', 'uWin', 'uWind', 'uWobA', 'uWobB', 'uWobId',
   'uWobR',
 ];
@@ -374,8 +394,21 @@ waveManifest('S13', 'bound uniform names (133; WAS the bare size, 130)',
   report.shaders.uniformBindingNameUnion, UNIFORM_NAMES_BOUND);
 // The two cross-check residues below are EXTRACTOR SCOPE, not defects — see
 // limitations.md §2c. They are pinned so a NEW residue is visible.
+/* S14 RE-BASELINED BY LANE B, and this one is an INVARIANT, so it is
+   spelled out rather than bumped. The residue exists because the extractor
+   pairs GLSL `uniform` DECLARATIONS against three's `uniforms: { ... }`
+   BINDING blocks. organism/hero-spores.js binds through raw WebGL —
+   gl.getUniformLocation() then gl.uniform1f/3f — so its four names are
+   declared where the extractor can see them and bound where it cannot.
+   That is extractor scope, the same class as the four names already here
+   (limitations.md 2c), not four unbound uniforms.
+   WHAT THE PIN STILL CATCHES is unchanged: a NINTH entry means a uniform
+   declared in a three material and never bound, which is the defect this
+   row exists for. Widening it by four named raw-GL entries does not
+   loosen that test; leaving it failing forever would. */
 check('S14', 'declared-but-not-bound residue', report.shaders.declaredButNeverBound,
-  ['uOwner', 'uOwnerAmt', 'uVarM', 'uVarMI']);
+  ['uAspect', 'uBgEncoded', 'uBgLinear', 'uOwner', 'uOwnerAmt', 'uTanHalfFov',
+    'uVarM', 'uVarMI']);
 check('S15', 'bound-but-not-declared residue', report.shaders.boundButNeverDeclared, ['uPullRaw']);
 check('S16', 'compiled program text is declared unmeasured, not faked',
   report.shaders.compiledProgram.derivation, 'unmeasured');
@@ -565,7 +598,14 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
 // `const opacity = hotspotIconTabOpacity(u, departing)` is the three-channel
 // DOM marker paint resolved for direct-navigation departure. M2/M3/M4 remain
 // unchanged, confirming no material construction flag moved.
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 241);
+/* M1 241 -> 246 (Lane B). Five sites, all in organism/hero-spores.js, and
+   NOT ONE OF THEM IS A MATERIAL FLAG: four `opacity` (three CSS
+   `style.opacity =` assignments plus `opacity:0` in the layer's inline
+   stylesheet) and one `premultipliedAlpha` in a getContext() options
+   object. This census is a text grep for flag NAMES over source, and its
+   own `warning` field says so; the module is the first in the tree to
+   spell those two words outside a three material. */
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 246);
 wave('M2', 'transparent: sites', flag('transparent'), 33);
 wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
 wave('M4', 'blending: sites', flag('blending'), 33);
@@ -686,7 +726,16 @@ const lcSites = (call) => report.lifecycle.perCall.find((c) => c.call === call).
    unchanged. See docs/code-health/DISPOSAL-REMOVED.md. */
 /* Click-only touch travel adds the platform cancellation partner beside
    touchend so an interrupted gesture cannot leave its blocked state armed. */
-wave('M6', 'addEventListener sites', lc.addEventListenerSites, 68);
+/* M6 68 -> 71 (Lane B). THREE attaches, and all three arrive WITH their
+   removers, so M18's zero-slack imbalance ceiling below is unmoved at 60 —
+   which is the row that would have caught an unpaired one.
+     organism/hero-spores.js  resize          re-reads the hero composition
+                                              for the new breakpoint
+     organism/hero-spores.js  visibilitychange parks its own loop
+     organism/animation.js    visibilitychange gates the composer while the
+                                              document is hidden
+   The matching removals are folded into M7's floor below. */
+wave('M6', 'addEventListener sites', lc.addEventListenerSites, 71);
 // D36: WHERE the rAF sites are, as a file-level map. File-level rather than
 // per-site because a line number shifts on unrelated edits, and rAF call text
 // is often a bare `requestAnimationFrame(tick)` that repeats across files.
@@ -723,6 +772,12 @@ const RAF_SITES_BY_FILE = [
     "journey/boot/handoff.js x6",
     "journey/ui/owner.js x1",
     "organism/animation.js x1",
+    /* Lane B: organism/hero-spores.js's preload loop. ONE site, on purpose
+       — its hidden-tab gate parks and resumes through the same `schedule()`
+       door rather than adding a second request, and the matching
+       cancelAnimationFrame is in M9's floor below, so M19's zero-slack
+       ceiling does not move. */
+    "organism/hero-spores.js x1",
     "organism/intro-clock.js x1",
     "organism/intro.js x1",
   ];
@@ -763,6 +818,13 @@ const REMOVE_LISTENER_SITES = [
     "journey/ui/media.js :: : { matches: false, addEventListener() {}, removeEventListener() {} };",
     "organism/spores.js :: offMouseLeave = () => document.removeEventListener('mouseleave', onMouseLeave);",
     "organism/spores.js :: offPointerMove = () => removeEventListener('pointermove', onPointerMove);",
+    /* Folded in by Lane B, as this floor's advisory prescribes: the three
+       removal partners for the three attaches M6 above records. Recording
+       them is what stops a later edit dropping one and leaving the attach
+       standing. */
+    "organism/animation.js :: doc.removeEventListener('visibilitychange', onVisibility);",
+    "organism/hero-spores.js :: document.removeEventListener('visibilitychange', onVisibility);",
+    "organism/hero-spores.js :: if (onResize) { removeEventListener('resize', onResize); onResize = null; }",
     /* FLOOR LOWERED BY EXPLICIT ACCEPTANCE — DISPOSAL REMOVAL, 2026-08-25.
        This is the one thing this floor exists to refuse, and it is being
        done deliberately with the owner's decision behind it, not slipped
@@ -795,6 +857,10 @@ manifestFloor('M7', 'every recorded removeEventListener site still exists',
 // failing, which is precisely the behaviour a monotonic pin exists to give.
 const CANCEL_RAF_SITES = [
     "organism/animation.js :: cancelAnimationFrame(rafId);",
+    /* Folded in by Lane B: the preload spore layer's own loop cancel, the
+       partner of M8's single request site above. Same trimmed text as
+       animation.js's, different file, so the set distinguishes them. */
+    "organism/hero-spores.js :: cancelAnimationFrame(rafId);",
     /* The local-clock extraction moved the ramp callback behind an injected
        requestFrame function. setupIntro still owns and cancels the exact
        platform id; only the binding name changed with that ownership seam. */
@@ -1218,6 +1284,14 @@ const SOURCE_MANIFEST = [
     "main.js",
     "organism/animation.js",
     "organism/furniture.js",
+    /* 136 -> 137, order Lane B 2B (organism/hero-spores.js — the text-side
+       descending spore band: a dependency-free WebGL preload layer and the
+       same field rebuilt inside the scene, one integrator shared). ONE
+       ENTRY, this order's own, in sort position between furniture.js and
+       intro-clock.js ('f' < 'h' < 'i'). Nobody else's row was added, moved
+       or removed (D62); the run that added it had X3 reporting exactly one
+       ADDED entry and nothing REMOVED. */
+    "organism/hero-spores.js",
     "organism/intro-clock.js",
     "organism/intro.js",
     "organism/organism.js",
