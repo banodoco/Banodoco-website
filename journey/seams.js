@@ -26,6 +26,8 @@ const DEG = Math.PI / 180;
 // p-windows that back the camera predicates up, expressed against the route
 // manifest so a re-timed route carries them along (M4). Values are the
 // shipped literals; each offset is authored against the camera path.
+const EQUIP_HOLD_LO = startOf('equip') - 0.06;    // 0.20 — the Inspire rest, where the fly-around starts
+const EQUIP_HOLD_HI = endOf('equip') + 0.02;      // 0.40 — just past the chapter, before Connect's lights
 const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped past the rim
                                                   // (D16 ground restage: outside it, same p)
 const T1_RELAX_OUT = startOf('connect') + 0.08;   // 0.46
@@ -133,6 +135,18 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }
+
+    // EQUIP — a p-window, and the only seam here that streams nothing.
+    // The chapter builds no geometry (chapters/equip/index.js: its subject is
+    // the specimen itself), so what `armed` gates is the right to SPEAK: the
+    // arrival ripple through the mycelium, and the ring a hovered hotspot
+    // answers with. The window opens at the Inspire rest — where the
+    // fly-around begins, so a ripple can never fire while the camera is still
+    // outside on the rim — and closes just past the chapter's own end, before
+    // Connect's ground arrival owns the light. No hysteresis: both edges sit
+    // on a state that draws nothing at all, so a shaky scrub cannot strobe
+    // anything visible either way.
+    chapters.equip.setArmed(p > EQUIP_HOLD_LO && p < EQUIP_HOLD_HI);
 
     // T2 - a PURE p-window (D16 ground restage, doc §6). The old
     // "cap-occludes" camera predicate is dead: the camera never goes under

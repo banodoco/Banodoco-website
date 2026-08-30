@@ -230,7 +230,24 @@ export const TRANSIT_S = {
   // class as the Connect -> Owned dive next door (measured vis ~20 against
   // the dive's ~32 peak, from ~13 at the shared 2.5), which is the punchy
   // departure she keeps contrasting it with.
-  'inspire>connect': { fwd: 2.5, back: 1.6 },
+  //
+  // SPLIT IN TWO 2026-08-30, when Equip landed between these two rests. The
+  // entry above is the whole history of a leg that no longer exists as one
+  // span, and both halves inherit its finding rather than re-deriving it:
+  // forward is content pacing and may breathe, backward is the same swing in
+  // reverse with nothing to breathe for and wants to be punchy. What changed
+  // is the geometry each half now covers — measured camera-path arc length at
+  // desktop aspect, against the 9.50 units the retired single leg carried:
+  //
+  //   inspire > equip   the arc around the specimen and in under the cap
+  //   equip > connect   back out from under the cap to the ground panorama
+  //
+  // Forward figures are set so each half runs at roughly the retired leg's
+  // own units-per-second rather than inheriting its seconds wholesale: a
+  // longer path given the same clock is a faster camera, which is the one
+  // direction six passes of "slower" on the Connect arrival may never move.
+  'inspire>equip': { fwd: 2.4, back: 1.6 },
+  'equip>connect': { fwd: 2.8, back: 1.8 },
   // 1.5 s rest to rest, both ways. Measured live: 7.01 s forward / 7.54 s back
   // on the shipped tree, and 3.27 / 3.44 before the glide-unit fix (3daac2e)
   // handed this leg the 17.0 vh of road it owns. Hannah's baseline when she asked
@@ -256,13 +273,35 @@ export const TRANSIT_S = {
  * solves K from an engage point taken at SNAP_K — "one fixed-point iteration",
  * and it does not run a second — so what actually ships is shorter than what
  * is written here, by a factor that depends on the leg's own cruise. Declared
- * 0.35 delivers 183 ms on Inspire -> Connect and 300 ms on Connect -> Owned.
+ * 0.35 delivers 233 ms on Inspire -> Equip and 300 ms on Connect -> Owned.
  * The dial is monotone and the readings below are measurements, not algebra.
+ *
+ * RE-MEASURED 2026-08-30, and the shape of the re-measurement is the point.
+ * Not one constant in this table moved; the ROUTE under it did, and the
+ * delivered tails moved with it, because the factor between dial and delivery
+ * is the leg's own cruise. All five forward legs, 12-notch flick, on the pure
+ * rig (tools/test-declared-conversions.mjs, which recomputes these from
+ * SNAP_K and SNAP_DEAD_P with no fitted quantity):
+ *
+ *                      K_eff   delivered   was
+ *   mission>inspire     7.14      283 ms   267 ms   (the leg lost p, not road)
+ *   inspire>equip       7.32      233 ms   ——       (new)
+ *   equip>connect       8.68      200 ms   183 ms   (the Inspire -> Connect
+ *                                                    row, split and re-cruised)
+ *   connect>owned       8.32      300 ms   300 ms   (untouched leg, untouched
+ *                                                    reading — the control)
+ *   owned>final         3.60      917 ms   917 ms   (no budget: the control
+ *                                                    the whole table is for)
+ *
+ * connect>owned reading back at exactly its shipped 300 ms is what says the
+ * other four moved because their legs moved and not because the rig did.
  *
  * ENTRIES
  *
- * 'inspire>connect' — 2026-08-17. The first of these, and the one that named
- * the fault. Unchanged.
+ * 'inspire>equip' / 'equip>connect' — 2026-08-17 as one entry, split
+ * 2026-08-30 when Equip landed between the two rests. The original was the
+ * first of these and the one that named the fault; both halves inherit it
+ * unchanged, at the same dial. See the split note under the entries below.
  *
  * 'connect>owned' — 2026-08-24 (DEFECT-04; owner: "the entry animation on the
  * owner thing feels a little janky"). This leg had no entry, and nobody chose
@@ -293,7 +332,7 @@ export const TRANSIT_S = {
  * the brake's own declared-tail mechanism rather than a new one. 0.35 for
  * the third time: the budget is the class's, not the leg's, and the two
  * shipped entries bracket this leg's cruise geometry. Delivered (measured,
- * not algebra): 267 ms flick / 217 ms gentle, camera <2%-of-peak window
+ * not algebra): 283 ms flick / 233 ms gentle, camera <2%-of-peak window
  * 433 -> 167 ms (flick), 367 -> 133 ms (gentle), p settled 367 ms sooner;
  * worst frame-to-frame camera-speed drop through the brake above a
  * 10%-of-peak floor 26.8% (was 13.1%) — inside the shipped band (28.0% on
@@ -308,7 +347,7 @@ export const TRANSIT_S = {
  *                        K_eff  brake tail  camera still  p settled  DEAD BEAT
  *   before (no entry)     3.61      967 ms          1883       2317     433 ms
  *   after  (0.35)         8.32      300 ms          1700       1867     167 ms
- *   inspire>connect fwd  10.11      183 ms          2483       2617     133 ms
+ *   equip>connect fwd     8.68      200 ms          2483       2617     133 ms
  *
  * WHY 0.35 AND NOT A NUMBER FITTED TO THIS LEG. The two legs' geometry really
  * does differ — Connect's approach segment is 8.00 vh against Owned's 2.27, and
@@ -334,14 +373,24 @@ export const TRANSIT_S = {
  * 1083 ms on the same rig. It is the copy envelope's authored breathe — copy
  * that is speed-gated on the p-servo rather than timed against the camera the
  * way the nav-jump envelope is — and moving it is a deliberate design change in
- * journey/ui/copy-arrival.js, not a side effect of a landing-tail budget. */
+ * journey/ui/copy-arrival.js, not a side effect of a landing-tail budget.
+ *
+ * 'inspire>equip' / 'equip>connect' — 2026-08-30, when Equip split the
+ * 'inspire>connect' entry described above. 0.35 for the fourth and fifth
+ * time, and for the reason the Mission entry already gives: THE BUDGET IS
+ * THE CLASS'S, NOT THE LEG'S. Both halves are arrivals whose camera ends on
+ * the same authored trapezoid ease-out the retired leg ended on, so both
+ * inherit the same exponential creep parked on a picture that has already
+ * stopped. Neither is fitted; the two shipped entries either side of them
+ * bracket their cruise geometry exactly as they bracketed Mission's. */
 export const FORWARD_BRAKE_TAIL_S = {
   'mission>inspire': 0.35,
-  'inspire>connect': 0.35,
+  'inspire>equip': 0.35,
+  'equip>connect': 0.35,
   'connect>owned': 0.35,
 };
 
-/* Desktop-only FORWARD speed limits for the three opening transitions.
+/* Desktop-only FORWARD speed limits for the four opening transitions.
  *
  * These are minimum rest-to-rest times, not raw p/s guesses. scroll.js
  * measures the authored progress span between the two rests, then derives:
@@ -362,18 +411,26 @@ export const FORWARD_BRAKE_TAIL_S = {
  * Relative to the current 0.45 p/s desktop maximum, the resulting minimum
  * full-span times are:
  *   mission -> inspire  0.58 s -> 1.80 s  (3.12x calmer)
- *   inspire -> connect  0.58 s -> 0.75 s  (1.28x calmer)
+ *   inspire -> equip    (see below)
+ *   equip   -> connect  (see below)
  *   connect -> owned    0.45 s -> 1.35 s  (3.01x calmer)
  *
  * Those are ceilings, not forced durations: the existing road-denominated
- * cruises (including Inspire -> Connect's 2.5 s natural transit) remain free
- * to run more slowly. Camera-path sampling at desktop aspect measured the
- * legs at 24.03 / 9.50 / 8.68 world units respectively; Hero therefore gets
- * the longest minimum, while Connect -> Owned keeps a deliberately slower
- * editorial class despite its similar physical arc. */
+ * cruises remain free to run more slowly. Camera-path sampling at desktop
+ * aspect measured the legs at 24.03 / 9.50 / 8.68 world units respectively;
+ * Hero therefore gets the longest minimum, while Connect -> Owned keeps a
+ * deliberately slower editorial class despite its similar physical arc.
+ *
+ * 2026-08-30: Equip splits the 9.50-unit 'inspire>connect' row in two. Its
+ * 0.75 s was the shortest minimum on the table because its arc was the
+ * shortest; the two halves are each LONGER than it was, so inheriting 0.75
+ * would have made a longer path finish in the same time, i.e. a faster
+ * camera. Re-derived at the retired row's own 12.7 units/s, re-measured on
+ * the built gesture (tools note in chapters/equip/camera.js). */
 export const DESKTOP_TRANSIT_CAP_S = {
   'mission>inspire': { fwd: 1.80 },
-  'inspire>connect': { fwd: 0.75 },
+  'inspire>equip': { fwd: 1.00 },
+  'equip>connect': { fwd: 1.25 },
   'connect>owned': { fwd: 1.35 },
 };
 
@@ -601,13 +658,44 @@ export const HERO_END_P = endOf(HERO_CHAPTER_ID);
   // Final rest 0.5 -> 0.8 of its span (0.925 -> 0.97): deliberate, 2026-08-09
   // — the arrival-road rebalance (see the ROUTE entry's comment). Every other
   // value is the shipped table, unchanged.
+  // EQUIP ARRIVES (2026-08-30). The route grows a sixth chapter between
+  // Inspire and Connect, so every derived p from 0.14 to 0.38 renormalises
+  // and this table is updated deliberately, in the same diff, exactly as the
+  // sentence above requires. What moved and what did not:
+  //
+  //   · The boundary at 0.38 and EVERYTHING above it is bit-identical.
+  //     Equip's 12 units come entirely out of Inspire's 24, so connect,
+  //     owned and final keep their spans, their stops and their p-ranges to
+  //     the last bit. That is not thrift: journey/portrait.js and
+  //     chapters/owned/leg.js hang absolute-p literals off those spans
+  //     (0.622 / 0.700 / 0.725, LEG_P0 0.660, LEG_P1 0.872), and
+  //     chapters/connect/index.js's LIGHT_LO/HI are leg-local fractions of a
+  //     span that has not moved. A rebalance that touched 0.38+ would have
+  //     silently re-pointed all of it.
+  //   · The INSPIRE REST moves 0.26 -> 0.20, and that is the one shipped
+  //     p-value this change spends. It is spent for the copy system: two
+  //     rests need ~0.10 of p between them before their COPY_BANDS (rest
+  //     +/- offsets, each with a 0.020 fade skirt) stop overlapping, and
+  //     Inspire at 0.26 with Equip at 0.32 leaves 0.06 — two copy blocks
+  //     cross-fading over each other at 50%. Inspire at 0.20 opens the gap
+  //     to 0.12 and every band closes cleanly again.
+  //   · NO CAMERA POSE MOVES WITH IT. Every leg is authored in leg-local or
+  //     gesture-local time (chapters/<id>/camera.js), so the Mission ->
+  //     Inspire arrival is the same gesture over a shorter p; the pose AT
+  //     the Inspire rest is still INSPIRE exactly, and inspire@* / mission@*
+  //     are unchanged. `scrollVh` is re-split to keep the arrival's
+  //     viewport-heights-per-gesture flat (mission 3.5 -> 4.9, inspire seg 0
+  //     3.5 -> 2.1): the mission/inspire knot now falls at gesture u 0.70
+  //     instead of u 0.538, so holding the old vh would have front-loaded
+  //     the swing and parked the tail.
   const LEGACY = {
-    starts: [0.00, 0.14, 0.38, 0.60, 0.85],
-    ends:   [0.14, 0.38, 0.60, 0.85, 1.00],
+    starts: [0.00, 0.14, 0.26, 0.38, 0.60, 0.85],
+    ends:   [0.14, 0.26, 0.38, 0.60, 0.85, 1.00],
     // Connect rest 0.5 -> 0.65 of its span (0.490 -> 0.5230): deliberate,
     // 2026-08-10 — the ground-lighting road rebalance (see the ROUTE entry's
     // comment; same pose, references re-shot same-commit).
-    rests:  [0.00, 0.14 + (0.38 - 0.14) * 0.5, 0.38 + (0.60 - 0.38) * 0.65,
+    rests:  [0.00, 0.14 + (0.26 - 0.14) * 0.5, 0.26 + (0.38 - 0.26) * 0.5,
+             0.38 + (0.60 - 0.38) * 0.65,
              0.60 + (0.85 - 0.60) * 0.5, 0.85 + (1.00 - 0.85) * 0.8],
   };
   const TOL = 1e-12;

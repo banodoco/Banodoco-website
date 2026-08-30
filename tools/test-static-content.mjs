@@ -23,7 +23,7 @@ assert.match(html, /html\.no-js \{ scroll-behavior: auto; \}/);
 assert.match(html, /document\.documentElement\.classList\.remove\('no-js'\)/);
 assert.match(html, /<a class="skip" href="#main">Skip to content<\/a>/);
 assert.match(html, /<main id="main">/);
-assert.equal((html.match(/<section class="chapter"/g) ?? []).length, 5);
+assert.equal((html.match(/<section class="chapter"/g) ?? []).length, 6);
 
 const chapterSections = [...html.matchAll(/<section\b[^>]*\bclass="[^"]*\bchapter\b[^"]*"[^>]*>/gi)];
 assert.deepEqual(
@@ -50,7 +50,7 @@ assert.match(html, /if \(CHAPTERS\.indexOf\(chapter\) < 0\) return \{ chapter: n
 assert.match(html, /history\.replaceState\(null, '', '#\/mission'\)/);
 assert.doesNotMatch(html, /\bid="\/unknown"/);
 
-assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 133);
+assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 143);
 assert.equal((html.match(/<[a-z][^>]*\bdata-sym="/gi) ?? []).length, 11);
 assert.match(html, /data-src="chapters\.final\.nav">Purpose<\/span>/);
 assert.match(html, /class="menu-no">1\.<\/span><span class="menu-name">Inspiring<\/span>/);

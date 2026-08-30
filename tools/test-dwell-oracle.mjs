@@ -212,9 +212,10 @@ const settersInFile = (i) => {
 
 pin('DW-ROAD', 'EXACT — where every chapter\'s canonical rest sits within its own scroll road',
   roadTable, SCHEMA, [
-    { id: 'mission', scrollVh: 3.5, beforeVh: 0, afterVh: 3.5, restAt: '0/3.5' },
-    { id: 'inspire', scrollVh: 6.7, beforeVh: 3.5, afterVh: 3.2, restAt: '3.5/6.7' },
-    { id: 'connect', scrollVh: 10.85, beforeVh: 8, afterVh: 2.85, restAt: '8/10.85' },
+    { id: 'mission', scrollVh: 4.9, beforeVh: 0, afterVh: 4.9, restAt: '0/4.9' },
+    { id: 'inspire', scrollVh: 4.7, beforeVh: 2.1, afterVh: 2.6, restAt: '2.1/4.7' },
+    { id: 'equip', scrollVh: 6, beforeVh: 2.6, afterVh: 3.4, restAt: '2.6/6' },
+    { id: 'connect', scrollVh: 15.85, beforeVh: 13, afterVh: 2.85, restAt: '13/15.85' },
     { id: 'owned', scrollVh: 9.27, beforeVh: 2.27, afterVh: 7, restAt: '2.27/9.27' },
     { id: 'final', scrollVh: 10.6, beforeVh: 10, afterVh: 0.6, restAt: '10/10.6' },
   ],
@@ -236,8 +237,8 @@ pin('DW-ASYM', 'EXACT — the asymmetry itself: which chapter holds the most roa
   SCHEMA, { id: 'owned', afterVh: 7, ofOwnRoad: '7/9.27' },
   'the rule repeatAnchor applies is uniform; this is the value that makes its consequence not uniform');
 
-pin('DW-ANCHORS', 'EXACT — the five rest anchors, re-derived from the manifest rather than copied from the probe',
-  anchorPs, SCHEMA, [0, 0.26, 0.523, 0.725, 0.97],
+pin('DW-ANCHORS', 'EXACT — the six rest anchors, re-derived from the manifest rather than copied from the probe',
+  anchorPs, SCHEMA, [0, 0.2, 0.32, 0.523, 0.725, 0.97],
   'DEF-OWNED recomputed these under node from both trees and got the same five doubles; '
   + 'this is the check that the ANCHORS literal in dwell-oracle.mjs is still those doubles');
 
@@ -499,13 +500,20 @@ pin('DW-C3', 'SET — the anchors ever swept past across all eleven trials',
  * describing a route the page does not have.
  * ==================================================================== */
 
-const DWELL0 = Object.freeze({ mission: 0, inspire: 0, connect: 0, owned: 0, final: 0 });
+/* THE SYNTHETIC FIXTURES BELOW ARE ANCHOR-DERIVED, NOT p-LITERAL (2026-08-30).
+   They were written as "parked at `inspire`, scrub past `connect`" and spelled
+   that as p 0.26; when Equip re-timed the route, 0.26 stopped being any rest at
+   all and the fixtures silently became "parked mid-leg", which reclassified
+   every crossing they exist to name. The sentences are the contract; the
+   coordinates are looked up. */
+const AP = Object.freeze(Object.fromEntries(ANCHORS.map((a) => [a.id, a.p])));
+const DWELL0 = Object.freeze({ mission: 0, inspire: 0, equip: 0, connect: 0, owned: 0, final: 0 });
 const JUDGED2 = Object.freeze(['connect', 'owned']);
 /** Parked at `inspire`; one gesture scrubs past `connect` under the
  *  visitor's own hand, hands off across `owned`, then a second gesture from
  *  mid-flight. Three of the four mechanisms, off one mark list. */
 const MARKS_SCRUB = Object.freeze([
-  { t: 0, p: 0.26, kind: 'gesture-start' },
+  { t: 0, p: AP.inspire, kind: 'gesture-start' },
   { t: 200, p: 0.60, kind: 'gesture-end' },
   { t: 700, p: 0.74, kind: 'gesture-start' },
   { t: 900, p: 0.80, kind: 'gesture-end' },
@@ -514,7 +522,7 @@ const MARKS_SCRUB = Object.freeze([
 /** The class's own shape: gesture two BEGINS at p 0.60, which is no rest, so
  *  every metre it spends was banked by the resolution still in flight. */
 const MARKS_INFLIGHT = Object.freeze([
-  { t: 0, p: 0.26, kind: 'gesture-start' },
+  { t: 0, p: AP.inspire, kind: 'gesture-start' },
   { t: 200, p: 0.50, kind: 'gesture-end' },
   { t: 700, p: 0.60, kind: 'gesture-start' },
   { t: 900, p: 0.80, kind: 'gesture-end' },
@@ -567,11 +575,11 @@ pin('DW-LAND-1', 'DW-C4\'s two outcomes off one number: a landing that composed,
 pin('DW-DUAL-1', 'DW-C5 — the dual, both directions off one integer, and the outcome that is neither',
   (i) => {
     const mk = (endP) => ({
-      from: 'inspire', to: 'connect', delayMs: 650, startIdx: 1, dir: 1, endP, midFlight: { resolving: true },
+      from: 'inspire', to: 'equip', delayMs: 650, startIdx: 1, dir: 1, endP, midFlight: { resolving: true },
     });
     const r = evaluateDual(i.ends.map(mk));
     return [r.legs, r.violations.map((v) => v.slice(0, 13))];
-  }, { ends: [0.523, 0.725, 0.26, 0.6] }, [
+  }, { ends: [AP.equip, AP.connect, AP.inspire, 0.6] }, [
     [1, 2, 0, null],
     ['DW-C5 SKIP in', 'DW-C5 REFUSED', 'DW-C5 inspire'],
   ],
@@ -587,9 +595,9 @@ pin('DW-DUAL-1', 'DW-C5 — the dual, both directions off one integer, and the o
 pin('DW-DUAL-2', 'D63 — a run whose second stream arrived AFTER the resolution landed is DISCARDED, not pooled',
   (i) => {
     const mk = (endP, resolving) => ({
-      from: 'inspire', to: 'connect', delayMs: i.delayMs, startIdx: 1, dir: 1, endP, midFlight: { resolving },
+      from: 'inspire', to: 'equip', delayMs: i.delayMs, startIdx: 1, dir: 1, endP, midFlight: { resolving },
     });
-    const r = evaluateDual([mk(0.523, true), mk(0.725, i.secondResolving)]);
+    const r = evaluateDual([mk(AP.equip, true), mk(AP.connect, i.secondResolving)]);
     return [r.legs, r.violations.length, r.rows.map((x) => x.midFlightProved)];
   }, { delayMs: 650, secondResolving: false }, [[1, 2], 0, [true, false]],
   'the mirror of flick-probe.mjs, which refused any trial where the ride was NOT idle before its single '
@@ -599,20 +607,21 @@ pin('DW-DUAL-2', 'D63 — a run whose second stream arrived AFTER the resolution
 
 pin('DW-STEPS-1', 'the leg arithmetic on a LOOPED route, including the wrap and the outcome that is not a rest',
   (i) => [
-    stepsAdvanced(1, 0.725, 1), stepsAdvanced(1, 0.97, 1),
-    stepsAdvanced(3, 0.523, -1), stepsAdvanced(i.fromFinal, 0.26, 1), stepsAdvanced(1, 0.6, 1),
-  ], { fromFinal: 4 }, [2, 3, 1, 2, null],
+    stepsAdvanced(1, AP.owned, 1), stepsAdvanced(1, AP.final, 1),
+    stepsAdvanced(4, AP.connect, -1), stepsAdvanced(i.fromFinal, AP.inspire, 1), stepsAdvanced(1, 0.6, 1),
+  ], { fromFinal: 5 }, [3, 4, 1, 2, null],
   'the fourth is the WRAP: forward from `final` past `mission` to `inspire` is two legs, not minus '
   + 'three. The fifth is a ride that stopped at p 0.6, which is no anchor — reported as null rather '
   + 'than rounded into whichever neighbour is closer, because a rounded null is an invented measurement');
 
 pin('DW-WIN-1', 'the cadence, DERIVED from the route rather than from a remembered millisecond',
   (i) => {
-    const transitOf = (lo) => (Math.abs(lo - 0.26) < 1e-9 ? i.inspireS : (Math.abs(lo - 0.523) < 1e-9 ? 0 : 1.8));
+    const transitOf = (lo) => (Math.abs(lo - AP.inspire) < 1e-9 ? i.inspireS : (Math.abs(lo - AP.connect) < 1e-9 ? 0 : 1.8));
     return dualDelaysMs({ anchors: ANCHORS, transitOf }).map((w) => `${w.from}->${w.to} ${w.declared} ${w.ms} [${w.delays}]`);
   }, { inspireS: 1.3 }, [
     'mission->inspire 1.8 1800 [450,900,1350]',
-    'inspire->connect 1.3 1300 [325,650,975]',
+    'inspire->equip 1.3 1300 [325,650,975]',
+    'equip->connect 1.8 1800 [450,900,1350]',
     'connect->owned null 1800 [450,900,1350]',
     'owned->final 1.8 1800 [450,900,1350]',
   ],
@@ -882,17 +891,17 @@ const parkOn = (run, p, ms) => {
 const MUTANTS = [
   /* --- the route geometry: the value S-4 says must not move silently --- */
   M('DW-ROAD', 'MR1 — `owned`\'s rest is moved to the middle of its own road (segVh 2.27/7.00 -> 4.635/4.635)',
-    [3], (i) => chapter(i, 'owned', (c) => { c.segVh = [4.635, 4.635]; })),
+    [4], (i) => chapter(i, 'owned', (c) => { c.segVh = [4.635, 4.635]; })),
   M('DW-ROAD-OWNED', 'MR2 — the same move, read through the single-chapter pin',
     ['afterVh', 'beforeVh', 'restAt'], (i) => chapter(i, 'owned', (c) => { c.segVh = [4.635, 4.635]; })),
   M('DW-ASYM', 'MR3 — `final` is given the longest road behind its rest instead of `owned`',
     ['afterVh', 'id', 'ofOwnRoad'], (i) => chapter(i, 'final', (c) => { c.segVh = [0.6, 10.0]; })),
   M('DW-ROAD', 'MR4 — `connect`\'s split moves, which no other pin in this file reads',
-    [2], (i) => chapter(i, 'connect', (c) => { c.segVh = [7.0, 3.85]; })),
+    [3], (i) => chapter(i, 'connect', (c) => { c.segVh = [10.0, 5.85]; })),
   M('DW-ANCHORS', 'MR5 — a chapter span changes, so every anchor from its own rest onward moves',
-    [1, 2, 3, 4], (i) => chapter(i, 'inspire', (c) => { c.span = 26; })),
+    [1, 2, 3, 4, 5], (i) => chapter(i, 'inspire', (c) => { c.span = 26; })),
   M('DW-ANCHORS', 'MR6 — `connect`\'s declared stop moves within its own leg',
-    [2], (i) => chapter(i, 'connect', (c) => { c.stops = [0.5]; })),
+    [3], (i) => chapter(i, 'connect', (c) => { c.stops = [0.5]; })),
 
   /* --- the gesture generator --- */
   M('DW-SEED', 'MS1 — the seed changes, so these are no longer DEF-OWNED\'s eleven trials',
@@ -962,7 +971,7 @@ const MUTANTS = [
   M('DW-LAND-1', 'ML7 — the abandoned landing is given 300 ms instead of 120, which moves it across the floor',
     null, (i) => ({ ...i, shortMs: 300 })),
   M('DW-DUAL-1', 'ML8 — every dual run lands two legs on, so the contract row, the REFUSAL row and the not-a-rest row all vanish into a single repeated SKIP',
-    null, (i) => ({ ...i, ends: i.ends.map(() => 0.725) })),
+    null, (i) => ({ ...i, ends: i.ends.map(() => AP.connect) })),
   M('DW-DUAL-2', 'ML9 — the discarded run is marked as having been delivered mid-flight after all, so its extra leg is judged',
     null, (i) => ({ ...i, secondResolving: true })),
   M('DW-STEPS-1', 'ML10 — the wrapping start moves off `final`, so the leg count that must survive the wrap is a different one',

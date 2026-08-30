@@ -666,6 +666,7 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
     i.naming.includes('main.js'), i.naming.includes('organism/furniture.js')],
   { naming: NAMING_CAMERA, scanned: SCANNED },
   [['journey/camera-blend.js', 'journey/chapters/connect/index.js',
+    'journey/chapters/equip/index.js',
     'journey/chapters/final/index.js', 'journey/chapters/final/interact.js',
     'journey/chapters/inspire/index.js', 'journey/chapters/owned/index.js',
     'journey/director.js', 'journey/frame/publication.js', 'journey/journey.js',
@@ -847,7 +848,16 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
        pin's own code() reader. The thirteen-file naming allow-list above and
        both exclusion booleans are byte-identical; only the disk-derived scan
        cardinality moved by the two accepted files. */
-    13, 126, false, false],
+    /* RE-BASELINED 13 -> 14 files and 126 -> 128 scanned at the 2026-08-30
+       Equip wave. The two new files are journey/chapters/equip/camera.js,
+       which names no `camera` in CODE (it is a leg of poses, and its prose is
+       stripped by this pin's own code() reader), and journey/chapters/equip/
+       index.js, which DOES: it reads `sceneApi.camera` once, in `entryReady`,
+       to answer "is the eye under the cap yet" as a camera-pure predicate —
+       the same shape and the same justification as the four chapter modules
+       already on this list. It is a chapter naming the camera to gate its own
+       reveal, which is precisely what boundaries.md section B.7 admits. */
+    14, 128, false, false],
   'boundaries.md section B.7 pins 11 and the two publication owners are named. main.js and organism/furniture.js are in the SCANNED roots and in neither list — section B.6a\'s reclassification, and the scan is what keeps it true. The scanned cardinality is pinned beside the hits so a scan that read nothing reports 0/0 rather than a clean 12');
 
 pin('C6', 'D46 — the camera scan DOES see a code mention and does NOT see a prose one, which is the whole difference between 11 and the raw grep\'s 44',

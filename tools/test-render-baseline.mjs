@@ -1187,6 +1187,8 @@ const SOURCE_MANIFEST = [
     "journey/chapters/connect/tendrils-baked.js",
     "journey/chapters/connect/tendrils-materials.js",
     "journey/chapters/connect/tendrils.js",
+    "journey/chapters/equip/camera.js",
+    "journey/chapters/equip/index.js",
     "journey/chapters/final/camera.js",
     "journey/chapters/final/canopy-baked.js",
     "journey/chapters/final/canopy-levels.js",

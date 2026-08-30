@@ -187,6 +187,7 @@ const CONTENT_MOD = await import('../content/content.js');
  *  any set but this one (D94 — no pin reads a hand-written collection). */
 const SCHEMA_NODE_IDS = Object.freeze({
   inspire: STRUCTURE.FIXED_HOTSPOTS.inspire,
+  equip: STRUCTURE.FIXED_HOTSPOTS.equip,
   connect: STRUCTURE.FIXED_HOTSPOTS.connect,
   owned: CONTENT_MOD.CONTENT.contributors.map((c) => c.id),
 });
@@ -806,6 +807,7 @@ pin('B3', 'THE REAL REGISTRAR, IMPORTED AND RUN: journey/chapter-interactions.js
       hotspots: [],
       chapters: {
         inspire: { nodeIds: i.nodeIds.inspire, setSelected: true, labelPolicy: true },
+        equip: { nodeIds: i.nodeIds.equip, setSelected: true },
         connect: { nodeIds: i.nodeIds.connect, selectionNull: true },
         owned: { nodeIds: i.nodeIds.owned, nodeRadius: true, setSelected: true },
       },
@@ -832,11 +834,11 @@ pin('B3', 'THE REAL REGISTRAR, IMPORTED AND RUN: journey/chapter-interactions.js
   },
   { register: REGISTRAR_MOD.registerChapterInteractions, nodeIds: SCHEMA_NODE_IDS },
   {
-    globalReads: 0, privateReaches: 0, threw: null, registered: 22,
-    order: ['inspire', 'connect', 'owned'],
+    globalReads: 0, privateReaches: 0, threw: null, registered: 24,
+    order: ['inspire', 'equip', 'connect', 'owned'],
     radiusOwners: ['owned'],
   },
-  'the 22 registered nodes and the RUNTIME_CHAPTER_IDS order are the properties C05 slice C\'s prose says must not change; they appear here as by-products of the closure run, and the load-bearing halves of this row are the two zeros beside them');
+  'the 24 registered nodes and the RUNTIME_CHAPTER_IDS order are the properties C05 slice C\'s prose says must not change; they appear here as by-products of the closure run, and the load-bearing halves of this row are the two zeros beside them');
 
 pin('B4', 'THE VALUES, not merely the wiring (C05 F-3): labelPolicy\'s return reaches the applier for every mounted chapter\'s nodes, policyDone is set on exactly those, and an UNMOUNTED chapter re-arms the pass',
   (i) => { const r = runMigrated(i.text); return { applied: r.applied, pending: r.pending, policyDone: r.policyDone }; },
