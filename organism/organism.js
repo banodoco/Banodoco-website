@@ -2236,6 +2236,19 @@ return {
   consts: { CAP_Y, CAP_R },
   /** Ease a highlighted region ('spores' | 'stem' | 'ground') toward on/off; unknown names are ignored. */
   setHighlight: highlights.setHighlight,
+  /** Start the touch wave from an arbitrary WORLD point — the same single wave
+   *  the pointer tap above plants, exposed so a caller outside this module can
+   *  answer in the specimen's own language instead of inventing a second one.
+   *  `profile` is uPulseP verbatim: [wave speed, range falloff, amplitude];
+   *  omit it to keep whatever the last trigger set. There is exactly ONE wave
+   *  in the shader, so this REPLACES any ring still travelling rather than
+   *  adding to it — callers that want two rings must space them in time. */
+  pulseFrom(world, profile) {
+    if (!world) return;
+    pulseC.value.copy(world);
+    pulseT.value = 0;
+    if (profile && profile.length === 3) pulseP.value.set(profile[0], profile[1], profile[2]);
+  },
   /** Recompose the camera (panX/camY/camZ/targetY/fov). seconds=0 snaps; seconds>0 eases via a
    *  cancellable 'view-tween' animator — see the setView JSDoc above for full behavior. */
   setView,
