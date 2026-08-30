@@ -82,6 +82,7 @@ import { endOf } from '../../route.js';
 import { FIXED_HOTSPOTS } from '../../structure.js';
 import { isBaked, geometry, payload, registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 import { createDial } from '../../dial.js';
+import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
 import { T_QA_ACTIVE, T_QS_VALUE, getTransformStorage, setTransformStorage } from '../../../flags.js';
 
 const TAU = Math.PI * 2;
@@ -290,6 +291,33 @@ export function createInspire(sceneApi) {
   const group = new THREE.Group();
   group.visible = false;
   sceneApi.groups.mushroom.add(group);
+
+  /* PORTRAIT GROUND-RIBBON RECEDE (2026-08-30, owner's screenshot: a thin
+     line "looks out of place" along the bottom-left of the phone Inspire
+     frame). The line is one of the organism's thick tapered ground
+     strands — groundGroup child 5, the "floor highways" ribbon Mesh
+     (organism.js's ribbon block) — whose brightest strand survives the
+     near-fade into the close-up portrait frame's bottom-left corner as a
+     smooth wide bar, foreign next to the fine web it anchors. Isolated by
+     per-child visibility toggling on the rendered 430x932 rest: hiding
+     child 5 removes exactly the reported band and nothing else. The same
+     strand cuts diagonally under the copy on the tablet's portrait frame
+     (confirmed on the rendered 744x1133 rest, second review pass), so the
+     gate is the full portrait band the site itself uses (<= 900,
+     portrait — hero.css's tablet boundary), not just the phone contract.
+     Composition-level cure, no geometry edits: a claim on the shared
+     hero-ground dim ledger (the Connect/Final precedent — one ledger,
+     darkest active request wins, releases without erasing siblings) that
+     dims ONLY the ribbon entry, to the same 0.12-0.15 whisper Final holds
+     it at. Auditioned on the rendered frame at 0.12 / 0.35: 0.35 still
+     reads as the reported bar; 0.12 leaves a faint continuity trace.
+     Driven below off effMin behind the D26/D27 late gate, so it fades with
+     the far-history recede and cannot pop across the T1 seam or a nav
+     snap; landscape and desktop frames are byte-identical. */
+  const portraitRibbonDim = createHeroGroundDimClaim(sceneApi, {
+    keeps: [1, 1, 1, 1, 1, 0.12, 1],
+    fallback: 1,
+  });
 
   const glowTex = makeGlowTexture();
   const streakTex = makeStreakTexture();
@@ -1623,6 +1651,15 @@ export function createInspire(sceneApi) {
     const effMin = Math.min(eff[0], eff[1], eff[2]);
     const gz = effMin < 0.55 ? 0 : ((effMin - 0.55) / 0.45);
     _grad.k = 0.24 * (gz * gz * (3 - 2 * gz)) * effMin * T;
+    // Portrait ground-ribbon recede (see the claim block above): rides the
+    // same late gate as the far-history recede, so it is a pure function
+    // of scroll position — reverse scrubs restore it on the same schedule,
+    // and dt = 0 landings settle it in one frame like everything else.
+    // set(0) releases the claim entirely off-portrait and off-chapter.
+    portraitRibbonDim.set(
+      (typeof window !== 'undefined'
+        && window.innerWidth <= 900 && window.innerHeight > window.innerWidth)
+        ? gz * gz * (3 - 2 * gz) : 0);
     // The seat, driven (runs OUTSIDE the anyVisible gate so the release path
     // always executes): one call carries the whole frame's intent — the
     // system steers its own dots first, then its color pass reads the
