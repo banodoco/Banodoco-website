@@ -94,15 +94,88 @@
   animation: j-mycelium-wake 0.62s ease-out both;
 }
 
-/* THE STAGE IS THE WHOLE CARD (Hannah, 2026-08-18: "we shouldn't have the
-   bottom part … explain everything in the main part") — the house block
-   below is hidden on rich cards and each stage carries its own name, copy
-   and door in its project's voice. The elements stay in the DOM: the short
-   line is still the chip's aria-describedby text, so what a screen reader
-   hears is unchanged. */
-.j-pop-rich .j-pop-t,
-.j-pop-rich .j-pop-s,
-.j-pop-rich .j-pop-link { display: none; }
+/* ONE RHYTHM, SIX VOICES (2026-08-30, polish §3A). From 2026-08-18 until
+   this pass the house block was display:none here ("the stage is the whole
+   card") and each stage carried its own name, copy and door wherever its
+   world put them — which left ArtCompute's card never saying "ArtCompute"
+   and put six doors in six different corners. The polish brief re-seats the
+   house block as the shared shell frame around every stage: the initiative's
+   NAME in its own accent colour, the house SHORT line under it, the stage as
+   the whole body, and ONE quiet door anchored at the foot. The stage keeps
+   complete ownership of everything inside its window; only identity and the
+   exit move out to the shell, so all six cards answer "what is this, what
+   does it do, where do I go" in the same three places. The short line keeps
+   double duty as the chip's aria-describedby text, exactly as before. */
+.j-pop.j-pop-rich {
+  align-items: stretch;
+  gap: 0;
+}
+.j-pop-rich .j-pop-t {
+  order: 0;
+  margin: 0.42rem 0.5rem 0.08rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--card-accent, var(--parchment));
+}
+.j-pop-rich .j-pop-s {
+  order: 1;
+  margin: 0 0.5rem 0.55rem;
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+.j-pop-rich .j-pop-frame { order: 2; }
+/* The door: full-width, hairline above, arrow that answers the pointer.
+   The label stays whatever content.js gave the node — the shell provides
+   the place, the initiative provides the words and the colour. */
+.j-pop-rich .j-pop-link {
+  order: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0.55rem 0 0;
+  padding: 0.5rem 0.5rem 0.22rem;
+  border-bottom: 0;
+  border-top: 1px solid rgba(217, 164, 65, 0.16);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: var(--card-accent, var(--gold-bright));
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+.j-pop-rich .j-pop-link::after {
+  content: "\2192";
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  transition: transform 0.25s ease;
+}
+.j-pop-rich .j-pop-link:is(:hover, :focus-visible) { opacity: 1; }
+.j-pop-rich .j-pop-link:is(:hover, :focus-visible)::after { transform: translateX(3px); }
+/* A node with no destination (2RP, until it launches) keeps no door at all;
+   this must out-cascade the display:flex above because cards.css loads after
+   site.css's own `[hidden]` belt. */
+.j-pop-rich .j-pop-link[hidden] { display: none; }
+
+/* Each initiative's accent — the one colour the shell borrows from the world
+   behind its window. Sources: arca's site red warmed to read on the house
+   dark; ArtCompute's own #39ff14; 2RP as print parchment; ADOS's white mark;
+   Hivemind wears the house gold (it has no brand colour, by its own note
+   below); Discord's blurple lifted for small-caps legibility. */
+.j-pop[data-node="arca"]       { --card-accent: #e0745f; }
+.j-pop[data-node="artcompute"] { --card-accent: #39ff14; }
+.j-pop[data-node="tworp"]      { --card-accent: #f4e4c1; }
+.j-pop[data-node="ados"]       { --card-accent: #ffffff; }
+.j-pop[data-node="hivemind"]   { --card-accent: #d9a441; }
+.j-pop[data-node="discord"]    { --card-accent: #8891f2; }
+
+/* WHAT THE SHELL TOOK OVER, the stages stop saying twice: the six in-voice
+   doors fold into the one anchored door above, and arca's in-scrim descriptor
+   line — the same sentence as the shell's short line — steps aside for the
+   record it was crowding. The stats stay: they are the artwork's own
+   caption, not identity. */
+.j-pop-rich .card-cta { display: none; }
+.j-pop[data-node="arca"] .ag-desc { display: none; }
 
 .j-pop-stage {
   position: relative;
