@@ -1619,9 +1619,22 @@ export function createRail({ onNav } = {}) {
   let dockingFlight = null;
   let dockingFlightFrom = 0;
   let dockingFlightTarget = 0;
+  // The row coordinate a flight departs from — captured off the painted value
+  // when the ticket changes, exactly as dockingFlightFrom is. See update().
+  let flightFromPosition = 0;
+  // ...and the compass's painted presence, captured at the same moment for
+  // the same reason. `ringPresence` is what paintHorizontalProgress last put
+  // on screen; `flightFromRing` is what the current flight departed from.
+  let ringPresence = 1;
+  let flightFromRing = 1;
   let handoffFlight = null;
   let handoffFrom = railHandoffRest('mission');
   let handoffVisual = railHandoffRest('mission');
+  // The navigation's own hero->persistent pose. Painted every frame, captured
+  // when a ticket changes — see paintPurposeHandoff for why it is not the
+  // tree's coordinate and why it still has to depart from the tree's pixel.
+  let navPoseVisual = railHandoffRest('mission').tree;
+  let navPoseFrom = navPoseVisual;
 
   /* THE CROSSING, GIVEN AN OWNER — and only this one crossing (DEFECT-01 #2).
      The centred row no longer writes ANY inline geometry (the DOCK_INLINE
@@ -1923,6 +1936,22 @@ export function createRail({ onNav } = {}) {
     return RAIL_RESTS.length - 1;
   }
 
+  /** ...and back again, off the same table. The row's own coordinate is the
+   *  continuous chapter index — it is what the ring rides, what the glyph
+   *  proximity reads and what the connectors fill against — but four readers
+   *  in update() below are authored in `p` (`chapterAt`, the layout flag, the
+   *  handoff state). Exact at every rest by construction, so a landing and a
+   *  placement are bit-identical to reading `p` directly; only the pacing
+   *  BETWEEN two rests differs, and between two rests the row's index is the
+   *  coordinate the visitor is actually watching. */
+  function restAtIndex(pos) {
+    const last = RAIL_RESTS.length - 1;
+    if (!(pos > 0)) return RAIL_RESTS[0];
+    if (pos >= last) return RAIL_RESTS[last];
+    const i = Math.floor(pos);
+    return RAIL_RESTS[i] + (RAIL_RESTS[i + 1] - RAIL_RESTS[i]) * (pos - i);
+  }
+
   /* ---- THE ROW'S PIXEL FRAME --------------------------------------------
      The retired strip was uniform — five 48px slots, one gap — so "chapter
      coordinate x step" was its whole geometry. The centred row is not: two
@@ -2025,7 +2054,7 @@ export function createRail({ onNav } = {}) {
   /** Paint the row directly from real journey progress.
    *  No transition or timer sits between input and output: reverse scrolling
    *  reverses immediately, and a stopped scrub leaves every pixel frozen. */
-  function paintHorizontalProgress(pos, wrap = null) {
+  function paintHorizontalProgress(pos, wrap = null, ringFrom = 1, ringPhase = 1) {
     const frame = rowFrame();
     const { L } = frame;
     const phase = wrap
@@ -2036,7 +2065,14 @@ export function createRail({ onNav } = {}) {
       : Math.max(0, Math.min(N - 1, Number(pos) || 0));
     const at = rowPoint(frame, horizontalPosition);
     let ringX = at.x;
-    let ringOpacity = 1;
+    /* The compass's own presence departs from what is painted too, on the same
+       flight phase as its position. A lap hides the ring outright while it
+       crosses the row's toroidal seam (below), so an interruption taken inside
+       that window used to hand the ordinary branch a flat 1 and the compass
+       arrived out of nowhere at 0.65 alpha — measured on the same
+       Mission -> Purpose lap the position note in update() describes. With no
+       lap in the history ringFrom is 1 and this is the constant it was. */
+    let ringOpacity = ringFrom + (1 - ringFrom) * Math.max(0, Math.min(1, ringPhase));
     if (wrap) {
       /* The row has a toroidal seam just beyond its two ends. A forward
          Final -> Mission wrap exits to the RIGHT, resets while one
@@ -2083,6 +2119,7 @@ export function createRail({ onNav } = {}) {
        coordinate the scale, the drop and the scrim ride. dockingU is last
        frame's value when the paint runs first in a frame; both are
        continuous in p, so the seam is invisible. */
+    ringPresence = ringOpacity;
     activeRing.style.opacity = (ringOpacity * dockingU).toFixed(6);
     root.style.setProperty('--nav-position', horizontalPosition.toFixed(4));
     root.classList.toggle('j-rail-wrap-progress', !!wrap);
@@ -2198,6 +2235,7 @@ export function createRail({ onNav } = {}) {
       if (handoffFlight !== ticket) {
         handoffFlight = ticket;
         handoffFrom = { ...handoffVisual };
+        navPoseFrom = navPoseVisual;
       }
       handoffVisual = wrap
         ? railHandoffWrapVisual({
@@ -2216,9 +2254,31 @@ export function createRail({ onNav } = {}) {
     }
 
     const treeU = Math.max(0, Math.min(1, handoffVisual.tree));
-    const navPoseU = wrap
+    /* THE NAVIGATION'S POSE IS CARRIED ACROSS A TICKET CHANGE, LIKE EVERY
+       OTHER PAINTED VALUE HERE (2026-08-30). It is deliberately not the tree's
+       coordinate: a lap breathes the row from its hero pose to its persistent
+       one over the WHOLE orbit, while Purpose's subtree is a late endpoint
+       reveal (railWrapNavigationProgress says so). But those are two different
+       curves, and until this the row simply changed which one it was reading
+       the instant the ticket changed type. A press on Connect 2.2s into a
+       Mission -> Purpose lap read 0.53 from the lap's curve on one frame and
+       0.00 from the tree's on the next: --purpose-rail-lift is that number
+       times L.purposeLift, so the whole row dropped in a single frame,
+       measured 38.7px at 1440x900, in the middle of answering a click.
+       Departing from the value already painted is the same rule handoffFrom,
+       dockingFlightFrom and flightFromPosition all keep, and it costs nothing
+       anywhere else: with no lap in the history navPoseFrom IS handoffFrom's
+       tree, so the expression below is the one that was here. */
+    navPoseVisual = wrap
       ? railWrapNavigationProgress({ targetChapterId: selectedChapterId, phase: wrap.phase })
-      : treeU;
+      : flight
+        ? railHandoffVisual({
+          from: { tree: navPoseFrom, ownership: 0 },
+          targetChapterId: chapterAt(flight.targetP).id,
+          phase: flight.phase,
+        }).tree
+        : treeU;
+    const navPoseU = navPoseVisual;
     const ownershipU = Math.max(0, Math.min(1, handoffVisual.ownership));
     const { L, purposeX } = rowFrame();
     /* The children are a viewport-centred pair, not a cluster hanging from
@@ -2461,23 +2521,53 @@ export function createRail({ onNav } = {}) {
       paintHorizontalProgress(0, horizontalWrap);
     } else {
       horizontalWrap = null;
+      let position;
+      let ringEase = null;
       if (railFlight) {
         horizontalFlight = railFlight;
         if (dockingFlight !== railFlight) {
           dockingFlight = railFlight;
           dockingFlightFrom = dockingU;
           dockingFlightTarget = railFlight.targetP < FIRST_OUTSIDE_P ? 0 : 1;
+          /* ...AND THE ROW'S OWN COORDINATE DEPARTS FROM THE PIXEL ON SCREEN
+             TOO (2026-08-30). The dock captured the value already painted
+             three lines up and the row did not, so the row took its origin
+             from the ticket — and a ticket's `fromP` is journey STATE, which
+             an interrupted move has already parked at the move it interrupted.
+             Ordinary click over ordinary click survived that, because
+             journey.js hands the replacement its predecessor's interpolated
+             coordinate. A click over a WRAP does not: the lap carries no
+             railFlight for that code to read, so `fromP` arrives as the wrap's
+             own destination. Measured on a Mission -> Purpose lap interrupted
+             at 2.2s by a press on Connect: the row was painting index 1.53
+             with the ring parked off the left edge at the seam, and the click
+             frame put it at index 4.00, x = 336px, opacity 0.38 — the compass
+             appeared at the far RIGHT end of the row and then walked back to
+             Connect, having been asked to go left. Capturing what is painted
+             answers every ticket source with one rule and needs no second
+             conversion: at a rest it is the same number `fromP` would have
+             given, and mid-move it is the one the visitor is looking at. */
+          flightFromPosition = horizontalPosition;
+          flightFromRing = ringPresence;
         }
         const phase = Math.max(0, Math.min(1, Number(railFlight.phase) || 0));
-        railP = railFlight.fromP
-          + (railFlight.targetP - railFlight.fromP) * phase;
+        position = flightFromPosition
+          + (progressIndex(railFlight.targetP) - flightFromPosition) * phase;
+        ringEase = { from: flightFromRing, phase };
+        /* One coordinate, and the p-authored readers below take it back
+           through the same table (restAtIndex). Keeping a separately
+           interpolated `railP` beside the painted index is how the ring and
+           the `now`/`active` marks come to disagree about which chapter the
+           picture is in. */
+        railP = restAtIndex(position);
       } else {
         horizontalFlight = null;
         dockingFlight = null;
+        position = progressIndex(railP);
       }
-      const position = progressIndex(railP);
       dockingProgress = Math.min(1, position);
-      paintHorizontalProgress(position);
+      paintHorizontalProgress(position, null,
+        ringEase ? ringEase.from : 1, ringEase ? ringEase.phase : 1);
     }
     /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
 
