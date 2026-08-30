@@ -2102,6 +2102,11 @@ function setView({ panX: p = 0, camY: cy = 2.05, camZ: cz = 8.8, targetY: ty = 2
   });
 }
 
+// A single subscriber, not a list: the one thing that needs to know the
+// picture has come back is the ride's input model, and a list would invite
+// registrations nobody can enumerate at the one moment it fires.
+let renderResumeHook = null;
+
 // =====================================================================
 // 13. PUBLIC API — the object returned by createScene()
 // =====================================================================
@@ -2185,7 +2190,20 @@ return {
    *  a full frame each time. The clock, the animators and the rAF cadence are
    *  deliberately left alone; organism/animation.js's gate carries the
    *  measurement behind that choice. */
-  setRenderEnabled: animationLifecycle.setRenderEnabled,
+  setRenderEnabled(on) {
+    animationLifecycle.setRenderEnabled(on);
+    // Fired on the RESUME edge only, and before the resumed frame renders:
+    // the subscriber's job is to decide what happens to input that was in
+    // flight when the picture stopped, and it has to have decided by then.
+    if (on && renderResumeHook) renderResumeHook();
+  },
+  /** Subscribe to the resume edge of setRenderEnabled() — the moment the
+   *  scene starts painting again after a stretch the visitor watched nothing
+   *  through. Pass null to unsubscribe. One subscriber; a second call
+   *  replaces the first. */
+  setRenderResumeHook(fn) {
+    renderResumeHook = typeof fn === 'function' ? fn : null;
+  },
   /** Drop the TAA accumulation history so the next rendered frame starts a
    *  fresh average instead of blending against whatever the pass last held.
    *  A restored WebGL context has lost the history texture's CONTENTS but not
