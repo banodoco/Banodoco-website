@@ -540,10 +540,18 @@ const SCENARIOS = {
     r.log.push(`hero:${n3(r.t.stepHeroEntry(0.5))}`);
     return [r.log, `play=${r.t.blend.play}/rewound=${r.t.rewoundHome}`];
   },
-  /* REWIND + LANDING HOME — the steered lap reaches its own first frame. */
+  /* REWIND + LANDING HOME — the steered lap reaches its own first frame.
+     Two laps, because the property ranges over both: one REVERSED BEFORE IT
+     EVER STEPPED (two bookend controls pressed between two animation frames
+     — t is exactly 0 and play is already -1), which is not home because it
+     never left; and the same lap once it has a clock behind it, which is.
+     The second beginBlend replaces the first exactly as a jump overtaking a
+     jump does; nothing of the first was ever stepped. */
   rewind(factory) {
     const r = makeRig(factory, { owned: false });
     r.t.beginFlight({ railWrap: { dir: 1, homeP: 0.75, phase: 0 }, railFlight: null, chapterEntry: null });
+    r.t.beginBlend(blendOf({ wrapDir: 1, dur: 4, homeP: 0.75, play: -1 }));
+    r.log.push(`rewound:${r.t.rewoundHome}`);
     r.t.beginBlend(blendOf({ wrapDir: 1, dur: 4, homeP: 0.75, t: 0.5, play: -1 }));
     r.log.push(`rewound:${r.t.rewoundHome}`);
     r.t.stepCamBlend(1);                          // t clamps to 0
@@ -626,10 +634,11 @@ pin('E3', 'REVERSAL — the lap retraces its own path: play flips ONCE, the copy
     '>> play=-1/rewound=false'],
   '2026-08-16: a down-wrap that rewinds is an arrival back INTO the field, not a departure from it. The second steer is a no-op — a same-way gesture must not re-announce');
 
-pin('E4', 'REWIND AND LANDING HOME — a fully rewound lap is recognised only once its clock reaches zero, and landing places the journey back on the rest it departed, hero first so the capture cannot bake a lap frame',
+pin('E4', 'REWIND AND LANDING HOME — a lap that never advanced off its own first frame is not home at all, a fully rewound one is recognised only once its clock reaches zero, and landing places the journey back on the rest it departed, hero first so the capture cannot bake a lap frame',
   (i) => runScenario(i.f, 'rewind'),
   { f: compileController(SRC.controller) },
-  ['rewound:false', 'director.applyHeroPose', 'cam.fov', 'lens.setLookOverride(look)',
+  ['rewound:false',
+    'rewound:false', 'director.applyHeroPose', 'cam.fov', 'lens.setLookOverride(look)',
     'rewound:true',
     'lens.setLookOverride(null)',
     'mission.setBlending(false,undefined,undefined)', 'final.setBlending(false,undefined,undefined)',
