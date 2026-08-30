@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import re
 import shutil
 import sys
 from pathlib import Path, PurePosixPath
@@ -14,6 +15,16 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "deploy" / "public-files.json"
 REVISION_FILE = "release-revision.txt"
+
+STATIC_FROM = re.compile(
+    r'''(?ms)^[ \t]*(?:import|export)\b(?:(?!;).)*?\bfrom\s*["']([^"']+)["']'''
+)
+SIDE_EFFECT_IMPORT = re.compile(
+    r'''(?m)^[ \t]*import\s*["']([^"']+)["']'''
+)
+DYNAMIC_IMPORT = re.compile(
+    r'''\bimport\s*\(\s*["']([^"']+)["']\s*\)'''
+)
 
 
 def matches(path: str, patterns: list[str]) -> bool:
@@ -49,6 +60,37 @@ def selected_files(config: dict) -> list[tuple[Path, Path]]:
     return [(source, Path(relative)) for relative, source in sorted(selected.items())]
 
 
+def verify_relative_module_graph(destination: Path) -> None:
+    """Fail when a shipped JavaScript module imports a file we did not ship."""
+    missing: list[str] = []
+    escaped: list[str] = []
+    for module in destination.rglob("*.js"):
+        source = module.read_text(encoding="utf-8")
+        specifiers: set[str] = set()
+        for pattern in (STATIC_FROM, SIDE_EFFECT_IMPORT, DYNAMIC_IMPORT):
+            specifiers.update(pattern.findall(source))
+        for specifier in sorted(specifiers):
+            if not specifier.startswith("."):
+                continue
+            clean = specifier.split("?", 1)[0].split("#", 1)[0]
+            target = (module.parent / clean).resolve()
+            try:
+                target.relative_to(destination)
+            except ValueError:
+                escaped.append(
+                    f"{module.relative_to(destination).as_posix()} -> {specifier}"
+                )
+                continue
+            if not target.is_file():
+                missing.append(
+                    f"{module.relative_to(destination).as_posix()} -> {specifier}"
+                )
+    if escaped:
+        raise ValueError("module imports escape public artifact: " + ", ".join(escaped))
+    if missing:
+        raise ValueError("module imports are absent from public artifact: " + ", ".join(missing))
+
+
 def verify(destination: Path, config: dict,
            copied: list[tuple[Path, Path]], origin: str, revision: str) -> None:
     missing = [path for path in config["required"] if not (destination / path).is_file()]
@@ -60,6 +102,8 @@ def verify(destination: Path, config: dict,
     leaked = sorted(present.intersection(config["forbidden"]))
     if leaked:
         raise ValueError("repository-only paths entered the artifact: " + ", ".join(leaked))
+
+    verify_relative_module_graph(destination)
 
     check_outputs = destination / "static" / "captures" / "_check"
     if check_outputs.exists():

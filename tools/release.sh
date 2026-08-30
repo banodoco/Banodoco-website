@@ -76,6 +76,7 @@ fi
 step "STAGE REVIEWED FILES"
 is_requested() {
   local changed=$1 requested
+  [ "${#STAGE_FILES[@]}" -gt 0 ] || return 1
   for requested in "${STAGE_FILES[@]}"; do
     [ "$changed" = "$requested" ] && return 0
   done
@@ -118,12 +119,14 @@ fi
 CHECKED_HEAD=$(git rev-parse HEAD)
 CHECKED_INDEX=$(git diff --cached --binary | shasum -a 256)
 step "CHECK STAGED TREE AND DEPLOY ARTIFACT"
-CHECK_ARGS=()
-[ "$SKIP_CAPTURES" = "1" ] && CHECK_ARGS+=(--skip-captures)
 step "DEVELOPER AND BROWSER CONTRACT"
 npm run check
 step "SCENE AND DEPLOY ARTIFACT CONTRACT"
-tools/check.sh "${CHECK_ARGS[@]}"
+if [ "$SKIP_CAPTURES" = "1" ]; then
+  tools/check.sh --skip-captures
+else
+  tools/check.sh
+fi
 [ "$CHECKED_HEAD" = "$(git rev-parse HEAD)" ] \
   || die "HEAD changed while checks ran; release stopped" 2
 [ "$CHECKED_INDEX" = "$(git diff --cached --binary | shasum -a 256)" ] \

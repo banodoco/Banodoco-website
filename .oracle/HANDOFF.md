@@ -13,10 +13,17 @@ The branch contains three reviewed/reliability checkpoints after base `1fa145f`:
 
 This stopping commit also adds the completed Wave3C source evidence and T2 unavailable record. No unfinished artifact-packaging implementation is included.
 
+Before the authorized push, the branch was merged non-destructively with current
+`origin/main` at `d08009f`. Eight overlapping files were reconciled against the
+current architecture, preserving both the upstream refactors and the verified
+reliability behavior described above. The resulting integration is the branch HEAD.
+
 ## Validation state
 
 - Focused/unit tests for every implemented repair passed.
-- Changed-file syntax, ESLint, cycle checks used by the earlier repair batch, artifact checks, and `git diff --check` passed at their checkpoints.
+- After integrating current `origin/main`, `npm run check` passed: ESLint reported zero errors (six pre-existing/current-main warnings), cycle analysis found no circular dependency, all unit/harness/static suites passed, all 48 contract suites passed in pinned fail-fast order, and all mutation controls passed.
+- `tools/check.sh --skip-captures` passed against this exact served checkout: the public artifact matched its allowlist and substituted source bytes, checkout identity was verified, and bake/meta gates were green.
+- The capture-drift portion of that final artifact gate was intentionally skipped because the host remained contaminated by unrelated browser/GPU workloads; the latest exclusive real-browser evidence below remains the browser stopping record.
 - Latest exclusive real-browser run:
   - seven non-live scenarios passed;
   - the live scenario reached the owned 120-second total deadline during `live Connect navigation`;

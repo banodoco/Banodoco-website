@@ -4,6 +4,7 @@
 // formerly-closure state arrives through `ctx` (built in organism.js).
 import * as THREE from 'three';
 import { TKDBG } from '../flags.js';
+import { EXITS as INSPIRE_EXITS, EXIT_SLOT } from '../inspire-exits.js';
 
 // =====================================================================
 // 10. SPORE CLOUD — shed from the gill surface across the cap's back side
@@ -39,7 +40,7 @@ export function createSpores(ctx) {
   // section — so the shed's stationary density genuinely carries three
   // soft streams for the chapter's lighting to pick out, and crossing a
   // boundary still moves nothing (positions stay a pure function of time
-  // and wind). The azimuths are the wind's own: ArtCompute's 5.83 was
+  // and wind). The azimuths are the wind's own: the source slot's 5.83 was
   // back-projected FROM the hero's visible stream (D16), and the flanks
   // sit ±1.15 rad along the rim (D18); the chapter's exit anatomy is
   // authored AT these filaments — if one ever moves, both files move
@@ -58,8 +59,8 @@ export function createSpores(ctx) {
   // GAIN_BODY/GAIN_KNOT below) while the far view reads as one irregular
   // wind. Same law everywhere, at every scroll position — the softening
   // is global, so positions remain scroll-independent by construction.
-  const FIL_AZ = [5.83, 6.98, 4.68];
-  const FIL_RISEMAX = [2.35, 1.32, 2.10]; // = EXITS riseMax (anatomy.js)
+  const FIL_AZ = INSPIRE_EXITS.map(exit => exit.az);
+  const FIL_RISEMAX = INSPIRE_EXITS.map(exit => exit.riseMax);
   const FIL_LAM = 0.060, FIL_SIG2 = 0.81, FIL_R2 = 2.25;
   // ---- D29 (2026-08-10, Hannah's Epilogue report: "three lines of glowing
   // spores coming from the main mushroom" at the Final pullback). Measured
@@ -111,7 +112,10 @@ export function createSpores(ctx) {
                                           // hugs the braid while the D30
                                           // cohort carries the far strays)
   const DISP_Y0 = 4.2, DISP_Y1 = 5.6;       // world-y gate (above the lit lanes)
-  const FIL_SEED_T = [0.75, 0.55, 1.60]; // per-filament seed-transit scale, re-calibrated to the D29 live equilibrium (see D27/D29)
+  const FIL_SEED_T = [];
+  FIL_SEED_T[EXIT_SLOT.CENTER] = 0.75;
+  FIL_SEED_T[EXIT_SLOT.LEFT] = 0.55;
+  FIL_SEED_T[EXIT_SLOT.RIGHT] = 1.60;
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
   let dispDir;                             // D29 per-dot decoherence directions
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
@@ -218,13 +222,13 @@ export function createSpores(ctx) {
     // leave the wind, so a stream can only be lit out of dust the wind
     // actually carries — and the old release arc [pi, 1.98pi], biased hard
     // toward the lee, never fed two of the three exit sectors (measured:
-    // 2,422 / 24 / 429 dots within 0.55 u of the ArtCompute / Arca / 2RP
+    // 2,422 / 24 / 429 dots within 0.55 u of the 2RP / Arca / ArtCompute
     // rise spines). The exits' rise corridors ARE wind streamlines seeded at
     // their rim lips (rise advance = DRIFT_RX/RZ, the breeze's own ratios),
     // so the honest reshape is at the SOURCE: the hymenium sheds around a
     // wider sweep of the margin, one smooth single-peaked density — densest
-    // at the lee (az ~5.9, ArtCompute's side, keeping it the primary
-    // stream), tapering through both flank sectors (2RP az 4.68, Arca az
+    // at the lee (az ~5.9, 2RP's side, keeping it the primary
+    // stream), tapering through both flank sectors (ArtCompute az 4.68, Arca az
     // 6.98) to near-zero tails, so the landing reads as ONE wind wrapping
     // the cap, not three pre-drawn plumes. The BREEZE vector, the
     // integrator, and the age-scatter law are untouched — each birth still
@@ -370,6 +374,19 @@ export function createSpores(ctx) {
     pos.needsUpdate = true;
   }
 
+  // ---- R03: ownership bookkeeping for registerDrift()'s attachments ----
+  // Three things get attached below (the pointermove listener, the
+  // document mouseleave listener, and the 'spore-drift' animator) and,
+  // before this order, nothing ever detached any of them (see
+  // docs/code-health/evidence/2026-08-21-elegance-run-01/r03/CHARACTERIZATION.md).
+  // These stay closure-scoped to this createSpores() call — never hoisted
+  // to module scope — so two instances never share this bookkeeping (see
+  // the CHARACTERIZATION note on why that matters: this file has no
+  // module-global state today, and these variables must not become the
+  // first).
+  let driftAttached = false, driftDisposed = false;
+  let offPointerMove = null, offMouseLeave = null, offDriftAnimator = null;
+
   // ---- mouse wind + the drift integrator ----
   // Called by organism.js at the exact position the inline block held
   // before the M2 split. ORDERING CONSTRAINT (load-bearing): 'spore-drift'
@@ -381,6 +398,13 @@ export function createSpores(ctx) {
   // the seat writes light, render sees both: that order is proven
   // load-bearing (a8d4518).
   function registerDrift() {
+    // Idempotent: a second call (or any call after dispose()) attaches
+    // nothing new — there is exactly one live attachment per instance, or
+    // none. The one real caller (organism.js:1803) calls this once; this
+    // guard only matters for a hypothetical re-init/re-instantiation path,
+    // which today would otherwise stack listeners forever (see
+    // CHARACTERIZATION.md's "re-instantiation" section).
+    if (driftAttached || driftDisposed) return;
     const { breeze, camera, addAnimator } = ctx;
 
     // ---- mouse wind: the cursor drags a whisper of air with it ----
@@ -392,17 +416,29 @@ export function createSpores(ctx) {
     // The smoothed velocity makes the stirred air trail the cursor a beat.
     // Mouse only: touch drags are orbit gestures, and this is a hover thing.
     const mw = { x: 9, y: 9, px: 9, py: 9, svx: 0, svy: 0, on: false };
-    addEventListener('pointermove', (e) => {
+    const onPointerMove = (e) => {
       if (e.pointerType && e.pointerType !== 'mouse') return;
       if (e.buttons !== 0) { mw.on = false; return; } // dragging = orbiting, not hovering
       mw.x = (e.clientX / innerWidth) * 2 - 1;
       mw.y = -(e.clientY / innerHeight) * 2 + 1;
       mw.on = true;
-    });
-    document.addEventListener('mouseleave', () => { mw.on = false; });
+    };
+    addEventListener('pointermove', onPointerMove);
+    const onMouseLeave = () => { mw.on = false; };
+    document.addEventListener('mouseleave', onMouseLeave);
+    offPointerMove = () => removeEventListener('pointermove', onPointerMove);
+    offMouseLeave = () => document.removeEventListener('mouseleave', onMouseLeave);
     const _mwDir = new THREE.Vector3(), _mwRight = new THREE.Vector3(), _mwUp = new THREE.Vector3();
 
-    addAnimator('spore-drift', (t, dt) => {
+    offDriftAnimator = addAnimator('spore-drift', (t, dt) => {
+      // R03: post-dispose guard. The removal below (dispose() calling the
+      // handle addAnimator returned) is the real detachment — this is
+      // cheap defense in depth against the same defect class C04 found in
+      // portraits.tickSwap() (a disposed instance still mutated by
+      // late-arriving scheduled work), in case anything ever re-registers
+      // this name without going through this file's own dispose/register
+      // pair.
+      if (driftDisposed) return;
       // Seat watchdog (restore discipline is structural, not promised): if a
       // claimed driver stopped calling drive() — chapter torn down, journey
       // frame error — the system itself restores the colors and sizes
@@ -538,6 +574,33 @@ export function createSpores(ctx) {
       }
       pos.needsUpdate = true;
     });
+    driftAttached = true;
+  }
+
+  /** R03: detach everything registerDrift() attached — the pointermove
+   *  listener, the document mouseleave listener, and the 'spore-drift'
+   *  animator (via the identity-scoped, idempotent handle R01's
+   *  addAnimator now returns). Idempotent: safe to call twice, safe before
+   *  registerDrift() ever ran (registerDrift() then becomes a permanent
+   *  no-op too — see its own guard), and safe to call from inside a frame
+   *  (removing an animator mid-iteration is R01's proven-safe case; the
+   *  worst outcome is 'spore-drift' being skipped for the frame already in
+   *  flight, never a call after removal). Positions/colors/sizes are left
+   *  exactly where the integrator last wrote them — dispose() releases
+   *  ownership of the attachments, it does not reset spore state, mirroring
+   *  R02's teardown() for organism/intro.js. */
+  function disposeDrift() {
+    if (driftDisposed) return;
+    driftDisposed = true;
+    if (driftAttached) {
+      offPointerMove();
+      offMouseLeave();
+      offDriftAnimator();
+      offPointerMove = null;
+      offMouseLeave = null;
+      offDriftAnimator = null;
+      driftAttached = false;
+    }
   }
 
   // =====================================================================
@@ -643,9 +706,9 @@ export function createSpores(ctx) {
   const R0_WLK = 0.20, R1_WLK = 0.45;   // migrant rim-walk chord
   // Rise tubes are PER EXIT: the ambient flux through each exit's rise
   // corridor differs by two orders (measured at the rest: dots within
-  // 0.55 u of the rise spines — ArtCompute 2,422 / Arca 24 / 2RP 429),
-  // because the wind carries the shed past ArtCompute's sector, brushes
-  // 2RP's, and barely reaches Arca's front-left lip. A lane can only light
+  // 0.55 u of the rise spines — 2RP 2,422 / Arca 24 / ArtCompute 429),
+  // because the wind carries the shed past 2RP's sector, brushes
+  // ArtCompute's, and barely reaches Arca's front-left lip. A lane can only light
   // the dust that is actually there, so the starved exits get wider,
   // softer catchments and the source exit a tight one.
   // D27: the release-arc reshape feeds all three corridors honestly
@@ -781,7 +844,7 @@ export function createSpores(ctx) {
   }
 
   function buildRoutes(tNow, leanScale, mEl) {
-    const srcAz = exits[0].az;
+    const srcAz = exits[EXIT_SLOT.CENTER].az;
     const A = [seg.axA, seg.ayA, seg.azA], B = [seg.bxA, seg.byA, seg.bzA];
     const BA = [seg.bAx, seg.bAy, seg.bAz], BB = [seg.bBx, seg.bBy, seg.bBz];
     // shared source geometry (all three chains are born in the source wedge —
@@ -791,7 +854,7 @@ export function createSpores(ctx) {
     const srcLipX = Math.cos(srcAz) * srcR, srcLipZ = Math.sin(srcAz) * srcR;
     for (let e = 0; e < 3; e++) {
       const spec = exits[e];
-      const a = spec.az, migF = e > 0;
+      const a = spec.az, migF = e !== EXIT_SLOT.CENTER;
       const rimR = rimRad(a) + 0.05, rimY = rimYof(a);
       const lipX = Math.cos(a) * rimR, lipY = rimY + 0.10, lipZ = Math.sin(a) * rimR;
       const sSrc1 = migF ? 0.15 : 0.22;   // arc where the source stage ends
@@ -912,7 +975,7 @@ export function createSpores(ctx) {
       const rev = eff[e];
       let f;
       if (rev <= 0) f = 0;
-      else if (e === 0) {
+      else if (e === EXIT_SLOT.CENTER) {
         // resident: source saturates by rev 0.2, the rise rides the rest
         f = rev < 0.2 ? (rev / 0.2) * 0.22
                       : 0.22 + ((rev - 0.2) / 0.8) * 0.78;
@@ -924,7 +987,7 @@ export function createSpores(ctx) {
       }
       fronts[e] = f * (1 + FRONT_W);
     }
-    const knotG = [exits[0].knot, exits[1].knot, exits[2].knot];
+    const knotG = exits.map((exit) => exit.knot);
 
     let anyOn = false;
     // ?tkdbg=1 — per-exit lane occupancy probe (QA): how many dots each
@@ -1172,6 +1235,14 @@ export function createSpores(ctx) {
   const system = {
     sporePts,
     shedSpores, registerDrift,
+    // R03: the one named owner of everything registerDrift() attaches (the
+    // pointermove listener, the document mouseleave listener, the
+    // 'spore-drift' animator). See disposeDrift() above for the idempotence/
+    // safety contract. Exported but not wired into any caller — this
+    // codebase has no scene-teardown path yet (organism.js is outside this
+    // order's allowlist), the same posture R02 left organism/intro.js's
+    // teardown() in.
+    dispose: disposeDrift,
     // ---- driver seat (merge doc §3) ----
     // ONE driver at a time claims the seat with its static exit geometry and
     // gets the seat handle back; releasing (setDriver(null)) — like going

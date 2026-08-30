@@ -404,7 +404,13 @@ export const CONTENT = {
     final: {
       // The route manifest still keeps this chapter's nav field null so it
       // retains its quieter, non-peer treatment. This content-level name is
-      // the visible label used by the side rail and site-map panel.
+      // the visible label used by the navigator and site-map panel.
+      //
+      // RENAMED 2026-08-27 (owner's navigation bookends): 'Epilogue' ->
+      // 'Outro' -> 'Purpose'. Same decision shape as NAV-01's 'Mission' -> 'Intro':
+      // this file is the sole owner of the visible chapter name, so the
+      // rename is this one word — the navigator, the panel and the static
+      // tier's binding all read through it.
       nav: 'Purpose',
       // Locked verbatim — 13-content-ops.md locked copy table, "Final H" / Final sub".
       // The SUB below is still that locked string. The HEADING is not:
@@ -442,9 +448,9 @@ export const CONTENT = {
       // Direction, transcribed from voice: "something along the lines of — 'a
       // thriving open AI art ecosystem'… a world in which the AI art ecosystem
       // thrives would really be one in which humans and artificial
-      // intelligence maximise their collective creative potential. Say
-      // something like that, and then make that over two lines instead of
-      // three."
+      // intelligence maximise their collective creative potential. The current
+      // Purpose treatment gives that explanation three balanced desktop lines
+      // to clear the lifted navigator; phones retain their natural wrapping.
       //
       // PROVENANCE, kept deliberately rather than deleted. The previous sub,
       // locked verbatim by 13-content-ops.md's "Final sub" row, was:
@@ -469,24 +475,58 @@ export const CONTENT = {
       // intelligence" is spelled out where the same sentence abbreviates "AI
       // art" — that contrast is hers and is deliberately kept.
       //
-      // The 28 characters are not a style preference; they are the two-line
-      // promise. At the shipped font this line needs 448px of column to break
-      // in two and the long form needs 544px, and 448px is what leaves the
-      // measure enough headroom to survive the fallback font (nothing in this
-      // stack is a webfont — see the CONNECT/FINAL SUB MEASURE block in
-      // journey/site.css). Copy gave way; the type scale did not move, exactly
-      // as it did not for the heading above.
-      //
-      // Two lines is a DESKTOP promise, on the same terms and for the same
-      // reason as the heading's: at 375px the block can offer ~285px of column
-      // and this line sets 850px, so two lines is geometrically unreachable
-      // without a font step-down that would flatten the hierarchy. It runs to
-      // four balanced lines at phone widths instead, under the heading's four.
-      // SUPERSEDED 2026-08-19. The prose and line-measure discussion above
-      // records the retired version; this replacement is supplied verbatim,
-      // including American-spelled "maximize".
+      // The desktop measure is intentionally narrower than the block's heading
+      // measure: 28rem renders three balanced lines at 1440x900 and 1280x800,
+      // while the responsive phone measure naturally remains four lines. The
+      // copy and house type scale stay unchanged; only the Purpose text measure
+      // is scoped in journey/site.css.
       sub: 'In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.',
+      // Ownership now lives exclusively in the Purpose navigator subtree.
+      // Keep the copy surface free of the retired duplicate editorial CTA.
+      actions: [],
     },
+  },
+
+  /* =========================================================================
+     THE NAVIGATOR ROW — the item list of the journey navigator
+     =========================================================================
+     THE ROW IS NOT THE CHAPTER LIST, and this declaration is what makes that
+     an authored fact rather than a drift (owner, 2026-08-26: "In the middle,
+     we should have Inspire, Connect, and Equip with Equip showing Coming
+     Soon when you hover over it. Intro and Epilogue should be smaller.
+     Ownership should become a button in the Epilogue section.").
+
+     Until this pass the navigator derived its slots from route.js's CHAPTERS
+     one-for-one. Two of the owner's asks break that identity permanently:
+     `equip` is a row item with NO chapter behind it (its section is deferred
+     — see content-archive-deferred.js — so its slot is a promise, not a
+     destination), and `owned` is a chapter with NO row item (it is reached
+     from the Epilogue's Ownership action and the site-map panel instead).
+     So the row is declared HERE, in the file that owns every other word a
+     visitor reads:
+
+       chapter      the row item is that chapter's link; its visible name
+                    still comes from chapters.<id>.nav above, unduplicated.
+       placeholder  a non-navigating item; `label` is its visible name and
+                    `note` is its hover/tap answer. It never gains the
+                    active state and never joins the site-map panel.
+       size         'major' | 'minor' — the two circle sizes of the row
+                    ("Intro and Outro should be smaller"). Geometry is
+                    the navigator's (journey/layout/rail-geometry.js); this
+                    only says which of the two classes an item belongs to.
+
+     Route order is untouched by this list: chapters keep their p-ranges and
+     their cardinality guard, and a chapter absent from the row is still a
+     routable destination. journey/rail.js validates every `chapter` entry
+     against CHAPTERS at boot and throws on an unknown id. */
+  navigator: {
+    items: [
+      { chapter: 'mission', size: 'minor' },
+      { chapter: 'inspire', size: 'major' },
+      { placeholder: 'equip', label: 'Equip', note: 'Soon', size: 'major' },
+      { chapter: 'connect', size: 'major' },
+      { chapter: 'final', size: 'minor' },
+    ],
   },
 
   // Each node names its own chapter (`chapter:`). Added for the navigation

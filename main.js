@@ -9,81 +9,135 @@
 // merely wires its trigger events. Styles moved to hero.css +
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
-import { createScene } from './organism/organism.js?v=1785427900';
-import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM, DEBUG_OVERLAY } from './flags.js';
+import { createScene } from './organism/organism.js';
+import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF } from './flags.js';
 // The journey's film grade, created at scene init rather than at journey boot
 // — see THE GRADE IS ON FROM THE FIRST FRAME below. Static import: the module
 // graph behind it (route/constants/ease) is small shared infrastructure.
 import { createLens } from './journey/lens.js';
 // The baked-geometry fetch starts the moment this import evaluates — early in
 // the intro, so it has ~7s of runway before the chapter builds could want it.
-// Awaited (bounded) in loadJourney below.
+// Awaited (bounded) in journey/boot/handoff.js's loadJourney, which is handed
+// the promise rather than starting its own — see the note in its header.
 import { ready as bakedGeomReady } from './journey/lib/baked.js';
+/* THE FOUR OWNERS THIS FILE COMPOSES (B01). Everything that is left below is
+   the page's own wiring — listeners, query params, the hero's furniture — and
+   every machine this file used to inline now has a name and a header:
+
+     boot/scene-note.js   the failure story: one visitor-facing note with a
+                          working exit, and the ?debug=1 error channel.
+     boot/hero-mode.js    the viewport mode and the five tables keyed by it —
+                          compositions, the Mission truck, world anchors, the
+                          live trackers, the `mode-*` class on <body>.
+     boot/entry-queue.js  the chapter a control queued before the journey
+                          booted, and the one place it is drained.
+     boot/handoff.js      journey preparation -> intro release -> activation,
+                          including the protected preboot -> live rail swap.
+
+   WHAT DID NOT MOVE, and why, because "then why is this file still 300 lines"
+   is a fair question. The annotation rail below is 130 lines of hero furniture
+   geometry whose every constant carries a measurement; its only automated eye
+   is the capture set, which hides `.callouts` by design, so a render check
+   cannot see it at all. It is also the page's own hero rather than the
+   journey's. Moving it would have bought a shorter file and no proof. */
+import { createSceneNote, NOTE } from './journey/boot/scene-note.js';
+import { createHeroMode } from './journey/boot/hero-mode.js';
+import { createEntryQueue } from './journey/boot/entry-queue.js';
+import { createJourneyHandoff } from './journey/boot/handoff.js';
 // Fetch/parse the full journey graph during the quiet preparation frame. The
 // previous late import began only after the 7.6s hero timer and moved a whole
 // module waterfall into the settled scene.
 const journeyModuleP = import('./journey/journey.js');
 
-// --- failure story ---
-// Three ways this page used to die mid-boot — WebGL missing, the journey
-// import failing, or the GPU context being lost on a mobile tab — each left
-// a dead or inert page with only a console.error: body is overflow:hidden
-// so there is no scroll, and the static tier's only link is built by the
-// journey rail at boot. showSceneNote() is the visitor-facing fallback: one
-// fixed note built lazily, so the happy path never touches it.
-let _sceneNote = null;
-function showSceneNote(html) {
-  if (!_sceneNote) {
-    _sceneNote = document.createElement('div');
-    _sceneNote.setAttribute('role', 'status');
-    _sceneNote.setAttribute('aria-live', 'polite');
-    const s = _sceneNote.style;
-    s.position = 'fixed';
-    s.left = '50%';
-    s.bottom = '1.5rem';
-    s.transform = 'translateX(-50%)';
-    s.maxWidth = '44ch';
-    s.padding = '0.75rem 1.15rem';
-    s.background = 'rgba(12, 9, 4, 0.86)';
-    s.color = 'var(--parchment, #f2ebdd)';
-    s.fontSize = '0.85rem';
-    s.lineHeight = '1.5';
-    s.borderRadius = '10px';
-    s.zIndex = '10';
-    s.textAlign = 'center';
-    document.body.appendChild(_sceneNote);
-  }
-  _sceneNote.style.display = '';
-  _sceneNote.innerHTML = html;
-  return _sceneNote;
-}
-function hideSceneNote() {
-  if (_sceneNote) _sceneNote.style.display = 'none';
-}
+const note = createSceneNote();
+const entryQueue = createEntryQueue();
 
-// QA reads __pageErrors; the visitor-facing story is the specific handlers above.
-const _seenErrors = new Set();
+/* ================================================================
+   J05 — THE PAGE-LIFETIME REGISTER. Read this before adding a listener,
+   a timer or an observer to this file.
+   ================================================================
+   Order J05 ("document and test page-lifetime singleton handlers separately
+   from journey recreation") classifies every registration in this module.
+   The classification is the deliverable; almost nothing here is converted,
+   because a page-lifetime listener legitimately never detaches
+   (`runtime-design/lifecycle.md` §5.3). The executable half is
+   `tools/test-page-lifetime.mjs`, which scans this file's text and drives
+   the two regions that can be driven out of a browser.
 
-// ?debug=1 field overlay: venue staff load /?debug=1 and read failures on
-// screen (registered in flags.js like every other flag).
-function renderErrorOverlay() {
-  if (!DEBUG_OVERLAY) return;
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  showSceneNote([..._seenErrors].map(esc).join('<br>'));
-}
+   B01 MOVED ONE SITE OUT OF THIS FILE AND NOT THE OTHER FIFTEEN, and the
+   line it drew is the one this register already describes. Every PAGE and
+   GATED registration below is page wiring and stayed here, because that is
+   what this file is for. The single BOUNDED registration — the intro input
+   capture — went with the machine that takes it back off,
+   `journey/boot/handoff.js`, since a lifecycle split from its owner is
+   exactly how a leak gets written. Section B of the suite now scans BOTH
+   files and requires the union to be the same site set it always was: the
+   register did not lose a site, it gained a file.
 
+   THE THREE CLASSES, and the rule that separates them:
+
+     PAGE      installed once when this module evaluates, lives until the
+               document does, and is never taken back off. Legitimate. The
+               property that matters is ONE INSTALL PER PAGE MODULE, which
+               ESM's module cache delivers as long as no importer names a
+               module under a second specifier form — area D of the suite is
+               the row that would notice.
+     GATED     PAGE, but behind a QA flag, so an ordinary visitor installs
+               nothing. `?introat` is the only one.
+     BOUNDED   installed and later taken back off by the module that owns
+               it. There is exactly ONE, and it is the intro input capture,
+               now in journey/boot/handoff.js beside its own remover.
+
+   THE REGISTER — 16 listener sites, by class:
+
+     PAGE      window error / unhandledrejection — the error CHANNEL is
+               journey/boot/scene-note.js's; these two sites hand it each
+               event's message and are registered here because they are
+               page-lifetime window listeners like every other line below.
+     PAGE      the skip link's click
+     GATED     the `?introat` load hook — inside `if (introAt !== null)`
+     PAGE      the canvas's webglcontextlost / webglcontextrestored pair,
+               and the 2.5s grace timer the first one arms
+     PAGE      the window resize hook and its debounce timer
+     PAGE      the explore CTA's capture-phase click
+     PAGE      the logo link's click
+     PAGE      the three callouts' mouseenter / mouseleave, the EQUIP tag's
+               preventDefault, the INSPIRE / CONNECT tag navigation, and the
+               hoverless-device EQUIP toggle. FIVE SITES, but they sit
+               inside a loop over three callouts, so the live registration
+               count is larger than the site count and a census that
+               conflates the two is wrong in this file specifically.
+     PAGE      the `b` serif-A/B keydown. SEE THE FINDING BELOW.
+     BOUNDED   the intro input capture — one site, six event types, taken
+               back off by stopIntroInputCapture() on every exit path. IN
+               journey/boot/handoff.js, which carries this same note.
+
+   FINDING, RECORDED NOT FIXED: the serif keydown is the shipped page's only
+   UNGATED QA key hook. It is installed for every visitor and then decides
+   at dispatch time, where `journey/dial.js` was moved the other way by J04c
+   — gated at REGISTRATION so a plain load registers nothing (J-H19). The
+   two are the same kind of QA affordance and they are now inconsistent.
+   Making them consistent moves a registration, which is a behaviour change,
+   so Wave 3 records it and does not take it.
+
+   AND WHAT IS PAGE-LIFETIME BUT IS NOT A LISTENER:
+
+     `readyState` (journey/boot/handoff.js) holds the journey's public
+     handle and `state.ready` is its un-awaited preparation promise. Both
+     are written once, for the one journey this page ever builds, and both
+     live until the document does. THIS USED TO BE RECORDED AS A HAZARD —
+     "a disposed journey stays reachable from readyState" — against a
+     recreation nobody had ordered. The disposal machinery it was a hazard
+     to is gone (docs/code-health/DISPOSAL-REMOVED.md) and the hazard is
+     gone with it: this page boots one journey and the visitor's teardown
+     is the tab closing.
+   ================================================================ */
 addEventListener('error', (e) => {
-  window.__pageErrors = (window.__pageErrors || 0) + 1;
-  const msg = String((e && e.message) || 'window error');
-  if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
-  renderErrorOverlay();
+  note.recordError(String((e && e.message) || 'window error'));
 });
 addEventListener('unhandledrejection', (e) => {
-  window.__pageErrors = (window.__pageErrors || 0) + 1;
   const r = e && e.reason;
-  const msg = String((r && r.message) || r || 'unhandled rejection');
-  if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
-  renderErrorOverlay();
+  note.recordError(String((r && r.message) || r || 'unhandled rejection'));
 });
 
 // --- a11y: skip link (M5) ---
@@ -106,172 +160,18 @@ if (skipLink) {
   });
 }
 
-// --- responsive camera compositions, keyed by mode ---
-const VIEWS = {
-  // Composition restage (2026-08-19): pan the organism + its projected
-  // annotations left by roughly 5-8vw, while the DOM hero copy stays put.
-  // Lowering camera and target together preserves the viewing angle/scale
-  // and lifts the specimen slightly in frame. Anchors remain anatomy-owned.
-  desktop: { panX: -1.65, camY: 2.07, camZ: 10.4, targetY: 2.42, fov: 38 },
-  compact: { panX: -1.82, camY: 2.12, camZ: 11.2, targetY: 2.52, fov: 38 },  // short landscape (phones)
-  deskNarrow: { panX: -1.27, camY: 2.12, camZ: 11.6, targetY: 2.47, fov: 38 }, // landscape aspect < 1.55 (iPads)
-  // Prior optical centring pass (ending at panX +0.45): the earlier
-  // +0.33 landed the ensemble's geometric bounds on centre, but the bright
-  // spore plume and the label column both weight the right side. Another
-  // ~11px of leftward screen travel centres the visible energy of the set,
-  // not merely its outer box. (2026-08-17, Hannah: "the way on mobile we hide the
-  // main button and centre align the mushroom with the labels — do the same
-  // on tablet"). Same pass as mobile's below: the CTA is gone (hero.css ≤900
-  // portrait block), the labels ride runs (RAIL.tablet), and the pan walks
-  // the specimen left until the ENSEMBLE reads centred — measured
-  // at 768x1024: cap left rim 142, INSPIRE tag right 640, midpoint 391 at
-  // panX 0.25; ~91.5 px/unit at this framing puts the optical centre at 0.45.
-  tablet:  { panX: 1.00, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
-  // Prior optical centring pass (ending at panX +0.40): the previous
-  // comment described a +0.55 centring target, but the value below had only
-  // moved to +0.20. Closing part of that gap shifts the unified composition
-  // left by roughly the same visible amount as tablet, without making the
-  // cap feel left-biased on narrow phones. (2026-08-17, Hannah: the specimen read centred but
-  // specimen+labels together sat right-heavy — "they should be centred
-  // together"). The pan walks the mushroom left so the ENSEMBLE's bounding
-  // box centres; the labels follow because mobile now carries runs (RAIL).
-  mobile:  { panX: 0.83, camY: 2.95, camZ: 11.5, targetY: 4.50, fov: 64 },
-};
+/* The hero's composition, its world anchors and its live tracker set are
+   all keyed by one thing — which breakpoint band this viewport is in — so
+   they are one owner now. journey/boot/hero-mode.js carries the five tables
+   and their measurement provenance verbatim, plus the two functions that
+   read them and the single write site `current` has.
 
-/* Mission composition truck, in CSS pixels rather than world units. The
-   visual correction is projection-authored, while each responsive view uses a
-   different distance/FOV, so viewFor() converts these values through the
-   active projection. Moving panX trucks camera and target together: organism,
-   particles, bloom and ground all move as one projection while DOM copy/nav
-   remain fixed. Portrait keeps only a restrained nudge so the wide cap and
-   stipe do not crowd the phone/tablet edge. */
-const MISSION_RIGHT_PX = Object.freeze({
-  desktop: 20,
-  deskNarrow: 45,
-  compact: 36,
-  tablet: 26,
-  mobile: 14,
-});
-
-// --- per-mode world anchors for the HUD callouts (tuned against screenshots) ---
-const ANCHORS = {
-  desktop: {
-    // inspire raised back up the plume's sweep (2026-08-16, Hannah: the
-    // leader should point "higher into the spores, like similar angle to
-    // the connect one"): from here the dot sits up-RIGHT of the label's
-    // top centre by roughly its drop distance, so the leader reads as one
-    // 45° diagonal — CONNECT's angle, mirrored top-down.
-    inspire: [3.63, 3.97, -0.50],
-    equip:   [0.06, 1.60, 0.22],
-    connect: [0.55, 0.04, 1.15],
-  },
-  compact: {
-    inspire: [2.37, 3.20, -1.09], // measured in-plume, clear of the nav
-    equip:   [0.05, 0.50, 0.25],
-    connect: [0.50, 0.04, 1.60],
-  },
-  deskNarrow: {
-    inspire: [3.50, 3.90, -0.47], // up the plume sweep, same reasoning as desktop
-    equip:   [0.06, 1.60, 0.22],
-    connect: [0.55, 0.04, 1.15],
-  },
-  tablet: {
-    inspire: [2.52, 3.50, -0.17], // measured in-plume (tablet portrait)
-    equip:   [0.06, 1.30, 0.22],
-    connect: [0.30, 0.04, 1.30],
-  },
-  mobile: {
-    // raised off the rim exit into the plume's MIDDLE (2026-08-17, Hannah:
-    // the tag "should be pointing into the middle of the spores and have a
-    // nice angle to it") — the label holds its slot under the side rail
-    // (tuckSep in RAIL below), so the anchor alone sets the leader's angle;
-    // this projection aims for ~45° at 375x812.
-    inspire: [3.20, 4.45, -1.60],
-    // equip 1.55 -> 1.25 (2026-08-17, Hannah: "push all the labels down a
-    // little bit"): EQUIP's label sits ON its stem row (riseEquip 0), so the
-    // whole balanced column is slid by sliding this anchor down the stem —
-    // INSPIRE hangs tuckSep above it and CONNECT's rise (RAIL below) came
-    // down in step, so the 74px beat survives the shift.
-    equip:   [0.06, 1.25, 0.22],
-    connect: [-0.12, 0.04, 1.15],
-  },
-};
-
-// --- breakpoint detection: portrait phones/tablets get their own compositions ---
-function getMode() {
-  const w = innerWidth, h = innerHeight;
-  const portrait = h > w;
-  if (w <= 620 && portrait) return 'mobile';
-  if (w <= 900 && portrait) return 'tablet';
-  if (!portrait && h <= 560) return 'compact';
-  if (!portrait && w / h < 1.55) return 'deskNarrow';
-  return 'desktop';
-}
-
-// deskNarrow spans aspects 1.25–1.55: interpolate the framing with aspect so
-// the right-side callouts keep edge clearance all the way down to 4:3 iPads
-function viewFor(mode) {
-  const v = { ...VIEWS[mode] };
-  if (mode === 'deskNarrow') {
-    const t = Math.min(1, Math.max(0, (1.55 - innerWidth / innerHeight) / 0.3));
-    v.panX = -1.27 + 0.3 * t;
-    v.camZ = 11.6 + 0.9 * t;
-  }
-  if (mode === 'mobile') {
-    const t = Math.min(1, Math.max(0, (innerWidth / innerHeight - 0.44) / 0.16));
-    // base 4.75 -> 4.50 (2026-08-17, Hannah's vertical rebalance: "too much
-    // deadspace between the mushroom and text") — LOWERING the look-at
-    // lifts the specimen on screen (measured ~55px per unit, and the sign
-    // is the trap: a higher target renders the scene lower). ~25px of lift
-    // meets the copy's ~16px drop (hero.css mobile padding-top), splitting
-    // the frame's air roughly evenly above and below the text block.
-    v.targetY = 3.85 + 1.2 * t;
-    v.camZ = 11.5 + 1.3 * t;
-  }
-  /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
-     layout input: display scaling and window chrome give the same laptop many
-     possible CSS widths. Author the requested rightward composition in screen
-     space instead. It eases from the reviewed 1024px landscape pose to the
-     full 75px correction at 1200px, then holds—no device rectangle, no upper
-     cutoff, and no one-pixel cliff. Converting pixels through the active FOV
-     keeps the visible correction stable while deskNarrow changes distance. */
-  if (innerWidth > innerHeight && mode !== 'compact') {
-    let mix = (innerWidth - 1024) / (1200 - 1024);
-    mix = Math.max(0, Math.min(1, mix));
-    mix = mix * mix * (3 - 2 * mix);
-    const worldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360) / innerHeight;
-    v.panX -= 75 * mix * worldPerPixel;
-  }
-  /* The camera/target truck is the Mission boundary condition captured by the
-     journey director. Consequently scroll and the route-faithful direct-click
-     compositor depart from (and return to) this exact shifted pose, while the
-     analytic Inspire arrival still lands bit-exactly on its existing rest. */
-  const missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
-  const missionWorldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360)
-    / innerHeight;
-  v.panX -= missionShiftPx * missionWorldPerPixel;
-  return v;
-}
-
-let currentMode = getMode();
-
-// live tracker state the scene projects to screen space every frame
-const TRACKS = {
-  connect: { pos: ANCHORS[currentMode].connect.slice(), el: document.getElementById('co-connect') },
-  inspire: { pos: ANCHORS[currentMode].inspire.slice(), el: document.getElementById('co-inspire') },
-  // STABLE CALLOUTS (Hannah, 2026-08-05): all three are static world anchors.
-  //
-  // equip used to carry `sway: true`, which pinned it to swayGroup.matrixWorld
-  // so it rode the breeze with the stalk — measured at 7.4-12.6 px of
-  // horizontal travel, and the one callout that visibly moved. Hannah asked for
-  // all three to hold still, so the flag is gone and this is now the anchor's
-  // REST position, which (swayGroup being rotation-only, at the origin) is also
-  // its sway pivot. The leader still lands on the stalk at every phase of the
-  // breeze — the stalk's own excursion at this height is ~0.054 world units,
-  // far narrower than the stalk. Full reasoning, measurements and the rejected
-  // alternatives are in organism/furniture.js registerTrackers.
-  equip:   { pos: ANCHORS[currentMode].equip.slice(),   el: document.getElementById('co-equip') },
-};
+   THE ORDER BELOW IS LOAD-BEARING and is the order this file always used:
+   construct (resolve the mode, build the three trackers off its anchors) ->
+   build the scene from viewFor(current) with those trackers -> mount(),
+   which publishes the `mode-*` class to <body> AFTER the scene exists. */
+const heroMode = createHeroMode();
+const TRACKS = heroMode.tracks;
 
 // --- scene init ---
 // The entry choreography (see the ENTRY comment in hero.css) hangs off the
@@ -302,7 +202,7 @@ if (introAt !== null) {
 let sceneApi = null;
 try {
   sceneApi = createScene({
-    ...viewFor(currentMode),
+    ...heroMode.viewFor(heroMode.current()),
     container: document.getElementById('stage'),
     tiltX: -0.14,
     bg: 0x1c160b,
@@ -314,7 +214,7 @@ try {
 } catch (err) {
   document.body.classList.remove('scene-preparing');
   console.error('[glowshroom] scene failed to start', err);
-  showSceneNote(`This page's live scene could not start on this browser. <a href="./static/" style="color: inherit; text-decoration: underline;">The static journey</a> carries every chapter and link.`);
+  note.show(NOTE.sceneFailed);
 }
 
 if (sceneApi) {
@@ -327,12 +227,12 @@ if (sceneApi) {
   canvas.addEventListener('webglcontextlost', (e) => {
     e.preventDefault(); // tell the browser it should attempt a restore
     restoreTimer = setTimeout(() => {
-      showSceneNote(`The scene's graphics context was lost. <a href="./static/" style="color: inherit; text-decoration: underline;">The static journey</a> carries every chapter — or reload to restart the scene.`);
+      note.show(NOTE.contextLost);
     }, 2500);
   });
   canvas.addEventListener('webglcontextrestored', () => {
     clearTimeout(restoreTimer);
-    hideSceneNote();
+    note.hide();
   });
 }
 
@@ -361,7 +261,7 @@ if (sceneApi) {
   catch (err) { console.error('[glowshroom] lens failed to start — the grade will arrive with the journey instead', err); }
 }
 
-document.body.classList.add('mode-' + currentMode);
+heroMode.mount();
 
 // --- annotation rail: the three callout tags are ONE typographic system ---
 // (2026-08-16) The old approach placed each tag with hand-tuned per-breakpoint
@@ -545,7 +445,7 @@ function railApply() {
     }
     return;
   }
-  const rises = RAIL[currentMode];
+  const rises = RAIL[heroMode.current()];
   const pos = {};
   let sig = '';
   for (const key of ['inspire', 'equip', 'connect']) {
@@ -700,35 +600,31 @@ if (sceneApi) {
   // frames. The journey half (jumping to exactly p) is in journey.js.
   if (captureQ !== null) sceneApi.freezeTime(0);
 
-  // --- mode switching: re-frame the camera and re-anchor the trackers on breakpoint change ---
-  function applyMode(mode) {
-    sceneApi.setView(viewFor(mode), 0.6); // ease the camera between breakpoints instead of snapping
-    for (const key of ['inspire', 'equip', 'connect']) {
-      const a = ANCHORS[mode][key];
-      TRACKS[key].pos[0] = a[0];
-      TRACKS[key].pos[1] = a[1];
-      TRACKS[key].pos[2] = a[2];
-    }
-    document.body.classList.remove('mode-desktop', 'mode-tablet', 'mode-mobile', 'mode-compact', 'mode-deskNarrow');
-    document.body.classList.add('mode-' + mode);
-  }
-
   // rail layout: the hidden settled clone supplies final metrics before the
   // intro; the animator keeps projected geometry current every frame.
   railRefresh();
   sceneApi.addAnimator('rail', railApply);
 
+  /* RESIZE HAS TWO ANSWERS, AND ONLY ONE OF THEM IS A BREAKPOINT CROSSING.
+     `reframesWithinMode` names what used to be an inline triple here: three
+     of the five modes keep moving their composition INSIDE the band, so a
+     drag that never crosses a breakpoint still has to re-frame for them and
+     must not for the other two. The crossing case eases the camera FIRST and
+     adopts SECOND — the order the old applyMode() ran in, kept deliberately,
+     since adopt() re-anchors the trackers the easing camera is about to
+     project. */
   let resizeTimer;
   addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      const mode = getMode();
-      if ((mode === 'desktop' || mode === 'deskNarrow' || mode === 'mobile') && mode === currentMode) {
-        sceneApi.setView(viewFor(mode), 0.6);
+      const mode = heroMode.resolve();
+      if (heroMode.reframesWithinMode(mode) && mode === heroMode.current()) {
+        sceneApi.setView(heroMode.viewFor(mode), 0.6);
       }
-      if (mode !== currentMode) {
-        currentMode = mode;
-        applyMode(mode);
+      if (mode !== heroMode.current()) {
+        // ease the camera between breakpoints instead of snapping
+        sceneApi.setView(heroMode.viewFor(mode), 0.6);
+        heroMode.adopt(mode);
       }
       // re-measure the rail metrics (nav inset, tag widths, .co scale
       // may all have changed with the breakpoint); the animator follows
@@ -738,25 +634,19 @@ if (sceneApi) {
   });
 }
 
-// A hero callout pressed before the journey module has booted. The browser
-// used to record this intent for us — the tag was a plain `#/<chapter>` link,
-// so a click wrote the hash and boot read it back as a deep link. Nothing
-// writes the URL any more (Hannah, 2026-08-11), so the intent is held here and
-// handed to boot() instead. See journey/journey.js's `entry`.
-let pendingEntry = null;
-let requestEarlyEntry = null;
-
 // The left CTA remains live while the right side is the empty WebGL frame.
 // Capture it before journey.js's later bubble listener so an early click is a
 // queued normal jump, never a temporary #/inspire URL write or a lost press.
+// A press before the journey module has booted goes to the entry queue
+// (journey/boot/entry-queue.js), which holds the intent the browser used to
+// hold for us in the URL and asks boot to start departing at once.
 const exploreCta = document.querySelector('.ui .cta');
 if (exploreCta) {
   exploreCta.addEventListener('click', (e) => {
     if (window.journey) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    pendingEntry = 'inspire';
-    if (requestEarlyEntry) requestEarlyEntry();
+    entryQueue.request('inspire');
   }, true);
 }
 
@@ -804,7 +694,7 @@ if (logoLink) {
   logoLink.addEventListener('click', (e) => {
     e.preventDefault();
     if (window.journey) window.journey.flyTo('mission');
-    else pendingEntry = 'mission';
+    else entryQueue.request('mission', { fast: false });
   });
 }
 
@@ -844,10 +734,7 @@ if (sceneApi) {
       el.querySelector('.tag').addEventListener('click', (e) => {
         e.preventDefault();
         if (window.journey) window.journey.flyTo(chapter);
-        else {
-          pendingEntry = chapter;
-          if (requestEarlyEntry) requestEarlyEntry();
-        }
+        else entryQueue.request(chapter);
       });
     }
 
@@ -941,351 +828,31 @@ addEventListener('keydown', (e) => {
    The left copy and CTA are already live; chapter construction, portrait
    atlases, shader compilation and real first GPU draws finish before the
    mushroom's visible clock starts. There is no fixed loading duration.
+
+   The machine that runs all of that is journey/boot/handoff.js: preparation
+   -> intro release -> activation, the buffered first gesture, the two
+   timers, and the protected preboot -> live rail swap. It is the one region
+   of this file that was a state machine rather than wiring, which is why it
+   is the one region that left. Read its header before changing anything
+   here — the arguments below are the whole of its dependency on the page.
+
+   THE PROMISES ARE STARTED HERE AND HANDED DOWN, not started inside. Both
+   fetches are timed against the intro's runway by the comments at the head
+   of this file, and a module-scope import inside the machine would begin
+   during import resolution instead — earlier, and no longer what those
+   comments say.
    ============================================================ */
-
-// Input policy: the journey owns scroll and pointer gestures, so user
-// orbit/zoom/pan are disabled at the source (organism/organism.js
-// setInputPolicy — the DOM event shield this replaces is gone). Taps still
-// reach the organism's own tap handler; DOM links/nav are untouched.
-// ?free=1 keeps the hero's fully interactive camera (and the grab cursor,
-// via body.free-cam in journey/site.css).
 if (sceneApi) {
-  const freeCam = FREE_CAM;
-  if (freeCam) document.body.classList.add('free-cam');
-  else sceneApi.setInputPolicy('journey');
-
-  // The organism reports its own real completion after the 5.4s draw and
-  // 0.7s shell restore. This old page-level duration remains only as a
-  // defensive fallback for a suspended/missing animation frame.
-  const HERO_INTRO_MS = 7600;
-  const HERO_SCENE_COMPLETE_MS = INTRO_S * 1000 + 700;
-  // Let the navigation form over the mushroom's quiet final settle instead of
-  // waiting until the journey becomes interactive. Input remains gated until
-  // activateJourney(); this changes only the visual entrance.
-  const RAIL_REVEAL_LEAD_MS = 1200;
-  // (skipIntro is computed in the scene-init section above and already
-  // includes ?nointro, ?capture and reduced motion.)
-  const frozen = introAt !== null;
-
-  let journeyInputRequested = false;
-  let journeyLoadP = null;
-  let readyState = null;
-  let earlyRail = null;
-  let journeyActive = false;
-  let introReleased = false;
-  let fastHandoffStarted = false;
-  let activationTimer = null;
-  let railRevealTimer = null;
-  let bootInput = null;
-  let pendingTouch = null;
-  let introCaptureLive = false;
-  let onIntroInput = null;
-  const INTRO_INPUT_EVENTS = ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'keydown'];
-
-  function stopIntroInputCapture() {
-    if (!introCaptureLive) return;
-    introCaptureLive = false;
-    for (const type of INTRO_INPUT_EVENTS) removeEventListener(type, onIntroInput, true);
-  }
-
-  function touchById(list, id) {
-    if (!list) return null;
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].identifier === id) return list[i];
-    }
-    return null;
-  }
-
-  /* Buffer input independently from module loading. The journey listeners do
-     not exist while an early gesture is asking the intro to finish, so boot
-     consumes this one observed physical input only after scroll.attach(). */
-  function collectBootInput(e) {
-    // Prefer the event's own timestamp so every sample in a buffered gesture
-    // stays on the same physical input clock. The intro's accelerated draw
-    // time is deliberately local and never participates in this duration.
-    const now = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
-    if (e.type === 'touchstart') {
-      if (!bootInput && e.touches && e.touches.length === 1) {
-        const touch = e.touches[0];
-        pendingTouch = { identifier: touch.identifier,
-          startY: touch.clientY, latestY: touch.clientY,
-          startedAt: now, latestAt: now, active: true };
-      }
-      return false;
-    }
-    if (e.type === 'touchmove') {
-      if (!pendingTouch || !e.touches || e.touches.length !== 1) return false;
-      const touch = touchById(e.touches, pendingTouch.identifier);
-      if (!touch) return false;
-      pendingTouch.latestY = touch.clientY;
-      pendingTouch.latestAt = now;
-      if (!bootInput) {
-        bootInput = { kind: 'touch', contact: pendingTouch };
-        return true;
-      }
-      return false;
-    }
-    if (e.type === 'touchend' || e.type === 'touchcancel') {
-      if (pendingTouch) {
-        const touch = touchById(e.changedTouches, pendingTouch.identifier);
-        if (touch) pendingTouch.latestY = touch.clientY;
-        pendingTouch.latestAt = now;
-        pendingTouch.active = false;
-      }
-      return false;
-    }
-    if (e.type === 'wheel') {
-      if (bootInput && bootInput.kind === 'wheel') {
-        bootInput.samples.push({ deltaY: e.deltaY, deltaMode: e.deltaMode });
-        return false;
-      }
-      if (!bootInput) {
-        bootInput = { kind: 'wheel', samples: [{ deltaY: e.deltaY, deltaMode: e.deltaMode }] };
-        return true;
-      }
-      return false;
-    }
-    if (e.type === 'keydown' && !bootInput) {
-      bootInput = { kind: 'key', key: e.key };
-      return true;
-    }
-    return false;
-  }
-
-  function clearIntroDeparture(restore = false) {
-    if (!document.body.classList.contains('intro-depart')) return;
-    if (restore) {
-      document.body.classList.add('intro-restore');
-      setTimeout(() => {
-        document.body.classList.remove('intro-depart', 'intro-restore');
-      }, 220);
-    } else {
-      document.body.classList.remove('intro-depart', 'intro-restore');
-    }
-  }
-
-  function replayBootInput(state) {
-    const input = bootInput;
-    bootInput = null;
-    pendingTouch = null;
-    const scroll = state && state.scroll;
-    if (!input || !scroll) {
-      clearIntroDeparture(true);
-      return;
-    }
-    if (input.kind === 'wheel' && scroll.primeBootWheel) {
-      if (scroll.primeBootWheelStream) scroll.primeBootWheelStream(input.samples);
-      else {
-        const first = input.samples[0];
-        scroll.primeBootWheel(first.deltaY, first.deltaMode);
-      }
-    } else if (input.kind === 'touch' && scroll.primeBootTouch) {
-      scroll.primeBootTouch(input.contact);
-    } else if (input.kind === 'key' && state.flyTo) {
-      state.flyTo('inspire');
-      clearIntroDeparture(false);
-      return;
-    }
-    // Hold the immediate visual acknowledgement only until the journey's own
-    // Mission-copy envelope has genuinely taken over. A jitter that never
-    // earns travel restores the hero instead of leaving it blank.
-    if (document.body.classList.contains('intro-depart')) {
-      const started = Date.now();
-      const handoff = () => {
-        const hero = document.querySelector('.ui .hero');
-        const journeyOpacity = hero ? parseFloat(hero.style.opacity) : NaN;
-        const journeyOwnsExit = scroll.progress > 0
-          && Number.isFinite(journeyOpacity) && journeyOpacity <= 0.02;
-        const stayedHome = Date.now() - started > 900
-          && scroll.progress < 0.002 && !scroll.resolving;
-        if (journeyOwnsExit || stayedHome) {
-          clearIntroDeparture(stayedHome);
-          return;
-        }
-        requestAnimationFrame(handoff);
-      };
-      requestAnimationFrame(handoff);
-    }
-  }
-
-  function releaseIntro() {
-    if (introReleased) return;
-    introReleased = true;
-    document.body.classList.remove('scene-preparing');
-    document.body.classList.add('scene-intro-live');
-    sceneApi.intro.start();
-    performance.mark('hero-intro-start');
-  }
-
-  function activateJourney() {
-    if (journeyActive || !readyState) return;
-    journeyActive = true;
-    clearTimeout(activationTimer);
-    clearTimeout(railRevealTimer);
-    const entry = pendingEntry;
-    pendingEntry = null;
-    readyState.activate({ entry });
-    stopIntroInputCapture();
-    performance.mark('journey-interactive');
-    if (entry && entry !== 'mission') {
-      bootInput = null;
-      pendingTouch = null;
-      clearIntroDeparture(false);
-    } else {
-      replayBootInput(readyState);
-    }
-  }
-
-  /** The specimen, rather than a second page timer, owns the normal handoff.
-   *  This removes the old ~1.5s pause that belonged to hero callouts which
-   *  are no longer part of this navigation iteration. */
-  function activateWhenIntroComplete() {
-    if (journeyActive || !readyState) return;
-    if (sceneApi.intro.complete) {
-      activateJourney();
-      return;
-    }
-    requestAnimationFrame(activateWhenIntroComplete);
-  }
-
-  function beginFastHandoff() {
-    journeyInputRequested = true;
-    if (!readyState || fastHandoffStarted) return;
-    fastHandoffStarted = true;
-    clearTimeout(activationTimer);
-    const departMs = window.innerWidth <= 620 ? 220 : 480;
-    document.body.classList.add('intro-fast');
-    releaseIntro();
-    const accelerated = sceneApi.intro.accelerate({
-      totalMs: HERO_INTRO_MS + 900,
-      rampMs: departMs,
-    });
-    // A queued CTA/callout entry is a direct navigation and still benefits
-    // from immediate departure feedback while the journey activates. A wheel,
-    // touch or key gesture is different: its buffered deltas are replayed into
-    // the normal p-driven Mission envelope, which must own the gradual fade.
-    // Applying intro-depart there blanked the copy on the very first sample.
-    if (pendingEntry) document.body.classList.add('intro-depart');
-    setTimeout(activateJourney, accelerated ? departMs : 80);
-  }
-  requestEarlyEntry = beginFastHandoff;
-
-  function loadJourney() {
-    if (journeyLoadP) return journeyLoadP;
-    journeyLoadP = (async () => {
-      try {
-        performance.mark('journey-prepare-start');
-        // Give the DOM copy one paint, then construct one chapter per task.
-        // The scene is blank, but the button remains responsive between slices.
-        const nextTask = () => new Promise(resolve =>
-          requestAnimationFrame(() => setTimeout(resolve, 0)));
-        await nextTask();
-        // Build the lightweight navigation as soon as its module graph is
-        // ready, before chapter geometry/GPU preparation. Its own fade now
-        // shares the hero copy's opening beat instead of arriving after the
-        // mushroom has already finished drawing.
-        const m = await journeyModuleP;
-        earlyRail = m.prepareRail ? m.prepareRail((chapter) => {
-          pendingEntry = chapter;
-          beginFastHandoff();
-        }) : null;
-        if (earlyRail && earlyRail.reveal) {
-          const shell = document.querySelector('.j-rail-preboot');
-          const shellOpacity = shell ? parseFloat(getComputedStyle(shell).opacity) : 0;
-          earlyRail.reveal();
-          if (shell) {
-            // Continue the hero's already-running fade across the DOM swap.
-            // The live rail takes the shell's exact painted opacity, then
-            // completes only the unspent portion of the shared 0.9s beat.
-            const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
-            earlyRail.root.style.transition = 'none';
-            earlyRail.root.style.opacity = String(from);
-            void earlyRail.root.offsetWidth;
-            shell.remove();
-            const finishWithHero = () => {
-              const heroLine = document.querySelector('h1 .hl');
-              const heroOpacity = heroLine
-                ? parseFloat(getComputedStyle(heroLine).opacity)
-                : 1;
-              earlyRail.root.style.opacity = String(Number.isFinite(heroOpacity) ? heroOpacity : 1);
-              if (heroOpacity < 0.999) {
-                requestAnimationFrame(finishWithHero);
-              } else {
-                earlyRail.root.style.opacity = '1';
-                requestAnimationFrame(() => { earlyRail.root.style.transition = ''; });
-              }
-            };
-            requestAnimationFrame(finishWithHero);
-          }
-        }
-        await bakedGeomReady;
-        let remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
-        while (remaining > 0) {
-          await nextTask();
-          remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
-        }
-        await nextTask();
-        const state = m.boot({ heroIntroSkipped: !!skipIntro,
-          heroFrozen: frozen, deferActivation: true,
-          rail: earlyRail,
-          onEntry: (chapter) => {
-            pendingEntry = chapter;
-            beginFastHandoff();
-          } });
-        if (!state) throw new Error('Journey boot returned no state');
-        await state.ready;
-        readyState = state;
-
-        if (skipIntro || frozen) {
-          document.body.classList.remove('scene-preparing');
-          document.body.classList.add('scene-static');
-          sceneApi.intro.finish();
-          activateJourney();
-        } else if (journeyInputRequested || pendingEntry) {
-          beginFastHandoff();
-        } else {
-          releaseIntro();
-          railRevealTimer = setTimeout(() => {
-            if (readyState && readyState.revealRail) readyState.revealRail();
-          }, Math.max(0, HERO_SCENE_COMPLETE_MS - RAIL_REVEAL_LEAD_MS));
-          requestAnimationFrame(activateWhenIntroComplete);
-          activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
-        }
-        return state;
-      } catch (err) {
-        stopIntroInputCapture();
-        clearIntroDeparture(true);
-        document.body.classList.remove('scene-preparing');
-        document.body.classList.add('scene-intro-live');
-        sceneApi.intro.start();
-        performance.mark('journey-fallback');
-        console.error('[journey-v6] failed to load', err);
-        // the hero scene is still live but was left holding the journey's
-        // input policy (set above) — hand the orbit camera back and point the
-        // visitor at the static tier.
-        if (sceneApi) sceneApi.setInputPolicy('free');
-        showSceneNote(`The interactive journey could not load. The hero scene above is still live, and <a href="./static/" style="color: inherit; text-decoration: underline;">the static journey</a> carries every chapter.`);
-        return null;
-      }
-    })();
-    return journeyLoadP;
-  }
-
-  onIntroInput = (e) => {
-    if (e.type === 'keydown') {
-      if (!['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-      const t = e.target;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    }
-    if (collectBootInput(e)) beginFastHandoff();
-  };
-  introCaptureLive = true;
-  for (const type of INTRO_INPUT_EVENTS) {
-    addEventListener(type, onIntroInput, { capture: true, passive: true });
-  }
-
-  // Preparation begins now, not after the old 7.6s timer. Its first heavy
-  // slice is still held until the left-hand DOM has painted once.
-  loadJourney();
+  createJourneyHandoff({
+    scene: sceneApi,
+    entryQueue,
+    note,
+    journeyModule: journeyModuleP,
+    bakedGeomReady,
+    // already includes ?nointro, ?capture and reduced motion
+    skipIntro,
+    // ?introat — the choreography is pinned at a progress and must not run
+    frozen: introAt !== null,
+    introSeconds: INTRO_S,
+  });
 }

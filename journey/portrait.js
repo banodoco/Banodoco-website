@@ -40,6 +40,10 @@
 
 import { restProgress, startOf } from './route.js';
 import { smooth01 } from './lib/ease.js';
+import {
+  PHONE_FINAL_SCENE_LIFT_PX,
+  cameraWorldUnitsForPixels,
+} from './layout/final-composition.js';
 
 /* ------------------------------------------------------------------ */
 /* Aspect weight                                                       */
@@ -62,7 +66,8 @@ export function portraitWeight(aspect) {
 // stipe descent must stay outside the stipe — clearance there is ~0.5 world
 // units, so those legs run the field near zero and let it bloom at the rest).
 // p values reference director.js: ORBIT_P0 0.040, rests 0.26 / 0.5230 / 0.725 /
-// restProgress('final') (0.97 since §14), descent keys 0.622–0.718.
+// restProgress('final') (0.97 since §14), descent keys 0.6644–0.718 (the first
+// of those rides the leg since 2026-08-24 — see its own note).
 const ZERO = { back: 1, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
 
 const KEYS = [
@@ -200,11 +205,57 @@ const KEYS = [
   // forward.y, so changing tgtUp alone would leave the ground under-resolved.
   { p: restProgress('connect'), back: 1.62, rise: 2.30, truck: 0, tgtUp: 2.30, tgtRight: -0.30, fov: 8 },
 
-  // The approach to the trunk + the exterior descent (0.575–0.718):
-  // near-zero field — clearance to the stipe is small and the leg's whole
-  // job is the convergence itself. A whisper of fov keeps the frame from
-  // feeling suddenly narrower than the panorama.
-  { p: 0.622, back: 1.04, rise: 0.05, truck: 0, tgtUp: 0.05, tgtRight: 0, fov: 4 },
+  // The approach to the trunk + the exterior descent: near-zero field —
+  // clearance to the stipe is small and the leg's whole job is the
+  // convergence itself. A whisper of fov keeps the frame from feeling
+  // suddenly narrower than the panorama.
+  //
+  // RE-TIMED, NOT RE-AUTHORED (2026-08-24, Hannah on a phone: "when I scroll
+  // into Owned from Connect on mobile, the mushroom should be in the middle
+  // of the camera view. Currently it's off to the left and then it turns in
+  // when it's near to it"). Every value below is the shipped one; only WHEN
+  // it arrives has changed, 0.49 -> 0.70 of the leg.
+  //
+  // The desktop report that arrived alongside this one is a different fault
+  // with a different cause (owned/camera.js's gaze ease, fixed there). On
+  // desktop the subject's screen-x is a monotone arc that is merely badly
+  // paced. IN PORTRAIT IT REVERSES: measured at 430x932, the root crown ran
+  // -159 px -> -292 px -> centre, i.e. it swung 136 px FURTHER LEFT — 77 px
+  // beyond the left edge of a 430-wide frame, off-screen entirely — before
+  // coming back. Same words from the owner, genuinely different defect.
+  //
+  // Why: this key's collapse of the Connect composition is where portrait's
+  // leftward motion lives. Dollying in (back 1.62 -> 1.04) magnifies the
+  // off-centre offset of anything that is not the target, and the crown is
+  // far off-centre here; the fov narrowing and rise drop add to it, and
+  // tgtRight -0.30 -> 0 is worth another 71 px of leftward travel on its own.
+  // Freezing back alone removes 117 of the 136 px, so it is the bulk of it.
+  // ALL of that was spent in the leg's first half, while the landscape yaw —
+  // the only rightward contribution — spent itself in the back half. Two
+  // opposed movements, phased apart: the sum is the largest reversal the
+  // parts can produce.
+  //
+  // So the fix is to make them overlap. The key rides 0.70 of the leg instead
+  // of 0.49, which delays back/fov/rise/tgtRight TOGETHER, in their authored
+  // proportions, into the window where the yaw is working. With the gaze fix
+  // in owned/camera.js the reversal goes 136 px -> 20 px and the crown never
+  // leaves the frame (min -179 px inside a 215 px half-frame). Neither lever
+  // is sufficient alone: the gaze fix by itself still clips off-frame at
+  // -229 px, and this re-timing by itself still clips at -247 px.
+  //
+  // Nothing composed moves: both rest keys are untouched and both rest poses
+  // are bit-exact, landscape is bit-identical by construction (portraitWeight
+  // is 0 at aspect >= 1, verified), and owned/leg.js only ever calls frameAt
+  // at the rest (0.725) and at exitP (~0.85), so the colony is untouched.
+  // Clearance is not spent but gained — holding `back` higher for longer
+  // keeps the eye FURTHER out through the descent (min stipe clearance
+  // 2.065 -> 2.070). The portrait soil crossing moves 0.68813 -> 0.68866,
+  // 5.4e-4 against a 0.020-wide murk window.
+  //
+  // Rides the leg rather than a literal p, like the Inspire mid-leg key
+  // above and for the same reason (route.js owns p).
+  { p: restProgress('connect') + 0.70 * (restProgress('owned') - restProgress('connect')),
+    back: 1.04, rise: 0.05, truck: 0, tgtUp: 0.05, tgtRight: 0, fov: 4 },
   { p: 0.700, back: 1.01, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 3 },
 
   // OWNED (rest 0.725) — RE-KEYED for the root-network restage
@@ -288,9 +339,150 @@ const TAB_KEYS = [
   { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
 ];
 
+/* ------------------------------------------------------------------ */
+/* The phone Inspire close-up (2026-08-27, Hannah's phone feedback)    */
+/* ------------------------------------------------------------------ */
+// "On Inspire, on mobile, can you make it zoom in significantly closer to
+// the head of the mushroom and maybe be looking at it from below a bit more
+// ... right now it feels too similar to the prior section on mobile."
+//
+// She is right about the cause, not just the symptom: the phone Inspire rest
+// was a whole-organism portrait at subject-distance 12.6 — the same picture
+// as the Mission hero with the plume mirrored. The two rests need to be two
+// PLACES: Mission keeps the full figure, Inspire moves under the cap.
+//
+// Same mechanism as the tablet band above — a DELTA field folded into the
+// portrait offsets — but gated by the phone width branch (<= 620px, the
+// design contract the phone typography and the Connect/Final phone blocks
+// already use), so tablets (768px) and every landscape mode are bit-identical
+// BY CONSTRUCTION. The deltas bloom at the Inspire rest and are gone by the
+// mid-leg key, exactly like the tablet band, so the Connect approach and its
+// REST-01 gaze contract inherit the shipped path.
+//
+// The same session then widened the brief twice ("the mushroom should be
+// higher up, pushed up on the page"; "consider deeply the overall feng shui
+// of the Inspire page on mobile — too much dead space above the mushroom"),
+// so the values below are a BALANCE solve for the whole 430x932 screen, not
+// a zoom knob. Measured on the shipped pose: the organism's ink did not
+// reach 30% of its peak until y 425 — 46% of a phone screen carrying faint
+// plume against black — while the copy block and the navigator share the
+// bottom 280 px. The rest below moves the subject up AND closer.
+//
+// Why these axes and not others (judged on rendered 430x932 / 375x812 pairs
+// each iteration — before/after and the iteration ladder are archived in
+// docs/code-health/evidence/2026-08-21-elegance-run-01/inspire-cam-mobile/):
+//   back  -0.66   1.50 -> 0.84: eye-to-cap distance 14.87 -> 9.43, the cap
+//                 ~58% larger on screen — the "zoom in significantly". This
+//                 is the CEILING the chips set, not a taste stop: the two
+//                 flanking release lips must project inside hotspot-frame's
+//                 |ndc| 0.92 admission band or their labels are culled
+//                 outright (measured: Arca's anchor at ndc -0.937 = hidden,
+//                 -0.87 = a pill clipped by the frame edge). Even this value
+//                 is only reachable together with the phone-portrait label-
+//                 anchor pull in inspire/index.js nodeWorld() — Arca lands
+//                 at ndc -0.66 and 2RP at 0.81, with 18.3 px and 16.2 px of
+//                 frame margin and no edge-nudge on either.
+//                 (First pass put Arca at -0.77; that cleared ADMISSION but
+//                 not the FRAME — the pill still landed 4 px from the left
+//                 edge and only got there through resolveX's +-26 px nudge,
+//                 i.e. with its dot pulled off its own node. See the pull's
+//                 own note in inspire/index.js.)
+//   rise  -0.40   eye y 2.0 -> 1.167 net of the dolly's geometric lift —
+//                 under every release lip (lips at 2.55/2.92/3.11, rim low
+//                 point 2.42), so the underside gills read. NOT lower: a
+//                 2026-08-27 iteration at eye 0.48 reproduced the exact trap
+//                 camera.js's D19 note records ("near ground is bright
+//                 ground") — the grazing root field became a lit band laid
+//                 straight across the body copy.
+//   tgtUp +0.46   net target y 2.024, gaze pitch +6.9 deg (shipped +1.2).
+//                 THIS IS D21's EQUAL-VOIDS RULE, RE-SOLVED FOR THE CLOSE-UP.
+//                 It was +0.70 when this block was first written (2026-08-27,
+//                 pitch +8.8), on the reasoning that more upward pitch is what
+//                 reads as "from below". That reasoning was WRONG and is
+//                 retracted here rather than deleted: "from below" is bought
+//                 by `rise` — the EYE below every release lip — not by the
+//                 aim. Ablated on rendered 430x932 frames the same day: the
+//                 underside gills read identically at pitch +5.5, +6.9, +8.8,
+//                 because eye y 1.167 never moved. All the aim decides is
+//                 where the head sits on the page, which is D21's question.
+//                 Measured on no-chrome frames, cap silhouette taken as the
+//                 rows carrying >= 80 lit strands, voids taken between the
+//                 top furniture's bottom edge (y 59.8) and the copy block's
+//                 top (y 650) — D21's "anchor to the furniture a viewer
+//                 actually sees":
+//                     tgtUp   cap rows    centre   void above / below
+//                     shipped 349..365      357        289 / 285
+//                     +0.70   312..462      387        252 / 188
+//                     +0.57   295..444      369        235 / 206
+//                     +0.46   281..453      367        221 / 197   <-
+//                     +0.28   257..408      332        197 / 242
+//                 +0.46 is the only value that closes D21's two voids (1 px
+//                 apart) and it lands the head within 2 px of where D21 put
+//                 it on the shipped pose — the same composition law, 58%
+//                 more cap, seen from underneath. +0.28 INVERTS the voids,
+//                 which is the shape D21 measured and rejected at +70 px.
+//                 It also repays D19's ground: the bright root ring rides UP
+//                 past the copy with the rest of the scene, so the field
+//                 behind the sub falls from mean 51.6 / p95 116 at +0.70 to
+//                 35.4 / 81 here (headline band flat at ~80 / 155). The
+//                 close-up still costs copy contrast against the shipped
+//                 pose's near-black 18.8 / 27 — that is this pose's real
+//                 price and it is recorded, not hidden.
+//   tgtRight -0.05  shares the admission margin between the two flanking
+//                 lips (Arca was the binding edge, 2RP had slack) and holds
+//                 D23's centring: measured on the rendered no-chrome frame,
+//                 the stalk's SILHOUETTE centre (half-max edges of the
+//                 stalk-only band, the stable form of this measurement) sits
+//                 at x 211.0 against a 215 midline — the same -4 px the
+//                 SHIPPED pose carries at 210.5, i.e. the close-up does not
+//                 spend D23 at all.
+//                 A -0.13 pan was tried on 2026-08-27 to buy Arca's frame
+//                 margin from the camera instead of the label, and REJECTED
+//                 on measurement: it moved the stalk to 221.0, from 4 px
+//                 left of the midline to 6 px right, which is spending a
+//                 recorded decision for a cosmetic gain. (An earlier read
+//                 of that pan claimed it IMPROVED the centring to 214.6.
+//                 That number came from a baseline-subtracted luminous
+//                 centroid over a fixed row band, which drifts by 13 px with
+//                 the band's choice because the band catches a varying slice
+//                 of root glow. It is retracted; the silhouette measure
+//                 above is band-stable and is the one to use.) The margin is
+//                 therefore bought where D22 buys it — in the label anchor,
+//                 inspire/index.js nodeWorld().
+//                 What the frame does keep is an uneven pair of cut edges —
+//                 in the cap band, column 0 / column 429 mean luminance
+//                 97.3 / 75.5. That is the CHAPTER's asymmetry, not a
+//                 framing error: D16/D18 put the spore stream on this side
+//                 deliberately, so the left edge is where the light is.
+//   fov   +2      53 -> 55: a touch of wide-angle steepens the from-below
+//                 perspective without pushing the rim lips off-frame.
+//
+// What it deliberately spends: the cap's rim tips and the plume tops spill
+// off the frame edges (they are context; the head is the subject — the same
+// argument as landscape D21), and the root field drops to a thin ground band
+// under the copy. Both are what makes the frame read as a different place
+// from Mission's full figure — which was the original complaint.
+//
+// Inspire's own reveal machinery is safe under this by construction-plus-
+// measurement: its reveal channels ride camera AZIMUTH alone
+// (inspire/index.js camAzDeg reads pos.x/z), the dolly slides pos along the
+// view line whose endpoints sit at az ~113.2/114.4 — far above the 78-deg
+// ramp ceiling and far from the -90 fold — and az(p) over the whole phone
+// arrival stays strictly monotone with max |delta| 1.30 deg vs the 621-wide
+// ablation (measured, 441-sample scrub over p 0.040..0.26, both phone
+// widths, 2026-08-27). The 2026-08-27 rebalance below moved only `tgtUp` and
+// `tgtRight`, both of which re-aim the TARGET and leave pose.pos alone, so
+// az(p) is bit-identical to that scrub rather than merely close to it.
+const PHONE_KEYS = [
+  { p: 0.040, ...TZERO },
+  { p: restProgress('inspire'), back: -0.66, rise: -0.40, truck: 0, tgtUp: 0.46, tgtRight: -0.05, fov: 2 },
+  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
+];
+
 const FIELDS = ['back', 'rise', 'truck', 'tgtUp', 'tgtRight', 'fov'];
 const _off = { ...ZERO };
 const _toff = { ...TZERO };
+const _poff = { ...TZERO };
 
 function fieldAt(p, keys, out) {
   if (p <= keys[0].p) { Object.assign(out, keys[0]); return out; }
@@ -317,6 +509,40 @@ const _fwd = { x: 0, y: 0, z: 0 }, _right = { x: 0, y: 0, z: 0 };
 // so the live director and Connect's ADOS placement solve consume the
 // same pose. The envelope is zero-slope at the chapter boundaries and peaks
 // at the authored Connect rest, preserving exact reverse scrubbing.
+//
+// DELIVERY CHANGED, MAGNITUDE UNTOUCHED (2026-08-24). The authored 0.45 and
+// its width ramp and its envelope are all the shipped ones; what changed is
+// that the offset now moves EYE AND TARGET TOGETHER — a pure vertical truck —
+// instead of the target alone.
+//
+// Why it had to: target-alone is a PITCH, and the Connect rest key twelve
+// lines above says why that is not available on this leg — "Connect's reveal
+// is derived from forward.y, so changing tgtUp alone would leave the ground
+// under-resolved". Measured at 430x932 against the 621-wide ablation (same
+// portrait field, phone-only blocks off): gaze at the rest -6.20 deg instead
+// of -7.72, so the camera-pure resolve read 0.9267 at the rest instead of
+// 1.0000, never reached 1 before the rest, and was NON-MONOTONE across the
+// leg (0.296 at p 0.400 -> 0.242 at p 0.420 -> rising). The gaze rate
+// reversed sign mid-glide, -36 -> +15 -> -40 deg/p: a visible nod, with the
+// whole network's brightness (arm x resolve x entry) dipping and recovering
+// with it. Downstream, the chips' 0.72 gate floor rode the depressed resolve,
+// so the section's own icons could not finish forming at the rest — the
+// owner's "the icon arrives in too late and out of sync".
+// (docs/code-health/evidence/2026-08-21-elegance-run-01/phone-01/)
+//
+// A truck keeps forward.y bit-exact, so every camera-pure reveal threshold on
+// the leg is exactly the ablation's, while the frame still moves down: it is
+// the same pattern as Final's phone lift below, and as the 2026-08-19
+// rise/tgtUp +0.80 pass, adopted there for this same reason.
+//
+// What it costs, measured, on the frame: at the rest the three Connect hubs
+// sat 19.4 / 18.6 / 20.0 px lower than the ablation under the pitch, and sit
+// 23.9 / 20.2 / 25.8 px lower under the truck — the same composition a few px
+// deeper (a truck is a parallax move, so the shift grows mildly with depth,
+// where a pitch is near-uniform). 0.45 is deliberately NOT re-tuned to erase
+// those 1.6-5.8 px: that is a taste call on a rendered phone frame, and it is
+// the owner's, not this file's. It does mean connect@430x932 legitimately
+// changes and wants a deliberate re-shoot.
 const PHONE_CONNECT_TARGET_Y = 0.45;
 
 function phoneConnectTargetY(viewportWidth) {
@@ -353,6 +579,20 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     o.tgtRight += t2.tgtRight * tw;
     o.fov += t2.fov * tw;
   }
+  // phone Inspire close-up: same fold, gated by the phone width branch (the
+  // contract the Connect lift and Final truck below already use). Width is a
+  // hard branch and the field's own keys are zero outside the Inspire leg,
+  // so tablets, landscape and every other chapter are untouched by
+  // construction. See the PHONE_KEYS note above.
+  if (viewportWidth <= 620 && aspect < 1) {
+    const p2 = fieldAt(p, PHONE_KEYS, _poff);
+    o.back += p2.back;
+    o.rise += p2.rise;
+    o.truck += p2.truck;
+    o.tgtUp += p2.tgtUp;
+    o.tgtRight += p2.tgtRight;
+    o.fov += p2.fov;
+  }
 
   // view frame of the LANDSCAPE pose
   _fwd.x = pose.target.x - pose.pos.x;
@@ -385,8 +625,11 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
 
   if (viewportWidth <= 620 && aspect < 1) {
     const connectW = phoneConnectWeight(p);
-    const connectTargetY = phoneConnectTargetY(viewportWidth);
-    pose.target.y += connectTargetY * connectW;
+    const connectLift = phoneConnectTargetY(viewportWidth) * connectW;
+    // Eye and target by the SAME amount: forward stays bit-exact, so
+    // Connect's camera-pure resolve is the ablation's. See the note above.
+    pose.pos.y += connectLift;
+    pose.target.y += connectLift;
   }
 
   // Final's phone composition needs a literal CAMERA move, independent of
@@ -407,9 +650,26 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
-    const lift = -0.35 * finalW;
-    pose.pos.y -= lift;
-    pose.target.y -= lift;
+    const legacyTruck = 0.35 * finalW;
+    pose.pos.y += legacyTruck;
+    pose.target.y += legacyTruck;
+
+    // Move the world picture upward independently of Final's fixed copy and
+    // Purpose navigation. Eye and target move together, preserving pitch,
+    // scale and every camera-pure reveal threshold; only scene framing moves.
+    const distance = Math.hypot(
+      pose.target.x - pose.pos.x,
+      pose.target.y - pose.pos.y,
+      pose.target.z - pose.pos.z,
+    );
+    const finalLiftWorld = cameraWorldUnitsForPixels({
+      pixels: PHONE_FINAL_SCENE_LIFT_PX,
+      distance,
+      fov: pose.fov,
+      viewportHeight: viewportWidth / aspect,
+    }) * finalW;
+    pose.pos.y -= finalLiftWorld;
+    pose.target.y -= finalLiftWorld;
   }
   return pose;
 }

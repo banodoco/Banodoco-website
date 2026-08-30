@@ -15,8 +15,9 @@ packaging path that Railway runs after push; release does not perform a second
 artifact build.
 
 The allowlist contains the browser entry files and runtime trees for assets,
-content, the journey, the organism, ownership, static captures/baked geometry,
-and the locally hosted Three.js modules. `ownership/reasons.js` is generated
+content, the journey, journey-v6, the organism, ownership, static
+captures/baked geometry, and the locally hosted Three.js modules.
+`ownership/reasons.js` is generated
 runtime data and is public even though lint correctly classifies it as generated.
 The Three.js tree is public vendor code and remains excluded from application
 lint/scanning.

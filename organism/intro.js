@@ -136,7 +136,16 @@ export function setupIntro(ctx) {
   const _introAt = INTROAT;
   // This clock is local to the draw choreography. Its acceleration never
   // leaks into scroll, readiness, seam, tooling, or other scene clocks.
-  const introClock = createIntroClock();
+  let accelerationRaf = null;
+  const introClock = createIntroClock({
+    requestFrame(callback) {
+      accelerationRaf = requestAnimationFrame(() => {
+        accelerationRaf = null;
+        callback();
+      });
+      return accelerationRaf;
+    },
+  });
   let completed = false;
 
   function start() {
@@ -207,10 +216,23 @@ export function setupIntro(ctx) {
     return introClock.accelerate({ totalMs, rampMs });
   }
 
+  /** Retire the draw animator and the intro-local acceleration ramp.
+   *  Idempotent, including when the intro never started or accelerated. */
+  function teardown() {
+    let undid = animators.delete('intro-draw');
+    if (accelerationRaf !== null) {
+      cancelAnimationFrame(accelerationRaf);
+      accelerationRaf = null;
+      undid = true;
+    }
+    return undid;
+  }
+
   return {
     start,
     finish,
     accelerate,
+    teardown,
     get started() { return introClock.started; },
     get complete() { return completed; },
   };

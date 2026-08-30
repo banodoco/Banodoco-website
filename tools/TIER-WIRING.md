@@ -7,10 +7,28 @@ rail's site-map panel instead of the capability-redirect design below
 journey/rail.js), and the failure doors this doc specified were built in
 the 2026-08-16 resilience pass (main.js: createScene guard, journey-import
 recovery, context-loss note — each pointing at `static/`). The `?tier=`
-flag was never created. The capture pipeline and Tier-3 page sections
-below remain accurate; the wiring sections are kept as design history
-only. File references to `mushroom-scene.js` and `core/` predate the
-M2/M4 renames.
+flag was never created. The Tier-3 page sections below remain accurate;
+the wiring sections are kept as design history only. File references to
+`mushroom-scene.js` and `core/` predate the M2/M4 renames.
+
+**Current navigation note (2026-08-27):** with JavaScript available, Tier 3
+shows one chapter at a time and switches it only through its chapter links;
+wheel, vertical touch and scroll keys cue that navigator instead of changing
+chapters. Its menu and long active chapter retain internal overflow so content
+stays reachable. With JavaScript disabled, the five authored sections remain a
+normally scrollable document as the accessibility-safe recovery baseline.
+
+**Capture pipeline sections (§2 and §4) are ALSO now historical, not current
+behavior — flagged here rather than rewritten.** They describe the pre-freeze
+state: `?capture=` as a proposal rather than shipped (§2, "the hard
+prerequisite for a pixel gate... without it... `capture.py --check` is
+advisory only"), and `--check` as "advisory today, a real gate once
+`?capture=` lands" (§4). Both landed at M6 (2026-08-04, capture.py's own
+header) — before this status note was written — and `--check` is a REAL,
+non-advisory gate in frozen mode today (see `tools/README.md`, `BUILDING.md`).
+§4 also predates current git availability (the doc's "git is still
+unavailable" no longer holds). For current capture/gate behavior, see
+`tools/README.md`'s "The capture loop" and "The commit gate" sections.
 
 Original handover text follows, unedited:
 
