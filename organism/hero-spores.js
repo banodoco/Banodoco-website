@@ -71,114 +71,146 @@
  *   fog            the scene's own FOG_NEAR 7.0 / FOG_FAR 20
  *   blending       additive, no depth write
  *
- * WHAT IS DELIBERATELY DIFFERENT, and it is three things and no more:
+ * WHAT IS DELIBERATELY DIFFERENT, and it is four things and no more:
  *   1. VERTICAL DIRECTION. The mushroom's shed rides BREEZE_DIR upward
  *      (1, 0.62, 0.17). These settle: the same left-to-right wind with
  *      gravity in it. `fall` is a per-mode composition parameter because
  *      the descent has to read at aspect 1.6 and at aspect 0.46, and the
  *      NDC slope a world ratio buys is multiplied by the aspect.
- *   2. REGION. The shed is emitted from the gills; this field is composed
- *      as a band across the text side (§ COMPOSITION).
+ *   2. REGION. The shed is emitted from the gills; this field is the
+ *      OTHER END of the same wind — a stream that falls in from off the
+ *      upper-left and lands at the mushroom's own ground (§ COMPOSITION).
  *   3. RESTRAINT. Opacity 1.05 against the shed's 2.4. The brief's words
  *      are "the headline remains dominant and calm", and one global gain
  *      is the honest knob for that — the draws above are untouched, so it
  *      is the same dust carrying less light, not different dust.
+ *   4. LANDING. The shed's dots ride the wind out of frame; these are
+ *      absorbed. Over the last stretch of its streamline a particle's
+ *      light ramps to zero — seeding the ground, not bouncing off it —
+ *      and it re-enters at the origin under the same law (§ the fade
+ *      note in advance()).
  * ==================================================================== */
 
 import { createHeroMode } from '../journey/boot/hero-mode.js';
 
 /* ---------------------------------------------------------------- *
- * COMPOSITION — 2B.1. One band per viewport mode.
+ * COMPOSITION — the seeding stream. One aim per viewport mode.
  * ---------------------------------------------------------------- *
- * The band is authored in the streamline coordinate, not as a
- * rectangle, and that is what makes it a STREAM rather than a field.
- * Every particle travels the same NDC slope (`fall` x aspect — the
- * depth cancels, because a world step scales x and y by the same
- * 1/depth), so a particle is identified for all time by `q`: the NDC
- * height it will have when it reaches `xOut`. A band is an interval in
- * q. Particles cannot leave it, the density along it cannot drift, and
- * "where does the stream sit in this frame" is two numbers.
+ * THE OWNER'S DIRECTION, and the whole shape of this table: the spores
+ * come in from the top-left of the screen and land where the mushroom
+ * is — "a stream of them that just happened to be landing there ...
+ * like they're the ones that are actually SEEDING the mushroom."
+ * During preload there IS no mushroom, and that is the point: the
+ * stream lands on the spot the specimen will stand, so when the intro
+ * draws it in, it materialises under an arrival that was already
+ * feeding that ground.
  *
- * That is also why a slow load stays composed (2D). Re-entry is at
- * `xIn` with a fresh q drawn from the same interval — the stationary
- * distribution is the seeded one, so the field neither thins nor
- * densifies however long the scene takes, and because every draw is
- * fresh it never reads as a loop.
+ * The stream is authored in the streamline coordinate, not as a
+ * rectangle. Every particle travels its own near-shared NDC slope
+ * (`fall` x aspect — the depth cancels, because a world step scales x
+ * and y by the same 1/depth), so a particle is identified for all time
+ * by `q`: the NDC height it will have when it reaches `xOut`. And
+ * because `xOut` now SITS AT THE MUSHROOM, q is the LANDING interval:
+ * "where does the stream land" is written directly below, in the same
+ * numbers the anatomy was measured in. Particles cannot leave the
+ * stream, the density along it cannot drift, and re-entry after
+ * absorption is at `xIn` with a fresh q from the same interval — the
+ * stationary distribution is the seeded one, so the field neither
+ * thins nor densifies however long the scene takes (2D), and because
+ * every draw is fresh it never reads as a loop.
  *
  *   n      particle count. Sparse on purpose; see the cap note in 2D.
- *   xIn    NDC x a particle enters at (off-frame left)
- *   xOut   NDC x it recycles at (off-frame right)
- *   q      [lo, hi] NDC y band, measured AT xOut. Placement lives here.
- *   depth  [near, far] view depth in world units. The scene's focal
- *          band is 9.5 (the blur term above), and the mushroom sits at
- *          roughly 8.5-12 from the hero camera, so a range straddling
- *          that puts some of this stream in the mushroom's own air and
- *          brings the rest forward for parallax.
+ *   xIn    NDC x a particle enters at (off-frame upper-left)
+ *   xOut   NDC x the stream lands at — set just past the stalk, so the
+ *          absorption tail (advance()) dies across the stem's own air
+ *   q      [lo, hi] NDC y landing band, measured AT xOut: the ground/
+ *          stem zone. Aim lives here, from live anatomy projections
+ *          (evidence/fb-seed/aim-before/aim-report.json):
+ *            mode        stalk x   ground y   stem-mid y
+ *            desktop      +0.42     -0.68      -0.34
+ *            deskNarrow   +0.43     -0.60      -0.31   (at 1280x900)
+ *            compact      +0.36     -0.66      -0.34   (at 900x520)
+ *            tablet       -0.02     -0.70      -0.47
+ *            mobile       +0.05     -0.45      -0.28
+ *   depth  [near, far] view depth in world units. The stem stands
+ *          10.8-12.4 from the hero camera by mode, so the far end lands
+ *          the stream in the mushroom's own air while the near end
+ *          brings some of it forward for parallax.
  *   fall   THE ON-SCREEN DESCENT, IN ITS OWN UNIT. It is authored as
  *          world descent per unit of world travel to the right, and that
  *          happens to be exactly `tan(the angle a reviewer sees)`: NDC
  *          slope is fall x aspect, screen pixels re-divide by that same
- *          aspect, and the two cancel. So 0.26 IS 14.6 degrees on every
- *          frame it is read on, which is why the per-mode values below
- *          can be argued about in degrees rather than measured.
+ *          aspect, and the two cancel. So 0.56 IS 29 degrees on every
+ *          frame it is read on. The portrait values are steep because
+ *          the frames are: from the upper-left edge to a centred stem
+ *          there is far more screen height to spend than width, and a
+ *          shallow slope would arrive from the LEFT, not the TOP-left.
  *   gain   speed multiplier over the shed's own base draw
  *   dpr    pixel-ratio ceiling for THIS layer (2D)
+ *   gx     [lo, hi] NDC x range of the GROUND MOTES only — the stand-in
+ *          ground keeps its full width while the stream above it aims;
+ *          motes are placement, not travel, so they do not follow xOut.
  *
- * Every band below was set by shooting the breakpoint and looking, at the
- * three sizes 2B.1 names; the angles are what the frame's own furniture
- * asked for, not a series.
+ * Every aim below was set by shooting the mode and looking; the landing
+ * bands are the measured anatomy plus soft width, not a series.
  */
 const COMPOSITION = {
-  // 1440x900. The copy is a left column and the specimen stands right, so
-  // there is a long clear diagonal between them: the band enters off the
-  // top-left, grazes the headline's upper lines on its way across (a few
-  // streamlines cross the type; at this brightness they read as air, and
-  // the copy stays dominant) and lands mid-frame in the specimen's own
-  // depth. 14.6 degrees is as steep as this width takes before the stream
-  // stops reading as drift and starts reading as fall.
+  // 1440x900. The specimen stands right of centre, so the diagonal runs
+  // the long way: in off the top-left corner, under the cap's left rim,
+  // dissolving across the stem base and root flare. A few streamlines
+  // cross the headline's upper-right shoulder on the way down; at this
+  // brightness they read as air, and the copy stays dominant.
   desktop: {
-    n: 190, xIn: -1.34, xOut: 1.20, q: [-0.70, 0.14],
-    depth: [4.2, 12.0], fall: 0.26, gain: 2.2, dpr: 2,
+    n: 150, xIn: -1.30, xOut: 0.58, q: [-0.80, -0.46],
+    depth: [6.0, 12.4], fall: 0.56, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
-  // windows. Same reading as desktop, one degree steeper and a shade
-  // narrower because the frame is shorter for its width.
+  // windows. Same reading as desktop, a shade steeper because the frame
+  // is shorter for its width and the stalk sits a touch higher.
   deskNarrow: {
-    n: 180, xIn: -1.34, xOut: 1.20, q: [-0.66, 0.16],
-    depth: [4.4, 12.2], fall: 0.28, gain: 2.2, dpr: 2,
+    n: 140, xIn: -1.30, xOut: 0.58, q: [-0.74, -0.40],
+    depth: [6.2, 12.6], fall: 0.62, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
   },
-  // Short landscape (a phone on its side; a very shallow window). Almost
-  // no vertical room, so the band is thin, the descent is steeper to make
-  // the crossing legible at all, and the count comes down with the frame.
+  // Short landscape (a phone on its side; a very shallow window). The
+  // same aim with almost no vertical room: the shallowest descent here,
+  // and the count comes down with the frame.
   compact: {
-    n: 130, xIn: -1.30, xOut: 1.18, q: [-0.58, 0.10],
-    depth: [4.5, 12.0], fall: 0.34, gain: 2.0, dpr: 1.5,
+    n: 100, xIn: -1.28, xOut: 0.52, q: [-0.76, -0.42],
+    depth: [6.0, 12.0], fall: 0.50, gain: 2.0, dpr: 1.5, gx: [-1.0, 1.1],
   },
-  // iPad portrait, 744x1133. fov 50 and camZ 12 centre the specimen low
-  // and leave a real gap between the sub-copy and the cap — the one place
-  // on this frame a stream can cross without competing with either. The
-  // band enters top-left above the copy, descends through that gap at
-  // 23.7 degrees and finishes on the cap's right shoulder, where the
-  // plume is already rising: the two sheds meet in the same air rather
-  // than occupying two halves of a centred composition.
+  // iPad portrait, 744x1133. The specimen is centred and low, so the
+  // stream enters high on the left edge, drops steeply past the cap's
+  // left rim and lands down the stem's visible length. Steep is honest
+  // here: this is the angle at which a line from the upper-left actually
+  // reaches a centred stem base on a frame this tall.
   tablet: {
-    n: 150, xIn: -1.28, xOut: 1.22, q: [-0.34, 0.22],
-    depth: [5.0, 13.5], fall: 0.44, gain: 2.0, dpr: 1.5,
+    n: 110, xIn: -1.24, xOut: 0.14, q: [-0.80, -0.52],
+    depth: [6.5, 13.0], fall: 1.65, gain: 1.7, dpr: 1.5, gx: [-1.0, 1.1],
   },
-  // Phone portrait, 430x932. Measured on the loaded frame, the gap
-  // between the sub-copy and the cap is about forty pixels — there is no
-  // "between" to put a stream in. So the band is narrow, steep (33
-  // degrees, the steepest here, because a shallow angle on a frame this
-  // tall never arrives anywhere) and aimed diagonally: in past the
-  // headline's upper-left, down across the copy column, out onto the
-  // cap's shoulder. A desktop-width band here is exactly the "spraying
-  // uniformly across the whole viewport" 2B.1 rules out, and this is a
-  // third of desktop's count over a much smaller frame.
+  // Phone portrait, 430x932. The steepest and sparsest: in at the upper
+  // left beside the headline's first line, down across the copy column
+  // (few dots, dim — the copy keeps dominance), landing on the short
+  // visible stem between cap and ground. Well under desktop's count over
+  // a much smaller frame — never snowfall.
   mobile: {
-    n: 120, xIn: -1.26, xOut: 1.24, q: [-0.18, 0.28],
-    depth: [5.0, 13.0], fall: 0.66, gain: 1.9, dpr: 1.5,
+    n: 100, xIn: -1.22, xOut: 0.16, q: [-0.64, -0.36],
+    depth: [6.5, 12.6], fall: 1.9, gain: 1.6, dpr: 1.5, gx: [-1.0, 1.1],
   },
 };
+
+// THE LANDING, in the streamline's own parameter. u is the fraction of
+// the xIn -> xOut span a particle has travelled; from LAND_U onward its
+// light ramps smoothly to zero, reaching exactly 0 at xOut — where the
+// recycle teleports it back to xIn invisibly. Authored as a fraction so
+// every mode's absorption occupies the same last stretch of its own
+// approach: the stream dims INTO the ground/stem zone rather than
+// stopping at a curtain.
+const LAND_U = 0.88;
+// Per-particle descent jitter (multiplicative, ±10%). The shed is
+// turbulent; a strictly parallel ribbon aimed at a point reads drawn.
+// A tenth of slope of scatter keeps every streamline aimed at the same
+// landing band while the body of the stream breathes like weather.
+const SLOPE_JIT = 0.10;
 
 // The scene's own fog, from organism/renderer.js's createRendererSetup.
 // Named here rather than imported because importing it would pull `three`
@@ -190,9 +222,11 @@ const OPACITY = 1.05;
 // A few dim points low in the frame stand in for the ground while the
 // real mycelial network is still a download (2C: "only a faint low amber
 // haze or a few dim ground points" — never a duplicate network). They are
-// the same particles at the bottom of the band, nearly still and at the
-// dark end of the palette, and they do not migrate: the real ground
-// arrives underneath them and this layer fades off it.
+// the same particles parked under the stream's landing, nearly still and
+// at the dark end of the palette, and they do not migrate: the real
+// ground arrives underneath them and this layer fades off it. Their x
+// placement is `gx`, not the stream's span — the ground keeps its full
+// width while the stream above it aims at the stem.
 const GROUND_MOTES = 26;
 
 /* ---------------------------------------------------------------- *
@@ -284,31 +318,48 @@ function basisOf(view) {
   return { fx, fy, fz, rx, ry, rz, ux, uy, uz };
 }
 
+/** The absorption ramp (§ LAND_U): full light through most of the
+ *  approach, then a smoothstep down to exactly zero at xOut, so the
+ *  recycle teleport is invisible even in mid-frame. Ground motes never
+ *  pass through here — they are placement, not travel. */
+function landFade(c, xNdc) {
+  const u = (xNdc - c.xIn) / (c.xOut - c.xIn);
+  if (u <= LAND_U) return 1;
+  const t = Math.min(1, (u - LAND_U) / (1 - LAND_U));
+  return 1 - t * t * (3 - 2 * t);
+}
+
 /** Seed (or re-seed) one particle. `atEntry` places it on the inflow edge
- *  — the recycle case; otherwise it is scattered along the band, which is
- *  what makes the composition complete on the very first painted frame
- *  instead of sweeping in from the left while somebody reads it. */
+ *  — the recycle case; otherwise it is scattered along the stream, which
+ *  is what makes the composition complete on the very first painted frame
+ *  instead of sweeping in from the corner while somebody reads it. */
 function seedOne(F, i, c, rand, atEntry) {
   const i3 = i * 3;
   const ground = i >= F.n - GROUND_MOTES;
-  const x = atEntry ? c.xIn : c.xIn + (c.xOut - c.xIn) * rand();
-  // THE BAND HAS NO EDGE. A uniform draw across [lo, hi] gives the stream
-  // two visible rims and reads as a beam; three summed draws give an
-  // Irwin-Hall bell, so occupancy tapers to nothing at the band's limits
-  // and the stream has a body and no boundary. Same trick, same reason, as
-  // the release arc's single-peaked density in organism/spores.js.
+  const x = ground
+    ? (atEntry ? c.gx[0] : c.gx[0] + (c.gx[1] - c.gx[0]) * rand())
+    : (atEntry ? c.xIn : c.xIn + (c.xOut - c.xIn) * rand());
+  // THE STREAM HAS NO EDGE. A uniform draw across [lo, hi] gives it two
+  // visible rims and reads as a beam; three summed draws give an
+  // Irwin-Hall bell, so occupancy tapers to nothing at the landing band's
+  // limits and the stream has a body and no boundary. Same trick, same
+  // reason, as the release arc's single-peaked density in organism/spores.js.
   const bell = (rand() + rand() + rand() - 1.5) / 1.5;
   const q = (c.q[0] + c.q[1]) / 2 + bell * (c.q[1] - c.q[0]) / 2;
   const depth = c.depth[0] + (c.depth[1] - c.depth[0]) * rand();
-  // Ground motes hang below the band, deep, and barely move: a handful of
-  // dim points where the network will be, not a picture of the network.
-  const y = ground ? -0.62 - 0.30 * rand() : q + F.slope * (c.xOut - x);
+  // Each particle's own descent, the shared slope breathed by SLOPE_JIT.
+  const fallJ = c.fall * (1 + SLOPE_JIT * (rand() * 2 - 1));
+  // Ground motes hang low, deep, and barely move: a handful of dim
+  // points where the network will be, not a picture of the network.
+  const y = ground ? -0.62 - 0.30 * rand() : q + fallJ * F.aspect * (c.xOut - x);
   const d = ground ? c.depth[1] * (0.86 + 0.14 * rand()) : depth;
   const halfH = d * F.tanHalfFov;
   F.frame[i3] = x * halfH * F.aspect;
   F.frame[i3 + 1] = y * halfH;
   F.frame[i3 + 2] = d;
   F.q[i] = ground ? y : q;
+  F.fallJ[i] = fallJ;
+  F.fade[i] = ground ? 1 : landFade(c, x);
   // The shed's own draws, one for one (see the header).
   F.size[i] = Math.pow(rand(), 1.8) * 0.072 + 0.019;
   F.tone[i] = ground
@@ -327,19 +378,23 @@ function createField(view, seed) {
   const n = c.n;
   const F = {
     n, comp: c, rand,
-    // The NDC slope every streamline shares. A world step of (1, -fall)
-    // becomes (1 / (halfH * aspect), -fall / halfH) in NDC, so the ratio
-    // is fall * aspect and the depth cancels — one band at every depth.
-    slope: c.fall * view.aspect,
     tanHalfFov: view.tanHalfFov,
     aspect: view.aspect,
     frame: new Float32Array(n * 3),      // (a, b, d) in the camera's view plane
-    color: new Float32Array(n * 3),      // linear working-space rgb
+    color: new Float32Array(n * 3),      // linear working-space rgb (unfaded base)
     size: new Float32Array(n),
     tone: new Float32Array(n),
     speed: new Float32Array(n),
     seed: new Float32Array(n),
     q: new Float32Array(n),
+    // Each particle's world descent per unit of rightward travel. A world
+    // step of (1, -fallJ) becomes (1 / (halfH * aspect), -fallJ / halfH)
+    // in NDC, so the on-screen slope is fallJ * aspect and the depth
+    // cancels — one aim at every depth, breathed by SLOPE_JIT.
+    fallJ: new Float32Array(n),
+    // The landing absorption, 1 -> 0 over the approach (landFade). Both
+    // renderers multiply it into the light, so the seam carries it too.
+    fade: new Float32Array(n),
     attrsDirty: true,
   };
   for (let i = 0; i < n; i++) seedOne(F, i, c, rand, false);
@@ -347,45 +402,70 @@ function createField(view, seed) {
 }
 
 /** Re-frame an existing field for a new viewport without re-seeding it:
- *  the particles keep their identity and their streamline, the band is
+ *  the particles keep their identity and their streamline, the aim is
  *  re-read for the new mode, and the composition follows the frame. */
 function reframe(F, view) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
+  const oldAspect = F.aspect;
+  // Crossing a breakpoint re-aims the whole field: each particle's jitter
+  // survives, rescaled onto the new mode's descent.
+  const fallScale = c.fall / F.comp.fall;
   F.comp = c;
-  F.slope = c.fall * view.aspect;
   F.tanHalfFov = view.tanHalfFov;
   F.aspect = view.aspect;
   for (let i = 0; i < F.n; i++) {
     const i3 = i * 3;
+    const ground = i >= F.n - GROUND_MOTES;
     const d = F.frame[i3 + 2];
     const halfH = d * F.tanHalfFov;
+    const xPrev = F.frame[i3] / (halfH * oldAspect);
+    if (ground) {
+      const x = Math.min(c.gx[1], Math.max(c.gx[0], xPrev));
+      F.frame[i3] = x * halfH * F.aspect;
+      F.frame[i3 + 1] = F.q[i] * halfH;
+      continue;
+    }
     // hold each particle on its own streamline, re-derived in the new frame
     const q = Math.min(c.q[1], Math.max(c.q[0], F.q[i]));
-    const xPrev = F.frame[i3] / (halfH * F.aspect);
     const x = Math.min(c.xOut, Math.max(c.xIn, xPrev));
     F.q[i] = q;
+    F.fallJ[i] *= fallScale;
     F.frame[i3] = x * halfH * F.aspect;
-    F.frame[i3 + 1] = (q + F.slope * (c.xOut - x)) * halfH;
+    F.frame[i3 + 1] = (q + F.fallJ[i] * F.aspect * (c.xOut - x)) * halfH;
+    F.fade[i] = landFade(c, x);
   }
 }
 
 /** Advance the whole field by `dt` seconds under `gust`. This is the one
  *  integrator; the preload canvas and the scene-side Points both call it,
- *  which is why the handoff cannot move a particle. */
+ *  which is why the handoff cannot move a particle — and why the landing
+ *  fade written here is the same brightness on both sides of the seam. */
 function advance(F, dt, gust) {
   const c = F.comp;
   const step = Math.min(dt, 0.05);
   for (let i = 0; i < F.n; i++) {
     const i3 = i * 3;
+    const ground = i >= F.n - GROUND_MOTES;
     const d = F.frame[i3 + 2];
     const v = F.speed[i] * gust * step;
     F.frame[i3] += v;
-    F.frame[i3 + 1] -= v * c.fall;
+    F.frame[i3 + 1] -= v * (ground ? c.fall : F.fallJ[i]);
     // The shed's wind carries 0.17 of z per unit of x, toward the viewer.
-    // Keeping it here is what stops the band reading as a flat plane.
+    // Keeping it here is what stops the stream reading as a flat plane.
     F.frame[i3 + 2] = Math.max(c.depth[0] * 0.8, d - v * 0.17);
     const halfH = F.frame[i3 + 2] * F.tanHalfFov;
-    if (F.frame[i3] > c.xOut * halfH * F.aspect) seedOne(F, i, c, F.rand, true);
+    const xNdc = F.frame[i3] / (halfH * F.aspect);
+    if (ground) {
+      // motes hold their light and idle across their own full-width range
+      if (xNdc > c.gx[1]) seedOne(F, i, c, F.rand, true);
+      continue;
+    }
+    // THE SEEDING ITSELF: light ramps out across the approach to the
+    // ground/stem zone, hits exactly zero at xOut, and the streamline
+    // respawn (2D) carries the particle back to the origin. Absorbed and
+    // re-blown, never bounced, never piled.
+    F.fade[i] = landFade(c, xNdc);
+    if (xNdc > c.xOut) seedOne(F, i, c, F.rand, true);
   }
 }
 
@@ -538,7 +618,7 @@ const STATIC_HAZE =
   + 'radial-gradient(ellipse 40% 44% at 64% 52%, rgba(226,160,74,0.045), transparent 74%)';
 
 const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
-  // The band has to add light to the frame the way the shed does, not
+  // The stream has to add light to the frame the way the shed does, not
   // paint over it. plus-lighter IS addition; screen is the fallback for
   // engines that lack it and is close enough on a field this dim.
   + 'mix-blend-mode:screen;mix-blend-mode:plus-lighter;'
@@ -559,6 +639,7 @@ function createPreload() {
   let uniforms = null;
   let attribs = null;
   let meta = null;
+  let lit = null;   // per-frame colour scratch: F.color x F.fade (draw())
 
   /** ONE requestAnimationFrame site in this module, deliberately. The
    *  hidden-tab gate (2D) parks the loop by clearing `rafId` and comes
@@ -583,10 +664,19 @@ function createPreload() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.frame);
     gl.bufferData(gl.ARRAY_BUFFER, F.frame, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(attribs.frame, 3, gl.FLOAT, false, 0, 0);
+    // The landing fade rides the colour, so the light — never the base
+    // palette — is what carries F.fade to the pixel. Uploaded per frame
+    // because the fade moves per frame; at this count it is ~2 KB.
+    for (let i = 0; i < F.n; i++) {
+      const i3 = i * 3, f = F.fade[i];
+      lit[i3] = F.color[i3] * f;
+      lit[i3 + 1] = F.color[i3 + 1] * f;
+      lit[i3 + 2] = F.color[i3 + 2] * f;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+    gl.bufferData(gl.ARRAY_BUFFER, lit, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(attribs.color, 3, gl.FLOAT, false, 0, 0);
     if (F.attrsDirty) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-      gl.bufferData(gl.ARRAY_BUFFER, F.color, gl.DYNAMIC_DRAW);
-      gl.vertexAttribPointer(attribs.color, 3, gl.FLOAT, false, 0, 0);
       for (let i = 0; i < F.n; i++) { meta[i * 2] = F.size[i]; meta[i * 2 + 1] = F.seed[i]; }
       gl.bindBuffer(gl.ARRAY_BUFFER, buffers.meta);
       gl.bufferData(gl.ARRAY_BUFFER, meta, gl.DYNAMIC_DRAW);
@@ -667,6 +757,7 @@ function createPreload() {
     }
     state.gl = gl;
     meta = new Float32Array(state.field.n * 2);
+    lit = new Float32Array(state.field.n * 3);
 
     try {
       const prog = gl.createProgram();
@@ -711,7 +802,7 @@ function createPreload() {
     state.field.preloadDriven = true;
     t0 = performance.now();
     draw(0);
-    // The band arrives on the hero copy's own beat rather than snapping on.
+    // The stream arrives on the hero copy's own beat rather than snapping on.
     // The forced reflow — journey/boot/handoff.js's own trick at the preboot
     // rail swap — is what makes the transition run from 0 rather than being
     // collapsed into the same style recalculation. Deliberately NOT a second
@@ -784,7 +875,7 @@ function createPreload() {
      *  THE TWO FADES ARE LINEAR AND COMPLEMENTARY, and they have to be.
      *  Both layers add light, so through the crossfade the frame carries
      *  `p * scene + (1 - p) * preload` of the same spore; with an eased
-     *  pair the sum bulges in the middle and the band visibly flares. On
+     *  pair the sum bulges in the middle and the stream visibly flares. On
      *  a linear pair it is flat, and the only thing that changes across
      *  the seam is that the light acquires the composer's bloom.
      *
@@ -830,7 +921,7 @@ function encodeOnCpu(lin) {
 
 /* ---------------------------------------------------------------- *
  * THE SINGLETON. index.html loads this module ahead of main.js, so the
- * band is composed before the scene's graph has finished arriving;
+ * stream is composed before the scene's graph has finished arriving;
  * main.js imports the same specifier and therefore the same instance
  * (ESM module cache), and hands the field over when the scene exists.
  * ---------------------------------------------------------------- */
@@ -847,7 +938,7 @@ if (typeof document !== 'undefined') heroSpores.boot();
  * ---------------------------------------------------------------- */
 
 /**
- * Rebuild the preload band as a THREE.Points in the hero scene, at the
+ * Rebuild the preload stream as a THREE.Points in the hero scene, at the
  * exact state the preload layer is holding, and keep advancing it under
  * the organism's OWN wind.
  *
@@ -886,6 +977,25 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
   // the intro draws the MUSHROOM into it.
   pts.frustumCulled = false;
   const buf = pts.geometry.attributes.position;
+  const colAttr = pts.geometry.attributes.color;
+
+  /** The scene-side half of the landing fade: the same F.color x F.fade
+   *  the preload canvas uploads, written into this Points' own colour
+   *  attribute — one brightness law, two renderers, so the absorption at
+   *  the stem is identical on both sides of the seam. (This also keeps a
+   *  recycled particle's fresh tone, which the build-time colours alone
+   *  would not.) */
+  function inkFades() {
+    const carr = colAttr.array;
+    for (let i = 0; i < F.n; i++) {
+      const i3 = i * 3, f = F.fade[i];
+      carr[i3] = F.color[i3] * f;
+      carr[i3 + 1] = F.color[i3 + 1] * f;
+      carr[i3 + 2] = F.color[i3 + 2] * f;
+    }
+    colAttr.needsUpdate = true;
+  }
+  inkFades();
 
   /* THE PARITY THIS FUNCTION OWES, stated because nothing else states it and
      it failed silently once. `basisOf` returns the camera's OWN axes, so a
@@ -896,7 +1006,7 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
      seam moves nothing. Break the basis (a sign, a swapped axis, a stale
      fov) and NOTHING ERRORS: the field simply re-composes somewhere else the
      instant the mushroom arrives. The invariant to check after any edit here
-     is per-particle screen parity, not that the band still looks composed. */
+     is per-particle screen parity, not that the stream still looks composed. */
   function project() {
     const arr = buf.array;
     for (let i = 0; i < F.n; i++) {
@@ -937,6 +1047,7 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
     }
     if (!F.preloadDriven) advance(F, dt, 0.72 + 0.28 * breeze(t));
     project();
+    inkFades();
   });
 
   return { points: pts, field: F };
