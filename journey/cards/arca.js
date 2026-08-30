@@ -130,29 +130,46 @@ export default {
     prize.textContent = 'PRIZE';
     word.append(the, title, prize);
 
-    // what it is, in five words (Hannah, 2026-08-18: every card carries a
-    // short descriptor; the chip already says the name) — then the record
-    const info = document.createElement('div');
-    info.className = 'ag-info';
+    // THE RECORD, below the art rather than crowding it (round 2): what it
+    // is in one tracked caption, then three cells, value over label,
+    // hairline-separated — the artwork keeps only its own wordmark, and
+    // everything written moves onto the ink plate where it reads over
+    // nothing. Same verified figures as before (see the STATS provenance
+    // note at the top of this file); "Edition II" rides the door's own
+    // destination rather than a fourth cell.
+    const foot = document.createElement('div');
+    foot.className = 'ag-foot';
     const desc = document.createElement('p');
     desc.className = 'ag-desc';
-    desc.textContent = 'Open source AI art competition';
-    const stats = document.createElement('p');
-    stats.className = 'ag-stats';
-    stats.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k prizes';
-    info.append(desc, stats);
+    desc.textContent = 'OPEN SOURCE AI ART COMPETITION';
+    foot.appendChild(desc);
+    const band = document.createElement('div');
+    band.className = 'ag-band';
+    for (const [num, lab] of [['198', 'ENTRIES'], ['7,287', 'VOTES'], ['$56.8K', 'PRIZES']]) {
+      const cell = document.createElement('div');
+      cell.className = 'ag-stat';
+      const n = document.createElement('span');
+      n.className = 'ag-num';
+      n.textContent = num;
+      const l = document.createElement('span');
+      l.className = 'ag-lab';
+      l.textContent = lab;
+      cell.append(n, l);
+      band.appendChild(cell);
+    }
 
-    // the door, in the site's own voice — Edition II is OVER (results
+    // the ending, in the site's own voice — Edition II is OVER (results
     // announced 2026-04-06), so the door says what a visitor can actually
     // do: see the winners. The href is the site's own winners route.
-    const cta = document.createElement('a');
-    cta.className = 'ag-cta card-cta';
-    cta.href = 'https://arcagidan.com/winners/edition-2';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'SEE WINNERS →';
-    stage.append(row, word, info, cta);
+    const door = document.createElement('a');
+    door.className = 'ag-door card-cta';
+    door.href = 'https://arcagidan.com/winners/edition-2';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'SEE THE WINNERS →';
+    foot.append(band, door);
+    stage.append(row, word, foot);
   },
 
   activate() {},                      // hover-driven; nothing to start
