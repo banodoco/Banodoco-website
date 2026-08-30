@@ -484,9 +484,17 @@ export function createTransitionController({
    *  destination pose (which is what makes the duration and both grade
    *  endpoints knowable). Taken as authored rather than re-assembled here:
    *  the stepper reads twenty-two named fields off it, and a spread would
-   *  put this file in the business of knowing which. */
+   *  put this file in the business of knowing which.
+   *
+   *  ONE FIELD IS SET RATHER THAN READ, and it is the lap's own odometer.
+   *  `advanced` answers "has this lap put any of its clock behind it?" — the
+   *  question rewoundHome below has to ask before it may land one. A lap
+   *  handed a clock that is already running has, by construction; a lap
+   *  authored at its own first frame (every jump directJumpTo builds) has
+   *  not, until stepCamBlend says so. */
   function beginBlend(blend) {
     camBlend = blend;
+    camBlend.advanced = camBlend.t > 0;
   }
 
   /* ---------------------------------------------------------------- *
@@ -506,6 +514,10 @@ export function createTransitionController({
    *  abandons the blend instead — the camera keeps the destination pose the
    *  director just wrote, which is where the jump was going anyway. */
   function stepCamBlend(dt) {
+    // The lap's odometer (see beginBlend). A dt of 0 is a PLACEMENT, not a
+    // frame of travel — it composes the same pose twice and moves the clock
+    // nowhere — so it may not buy the lap the right to land.
+    if (camBlend && dt > 0) camBlend.advanced = true;
     try { stepper(camBlend, railWrap || railFlight, dt); }
     catch (err) {
       console.error('[journey] camera blend threw — the jump lands directly:', err);
@@ -522,8 +534,30 @@ export function createTransitionController({
     get railFlight() { return railFlight; },
     get cameraStateDisagree() { return cameraStateDisagree; },
     get heroExiting() { return !!heroExit; },
-    /** A fully rewound wrap: the lap has run back past its own first frame. */
-    get rewoundHome() { return !!camBlend && camBlend.play < 0 && camBlend.t <= 0; },
+    /** A fully rewound wrap: the lap has run back past its own first frame.
+     *
+     *  ...AND IT MUST HAVE HAD A FIRST FRAME TO RUN BACK PAST (2026-08-30 —
+     *  the rapid-bookend report: the view resets, and the move that should
+     *  have transitioned arrives already finished). Two bookend controls
+     *  pressed between two animation frames — Purpose, then Intro — reach
+     *  steerWrapTo() while the lap they name is still standing on t = 0.
+     *  steerWrapBlend sets play = -1, and without the odometer below this
+     *  getter was true on the spot, so the very next spineFrame landed a lap
+     *  that had flown NOTHING: placeAt(homeP) with the placement snap, every
+     *  chapter thrown to its home target, the camera handed back to the hero
+     *  — the heaviest reset in this file, fired in the middle of an
+     *  interaction, with no travel to unwind and no frame of it drawn.
+     *
+     *  `advanced` delays a genuine landing by at most one frame (the next
+     *  stepCamBlend arms it, and that step composes the lap's own first frame
+     *  — which is the home pose, so nothing jumps). What it buys is that the
+     *  ticket stays LIVE across a reversal that arrived too early: a third
+     *  press steers the same lap, as steerWrapTo was written to, instead of
+     *  meeting a journey that has already been re-placed underneath it. */
+    get rewoundHome() {
+      return !!camBlend && camBlend.advanced
+        && camBlend.play < 0 && camBlend.t <= 0;
+    },
     get chapterEntry() { return chapterEntry; },
     set chapterEntry(v) { chapterEntry = v; },
 

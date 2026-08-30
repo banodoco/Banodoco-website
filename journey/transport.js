@@ -51,9 +51,20 @@
 
 import { WHEEL_LINE_PX, KEY_STEP_PX } from './constants.js';
 
+/** Does this TouchList carry the touch with `id`? A TouchList is array-LIKE
+ *  and has no `.some`, so this is a loop. */
+function touchListHas(list, id) {
+  for (let i = 0; i < list.length; i += 1) if (list[i].identifier === id) return true;
+  return false;
+}
+
 export function createTransport(host) {
   let blockedTouch = false;
   let blockedTouchY = null;
+  // WHICH finger the live gesture is riding. touchend and touchcancel fire
+  // once per finger, so a contact may only be closed by the lift of the touch
+  // that opened it — see onTouchEnd.
+  let trackedTouchId = null;
 
   function onWheel(e) {
     if (!host.enabled()) return;
@@ -77,6 +88,10 @@ export function createTransport(host) {
     // Leave both ownership and touchY alone — the browser owns the zoom, and
     // multi-finger deltas never feed the ride.
     if (e.touches.length > 1) return;
+    // Recorded AFTER that bail, so a pinch's second finger never becomes the
+    // tracked one. A synthetic touch with no identifier records null, which
+    // onTouchEnd reads as "unidentifiable" and closes exactly as it always did.
+    trackedTouchId = e.touches[0] ? (e.touches[0].identifier ?? null) : null;
     const owned = !!host.ownerOf(e.target);
     if (!owned && host.blocksTravel && host.blocksTravel()) {
       blockedTouch = true;
@@ -115,7 +130,19 @@ export function createTransport(host) {
     if (e.cancelable) e.preventDefault();
     host.moveTouchContact(y);
   }
-  function onTouchEnd() {
+  /** touchend AND touchcancel, and both fire PER FINGER. This handler used to
+   *  take no event and end unconditionally, so a second finger joining a live
+   *  scrub and lifting again killed the FIRST finger's contact mid-drag — the
+   *  mirror of the multi-finger bails in onTouchStart/onTouchMove, which are
+   *  careful to leave a running gesture alone. `changedTouches` names the
+   *  fingers that actually left; a lift that does not name the tracked one is
+   *  somebody else's and the contact survives it. An end that names nothing —
+   *  the boot replay's contact, whose touchstart this transport never saw, and
+   *  every synthetic end in the node suites — closes as before. */
+  function onTouchEnd(e) {
+    if (trackedTouchId !== null && e && e.changedTouches && e.changedTouches.length
+      && !touchListHas(e.changedTouches, trackedTouchId)) return;
+    trackedTouchId = null;
     blockedTouch = false;
     blockedTouchY = null;
     host.endTouchContact();

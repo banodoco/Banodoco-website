@@ -16,6 +16,19 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "deploy" / "public-files.json"
 REVISION_FILE = "release-revision.txt"
 
+# The only files ORIGIN substitution ever touches. Declared in DEPLOY.md's
+# "Artifact-only origin substitution" section: the three page heads plus
+# sitemap.xml plus 404.html. Every other selected file — including the JS
+# comments that happen to spell "ORIGINAL" — ships byte-identical to the
+# source checkout.
+PLACEHOLDER_FILES = frozenset({
+    "404.html",
+    "index.html",
+    "ownership/index.html",
+    "sitemap.xml",
+    "static/index.html",
+})
+
 STATIC_FROM = re.compile(
     r'''(?ms)^[ \t]*(?:import|export)\b(?:(?!;).)*?\bfrom\s*["']([^"']+)["']'''
 )
@@ -58,6 +71,20 @@ def selected_files(config: dict) -> list[tuple[Path, Path]]:
     if missing:
         raise ValueError("allowlisted files are missing: " + ", ".join(missing))
     return [(source, Path(relative)) for relative, source in sorted(selected.items())]
+
+
+def validate_placeholder_declaration(copied: list[tuple[Path, Path]]) -> None:
+    """Fail closed if a declared ORIGIN placeholder file is not part of what
+    the manifest actually selected — e.g. deploy/public-files.json renaming
+    or dropping one of the five files DEPLOY.md documents as substituted.
+    Without this, a rename would silently ship that file with an unresolved
+    ORIGIN placeholder instead of failing the build."""
+    selected = {relative.as_posix() for _, relative in copied}
+    missing = sorted(PLACEHOLDER_FILES - selected)
+    if missing:
+        raise ValueError(
+            "declared ORIGIN placeholder files are not in the selection: " + ", ".join(missing)
+        )
 
 
 def verify_relative_module_graph(destination: Path) -> None:
@@ -123,15 +150,24 @@ def verify(destination: Path, config: dict,
         raise ValueError("artifact differs from allowlist (" + "; ".join(details) + ")")
 
     changed = []
+    unresolved = []
     for source, relative in copied:
-        expected_bytes = source.read_bytes().replace(b"ORIGIN", origin.encode("utf-8"))
-        if expected_bytes != (destination / relative).read_bytes():
-            changed.append(relative.as_posix())
+        key = relative.as_posix()
+        source_bytes = source.read_bytes()
+        artifact_bytes = (destination / relative).read_bytes()
+        if key in PLACEHOLDER_FILES:
+            expected_bytes = source_bytes.replace(b"ORIGIN", origin.encode("utf-8"))
+            if b"ORIGIN" in artifact_bytes:
+                unresolved.append(key)
+        else:
+            # Every other selected file — including the JS comments that
+            # happen to spell "ORIGINAL" — must ship byte-identical to the
+            # source checkout. ORIGIN substitution is declared, not implied.
+            expected_bytes = source_bytes
+        if expected_bytes != artifact_bytes:
+            changed.append(key)
     if changed:
         raise ValueError("artifact files differ from substituted sources: " + ", ".join(changed))
-    unresolved = [path.relative_to(destination).as_posix()
-                  for path in destination.rglob("*")
-                  if path.is_file() and b"ORIGIN" in path.read_bytes()]
     if unresolved:
         raise ValueError("unresolved ORIGIN placeholders: " + ", ".join(unresolved))
     if (destination / REVISION_FILE).read_text(encoding="utf-8") != revision + "\n":
@@ -162,10 +198,14 @@ def main() -> int:
 
     config = json.loads(MANIFEST.read_text(encoding="utf-8"))
     copied = selected_files(config)
+    validate_placeholder_declaration(copied)
     for source, relative in copied:
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(source.read_bytes().replace(b"ORIGIN", origin.encode("utf-8")))
+        data = source.read_bytes()
+        if relative.as_posix() in PLACEHOLDER_FILES:
+            data = data.replace(b"ORIGIN", origin.encode("utf-8"))
+        target.write_bytes(data)
         shutil.copystat(source, target)
     (destination / REVISION_FILE).write_text(revision + "\n", encoding="utf-8")
     verify(destination, config, copied, origin, revision)

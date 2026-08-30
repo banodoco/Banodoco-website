@@ -222,17 +222,53 @@ if (sceneApi) {
   // it (mobile Safari especially). Hold the fallback note behind a 2.5s grace
   // window: a restore inside it is invisible; a loss that outlives it gets the
   // static-tier fallback.
+  //
+  // THREE THINGS A LOSS EVENT OWES, and preventDefault() is only the first.
+  //
+  //  · STOP RENDERING. A lost context accepts composer.render() and charges
+  //    full price for it — 181 composer passes measured across 3 s of forced
+  //    loss, all of them into nothing. setRenderEnabled() gates the render
+  //    alone; the loop, the clock and the animators keep running on purpose
+  //    (organism/animation.js says why, and it is not a small why).
+  //  · FORGET THE OLD FRAME. The TAA history texture does not survive the
+  //    context, but nothing in the pass knows that, so the first restored
+  //    frame would blend against garbage. Only a size change clears
+  //    validHistory, hence the narrow invalidateFrameHistory() hook.
+  //  · SPEAK AT MOST ONCE, AND ONLY FOR ITSELF. `lossToken` makes each loss
+  //    the owner of its own grace timer: loss -> loss -> restore used to
+  //    leave the FIRST loss's orphaned timer alive and able to raise the
+  //    note on a page whose context had already come back. And the note
+  //    surface is SHARED with sceneFailed/journeyFailed (journey/boot/
+  //    scene-note.js — there is exactly one), so an unconditional hide() on
+  //    restore could erase a message this path never wrote. Restore hides
+  //    only what the loss path itself put up.
   const canvas = sceneApi.renderer.domElement;
   let restoreTimer = null;
+  let lossToken = 0;
+  let noteShownByLoss = false;
   canvas.addEventListener('webglcontextlost', (e) => {
     e.preventDefault(); // tell the browser it should attempt a restore
+    const token = ++lossToken;
+    sceneApi.setRenderEnabled(false);
+    clearTimeout(restoreTimer);
     restoreTimer = setTimeout(() => {
+      if (token !== lossToken) return; // a newer loss or a restore owns the story now
+      noteShownByLoss = true;
       note.show(NOTE.contextLost);
     }, 2500);
   });
   canvas.addEventListener('webglcontextrestored', () => {
+    lossToken++; // retire every armed timer, including one already fired
     clearTimeout(restoreTimer);
-    note.hide();
+    restoreTimer = null;
+    if (noteShownByLoss) {
+      note.hide();
+      noteShownByLoss = false;
+    }
+    // Order matters: clear the stale history BEFORE the first frame is
+    // allowed to render, or that frame ships the smear.
+    sceneApi.invalidateFrameHistory();
+    sceneApi.setRenderEnabled(true);
   });
 }
 

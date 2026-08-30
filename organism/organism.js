@@ -2102,6 +2102,11 @@ function setView({ panX: p = 0, camY: cy = 2.05, camZ: cz = 8.8, targetY: ty = 2
   });
 }
 
+// A single subscriber, not a list: the one thing that needs to know the
+// picture has come back is the ride's input model, and a list would invite
+// registrations nobody can enumerate at the one moment it fires.
+let renderResumeHook = null;
+
 // =====================================================================
 // 13. PUBLIC API — the object returned by createScene()
 // =====================================================================
@@ -2179,6 +2184,38 @@ return {
    *  `freezeTime(0)` freezes at the t = 0 phase; `freezeTime(null)` resumes
    *  live time (no dt spike — the raw clock keeps being tracked). */
   freezeTime: animationLifecycle.freezeTime,
+  /** Gate the composer without stopping the frame loop: `false` skips the
+   *  per-frame render, `true` resumes it. The one caller is main.js's WebGL
+   *  context-loss pair — rendering into a lost context buys nothing and costs
+   *  a full frame each time. The clock, the animators and the rAF cadence are
+   *  deliberately left alone; organism/animation.js's gate carries the
+   *  measurement behind that choice. */
+  setRenderEnabled(on) {
+    animationLifecycle.setRenderEnabled(on);
+    // Fired on the RESUME edge only, and before the resumed frame renders:
+    // the subscriber's job is to decide what happens to input that was in
+    // flight when the picture stopped, and it has to have decided by then.
+    if (on && renderResumeHook) renderResumeHook();
+  },
+  /** Subscribe to the resume edge of setRenderEnabled() — the moment the
+   *  scene starts painting again after a stretch the visitor watched nothing
+   *  through. Pass null to unsubscribe. One subscriber; a second call
+   *  replaces the first. */
+  setRenderResumeHook(fn) {
+    renderResumeHook = typeof fn === 'function' ? fn : null;
+  },
+  /** Drop the TAA accumulation history so the next rendered frame starts a
+   *  fresh average instead of blending against whatever the pass last held.
+   *  A restored WebGL context has lost the history texture's CONTENTS but not
+   *  its dimensions, and only `setSize` clears `validHistory` — so this calls
+   *  it at the size already in force, which the vendored render target treats
+   *  as a no-op apart from the flag (it disposes only when a dimension
+   *  actually changes). Deliberately narrower than `viewport.sync()`, which
+   *  reaches the same flag by reallocating three render targets. */
+  invalidateFrameHistory() {
+    const db = renderer.getDrawingBufferSize(_taaDb);
+    taaPass.setSize(db.width, db.height);
+  },
   /** The spore SYSTEM handle (merge doc §3) — the same dots as
    *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
    *  chapter claims it with `setDriver({ exits })` and passes per-frame

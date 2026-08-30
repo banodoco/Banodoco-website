@@ -189,6 +189,46 @@ const prevented = () => {
   assert.deepEqual(r.calls.attempts, []);
 }
 
+/* A GESTURE ENDS WHEN ITS OWN FINGER LEAVES, NOT WHEN ANY FINGER DOES.
+   touchstart and touchmove already bail on a second finger so a pinch cannot
+   leak a delta into the ride; touchend did not, and closed the contact for
+   whichever finger happened to lift first. What this buys that nothing above
+   buys: every other touchend in this tree's suites is fired with an empty
+   `touches` and no `changedTouches` at all, so all of them are blind to the
+   two-finger case by construction. This is the only row that names the fingers.
+   Reported as a live defect: a normal drag that briefly becomes multi-touch
+   stops responding. */
+{
+  const r = rig({ blocked: false });
+  const A = { identifier: 1, clientY: 700 };
+  const B = { identifier: 2, clientY: 400 };
+  const move = (id, y) => r.fire('touchmove', {
+    target: {}, touches: [{ identifier: id, clientY: y }],
+    cancelable: true, preventDefault() {},
+  });
+
+  r.fire('touchstart', { target: {}, touches: [A] });
+  move(1, 660);
+  assert.equal(r.calls.touchMoves.length, 1, 'the first finger opens a live scrub');
+
+  r.fire('touchstart', { target: {}, touches: [A, B] });   // a pinch join: ignored
+  r.fire('touchend', { target: {}, touches: [A], changedTouches: [B] });
+  assert.equal(r.calls.touchEnds, 0,
+    "a second finger's lift must not close the tracked finger's contact");
+
+  move(1, 600);
+  assert.equal(r.calls.touchMoves.length, 2,
+    'the surviving finger keeps scrubbing after the other one lifts');
+
+  r.fire('touchend', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 1, "the tracked finger's own lift closes the contact");
+
+  // ...and the same for an OS/browser cancellation of the tracked contact.
+  r.fire('touchstart', { target: {}, touches: [A] });
+  r.fire('touchcancel', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 2, 'a cancellation naming the tracked finger still closes it');
+}
+
 // A navigation cue answers only a blocked gesture at rest. The flight entry
 // retires any cue that began immediately before a click, and the callback
 // itself refuses to start another while camera and chapter state disagree.
@@ -224,6 +264,16 @@ const railSource = readFileSync(new URL('../journey/rail.js', import.meta.url), 
 assert.match(railSource,
   /railHandoffState\(\{[\s\S]*?selectedChapterId: nowNext,[\s\S]*?cameraStateDisagree,[\s\S]*?\}\)/,
   'Ownership return CTA must be projected from the selected chapter and landed camera');
+/* The menu's scrim is a full-screen SIBLING of the panel, and ownership is
+   ancestor containment, so claiming the panel alone leaves the visible backdrop
+   unowned and a wheel or drag on it scrubs the journey behind the open dialog.
+   These two rows are presence, not behaviour — the behavioural half is the
+   browser ring, which is where a live scrim can be pointed at. They are here so
+   the claim cannot be deleted silently, and they fail loudly on a miss. */
+assert.match(railSource, /claimInput\(scrim[,)]/,
+  'the open menu must claim its scrim, or the backdrop scrubs the journey behind it');
+assert.match(railSource, /releaseInput\(scrim\)/,
+  'closing the menu must hand the scrim back to the journey');
 const handoffSource = readFileSync(new URL('../journey/boot/handoff.js', import.meta.url), 'utf8');
 const heroCssSource = readFileSync(new URL('../hero.css', import.meta.url), 'utf8');
 assert.doesNotMatch(handoffSource + heroCssSource, /intro-depart|intro-restore/,
@@ -360,6 +410,69 @@ const makeCopyArrival = (nodes = Object.fromEntries(copyBlocks.map(id => [id, fa
   assert.deepEqual(copyPlay, [-1, 1],
     'copy playback follows both directions without a replacement envelope');
 }
+
+// THE LAUNCH WINDOW IS ONE TRANSACTION. beginFlight() raises `transitioning`
+// and `cameraStateDisagree` and installs the rail ticket at phase 0;
+// beginBlend() is what gives the flight a clock that can ever lower them
+// again. A throw between the two — the duration policy refuses a non-finite
+// base, which an already-NaN camera reaches — used to leave both flags up for
+// the life of the page, and the director defers every responsive setView()
+// while `transitioning` is true and replays none of them. Executed rather than
+// read, because the property is that dropCamBlend() is a VALID rollback for a
+// flight that never got a blend: it must lower what beginFlight raised without
+// a camBlend to work from.
+{
+  const transitioning = [];
+  const stub = () => ({ clone: stub });
+  const controller = createTransitionController({
+    input: { claimNow: () => null },
+    sceneApi: { camera: { position: stub() }, controls: { target: stub() } },
+    director: {
+      owned: true,
+      setTransitioning(on) { transitioning.push(on); },
+      applyHeroPose() {}, restoreHero() {},
+    },
+    lens: { setLookOverride() {} },
+    ui: { cancelCopyEntry() {}, setCopyEntryPlay() {} },
+    chapters: {},
+    guarded: (_name, fn) => fn(),
+    chapterAt: () => ({ id: 'mission' }),
+    placeAt() {}, paintHero() {},
+    heroShownNow: () => 0, heroPresenceNow: () => 0,
+  });
+  const ticket = { fromP: 0, targetP: 0.26, phase: 0 };
+  controller.beginFlight({
+    railWrap: null, railFlight: ticket, chapterEntry: { id: 'inspire' },
+  });
+  assert.equal(controller.cameraStateDisagree, true,
+    'beginFlight raises the state/camera disagreement before any blend exists');
+  assert.deepEqual(transitioning, [true],
+    'beginFlight brackets the camera authority for the whole flight');
+  assert.equal(controller.blend, null,
+    'the window under test is exactly the one where the flight has no clock');
+  controller.dropCamBlend();
+  assert.equal(controller.cameraStateDisagree, false,
+    'the rollback lowers the disagreement a blend-less flight raised');
+  assert.deepEqual(transitioning, [true, false],
+    'the rollback hands the camera authority back, so resize re-framing lives');
+  assert.equal(controller.railFlight, null,
+    'the rollback drops the ticket the launch left frozen at phase 0');
+  assert.equal(controller.chapterEntry, null,
+    'the rollback drops the navigation-only chapter clock with it');
+}
+
+// ...and the shipped path takes it. The three anchors are the transaction's
+// three moments: opened before the flags are raised, committed only once the
+// blend owns a clock, rolled back on every other way out.
+assert.match(journeySource,
+  /let launched = false;\n\s*try \{\n\s*transition\.beginFlight\(/,
+  'the jump opens its transaction before it raises the flight flags');
+assert.match(journeySource,
+  /transition\.beginBlend\(\{[\s\S]*?\n\s*launched = true;/,
+  'the transaction commits only once the blend owns a clock that can end it');
+assert.match(journeySource,
+  /\n\s*\} finally \{\n\s*if \(!launched\) transition\.dropCamBlend\(\);\n\s*\}/,
+  'an unlaunched jump rolls the flight flags and its ticket back');
 
 function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP, dir) {
   const copy = makeCopyArrival();

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export function createAnimationLifecycle({ beforeRender, render }) {
   const animators = new Map();
   let frozenT = null;
+  let renderEnabled = true;
 
   /** Register a per-frame callback `fn(t, dt)` under `name`. Returns a
    *  handle: call it to remove exactly this registration. The handle is
@@ -27,7 +28,15 @@ export function createAnimationLifecycle({ beforeRender, render }) {
    *  once); callers that ignore the return value behave exactly as before. */
   function start() {
     const clock = new THREE.Clock();
-    const failed = new Set();
+    // R3: a single throw no longer condemns an animator outright — the
+    // 'journey' animator IS the ride (scroll, camera, chapters, UI), so a
+    // one-frame stumble used to end it for the rest of the page's life.
+    // failCounts tracks CONSECUTIVE throws per name; a success (including
+    // the very next frame's) clears it back to zero, and only
+    // FAILURE_BUDGET throws in a row without an intervening success
+    // retires the animator.
+    const failCounts = new Map();
+    const FAILURE_BUDGET = 3;
     let prevT = 0;
     let rafId = null;
     let stopped = false;
@@ -39,18 +48,39 @@ export function createAnimationLifecycle({ beforeRender, render }) {
       if (frozenT !== null) { t = frozenT; dt = 0; }
 
       for (const [name, fn] of animators) {
-        try { fn(t, dt); }
+        try {
+          fn(t, dt);
+          failCounts.delete(name);
+        }
         catch (err) {
-          animators.delete(name);
-          if (!failed.has(name)) {
-            failed.add(name);
-            console.error(`[organism] animator '${name}' threw and was disabled — the frame loop continues without it:`, err);
+          const count = (failCounts.get(name) || 0) + 1;
+          if (count < FAILURE_BUDGET) {
+            failCounts.set(name, count);
+            console.error(`[organism] animator '${name}' threw (${count}/${FAILURE_BUDGET} consecutive) — continuing:`, err);
+          } else {
+            failCounts.delete(name);
+            animators.delete(name);
+            console.error(`[organism] animator '${name}' threw ${count} times in a row and was disabled — the frame loop continues without it:`, err);
           }
         }
       }
 
-      beforeRender();
-      render();
+      /* THE COMPOSER IS GATED HERE; THE LOOP AND THE ANIMATORS ARE NOT, AND
+         THE ASYMMETRY IS THE POINT. A lost WebGL context still accepts
+         composer.render() and still costs the whole frame (measured: 181
+         composer renders across 3 s of forced loss), so the render is what
+         has to stop. Cancelling the rAF instead would stop the SHARED CLOCK
+         being observed, and the elapsed jump on resume lands past the
+         resolution governor's calibration window (organism/performance.js) —
+         which then calibrates off the 50 ms dt clamp floor and REMEMBERS the
+         lower pixel ratio for this display on every future visit. A GPU
+         hiccup lasting two seconds must not leave the site permanently
+         softer. Animators keep running for the same reason: they are what
+         keeps dt honest. */
+      if (renderEnabled) {
+        beforeRender();
+        render();
+      }
     }
     animate();
 
@@ -70,5 +100,11 @@ export function createAnimationLifecycle({ beforeRender, render }) {
     start,
     isFrozen: () => frozenT !== null,
     freezeTime(seconds = 0) { frozenT = seconds === null ? null : +seconds || 0; },
+    /** Gate the per-frame `beforeRender()`/`render()` pair. `false` stops
+     *  both while the rAF loop, the shared clock and every animator keep
+     *  running — see the note at the gate for why the loop stays up. This is
+     *  NOT freezeTime(): that one parks the clock for the capture tooling and
+     *  leaves the composer rendering every frame. */
+    setRenderEnabled(on) { renderEnabled = !!on; },
   };
 }
