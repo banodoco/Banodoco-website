@@ -779,6 +779,26 @@
     color: var(--muted);
   }
   .menu-thesis { margin-top: 0; font-size: 1.08rem; color: var(--parchment); }
+  /* Who / What / Why — the panel's three compact disclosures, mirrored from
+     the live tier (journey/rail.js). Authored open so a no-JS visitor reads
+     all three paragraphs; the script below collapses them and runs the
+     accordion. */
+  .menu-primer { margin: 0.1rem 0 0.45rem; padding: 0 0.6rem 0 2.9rem; }
+  .menu-primer-row + .menu-primer-row { border-top: 1px solid rgba(217, 164, 65, 0.1); }
+  .menu-primer-t {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    width: 100%; min-height: 44px; padding: 0.3rem 0.35rem; margin: 0 -0.35rem;
+    width: calc(100% + 0.7rem);
+    background: none; border: 0; border-radius: 2px; cursor: pointer;
+    color: var(--parchment); font-family: inherit; font-size: 0.62rem;
+    font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; text-align: left;
+    transition: color 0.3s, background 0.3s;
+  }
+  .menu-primer-t:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
+  .menu-primer-c { color: rgba(217, 164, 65, 0.6); font-size: 0.9rem; font-weight: 400; line-height: 1; }
+  .menu-primer-t[aria-expanded="true"] .menu-primer-c { color: var(--gold-bright); }
+  .menu-primer-d[hidden] { display: none; }
+  .menu-primer-p { margin: 0.05rem 0 0.7rem; font-size: 0.8rem; line-height: 1.6; color: var(--muted); }
   .menu-item:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
   .menu-item:is(:hover, :focus-visible) .menu-mark { color: var(--gold-bright); }
   .menu-item[aria-current="true"],
@@ -1429,7 +1449,25 @@
           <li><a class="menu-item" href="#/mission" data-menu="mission" data-menu-section="mission">
             <span class="menu-mark"><svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg></span>
             <span class="menu-txt"><span class="menu-line menu-thesis">We’re working to help the open-source AI art ecosystem thrive</span></span>
-          </a></li>
+          </a>
+          <!-- Who / What / Why (mirrors the live panel; copy from
+               content.js site.primer, every string data-src'd). Authored
+               open for the no-JS reader; the script collapses them. -->
+          <div class="menu-primer">
+            <div class="menu-primer-row">
+              <button class="menu-primer-t" type="button" id="pt-who" aria-expanded="true" aria-controls="pd-who"><span data-src="site.primer.0.label">Who</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
+              <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: Banodoco is 100% shared with the people who contribute, granted 1% per month.</p></div>
+            </div>
+            <div class="menu-primer-row">
+              <button class="menu-primer-t" type="button" id="pt-what" aria-expanded="true" aria-controls="pd-what"><span data-src="site.primer.1.label">What</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
+              <div class="menu-primer-d" id="pd-what" role="region" aria-labelledby="pt-what"><p class="menu-primer-p" data-src="site.primer.1.body">We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.</p></div>
+            </div>
+            <div class="menu-primer-row">
+              <button class="menu-primer-t" type="button" id="pt-why" aria-expanded="true" aria-controls="pd-why"><span data-src="site.primer.2.label">Why</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
+              <div class="menu-primer-d" id="pd-why" role="region" aria-labelledby="pt-why"><p class="menu-primer-p" data-src="site.primer.2.body">The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.</p></div>
+            </div>
+          </div>
+          </li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire" data-menu-section="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="15.4" cy="10.4" r="0.95"/><circle cx="17.2" cy="8.8" r="0.82"/><circle cx="15.4" cy="7.4" r="0.68"/><circle cx="18" cy="6" r="0.7"/><circle cx="16.2" cy="4.2" r="0.58"/></svg></span>
             <span class="menu-txt"><span class="menu-no">1.</span><span class="menu-name">Inspiring</span></span>
@@ -1861,6 +1899,27 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && openNode) { e.preventDefault(); closeDetail(true); }
+  });
+
+  /* ---------------- menu primer: Who / What / Why ---------------- */
+  // Authored open above (the no-JS reader gets all three paragraphs);
+  // with JS running they collapse into a small accordion, one open at a
+  // time, mirroring the live panel's behaviour (journey/rail.js).
+  var primerBtns = Array.prototype.slice.call(document.querySelectorAll('.menu-primer-t'));
+  primerBtns.forEach(function (btn) {
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!panel) return;
+    panel.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.addEventListener('click', function () {
+      var wasOpen = btn.getAttribute('aria-expanded') === 'true';
+      primerBtns.forEach(function (other) {
+        var otherPanel = document.getElementById(other.getAttribute('aria-controls'));
+        var on = !wasOpen && other === btn;
+        other.setAttribute('aria-expanded', on ? 'true' : 'false');
+        if (otherPanel) otherPanel.hidden = !on;
+      });
+    });
   });
 
   /* ---------------- routing: #/<chapter>[/<node>] ---------------- */

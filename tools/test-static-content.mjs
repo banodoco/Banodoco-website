@@ -50,7 +50,7 @@ assert.match(html, /if \(CHAPTERS\.indexOf\(chapter\) < 0\) return \{ chapter: n
 assert.match(html, /history\.replaceState\(null, '', '#\/mission'\)/);
 assert.doesNotMatch(html, /\bid="\/unknown"/);
 
-assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 127);
+assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 133);
 assert.equal((html.match(/<[a-z][^>]*\bdata-sym="/gi) ?? []).length, 11);
 assert.match(html, /data-src="chapters\.final\.nav">Purpose<\/span>/);
 assert.match(html, /class="menu-no">1\.<\/span><span class="menu-name">Inspiring<\/span>/);

@@ -1011,6 +1011,53 @@ export function createRail({ onNav } = {}) {
     }
     li.appendChild(a);
 
+    /* WHO / WHAT / WHY (2026-08-30, polish §3B.1) — three compact
+       closed-by-default disclosures directly under the opening statement,
+       one short paragraph each. An accordion: opening one closes the other
+       two, so the outline below never travels far and switching reads as
+       one drawer sliding, not a page reflow. The copy lives in
+       content/content.js (`site.primer`, flagged there as pending Peter's
+       editorial sign-off) so a wording swap never touches this file. The
+       buttons carry the standard aria-expanded/aria-controls pair; the
+       closed drawer is additionally aria-hidden so what a screen reader
+       walks matches what the eye can reach. */
+    if (section.id === 'mission' && Array.isArray(CONTENT.site.primer)) {
+      const primer = el('div', 'j-menu-primer');
+      const rows = [];
+      for (const item of CONTENT.site.primer) {
+        const row = el('div', 'j-menu-primer-row');
+        const btn = el('button', 'j-menu-primer-t');
+        btn.type = 'button';
+        btn.id = `j-primer-t-${item.id}`;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-controls', `j-primer-d-${item.id}`);
+        btn.appendChild(el('span', 'j-menu-primer-l', item.label));
+        const mark = el('span', 'j-menu-primer-c', '+');
+        mark.setAttribute('aria-hidden', 'true');
+        btn.appendChild(mark);
+        const drawer = el('div', 'j-menu-primer-d');
+        drawer.id = `j-primer-d-${item.id}`;
+        drawer.setAttribute('role', 'region');
+        drawer.setAttribute('aria-labelledby', btn.id);
+        drawer.setAttribute('aria-hidden', 'true');
+        drawer.appendChild(el('p', 'j-menu-primer-p', item.body));
+        row.appendChild(btn);
+        row.appendChild(drawer);
+        primer.appendChild(row);
+        rows.push({ btn, row, drawer });
+        itemsOwner.listen(btn, 'click', () => {
+          const wasOpen = btn.getAttribute('aria-expanded') === 'true';
+          for (const r of rows) {
+            const on = !wasOpen && r.btn === btn;
+            r.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+            r.drawer.setAttribute('aria-hidden', on ? 'false' : 'true');
+            r.row.classList.toggle('open', on);
+          }
+        });
+      }
+      li.appendChild(primer);
+    }
+
     const items = section.items || [];
     if (items.length) {
       const sub = el('ul', 'j-menu-sub');
