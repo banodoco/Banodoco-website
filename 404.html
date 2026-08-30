@@ -11,9 +11,10 @@
      style is inline and the mark is an embedded copy of the shipped
      mark-b-mask-96.png (see tools/build-mark.py), painted in gold via
      CSS mask exactly the way the live nav paints it. The only outbound
-     references are the two ORIGIN links (home + icon), swapped by the same
-     DEPLOY.md sed as the page heads. Point the host's 404 handling at this
-     file (most static hosts pick up /404.html by convention). -->
+     references are the three ORIGIN links (home + two icons), swapped by
+     the same DEPLOY.md sed as the page heads. Point the host's 404 handling
+     at this file (most static hosts pick up /404.html by convention). -->
+<link rel="icon" type="image/svg+xml" href="ORIGIN/assets/brand/favicon.svg">
 <link rel="icon" href="ORIGIN/favicon.ico" sizes="48x48 32x32 16x16">
 <style>
   :root { color-scheme: dark; }

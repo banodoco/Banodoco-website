@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<!-- Banodoco favicon mark — a neon-outline mushroom, recreated from
+     refs/approved-favicon-ref.jpg (2026-08-30, stem revised 2026-08-30 per
+     Fable review). Wide organic cap with a STRAIGHT underside line (the cap
+     path closes with a plain "Z", not a second curve, on purpose — that
+     straight line is what the reference calls out for small-size clarity),
+     narrow near-uniform stem with only a slight taper and a small flare
+     confined to the last ~20% of its height — NOT an hourglass waist and
+     NOT a trumpet/bell foot; the reference's stem sides stay close to
+     straight the whole way down. Full-bleed square on the site's dark
+     ground, same convention as the mark master this replaces. This file is
+     BOTH the shipped SVG icon (see the four page heads) AND the source
+     rasterized to assets/brand/favicon-source.png (see
+     tools/build-meta.py); the 16/32 .ico planes are cut from a separate,
+     bolder, unblurred variant — assets/brand/favicon-small.svg — because
+     this stroke width and glow blur read as a smear at that size (the
+     reference's own "optimized for 16x16" panel makes the same call). -->
+<title>Banodoco</title>
+<rect width="100" height="100" fill="#141008"/>
+<defs>
+<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+<feGaussianBlur stdDeviation="2.2" result="blur"/>
+<feMerge>
+<feMergeNode in="blur"/>
+<feMergeNode in="SourceGraphic"/>
+</feMerge>
+</filter>
+</defs>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<g filter="url(#glow)" stroke="#d9a441" stroke-width="4.6" opacity="0.55">
+<path d="M6,39.44 C20,20 34,14.8 50,14.8 C66,14.8 80,20 94,39.44 Z"/>
+<path d="M43.84,39.44 C44.10,50.00 44.72,63.20 44.72,74.64 C44.72,79.04 42.96,83.44 42.08,85.20 C43.84,86.96 56.16,86.96 57.92,85.20 C57.04,83.44 55.28,79.04 55.28,74.64 C55.28,63.20 55.90,50.00 56.16,39.44"/>
+</g>
+<g stroke="#f0c877" stroke-width="2.6">
+<path d="M6,39.44 C20,20 34,14.8 50,14.8 C66,14.8 80,20 94,39.44 Z"/>
+<path d="M43.84,39.44 C44.10,50.00 44.72,63.20 44.72,74.64 C44.72,79.04 42.96,83.44 42.08,85.20 C43.84,86.96 56.16,86.96 57.92,85.20 C57.04,83.44 55.28,79.04 55.28,74.64 C55.28,63.20 55.90,50.00 56.16,39.44"/>
+</g>
+</g>
+</svg>
