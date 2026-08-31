@@ -1,4 +1,4 @@
-import { arcLerp, skimWindow } from './camera-path.js';
+import { arcLerp } from './camera-path.js';
 
 /** The route-faithful flight's presented coordinate for eased phase `e`.
  *  With a pace table (journey.js buildRoutePace) the phase advances along the
@@ -66,24 +66,36 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
        SAME ease as the target it perturbs, so its velocity is zero at both
        ends and a settled or dt = 0 frame is byte-identical by construction. */
     if (blend.tgtDip) ctl.target.y += blend.tgtDip * Math.sin(Math.PI * e);
-    /* The rim-skim excursion of the shaped Connect -> Final leg (directJumpTo's
+    /* The banked pass of the shaped Connect -> Final leg (directJumpTo's
        FLYBY block prices it; absent from every other jump and from fixture
-       blends). A plateau window eases the pose off the generic arc onto a held
-       skim radius/height and the gaze onto the cap, holds all three through
-       the sweep's middle, and surrenders them over the last shoulder — so the
-       drop to the destination's own framing is the move's final gesture. The
-       window is zero at both ends with zero first and second derivative
-       (skimWindow), so endpoints, settled frames and dt = 0 frames are
-       byte-identical to the unshaped arc by construction. */
+       blends). ONE sin(pi*e) lobe — the same swell family as `bow`/`rise`
+       above, on the position's own ease — pulls the radius IN toward a
+       single closest pass and lifts the height over the rim. No plateau and
+       no shoulders: the first cut held a flat skim between two quintic
+       shoulders, which concentrated all radial motion in the entry — the
+       velocity aimed AT the specimen, then turned — and the owner read it as
+       "zooming in, almost hitting it, and then turning ... it should feel
+       like a PLANE flying around something". With the lobe, radial change is
+       spread across the whole move and the azimuth sweep is in the velocity
+       from the first frame, so curvature changes continuously and the path
+       never aims at what it is passing — the tangency trace in the R3
+       evidence measures the velocity holding >=60deg off the specimen the
+       entire approach. The gaze eases onto the cap on the lobe's SQUARE
+       (zero slope at both ends, one smooth in-and-out). Every term is zero
+       at e = 0 and e = 1, so endpoints, settled frames and dt = 0 frames are
+       byte-identical to the unshaped arc by construction — the arcLerp rule.
+       The radius term moves INWARD, so unlike a positive `bow` it does not
+       inherit arcLerp's clearance-by-construction guarantee; its clearance
+       is measured instead, on the live scene, in the same evidence. */
     if (blend.skim) {
-      const k = blend.skim, w = skimWindow(e, k.in, k.out);
+      const k = blend.skim, lobe = Math.sin(Math.PI * e), wG = lobe * lobe;
       const az = Math.atan2(cam.position.x, cam.position.z);
-      const r = Math.hypot(cam.position.x, cam.position.z) * (1 - w) + k.r * w;
+      const r = Math.hypot(cam.position.x, cam.position.z) - k.depth * lobe;
       cam.position.set(Math.sin(az) * r,
-        cam.position.y * (1 - w) + k.y * w, Math.cos(az) * r);
-      ctl.target.set(ctl.target.x * (1 - w) + k.gx * w,
-        ctl.target.y * (1 - w) + k.gy * w,
-        ctl.target.z * (1 - w) + k.gz * w);
+        cam.position.y + k.lift * lobe, Math.cos(az) * r);
+      ctl.target.set(ctl.target.x * (1 - wG) + k.gx * wG,
+        ctl.target.y * (1 - wG) + k.gy * wG,
+        ctl.target.z * (1 - wG) + k.gz * wG);
     }
     cam.up.set(0, 1, 0);
     cam.lookAt(ctl.target);
