@@ -898,7 +898,37 @@ export function boot(opts = {}) {
          longest ordinary jump, so the shipped cap would run it 4x faster than
          any other transition — a whip, not a considered move. */
       const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
-      const bow = wrap ? WRAP_BOW : 0, rise = wrap ? WRAP_RISE : 0;
+      /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:
+         "it should be one zoom and arc at the same time ... if it has to move
+         down and then up at the end, do a smooth arc and then move up at the
+         very end"). Measured on the shipped Connect -> Equip jump, every
+         channel already rode ONE smootherstep — az 61.8 -> 200 deg, r 9.0 ->
+         2.4, height and fov in step — yet the move READ as two: at radius 9 an
+         azimuth sweep is mostly a translation, so the first half presented as
+         a dolly-in (the gaze converging on the specimen while fov narrowed),
+         and only once close did the sweep read as going AROUND. The re-shape
+         is perceptual, using the two channels arcLerp already carries for the
+         wrap: `bow` holds the camera out near its wide radius while most of
+         the sweep is spent — the arc happens AT DISTANCE, where it reads as an
+         arc — so the close lands in the final third; and `tgtDip`, the one
+         addition (camera-blend.js), bows the gaze's height LOW through the
+         middle so the steep pitch-up onto the underside rest is the move's
+         last gesture — the "move up at the very end", said in the aim, which
+         is the axis the visitor actually reads it on. Both swells are
+         sin(pi*e) on the position's own ease, so velocity is zero at both
+         ends and a settled frame is byte-identical (the arcLerp rule). Every
+         equip-bound jump from every chapter takes the shape, and so does the
+         mirror out of Equip — the same two channels played backwards. The
+         magnitudes ride the leg's own gaps, so a short hop bows little and a
+         same-height leg dips not at all. */
+      const equipLeg = !wrap && !routeFaithful
+        && (chapterId === 'equip' || fromChapterId === 'equip');
+      const radGap = Math.abs(Math.hypot(pos0.x, pos0.z)
+        - Math.hypot(cam.position.x, cam.position.z));
+      const bow = wrap ? WRAP_BOW : equipLeg ? Math.min(2.2, radGap * 0.35) : 0;
+      const rise = wrap ? WRAP_RISE : 0;
+      const tgtDip = equipLeg
+        ? -Math.min(1.0, Math.abs(ctl.target.y - tgt0.y) * 0.35) : 0;
       // A route-faithful flight is priced by the route path it actually rides
       // (buildRoutePace above), not by the cylindrical arc it no longer follows
       // — the same "measured along the path actually travelled" rule the
@@ -930,7 +960,7 @@ export function boot(opts = {}) {
       // let lens.update() write the destination's per-leg curve.
       const look1 = lens.lookOf(journey.progress);
       transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
-        az1, bow, rise, look0, look1, look: { ...look1 },
+        az1, bow, rise, tgtDip, look0, look1, look: { ...look1 },
         // The lap's reverse gear (wrap only): the scroll direction that asked
         // for this move, the rest it departed — where a rewound lap places the
         // journey when it gets back (steerWrapBlend / landWrapHome) — and the
