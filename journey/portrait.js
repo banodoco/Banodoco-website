@@ -174,24 +174,28 @@ const KEYS = [
   // the same move in 2026-08-10 and 2026-08-09 for exactly this reason.
   { p: restProgress('inspire'), back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.296, fov: 13 },
 
-  // EQUIP (rest restProgress('equip') — 0.32; the underside). The landscape
-  // rest stands 5.0 out from the stipe axis at eye 1.15 with fov 48, which is
-  // a WIDE composition: the whole gill fan spans the frame edge to edge. A
-  // tall frame's horizontal fov collapses, so the fan's two ends leave the
-  // picture and the pose stops being an underside and becomes a close-up of
-  // the throat. `back` is therefore the lever, exactly as it is at Inspire —
-  // dolly out until the fan fits the narrow axis — and the aim comes DOWN with
-  // it so the stalk keeps its full column under the fan rather than being
-  // cropped by the copy block, which sits low here (pos-bottomleft).
-  //
-  // The eye must stay under the rim or the pose loses the one thing it is for:
-  // the specimen's lowest cap geometry is at world y 2.47, and the dolly's own
-  // geometric lift is along the VIEW axis, which at this pose climbs. `rise`
-  // pays that back so the net eye height stays near the landscape 1.15 — the
-  // same "from below is bought by the eye, not the aim" finding the phone
-  // Inspire block below records, applied to the chapter that is entirely about
-  // being underneath.
-  { p: restProgress('equip'), back: 1.42, rise: -0.34, truck: 0, tgtUp: -0.42, tgtRight: 0, fov: 9 },
+  // EQUIP (rest restProgress('equip') — 0.32; the underside ceiling, R3).
+  // The landscape rest stands 2.4 out at eye 0.85 with fov 56, looking 49 deg
+  // UP — the gill fan overhead, the stalk a column on the right third. The
+  // view axis therefore CLIMBS steeply, and that changes what `back` does
+  // here: dollying out slides the eye down that axis fast (0.42 of back is
+  // ~1.26 units of eye drop). The retired shallow pose could spend back 1.42
+  // and pay the height back with a small negative rise; folded onto the steep
+  // pose the same key drove the eye to y -0.75 — underground, the whole frame
+  // fogged brown. Every number below was re-derived against the steep pose on
+  // rendered 430x932 / 744x1133 frames:
+  //   back  1.16   one step out from under the rim (horizontal 2.4 -> 2.8) so
+  //                the narrow frame keeps a taller run of stalk and the near
+  //                rim's arc enters the top of the frame as structure;
+  //   rise  0.34   pays back the dolly's geometric drop — net eye y 0.70,
+  //                still 1.7+ under the lowest cap geometry (2.47);
+  //   tgtUp -0.15, tgtRight 0.17 — the aim eases toward the throat's centre
+  //                line ((0.45,3.85) -> ~(0.30,3.70)) so the stalk holds the
+  //                middle of the tall frame instead of its right edge;
+  //   fov   +4     60 vertical: the tall frame's horizontal fov is what
+  //                collapses, and the widening keeps a corner-to-corner sweep
+  //                of gill rays overhead without leaving the underside.
+  { p: restProgress('equip'), back: 1.16, rise: 0.34, truck: 0, tgtUp: -0.15, tgtRight: 0.17, fov: 4 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes

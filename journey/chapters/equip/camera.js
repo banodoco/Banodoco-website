@@ -61,50 +61,44 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 //     being behind the specimen.
 //
 // THE EYE IS BELOW THE RIM AND THAT — NOT THE AIM — IS WHAT BUYS "FROM BELOW".
-// The lowest cap geometry sits at world y 2.47; the eye is at 1.15, more than a
-// unit under it, so the gill surface is seen from underneath at every azimuth
-// in frame. This is the same finding the phone Inspire close-up records in
-// journey/portrait.js ("'from below' is bought by `rise` — the EYE below every
-// release lip — not by the aim"), and it is what lets the aim stay shallow.
+// The lowest cap geometry sits at world y 2.47; the eye is at 0.85, more than
+// one and a half units under it, and at r 2.4 it stands ON the rim's own
+// footprint (rim radius ~2.35-2.6), so the fan is not a subject ahead of the
+// camera but a ceiling over it. This is the same finding the phone Inspire
+// close-up records in journey/portrait.js ("'from below' is bought by `rise` —
+// the EYE below every release lip — not by the aim"), taken to where this
+// chapter was always pointed.
 //
-// THE PITCH IS AS SHALLOW AS THE PICTURE ALLOWS, and the ceiling is not taste —
-// it is borrowed from the next chapter. Connect's ground network is revealed by
-// a CAMERA-PURE quantity, `forward.y`, the downward component of the look axis
-// (connect/index.js resolveNow), and the whole Equip -> Connect leg is that
-// quantity unwinding from wherever this rest leaves it. Every degree of extra
-// pitch here is route progress spent later in that leg before the network can
-// draw at all, against a light schedule whose beats are its own. So the pose
-// was chosen at the SHALLOW end of what still reads as an underside, and where
-// that end is was found by shooting it, not by arithmetic. Every row below is a
-// rendered 1440x900 frame of this chapter at its own rest, with its copy block
-// and both chips live:
+// THE PITCH IS STEEP ON PURPOSE (R3, the owner's direction: "facing up at a
+// really high angle, almost into the sky, but covered by the underside of it —
+// an extreme angle, and a lot more elegant"). The look axis climbs 49.2 deg,
+// against the 21.3 the previous rest held. That earlier shallow ceiling was
+// borrowed from Connect — its ground network resolves on `forward.y`, the
+// downward component of the look axis (connect/index.js resolveNow), and every
+// degree of pitch here is route progress the Equip -> Connect leg spends
+// unwinding before the network can draw. The borrowing is now repaid in
+// measurement instead of shallowness: with this pose the resolve's first draw
+// and full arrival were re-measured over the whole leg by the property sweep
+// in tools/test-connect-motion.mjs — all eleven compositions — and both still
+// land before the rest, with the monotone rise that sweep demands. The
+// steeper start costs leg progress, not the guarantee.
 //
-//     r / eye y / aim y     pitch    what the frame shows
-//     4.3 / 1.05 / 3.30     27.6     the fan fills the frame corner to corner;
-//                                    its lower edge crowds the copy block
-//     4.6 / 1.10 / 3.20     24.5     open fan, long stalk — the most present
-//                                    the specimen ever is
-//     5.0 / 1.15 / 3.10     21.3     the same picture with air around it: the
-//                                    fan open and whole, the stalk a full
-//                                    column, a clear dark band for the copy <-
-//     5.4 / 1.20 / 3.05     18.9     still an underside, but the specimen has
-//                                    gone small in the frame
-//     5.2 / 1.35 / 2.90     16.4     NOT AN UNDERSIDE. The near margin closes
-//                                    over the fan and what reads is the DOME,
-//                                    seen from slightly below — the ordinary
-//                                    three-quarter this chapter exists to leave
-//     7.0 / 1.60 / 2.75      9.3     a low three-quarter of the whole specimen
+// The pose itself, judged on rendered 1440x900 frames with copy and chips
+// live (the survey walked r 3.4 -> 1.9, pitch 37 -> 60): at r 2.8 the frame is
+// still a specimen seen from below; at r 1.9 / 60 deg the near lattice starts
+// to abstract. r 2.4 with the aim at (0.45, 3.85, 0) is the seat between —
+// the gill fan radiates corner to corner overhead like a lit ceiling, the far
+// rim sweeps the lower right into open dark, and the stalk rises just right of
+// centre from the frame's bottom edge to the throat, anchoring the headline's
+// own corner. The 0.45 of aim-x is composition, not geometry: it seats the
+// throat on the frame's right third and hands the copy block the calmer
+// left field under the fan's fading edge.
 //
-// The 18.9 and 16.4 rows are the useful ones: 2.5 deg apart, and between them
-// the picture STOPS being the thing. An aim shallow enough to be free for
-// Connect is an aim that does not show the gills, so the pose is pinned to the
-// last row that still does (18.9), plus one row of margin — 21.3, the 5.0 row.
-//
-// fov 48 rather than the Inspire rest's 40: the widening is what holds the far
-// rim inside the frame at this distance without dollying back out of the
-// underside. It is also on the way to Connect's 62, so the leg out of here
-// keeps opening rather than turning around.
-export const EQUIP = { az: 200 * DEG, r: 5.0, y: 1.15, target: V(0, 3.10, 0), fov: 48 };
+// fov 56 rather than the Inspire rest's 40: at r 2.4 the widening is what
+// keeps both the throat and a long run of the fan inside one frame without
+// dollying back out from under the canopy. It is also on the way to Connect's
+// 62, so the leg out of here keeps opening rather than turning around.
+export const EQUIP = { az: 200 * DEG, r: 2.4, y: 0.85, target: V(0.45, 3.85, 0), fov: 56 };
 
 // The gaze's mid-arc control point — the CONTROL POINT of a quadratic bezier
 // INSPIRE.target -> EQUIP.target, the same construction the arrival and the
@@ -112,7 +106,7 @@ export const EQUIP = { az: 200 * DEG, r: 5.0, y: 1.15, target: V(0, 3.10, 0), fo
 // point the Inspire rest is aimed at and the underside centre this rest is
 // aimed at, so the gaze walks along the cap and in under it continuously
 // instead of cutting across open sky mid-swing.
-const PIN = V(1.05, 2.86, -0.55);
+const PIN = V(1.05, 2.90, -0.55);
 
 /** The Inspire -> Equip gesture. `u` is gesture-local (0 = the Inspire rest,
  *  1 = the Equip rest); the composer maps global p over
@@ -149,6 +143,6 @@ export const CAMERA = {
     // keyed spline above it. It is declared for the same reason Inspire's is:
     // it is the arc's landing and the approach's departure, and a seam with no
     // written-down pose is a seam nobody can check.
-    { t: 0.5, pos: V(-1.7101, 1.1500, -4.6985), tgt: V(0, 3.10, 0), fov: 48, hold: true, note: 'equip-rest' },
+    { t: 0.5, pos: V(-0.8208, 0.8500, -2.2553), tgt: V(0.45, 3.85, 0), fov: 56, hold: true, note: 'equip-rest' },
   ],
 };
