@@ -71,6 +71,11 @@
 
 import { FREE_CAM } from '../../flags.js';
 import { NOTE } from './scene-note.js';
+// The preload atmosphere's singleton (ESM cache: same instance the page
+// booted). Consulted for ONE thing — the overture's ignition contract:
+// the normal release below waits for the traveling amber light to reach
+// the specimen's landing spot, so the growth reads as struck by it.
+import { heroSpores } from '../../organism/hero-spores.js';
 
 /**
  * @param scene           the organism's scene handle (never null — the
@@ -245,6 +250,11 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     introReleased = true;
     document.body.classList.remove('scene-preparing');
     document.body.classList.add('scene-intro-live');
+    // THE STRIKE: the overture's landing-zone glow swells on this same
+    // frame, so the draw-on below reads as lit by the light's arrival.
+    // The normal path timed this call to the light's landing; the fast
+    // and fallback paths fire it wherever the light happens to be.
+    heroSpores.overtureIgnite();
     scene.intro.start();
     performance.mark('hero-intro-start');
   }
@@ -365,23 +375,43 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         if (skipIntro || frozen) {
           document.body.classList.remove('scene-preparing');
           document.body.classList.add('scene-static');
+          // no intro, so no strike to wait for — the overture leaves quietly
+          heroSpores.overtureDismiss();
           scene.intro.finish();
           activateJourney();
         } else if (journeyInputRequested || entryQueue.peek()) {
           beginFastHandoff();
         } else {
-          releaseIntro();
-          railRevealTimer = setTimeout(() => {
-            if (readyState && readyState.revealRail) readyState.revealRail();
-          }, Math.max(0, HERO_SCENE_COMPLETE_MS - RAIL_REVEAL_LEAD_MS));
-          requestAnimationFrame(activateWhenIntroComplete);
-          activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
+          /* THE IGNITION WAIT. The overture's amber light has been
+             cycling down the stream toward the specimen's spot the whole
+             load; asking for the strike here and releasing ON it is what
+             makes the growth read as CAUSED by the arrival instead of
+             coincident with a download. Bounded by construction — a
+             mid-travel light finishes its run (<= 1.8 s), a light in the
+             dwell just landed and returns 0 — and the whole release
+             beat (rail reveal, activation poll, defensive timer) shifts
+             by the same wait, so their offsets from the intro's start
+             are exactly what they were. A gesture during the wait takes
+             beginFastHandoff() as ever; the guard below then yields. */
+          const strikeMs = heroSpores.overtureMsUntilStrike();
+          const releaseOnStrike = () => {
+            if (fastHandoffStarted || journeyActive) return;
+            releaseIntro();
+            railRevealTimer = setTimeout(() => {
+              if (readyState && readyState.revealRail) readyState.revealRail();
+            }, Math.max(0, HERO_SCENE_COMPLETE_MS - RAIL_REVEAL_LEAD_MS));
+            requestAnimationFrame(activateWhenIntroComplete);
+            activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
+          };
+          if (strikeMs > 0) setTimeout(releaseOnStrike, strikeMs);
+          else releaseOnStrike();
         }
         return state;
       } catch (err) {
         stopIntroInputCapture();
         document.body.classList.remove('scene-preparing');
         document.body.classList.add('scene-intro-live');
+        heroSpores.overtureIgnite();
         scene.intro.start();
         performance.mark('journey-fallback');
         console.error('[journey-v6] failed to load', err);
