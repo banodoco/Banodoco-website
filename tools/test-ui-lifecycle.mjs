@@ -626,8 +626,13 @@ pin('UIL-T1', 'the UI surface: zero raw addEventListener sites, 30 owner.listen;
    The site-map panel's three thesis disclosures share one funnelled click
    listener per button, registered in the menuSections build; no timer —
    the drawer animates in CSS. Both zeros hold. */
-pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 26 owner.listen; zero raw setTimeout, 9 owner.timer (including both Purpose subtree routes, menu Ownership, Manifesto touch Soon, and the Who/What/Why primer)',
-  readSiteCensus, { src: SRC.rail }, [0, 26, 0, 9]);
+/* 26 -> 27 owner.listen, primer restage (2026-08-31, owner's direction:
+   side by side, never stacked). The trio became a one-line tablist and
+   gained a single funnelled keydown site on the row for Left/Right/Home/
+   End focus movement; the per-button click site is unchanged and the
+   answers still animate in CSS, so no timer. Both zeros hold. */
+pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 27 owner.listen; zero raw setTimeout, 9 owner.timer (including both Purpose subtree routes, menu Ownership, Manifesto touch Soon, and the Who/What/Why primer tablist)',
+  readSiteCensus, { src: SRC.rail }, [0, 27, 0, 9]);
 
 pin('UIL-T3', 'journey/rail.js: both requestAnimationFrame sites went through owner.raf',
   readRailRaf, { src: SRC.rail }, [0, 2]);
