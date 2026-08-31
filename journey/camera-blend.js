@@ -1,4 +1,4 @@
-import { arcLerp } from './camera-path.js';
+import { arcLerp, skimWindow } from './camera-path.js';
 
 /** The route-faithful flight's presented coordinate for eased phase `e`.
  *  With a pace table (journey.js buildRoutePace) the phase advances along the
@@ -66,6 +66,25 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
        SAME ease as the target it perturbs, so its velocity is zero at both
        ends and a settled or dt = 0 frame is byte-identical by construction. */
     if (blend.tgtDip) ctl.target.y += blend.tgtDip * Math.sin(Math.PI * e);
+    /* The rim-skim excursion of the shaped Connect -> Final leg (directJumpTo's
+       FLYBY block prices it; absent from every other jump and from fixture
+       blends). A plateau window eases the pose off the generic arc onto a held
+       skim radius/height and the gaze onto the cap, holds all three through
+       the sweep's middle, and surrenders them over the last shoulder — so the
+       drop to the destination's own framing is the move's final gesture. The
+       window is zero at both ends with zero first and second derivative
+       (skimWindow), so endpoints, settled frames and dt = 0 frames are
+       byte-identical to the unshaped arc by construction. */
+    if (blend.skim) {
+      const k = blend.skim, w = skimWindow(e, k.in, k.out);
+      const az = Math.atan2(cam.position.x, cam.position.z);
+      const r = Math.hypot(cam.position.x, cam.position.z) * (1 - w) + k.r * w;
+      cam.position.set(Math.sin(az) * r,
+        cam.position.y * (1 - w) + k.y * w, Math.cos(az) * r);
+      ctl.target.set(ctl.target.x * (1 - w) + k.gx * w,
+        ctl.target.y * (1 - w) + k.gy * w,
+        ctl.target.z * (1 - w) + k.gz * w);
+    }
     cam.up.set(0, 1, 0);
     cam.lookAt(ctl.target);
     if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }

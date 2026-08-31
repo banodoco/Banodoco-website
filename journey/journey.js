@@ -35,7 +35,7 @@ import { registerChapterInteractions } from './chapter-interactions.js';
 import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
-import { arcLength, azTurn } from './camera-path.js';
+import { arcLength, arcLerp, azTurn, skimWindow } from './camera-path.js';
 import { controlWrapDirection, normaliseNode } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
@@ -198,9 +198,49 @@ let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
                          // rotational sense — how the shipped path was chosen
                          // against the short way, and how it can be re-judged.
 const EQUIP_TURN = 1;    // the rotational sense forced on every rest-departing
-                         // Equip leg (the ONE LAP block below): +1 = increasing
-                         // azimuth, the sense the ride itself enters Equip with
-                         // on its own Inspire (115deg) -> Equip (200deg) arc.
+                         // Equip leg (the ONE LAP block below) and on the
+                         // Connect -> Final flyby (the FLYBY block): +1 =
+                         // increasing azimuth, the sense the ride itself
+                         // enters Equip with on its own Inspire (115deg) ->
+                         // Equip (200deg) arc. One constant on purpose — the
+                         // site turns one way, and a re-judged sense should
+                         // flip every forced lap together.
+
+/* The Connect -> Final flyby's authored numbers (see directJumpTo's FLYBY
+   block). `let`, and reachable through window.journey.flybyTuning, only so the
+   path can be swept and re-rendered without a reload — the shipped values are
+   these. Geometry they answer to, measured live at 1440x900: the hero cap ends
+   at r 2.65 with its swept-side rim riding y 2.4..3.15, and no other solid
+   geometry on the sweep stands past r 2.65 above y 3.0 (Final's own town crests
+   y 2.92 further out). */
+let FLYBY_SKIM_R = 4.0;   // world units of held radius through the sweep —
+                          // ~1.4 clear of the rim: close enough that the cap
+                          // fills the frame and the rim slides past, far
+                          // enough that the lattice is never entered.
+let FLYBY_SKIM_Y = 3.5;   // world units of held height — just over the rim
+                          // band (2.4..3.15), under the cap top (4.37), so the
+                          // move reads as flying ALONG the edge, and clears
+                          // the town below by ~0.6.
+let FLYBY_GAZE_Y = 3.1;   // gaze height held through the sweep: the cap
+                          // itself, on the axis — a near-level look across the
+                          // rim from the skim pose, not the ground-level rest
+                          // targets, whose lerp passes almost beneath the
+                          // skim and would pitch the view ~67deg down.
+const FLYBY_IN = 0.30;    // eased-phase shoulders of the plateau window
+const FLYBY_OUT = 0.34;   // (skimWindow): dive in over the first ~30%, skim,
+                          // release over the last ~34% — the drop to Purpose's
+                          // framing is end-phased, the tgtDip precedent.
+let FLYBY_EXTRA_S = 0.42; // BASE seconds added on top of the length law. The
+                          // law prices metres, but a rim orbit's perceived
+                          // speed is angular: at the length-law's own 2.05 s
+                          // the held sweep read 190 deg/s of gaze and the dive
+                          // peaked 274 — outside the 77-217 deg/s every other
+                          // transition measures. The declared conversion: the
+                          // 'connect|final' speed row (0.70) divides the base,
+                          // so 0.42 here delivers ~0.60 s on the page — total
+                          // ~2.65 s, hold ~150 deg/s, dive peak ~210. Priced
+                          // against the wrap's own precedent: 219 deg in
+                          // 2.65 s against the wrap's 360 in 4.00.
 
 /* ONE JOURNEY EVER. main.js boots once; a second boot returns the handle the
    first one published rather than building a second generation. */
@@ -748,6 +788,26 @@ export function boot(opts = {}) {
     }
     return { cum, total, pathLen };
   }
+  /* Length of a skim-shaped flyby path — the same "priced by the path
+     actually travelled" rule as buildRoutePace, sampled the same way,
+     because arcLength's mean-radius estimate is taken on the generic arc
+     and the skim excursion spends most of the sweep well inside it. */
+  const _skimPrev = new THREE.Vector3(), _skimCur = new THREE.Vector3();
+  function skimPathLength(a, b, az1, k) {
+    let len = 0;
+    for (let i = 0; i <= ROUTE_PACE_N; i++) {
+      const e = i / ROUTE_PACE_N;
+      arcLerp(a, b, e, _skimCur, az1, 0, 0);
+      const w = skimWindow(e, k.in, k.out);
+      const az = Math.atan2(_skimCur.x, _skimCur.z);
+      const r = Math.hypot(_skimCur.x, _skimCur.z) * (1 - w) + k.r * w;
+      _skimCur.set(Math.sin(az) * r,
+        _skimCur.y * (1 - w) + k.y * w, Math.cos(az) * r);
+      if (i) len += _skimCur.distanceTo(_skimPrev);
+      _skimPrev.copy(_skimCur);
+    }
+    return len;
+  }
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -923,8 +983,30 @@ export function boot(opts = {}) {
          live blend keeps the shortest way: a mid-flight reversal rewinds —
          the same grammar as the wrap's reverse gear — which is what keeps an
          80 ms change of mind a step back rather than a near-full lap. */
+      /* THE CONNECT -> FINAL LEG IS A RIM FLYBY (R3, the owner: "the camera
+         should zoom in close by the edge of the mushroom and fly along the
+         edge — keep it dynamic and interesting — and then go around the other
+         side, back to where the Purpose spot currently ends"). The short way
+         is -141.4deg — a retreat back across the front, the same in-and-unwind
+         reading the two blocks above rule out for their own seams — so the
+         sense is forced positive like Equip's: +218.6deg around the far side.
+         The return leg is deliberately NOT shaped: Final (-79.6deg) ->
+         Connect (+61.8deg) is +141.4deg the SHORT way, already in the same
+         sense, so the pair sums to exactly 360 — the visit reads as one lap,
+         the Equip grammar — and routine back-navigation keeps its brisk,
+         plain arc. The path itself is shaped by `skim` (camera-blend.js):
+         the generic arc would ride r 9.0 -> 15.0 the whole way, a wide
+         retreat; the plateau window instead eases r and height onto a held
+         rim-skimming pose and the gaze onto the cap for the sweep's middle,
+         then releases outward and down into Purpose's own rest, which this
+         block does not touch. An overtaking click keeps the shortest way and
+         the plain arc — a mid-flight change of mind rewinds, the same
+         grammar as the wrap's reverse gear. */
+      const flybyLeg = !wrap && !routeFaithful && !overtaken
+        && fromChapterId === 'connect' && chapterId === 'final';
       const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
         : equipLeg && !overtaken ? azTurn(pos0, cam.position, EQUIP_TURN)
+        : flybyLeg ? azTurn(pos0, cam.position, EQUIP_TURN)
         : null;
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:
          "it should be one zoom and arc at the same time ... if it has to move
@@ -955,6 +1037,11 @@ export function boot(opts = {}) {
       const rise = wrap ? WRAP_RISE : 0;
       const tgtDip = equipLeg
         ? -Math.min(1.0, Math.abs(ctl.target.y - tgt0.y) * 0.35) : 0;
+      const skim = flybyLeg ? {
+        r: FLYBY_SKIM_R, y: FLYBY_SKIM_Y,
+        gx: 0, gy: FLYBY_GAZE_Y, gz: 0,
+        in: FLYBY_IN, out: FLYBY_OUT,
+      } : null;
       // A route-faithful flight is priced by the route path it actually rides
       // (buildRoutePace above), not by the cylindrical arc it no longer follows
       // — the same "measured along the path actually travelled" rule the
@@ -962,7 +1049,9 @@ export function boot(opts = {}) {
       // 1.20 s on the shipped first leg (arc ~20+, route 24.0), so the shipped
       // duration is unchanged; they differ only for a mid-leg overtake.
       const routePace = routeFaithful ? buildRoutePace(railFromP, targetP) : null;
-      const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
+      const len = routePace ? routePace.pathLen
+        : skim ? skimPathLength(pos0, cam.position, az1, skim)
+        : arcLength(pos0, cam.position, az1);
       const baseDuration = wrap
         ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
         /* An Equip leg spends the length law UNCAPPED: the cap exists so a
@@ -972,7 +1061,12 @@ export function boot(opts = {}) {
            — 0.35 s per 20 units — so the marginal rate simply keeps running;
            legs shorter than 20 units (every unforced Equip arc) are
            byte-identical to the capped law. */
-        : 0.85 + 0.35 * (equipLeg ? len / 20 : Math.min(len / 20, 1));
+        /* A flyby spends it uncapped for the same reason: its sampled path
+           runs ~30 units, and at the cap that is the whip again — plus its
+           own authored seconds (FLYBY_EXTRA_S), because a rim orbit is
+           priced by the angle it sweeps, not only the metres it covers. */
+        : 0.85 + 0.35 * (equipLeg || skim ? len / 20 : Math.min(len / 20, 1))
+          + (skim ? FLYBY_EXTRA_S : 0);
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
       // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
       // p, so a jump threw the whole world's depth to the destination's ramp on
@@ -993,7 +1087,7 @@ export function boot(opts = {}) {
       // let lens.update() write the destination's per-leg curve.
       const look1 = lens.lookOf(journey.progress);
       transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
-        az1, bow, rise, tgtDip, look0, look1, look: { ...look1 },
+        az1, bow, rise, tgtDip, skim, look0, look1, look: { ...look1 },
         // The lap's reverse gear (wrap only): the scroll direction that asked
         // for this move, the rest it departed — where a rewound lap places the
         // journey when it gets back (steerWrapBlend / landWrapHome) — and the
@@ -1551,6 +1645,18 @@ export function boot(opts = {}) {
       if (typeof o.rise === 'number') WRAP_RISE = o.rise;
       if (typeof o.extra === 'number') WRAP_EXTRA_S = o.extra;
       if (typeof o.turn === 'number') WRAP_TURN = o.turn;
+    },
+    /** QA: the Connect -> Final flyby's authored numbers, same purpose and
+     *  same shipped-values rule as wrapTuning above. */
+    get flybyTuning() {
+      return { r: FLYBY_SKIM_R, y: FLYBY_SKIM_Y, gazeY: FLYBY_GAZE_Y, extra: FLYBY_EXTRA_S };
+    },
+    set flybyTuning(o) {
+      if (!o) return;
+      if (typeof o.r === 'number') FLYBY_SKIM_R = o.r;
+      if (typeof o.y === 'number') FLYBY_SKIM_Y = o.y;
+      if (typeof o.gazeY === 'number') FLYBY_GAZE_Y = o.gazeY;
+      if (typeof o.extra === 'number') FLYBY_EXTRA_S = o.extra;
     },
     /** QA: a chapter's build-time counts (segments, points, bodies, draws
      *  per body), or null. The budget A/Bs read this rather than counting

@@ -28,3 +28,20 @@ export function arcLength(a, b, az1) {
   const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
   return Math.hypot(Math.abs(d) * 0.5 * (rA + rB), rB - rA, b.y - a.y);
 }
+
+/** Plateau envelope for a held mid-flight excursion: quintic-smoothstep up
+ *  over eased phase [0, ein], 1 across the middle, quintic down over
+ *  [1 - eout, 1]. Both shoulders have zero first AND second derivative at
+ *  their ends, so a channel mixed by this window leaves its endpoints with
+ *  the same C2 stillness the master ease already guarantees — w(0) = w(1)
+ *  = 0 keeps a settled or dt = 0 frame byte-identical, the arcLerp rule.
+ *  The sin(PI e) swell above is one bump; this is the bump given a flat
+ *  top, for a value that must be REACHED, HELD, then surrendered. */
+export function skimWindow(e, ein, eout) {
+  const s = (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    return x * x * x * (x * (x * 6 - 15) + 10);
+  };
+  return s(e / ein) * s((1 - e) / eout);
+}
