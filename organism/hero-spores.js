@@ -16,12 +16,14 @@
  * number sizeCanvas() needs — and it is loaded by its OWN <script
  * type="module"> in index.html, ahead of main.js. It therefore paints as
  * soon as its own graph has arrived, in parallel with — not behind — the
- * 1.8 MB the scene needs. That graph is 24.9 KB with comments stripped as
- * the public build strips them (20.3 this file, 3.8 hero-mode, 2.5
- * performance, 2.3 flags); the two leaves added for the seam fix cost
- * 4.8 KB of it, and buy a stream that does not change size the instant the
- * scene adopts it. THE RULE THIS GRAPH LIVES UNDER: nothing that imports
- * `three`, and nothing that imports something that does.
+ * 1.8 MB the scene needs. That graph is ~33.9 KB with comments stripped
+ * (26.0 this file, 3.5 hero-mode, 2.2 performance, 2.1 flags); the two
+ * leaves added for the seam fix cost 4.8 KB of it, R4's overture — the
+ * thicker stream, the ambient washes and the traveling ignition light —
+ * costs ~5.7 KB of this file's share, and together they buy a wait that
+ * reads as a precursor rather than an empty rectangle. THE RULE THIS
+ * GRAPH LIVES UNDER: nothing that imports `three`, and nothing that
+ * imports something that does.
  *
  * AND THAT WEIGHT IS NOT FREE, so it is stated here rather than discovered.
  * Measured on a 6x CPU / 400 kbps cold load it puts first paint 1.25 s
@@ -165,6 +167,13 @@ import { PIN_PR } from '../flags.js';
  *   gx     [lo, hi] NDC x range of the GROUND MOTES only — the stand-in
  *          ground keeps its full width while the stream above it aims;
  *          motes are placement, not travel, so they do not follow xOut.
+ *   ov     the OVERTURE'S AIM (R4): NDC (x, y) of the stalk base — the
+ *          measured anatomy pairs from the table above, verbatim, NOT
+ *          xOut. The stream lands just PAST the stalk so its absorption
+ *          dies across the stem's own air, but the mushroom GROWS at the
+ *          stalk, and the pool glow, the ground wash and the traveling
+ *          light's landing all belong to the spot the specimen will
+ *          actually stand on (§ THE OVERTURE below).
  *
  * Every aim below was set by shooting the mode and looking; the landing
  * bands are the measured anatomy plus soft width, not a series.
@@ -190,6 +199,7 @@ const COMPOSITION = {
   desktop: {
     n: 235, xIn: -1.30, xOut: 0.58, q: [-0.80, -0.46],
     depth: [6.0, 12.4], fall: 0.56, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
+    ov: [0.42, -0.68],
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading as desktop, a shade steeper because the frame
@@ -197,6 +207,7 @@ const COMPOSITION = {
   deskNarrow: {
     n: 220, xIn: -1.30, xOut: 0.58, q: [-0.74, -0.40],
     depth: [6.2, 12.6], fall: 0.62, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
+    ov: [0.43, -0.60],
   },
   // Short landscape (a phone on its side; a very shallow window). The
   // same aim with almost no vertical room: the shallowest descent here,
@@ -204,6 +215,7 @@ const COMPOSITION = {
   compact: {
     n: 148, xIn: -1.28, xOut: 0.52, q: [-0.76, -0.42],
     depth: [6.0, 12.0], fall: 0.50, gain: 2.0, dpr: 1.5, gx: [-1.0, 1.1],
+    ov: [0.36, -0.66],
   },
   // iPad portrait, 744x1133. The specimen is centred and low, so the
   // stream enters high on the left edge, drops steeply past the cap's
@@ -213,6 +225,7 @@ const COMPOSITION = {
   tablet: {
     n: 175, xIn: -1.24, xOut: 0.14, q: [-0.80, -0.52],
     depth: [6.5, 13.0], fall: 1.65, gain: 1.7, dpr: 1.5, gx: [-1.0, 1.1],
+    ov: [-0.02, -0.70],
   },
   // Phone portrait, 430x932. The steepest and sparsest: in at the upper
   // left beside the headline's first line, down across the copy column
@@ -222,6 +235,7 @@ const COMPOSITION = {
   mobile: {
     n: 145, xIn: -1.22, xOut: 0.16, q: [-0.64, -0.36],
     depth: [6.5, 12.6], fall: 1.9, gain: 1.6, dpr: 1.5, gx: [-1.0, 1.1],
+    ov: [0.05, -0.45],
   },
 };
 
@@ -663,6 +677,212 @@ const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
   + 'mix-blend-mode:screen;mix-blend-mode:plus-lighter;'
   + `opacity:0;transition:opacity ${ENTRY_MS}ms ease;`;
 
+/* ---------------------------------------------------------------- *
+ * THE OVERTURE — ambient amber light for the wait (R4).
+ * ---------------------------------------------------------------- *
+ * THE OWNER'S DIRECTION, near verbatim: "ambient amber lighting that
+ * goes across the back and the side before stuff is there — lighting up
+ * around the bottom of where the mushroom will be", and "an amber light
+ * that travels subtly down to where the mushroom starts — behind the
+ * trail of spores — and when it hits, that's when it grows."
+ *
+ * So the pre-load frame carries three DOM glows under the stream, and
+ * none of them is a WebGL draw:
+ *
+ *   wash   still radial gradients: a low amber pool across the ground
+ *          under the landing band, a faint warmth across the back of
+ *          the frame and along its right side. The same colour family
+ *          the loaded page warms into (hero.css's .spill, and the
+ *          static hero's own haze above).
+ *   pool   the landing-zone glow, breathing quietly and swelling each
+ *          time the traveling light lands — anticipation pooled on the
+ *          exact spot the specimen will stand.
+ *   light  a soft luminance that runs down the stream's centre
+ *          streamline from the entry edge to the landing, on a
+ *          repeating cycle, under the particles.
+ *
+ * WHY DOM AND NOT A SECOND DRAW CALL, stated so nobody folds it into
+ * the shader later: these are large ultra-soft gradients — exactly what
+ * CSS rasterises well — and putting them in the canvas would tie their
+ * LIFETIME to the canvas, which is wrong. The spore canvas leaves at
+ * handOff(), when the scene is BUILT; the ignition strike belongs to a
+ * later beat, when the journey is PREPARED and the intro releases. A
+ * separate element under the spore layer survives that gap, keeps this
+ * path at one draw call and one rAF site, adds no listener — and under
+ * plus-lighter, addition commutes, so "behind the spores" is the same
+ * pixel sum in either paint order.
+ *
+ * THE IGNITION CONTRACT, one consumer: journey/boot/handoff.js asks
+ * overtureMsUntilStrike() when the journey is ready, delays its normal
+ * releaseIntro() by exactly that long, and calls overtureIgnite() as it
+ * starts the intro — so the specimen's draw-on begins on the beat the
+ * light reaches the ground it was seeding, and the pool's strike swell
+ * breathes under the growth. The wait is bounded by OV_TRAVEL_S: a
+ * light mid-travel completes its run; a light in the dwell just landed,
+ * so the pool is still lit and ignition fires at once. Worst case adds
+ * 1.8 s to a load that already took seconds; the mean over a uniform
+ * arrival phase is ~0.6 s; a load slower than one cycle (nearly all of
+ * them) waits only for the current run to land. A gesture never waits —
+ * beginFastHandoff() releases immediately, and the strike fires
+ * wherever the light happens to be.
+ *
+ * Reduced motion gets the wash and the resting pool, painted once, no
+ * traveling light and no loop — the same rule as the particle field.
+ * The no-WebGL static hero keeps its own composed haze and takes none
+ * of this. A hidden tab advances nothing: the cycle runs on ticks from
+ * the preload loop and, after adoption, from the scene's own animator,
+ * both of which park when the document hides.
+ */
+const OV_TRAVEL_S = 1.8;  // entry edge -> landing, one run of the light
+const OV_DWELL_S = 0.9;   // the pool cools before the next run launches
+const OV_CYCLE_S = OV_TRAVEL_S + OV_DWELL_S;
+// The landing swell's decay (seconds). Slow enough that an ignition
+// anywhere in the dwell still reads as riding the light that just landed.
+const OV_POOL_TAU = 0.55;
+
+/** The overture singleton for this page, or null before boot / after the
+ *  layer has left. Module-scope because BOTH drivers need it: the preload
+ *  tick while that canvas lives, the scene-side animator after adoption. */
+let overture = null;
+
+function createOverture(view, comp, reduced) {
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText = LAYER_CSS; // same shell as the spores: fixed, additive, entry fade
+  const wash = document.createElement('div');
+  const pool = document.createElement('div');
+  const light = document.createElement('div');
+  for (const d of [wash, pool]) {
+    d.style.cssText = 'position:absolute;inset:0;';
+    el.appendChild(d);
+  }
+  light.style.cssText = 'position:absolute;left:0;top:0;border-radius:50%;';
+  el.appendChild(light);
+
+  let E = null, L = null, lightD = 0; // the light's run, in layer pixels
+  let phase = 0, lastMs = 0, ignitedAt = 0, gone = false;
+
+  /** All geometry derives from the SAME composition the stream flies —
+   *  the landing band aims the pool, the centre streamline aims the
+   *  light's run — so the glow foreshadows exactly where the particles
+   *  already land, per mode, with no second aim table to drift. */
+  function reframe(v, c) {
+    const W = innerWidth, H = innerHeight;
+    const qMid = (c.q[0] + c.q[1]) / 2;
+    const slope = c.fall * v.aspect;
+    // the centre streamline, entered at whichever frame edge it crosses
+    let ex = -1.06, ey = qMid + slope * (c.xOut + 1.06);
+    if (ey > 1.06) { ey = 1.06; ex = c.xOut - (1.06 - qMid) / slope; }
+    E = { x: (ex + 1) / 2 * W, y: (1 - ey) / 2 * H };
+    // the run lands ON the stalk base (c.ov), not at the stream's own
+    // absorption point past it — the growth happens where the light hits
+    L = { x: (c.ov[0] + 1) / 2 * W, y: (1 - c.ov[1]) / 2 * H };
+    const lx = +((c.ov[0] + 1) / 2 * 100).toFixed(1);
+    const ly = +((1 - c.ov[1]) / 2 * 100).toFixed(1);
+    const groundY = Math.min(104, ly + 9).toFixed(1);
+    wash.style.background =
+      `radial-gradient(ellipse 52% 20% at ${lx}% ${groundY}%, rgba(224,152,66,0.105), transparent 70%),`
+      + `radial-gradient(ellipse 46% 44% at ${Math.min(94, lx + 10)}% 56%, rgba(214,142,58,0.05), transparent 74%),`
+      + 'radial-gradient(ellipse 30% 58% at 103% 60%, rgba(226,160,74,0.042), transparent 76%)';
+    pool.style.background =
+      `radial-gradient(ellipse 26% 11% at ${lx}% ${ly}%, rgba(255,196,106,0.15), rgba(224,146,60,0.06) 48%, transparent 72%)`;
+    lightD = Math.round(0.52 * Math.min(W, H));
+    light.style.width = light.style.height = lightD + 'px';
+    light.style.background =
+      'radial-gradient(circle, rgba(255,199,112,0.16), rgba(228,148,58,0.05) 46%, transparent 70%)';
+  }
+  reframe(view, comp);
+
+  if (reduced) {
+    // the still overture: wash and a resting pool, no run and no loop
+    pool.style.opacity = '0.55';
+    light.style.display = 'none';
+  }
+
+  function place(u) {
+    // gentle in, gentle out: the light leans into its run and settles
+    // onto the landing rather than striking it like a cursor
+    const e = u * u * (3 - 2 * u);
+    const x = E.x + (L.x - E.x) * e - lightD / 2;
+    const y = E.y + (L.y - E.y) * e - lightD / 2;
+    light.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+  }
+
+  /** Advance off wall deltas measured HERE, so the two drivers can only
+   *  split a frame's advance between them, never double it — through the
+   *  crossfade both the preload tick and the scene animator call this. */
+  function tick() {
+    if (gone || reduced) return;
+    const now = performance.now();
+    const dt = lastMs ? Math.min(0.08, (now - lastMs) / 1000) : 0;
+    lastMs = now;
+    if (!ignitedAt) phase += dt;
+    const p = phase % OV_CYCLE_S;
+    let boost = 0;
+    if (ignitedAt) {
+      // THE STRIKE: one larger swell, breathing under the growth's start
+      boost = 1.5 * Math.exp(-(now - ignitedAt) / (OV_POOL_TAU * 1400));
+    } else if (phase >= OV_TRAVEL_S) {
+      const since = p >= OV_TRAVEL_S ? p - OV_TRAVEL_S : p + OV_DWELL_S;
+      boost = Math.exp(-since / OV_POOL_TAU);
+    }
+    const breath = 0.05 * Math.sin(now / 1000 * 1.1);
+    pool.style.opacity = Math.min(1, 0.42 + breath + 0.58 * boost).toFixed(3);
+    if (ignitedAt) {
+      light.style.opacity = Math.max(0, 1 - (now - ignitedAt) / 300).toFixed(3);
+    } else if (p < OV_TRAVEL_S) {
+      const u = p / OV_TRAVEL_S;
+      place(u);
+      // rise over the first stretch; near the landing the run's light is
+      // handed to the pool, which is swelling to receive it
+      const rise = Math.min(1, u / 0.15);
+      const land = u < 0.86 ? 1 : 1 - ((u - 0.86) / 0.14) * 0.8;
+      light.style.opacity = (rise * land).toFixed(3);
+    } else {
+      light.style.opacity = '0';
+    }
+  }
+
+  function remove() {
+    gone = true;
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  return {
+    el, tick, reframe,
+    get gone() { return gone; },
+    msUntilStrike() {
+      if (reduced || gone || ignitedAt) return 0;
+      const p = phase % OV_CYCLE_S;
+      // mid-travel: let this run land, and grow on the landing. In the
+      // dwell: the light just landed and the pool is still lit — now IS
+      // the strike.
+      return p < OV_TRAVEL_S ? Math.round((OV_TRAVEL_S - p) * 1000) : 0;
+    },
+    ignite() {
+      if (gone || ignitedAt) return;
+      ignitedAt = performance.now();
+      // hold the strike under the first beats of the draw-on, then leave:
+      // by the fade's end the scene's own spill and ground carry the warmth
+      setTimeout(() => {
+        if (gone) return;
+        el.style.transition = 'opacity 2600ms linear';
+        el.style.opacity = '0';
+        setTimeout(remove, 2700);
+      }, 1500);
+    },
+    /** The no-ceremony exit for paths with no intro to strike under —
+     *  ?nointro, ?capture, reduced motion. Fast but not a pop, and gone
+     *  long before any capture's readiness gate opens its shutter. */
+    dismiss() {
+      if (gone) return;
+      el.style.transition = 'opacity 250ms linear';
+      el.style.opacity = '0';
+      setTimeout(remove, 350);
+    },
+  };
+}
+
 function createPreload() {
   const state = {
     live: false, failed: false, handedOff: false,
@@ -748,6 +968,7 @@ function createPreload() {
     // transfers when this layer leaves, not when the scene arrives.
     advance(state.field, dt, preloadGust(now));
     draw(now);
+    if (overture && !overture.gone) overture.tick();
     schedule();
   }
 
@@ -902,6 +1123,13 @@ function createPreload() {
       return;
     }
 
+    // The overture rides the live path only: the static hero already
+    // composes its own haze, and a page with no working WebGL has no
+    // intro to strike under. Inserted BEFORE the spore wrap, so the DOM
+    // reads background -> glow -> stream, whatever addition thinks of it.
+    overture = createOverture(state.view, state.field.comp, state.reduced);
+    stage.parentNode.insertBefore(overture.el, state.wrap);
+
     sizeCanvas();
     state.live = true;
     // While this layer is on screen it is the field's integrator; the
@@ -918,6 +1146,8 @@ function createPreload() {
     // zero-slack ceiling flat.
     void el.offsetWidth;
     el.style.opacity = '1';
+    // the glows arrive on the stream's own beat: same reflow, same ramp
+    overture.el.style.opacity = '1';
     // WHEN the entry ramp started, because handOff() needs to know whether it
     // is still running. Taken after the reflow above, which is the point the
     // transition actually begins from 0.
@@ -932,6 +1162,7 @@ function createPreload() {
       if (!state.live) return;
       state.view = readView(state.heroMode);
       reframe(state.field, state.view);
+      if (overture && !overture.gone) overture.reframe(state.view, state.field.comp);
       sizeCanvas();
       if (state.reduced) draw(0);
     };
@@ -953,7 +1184,11 @@ function createPreload() {
   }
 
   /** Release everything this layer attached, and take its canvas off the
-   *  page. Idempotent, and safe before boot() ever ran. */
+   *  page. Idempotent, and safe before boot() ever ran. THE OVERTURE IS
+   *  DELIBERATELY NOT TOUCHED HERE: this runs when the crossfade out of
+   *  the canvas completes, and the traveling light has to keep running
+   *  until the intro releases — its ticks come from the scene's animator
+   *  from here on, and its exit is ignite() or dismiss(), never stop(). */
   function stop() {
     stopLoop();
     state.live = false;
@@ -976,6 +1211,13 @@ function createPreload() {
   return {
     boot,
     stop,
+    /* THE OVERTURE'S PUBLIC FACE — three forwards, so the one consumer
+       (journey/boot/handoff.js) never holds the layer object itself and a
+       page whose overture never existed (static hero, node imports)
+       answers 0 / no-op instead of throwing. */
+    overtureMsUntilStrike() { return overture && !overture.gone ? overture.msUntilStrike() : 0; },
+    overtureIgnite() { if (overture) overture.ignite(); },
+    overtureDismiss() { if (overture) overture.dismiss(); },
     get failed() { return state.failed; },
     get field() { return state.field; },
     get view() { return state.view; },
@@ -1206,6 +1448,11 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
     if (!F.preloadDriven) advance(F, dt, 0.72 + 0.28 * breeze(t));
     project();
     inkFades();
+    // The overture's second driver: once this animator exists the preload
+    // loop is on its way out, and the traveling light still has an intro
+    // to wait for. Wall-delta advance inside tick() keeps the overlap
+    // frame-exact — two callers split a frame, they never double it.
+    if (overture && !overture.gone) overture.tick();
   });
 
   return { points: pts, field: F };

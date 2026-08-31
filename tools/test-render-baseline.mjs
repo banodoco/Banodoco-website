@@ -626,7 +626,16 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
    object. This census is a text grep for flag NAMES over source, and its
    own `warning` field says so; the module is the first in the tree to
    spell those two words outside a three material. */
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 246);
+/* M1 246 -> 254 (R4, the pre-load overture). Eight sites, all in
+   organism/hero-spores.js's createOverture(), and NOT ONE IS A MATERIAL
+   FLAG: all eight are `style.opacity =` assignments on the overture's DOM
+   glow elements — the breathing landing pool, the traveling light's
+   envelope, and the layer's own entry/exit fades. Same extractor scope as
+   Lane B's five directly above: this census greps flag NAMES over source,
+   and a module that animates CSS opacity by hand spells the word a lot.
+   S12-S15 are byte-unchanged by the same edit, confirming no shader or
+   uniform moved — the overture is deliberately not a GL surface. */
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 254);
 wave('M2', 'transparent: sites', flag('transparent'), 33);
 wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
 wave('M4', 'blending: sites', flag('blending'), 33);
