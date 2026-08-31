@@ -34,7 +34,7 @@ const clean = (s) => String(s ?? '')
   .replace(/`([^`]+)`/g, '$1')
   .trim();
 
-let stage, headerLabel, topicEl, titleEl, textEl, metaEl, dotsEl, thumbEl;
+let stage, topicEl, titleEl, textEl, metaEl, dotsEl, thumbEl;
 let dots = [];
 let topics = [];        // normalized { title, text, channel, date }
 let index = 0;
@@ -358,13 +358,6 @@ function present() {
 function applySnapshot(snapshot) {
   topics = snapshot.topics;
   index = 0;
-  // Round 2: the head already says DISCORD, so the status corner says only
-  // what the feed IS — live, or a dated snapshot (owner direction,
-  // 2026-08-30: "Live from the Discord" -> cleaner).
-  headerLabel.textContent = snapshot.live
-    ? 'LIVE UPDATES'
-    : (snapshot.capturedAt || 'SNAPSHOT');
-  stage.classList.toggle('dc-fallback', !snapshot.live);
   buildDots();
   present();
 }
@@ -374,23 +367,10 @@ export default {
     stage = s;
     stage.classList.add('dc');
 
-    // Round 3: the round-2 wordmark leaves this row — the restored shell
-    // head says DISCORD — and the feed's status corner (beacon plus one
-    // word) keeps the row alone, top-right over the topics like a
-    // broadcast bug.
-    const head = document.createElement('div');
-    head.className = 'dc-head';
-    const status = document.createElement('span');
-    status.className = 'dc-status';
-    const beacon = document.createElement('span');
-    beacon.className = 'dc-beacon';
-    beacon.setAttribute('aria-hidden', 'true');
-    headerLabel = document.createElement('span');
-    headerLabel.className = 'dc-label';
-    headerLabel.textContent = 'UPDATES';
-    status.append(beacon, headerLabel);
-    head.append(status);
-
+    // The live-status corner (beacon plus "LIVE UPDATES"/snapshot-date word)
+    // is gone — the shell head already says DISCORD, and the body opens
+    // straight onto the topic walk (owner direction, 2026-08-31: "let's
+    // remove that live updates thing in the Discord card").
     const body = document.createElement('div');
     body.className = 'dc-body';
     topicEl = document.createElement('div');
@@ -458,8 +438,7 @@ export default {
     door.tabIndex = -1;
     door.textContent = 'JOIN THE DISCORD →';
 
-    stage.append(head, body, dotsEl, door);
-    stage.classList.add('dc-fallback');
+    stage.append(body, dotsEl, door);
   },
 
   activate() {
