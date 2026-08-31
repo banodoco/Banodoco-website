@@ -462,6 +462,22 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
       btn.appendChild(badgeEl);
       btn.setAttribute('aria-label', `${label}, soon`);
     }
+    /* MARKER ABOVE NAME (2026-08-31, the owner on the two soon chips: "those
+       labels seem different to the rest too — e.g. the icon isn't above the
+       text like on the others"). Every other NAMED chip on the site is an
+       initiative marker, and those stack: pictograph in a raised tab, name in
+       the joined body below (cards.css, .j-hot--icon-tab). The soon pair were
+       the only named chips left in the older dot-beside-name row, because the
+       stacking arrived attached to the pictograph and Quark and Brötchen have
+       no CARD_ICONS entry. So the geometry is stated on its own here rather
+       than inferred from the icon: `stacked` means THE MARKER SITS OVER THE
+       NAME, which is the one thing hotspot-frame's placement needs to know —
+       such a chip anchors on its own midpoint instead of 11 px in, and the
+       edge-flip that mirrors a side-set label has no job on a symmetric one.
+       It is deliberately NOT `iconTab`: the soon chips keep their own housing,
+       their blurred name and their rise-on-ring entrance, and only the
+       skeleton is shared. */
+    const stacked = iconTab || soon;
     // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
     // thing the node draws, pinned to the node itself rather than to the pill
     // — the pill flips and nudges to keep a label on frame, and the target you
@@ -476,7 +492,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false, iconTab,
-      soon,
+      soon, stacked,
       // The tempo floor's per-chip state (DEFECT-01 #3). Written only by
       // journey/ui/hotspot-frame.js; initialised here for the same reason
       // `a`, `armAt` and `sup` are — the record states its whole shape at

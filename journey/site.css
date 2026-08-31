@@ -1770,10 +1770,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      interiors are unbuilt (ui.js sets the class off the popover tier's own
      under-construction qualifier). Three statements, each in an existing
      site vocabulary rather than a new one:
-       · PRESENT: a solid housing and a gold hairline — the base .j-hot wash
-         (0.3 alpha, no border) was tuned for labels against dark sky, and
-         under the R3 rest both chips sit ON the lit gill ceiling, where it
-         measured near-invisible (the owner saw one chip of two);
+       · PRESENT: a solid housing — the base .j-hot wash (0.3 alpha) was tuned
+         for labels against dark sky, and under the R3 rest both chips sit ON
+         the lit gill ceiling, where it measured near-invisible (the owner saw
+         one chip of two). 0.66 desktop / 0.78 phone, a step above the
+         initiative marker's own 0.48 / 0.66, plus a gold hairline on the body;
        · WITHHELD: the NAME is blurred to a shape, the same statement the
          unbuilt preview card makes of its own text (cards.css j-pop-unbuilt,
          blur 2.9px there, 2.6px here for the smaller type) — and, like
@@ -1783,15 +1784,141 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      The rise: --j-hot-rise is written per frame by hotspot-frame.js's
      paintSoonRise off the chip's own arrival clock; the individual
      `translate` property composes with the placement transform without
-     touching it (the same argument ICON-ARRIVAL makes for `scale`). */
+     touching it (the same argument ICON-ARRIVAL makes for `scale`).
+
+     ------------------------------------------------------------
+     THE HOUSE ANATOMY (2026-08-31, the owner: "those labels seem different to
+     the rest too — e.g. the icon isn't above the text like on the others").
+     These two were the last NAMED chips in the old dot-beside-name row. The
+     skeleton below is `.j-hot--icon-tab`'s, deliberately restated rather than
+     shared by selector list: that rule lives in cards.css and is authored
+     around a 13px pictograph and the ICON-ARRIVAL condense, neither of which
+     this chip has. What IS copied is the geometry that makes them read as one
+     family — a 22px marker tab, a body starting at y=16 exactly where the
+     tab's backing ends (adjacent, never overlapping, or alpha accumulates
+     into a dirty seam at the join), the name centred beneath, one optical
+     fill. The two chips differ from an initiative marker in exactly the three
+     ways above and in nothing structural.
+
+     THE SOON PILL SITS BESIDE THE NAME, not under it: a third row would make
+     these the tallest chips on the site and, at 430px, push a two-chip
+     collision the dodge would have to solve every frame. Row 2 is therefore
+     two cells wide and the tab spans both, which is why this is a two-column
+     grid where the icon-tab is one.
+
+     WHAT THE GEOMETRY OWES THE FRAME: a stacked chip anchors on its MIDPOINT,
+     so ui.js marks the record `stacked` and hotspot-frame's resolveX centres
+     the button (and with it the hit pad) on the projected node. Changing these
+     rows back to a row layout without clearing that flag would put the chip
+     half its own width off its node. */
   .j-hot--soon {
-    background: rgba(12, 8, 3, 0.62);
-    border: 1px solid rgba(217, 164, 65, 0.28);
+    --j-chip-bg: rgba(12, 8, 3, 0.66);
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: 22px auto;
+    justify-content: center;
+    align-items: start;
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     color: rgba(228, 218, 196, 0.92);
     translate: 0 var(--j-hot-rise, 0px);
   }
-  .j-hot--soon:is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.78); }
+  /* The body: the capsule under the tab, carrying the housing and the one
+     gold hairline. `top: 16px` is the tab backing's own height — see above. */
+  .j-hot--soon::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 16px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 999px;
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    background: var(--j-chip-bg);
+    pointer-events: none;
+  }
+  .j-hot--soon:is(:hover, .hot, :focus-visible) {
+    --j-chip-bg: rgba(18, 12, 4, 0.82);
+    background: transparent;
+  }
+  /* The marker tab. The ember dot is the site's generic node mark and stays
+     the mark here — an unbuilt node has no pictograph to give it, and the
+     absence is part of what it says. `<i class="j-hot-dot">` has no children,
+     so the tab's backing and the ember itself are its two pseudo-elements:
+     ::before is the 22x16 rounded-top patch (the icon tab's own), ::after the
+     9px ember, centred over the body's midline. */
+  .j-hot--soon .j-hot-dot {
+    position: relative;
+    z-index: 1;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+    box-sizing: border-box;
+    width: 22px; height: 22px;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    /* NOT --j-dot-dy. The collision dodge pins a side-set ember back onto its
+       world node while the pill above it is raised; a stacked marker moves
+       with its capsule as ONE object, exactly as the icon tab does, or the
+       dodge would tear the tab off the body. The invisible hit pad keeps the
+       node truthful either way (.j-hot-hit). */
+    transform: none;
+  }
+  .j-hot--soon .j-hot-dot::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0; left: 0;
+    width: 22px; height: 16px;
+    border-radius: 5px 5px 0 0;
+    background: var(--j-chip-bg);
+    pointer-events: none;
+  }
+  .j-hot--soon .j-hot-dot::after {
+    content: "";
+    position: absolute;
+    top: 4px; left: 6.5px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: rgba(240, 200, 119, 0.6);
+    box-shadow: 0 0 8px rgba(240, 170, 60, 0.45);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  /* The generic hotspot hover grows its DOT, and here the dot is the TAB, so
+     the same argument the icon tab makes applies: scaling it would split the
+     silhouette. Only the ember inside breathes. This selector matches the
+     generic rule's specificity and follows it, which is what it takes to win. */
+  .j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+  .j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot::after {
+    background: rgba(255, 226, 160, 1);
+    transform: scale(1.35);
+    box-shadow: 0 0 12px rgba(255, 200, 100, 0.9), 0 0 28px rgba(240, 170, 60, 0.5);
+  }
   .j-hot--soon .j-hot-label {
+    position: relative;
+    /* Above the body paint, for the reason the icon tab's label is: at z=0
+       the translucent capsule composites over the glyphs and the whole marker
+       looks muddy though the geometry is right. */
+    z-index: 1;
+    grid-column: 1;
+    grid-row: 2;
+    box-sizing: border-box;
+    min-height: 17px;
+    margin-top: -4px;
+    padding: 2px 2px 4px 12px;
+    line-height: 1.05;
+    text-align: center;
+    white-space: nowrap;
     filter: blur(2.6px);
     opacity: 0.8;
     user-select: none;
@@ -1800,9 +1927,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-hot--soon .j-hot-label { filter: none; opacity: 0.95; }
   }
   .j-hot-badge {
-    display: inline-block;
-    flex: 0 0 auto;
-    margin-left: 0.05rem;
+    position: relative;
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    margin-top: -3px;
+    margin-right: 8px;
     padding: 0.12em 0.5em;
     font-size: 0.5rem;
     font-weight: 700;
@@ -1811,6 +1942,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border: 1px solid rgba(217, 164, 65, 0.3);
     border-radius: 999px;
     background: rgba(217, 164, 65, 0.07);
+  }
+  /* Same phone conditions as the .j-hot contrast block above: over the lit
+     cap the marker needs the deeper wash the initiative tab also takes. */
+  @media (max-width: 720px), (max-height: 560px) {
+    .j-hot--soon { --j-chip-bg: rgba(12, 8, 3, 0.78); }
+    .j-hot--soon:is(:hover, .hot, :focus-visible) { --j-chip-bg: rgba(18, 12, 4, 0.88); }
   }
 
   /* ============================================================
@@ -2432,6 +2569,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      square controls it was written for and would flatten a pill. The outline
      follows the element's radius, so the pair states its own. */
   .j-act:focus-visible { border-radius: 999px; }
+  /* And the stacked marker states 0, for the same reason from the other
+     direction: its ring wraps a tab-over-capsule silhouette, where a 2px
+     round reads as a nick taken out of each corner rather than as a radius.
+     The INITIATIVE marker already lands on 0 — but by accident of the
+     cascade, not by saying so: cards.css writes `.j-hot.j-hot--icon-tab
+     { border-radius: 0 }` at two classes, which ties the shared ring above
+     and wins on order. The soon chip's own rule is one class and loses it,
+     so the pair drew two different rings (measured 2026-08-31: 2px on Quark,
+     0px on Arca and Tworp) — the exact family split this order set out to
+     close. Stated here rather than by thickening `.j-hot--soon` itself: that
+     rule also carries `color`, and raising it over the generic hover would
+     take the gold-brighten off the chip to win a corner. */
+  .j-hot--soon:focus-visible { border-radius: 0; }
   .j-card-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
   .j-card-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
 
@@ -3502,7 +3652,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .j-hot, .j-hot-dot, .j-card { transition: none; }
+    /* `.j-hot--soon .j-hot-dot::after` is the ember of a stacked marker, a
+       pseudo-element rather than the `<i>` itself, so it needs naming here to
+       get the same flattening the plain dot has always had. */
+    .j-hot, .j-hot-dot, .j-hot--soon .j-hot-dot::after, .j-card { transition: none; }
     /* The initiative marker's condense (ICON-ARRIVAL): cards.css already
        flattens the entry's opacity/transform variables under reduced motion;
        this flattens the `scale` axis site.css added beside them. What

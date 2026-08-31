@@ -60,7 +60,7 @@
  *
  *   IDENTITY + DOM, written by ui.js at registration and never after:
  *     id chapter btn world radius reveal revealDirect revealScrub
- *     revealBand stagger iconTab soon label labelEl dotEl hitEl chipBare
+ *     revealBand stagger iconTab soon stacked label labelEl dotEl hitEl chipBare
  *     preview policyDone labelOnHover
  *   PER-FRAME, written by THIS MODULE and by nothing else:
  *     a armAt sup pillW pillH placeable layoutPlaceable pendX sx sy
@@ -463,12 +463,15 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *  twenty lines here. */
   function resolveX(h, sx) {
     let tx;
-    if (h.iconTab) {
+    if (h.stacked) {
       /* A centred tab changes the truthful local anchor from x=11 to the
          marker's midpoint. Re-derive translate-x from the measured width
          so the icon — not merely the button box — still lands exactly on
          the projected world node. The shape is symmetric, so edge-flip
-         has no visual or geometric job here. */
+         has no visual or geometric job here.
+         `stacked`, not `iconTab`: what makes this branch right is that the
+         marker sits OVER the name, and the soon chips joined that anatomy
+         without becoming initiative markers (ui.js, MARKER ABOVE NAME). */
       if (h.flipped) {
         h.flipped = false;
         h.btn.classList.remove('flip');

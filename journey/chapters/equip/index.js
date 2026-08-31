@@ -229,11 +229,34 @@ export function createEquip(sceneApi) {
      *  state of the arrival ladder is "both rings already spent" — NOT "ring
      *  twice right now". Firing here would put a travelling wave into a frame
      *  that is supposed to be still, and every capture of this pose would catch
-     *  the wave at whatever radius the frozen clock happened to hold. */
+     *  the wave at whatever radius the frozen clock happened to hold.
+     *
+     *  AND IT SETTLES TO WHAT *THIS* PLACEMENT'S GATE SAYS, NOT TO "ARRIVED"
+     *  OUTRIGHT (2026-08-31, the owner: "when I load the page, the stuff shows
+     *  in the hero for some reason — the 2 labels"). journey.js places EVERY
+     *  cold load through `placeAt(0)`, and `snapChapters()` runs `snap()` on
+     *  every chapter there, not on the placed one — so an unconditional settle
+     *  parked `revealAt` at -Infinity at p = 0 and `nodeReveal` answered 1 at
+     *  the hero. The gate below it could not close: a chip with its own reveal
+     *  is read against `revealBand`, whose lo edge ui.js opens to the -1
+     *  sentinel by construction, because the reveal it was built for (Connect's
+     *  hub ignition) is a SCENE LIGHT and is therefore already 0 before its
+     *  chapter. This ladder is not a scene light, it is a CLOCK, and a clock
+     *  has no opinion about where the route is — so the p-awareness has to come
+     *  from here. It comes from the ladder's own gate, at the ladder's own
+     *  onset threshold, which is what makes this a settle rather than a second
+     *  rule: `snap()` now lands exactly where `advanceIntro` would have left
+     *  the ladder had it been driven to this p. A real placement snaps its copy
+     *  in the applyFrame that runs BEFORE snapChapters (copy-arrival: `dt === 0
+     *  && !railFlight` returns the band target outright), so the read is the
+     *  settled gate and a ?p=/?capture= still of the Equip rest lands with both
+     *  chips standing exactly as before. A nav click never reaches here — it
+     *  places with `snap: false`. */
     snap() {
-      stage = 2;
+      const arrived = copyEase() >= RIPPLE_GATE_ON;
+      stage = arrived ? 2 : 0;
       stalkRangAt = -Infinity;
-      revealAt.quark = revealAt.brotchen = -Infinity;
+      revealAt.quark = revealAt.brotchen = arrived ? -Infinity : null;
     },
 
     /** NO LANDING SETTLE, AND IT MUST STAY null.
@@ -331,10 +354,14 @@ export function createEquip(sceneApi) {
        *  names. The old design's settle guarantee is inherited rather than
        *  lost: the ladder itself only advances on the copy ease / entry clock
        *  (advanceIntro), so a ring — and therefore a label — still cannot
-       *  fire past a scrubbing finger. dt = 0 placements land settled: snap()
-       *  parks both revealAt at -Infinity, and now - (-Infinity) clamps to a
-       *  standing label with no wave in frame. A hover ring never writes
-       *  revealAt — it re-sounds the wave, it does not re-run the entrance. */
+       *  fire past a scrubbing finger. A dt = 0 placement INSIDE the arrival
+       *  lands settled: snap() parks both revealAt at -Infinity there, and
+       *  now - (-Infinity) clamps to a standing label with no wave in frame.
+       *  A placement outside it lands at null — this function is a clock and
+       *  not a scene light, so nothing below it is p-aware and the whole
+       *  answer at p = 0 is the one snap() left here (see snap()). A hover
+       *  ring never writes revealAt — it re-sounds the wave, it does not
+       *  re-run the entrance. */
       nodeReveal(id) {
         const at = revealAt[id];
         if (at === null) return 0;
