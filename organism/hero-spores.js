@@ -168,6 +168,18 @@ import { PIN_PR } from '../flags.js';
  *
  * Every aim below was set by shooting the mode and looking; the landing
  * bands are the measured anatomy plus soft width, not a series.
+ *
+ * THE R4 DENSITY RAISE, owner-directed: "make the entry pixels a thicker
+ * stream". Every count below went up ~50-60% over the first shipped
+ * table (desktop 150 -> 235, deskNarrow 140 -> 220, compact 100 -> 148,
+ * tablet 110 -> 175, mobile 100 -> 145), judged on throttled cold-load
+ * captures at all three shot viewports. The per-dot light is untouched
+ * (same OPACITY, same draws), so this is more of the same dust, not
+ * brighter dust — the stream reads as a body of weather instead of a
+ * scatter, and the headline corridor stays air because the dots that
+ * cross it carry the same brightness they always did. The portrait
+ * counts rise least: their streams cross the copy column, and the
+ * copy's dominance is the composition's first law.
  */
 const COMPOSITION = {
   // 1440x900. The specimen stands right of centre, so the diagonal runs
@@ -176,21 +188,21 @@ const COMPOSITION = {
   // cross the headline's upper-right shoulder on the way down; at this
   // brightness they read as air, and the copy stays dominant.
   desktop: {
-    n: 150, xIn: -1.30, xOut: 0.58, q: [-0.80, -0.46],
+    n: 235, xIn: -1.30, xOut: 0.58, q: [-0.80, -0.46],
     depth: [6.0, 12.4], fall: 0.56, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading as desktop, a shade steeper because the frame
   // is shorter for its width and the stalk sits a touch higher.
   deskNarrow: {
-    n: 140, xIn: -1.30, xOut: 0.58, q: [-0.74, -0.40],
+    n: 220, xIn: -1.30, xOut: 0.58, q: [-0.74, -0.40],
     depth: [6.2, 12.6], fall: 0.62, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
   },
   // Short landscape (a phone on its side; a very shallow window). The
   // same aim with almost no vertical room: the shallowest descent here,
   // and the count comes down with the frame.
   compact: {
-    n: 100, xIn: -1.28, xOut: 0.52, q: [-0.76, -0.42],
+    n: 148, xIn: -1.28, xOut: 0.52, q: [-0.76, -0.42],
     depth: [6.0, 12.0], fall: 0.50, gain: 2.0, dpr: 1.5, gx: [-1.0, 1.1],
   },
   // iPad portrait, 744x1133. The specimen is centred and low, so the
@@ -199,7 +211,7 @@ const COMPOSITION = {
   // here: this is the angle at which a line from the upper-left actually
   // reaches a centred stem base on a frame this tall.
   tablet: {
-    n: 110, xIn: -1.24, xOut: 0.14, q: [-0.80, -0.52],
+    n: 175, xIn: -1.24, xOut: 0.14, q: [-0.80, -0.52],
     depth: [6.5, 13.0], fall: 1.65, gain: 1.7, dpr: 1.5, gx: [-1.0, 1.1],
   },
   // Phone portrait, 430x932. The steepest and sparsest: in at the upper
@@ -208,7 +220,7 @@ const COMPOSITION = {
   // visible stem between cap and ground. Well under desktop's count over
   // a much smaller frame — never snowfall.
   mobile: {
-    n: 100, xIn: -1.22, xOut: 0.16, q: [-0.64, -0.36],
+    n: 145, xIn: -1.22, xOut: 0.16, q: [-0.64, -0.36],
     depth: [6.5, 12.6], fall: 1.9, gain: 1.6, dpr: 1.5, gx: [-1.0, 1.1],
   },
 };
@@ -242,7 +254,9 @@ const OPACITY = 1.05;
 // ground arrives underneath them and this layer fades off it. Their x
 // placement is `gx`, not the stream's span — the ground keeps its full
 // width while the stream above it aims at the stem.
-const GROUND_MOTES = 26;
+// (R4: 26 -> 34 alongside the stream's own density raise, so the seeded
+// ground thickens in step with the weather feeding it.)
+const GROUND_MOTES = 34;
 
 /* ---------------------------------------------------------------- *
  * THE PALETTE, IN THE WORKING COLOR SPACE.
@@ -698,7 +712,7 @@ function createPreload() {
     gl.vertexAttribPointer(attribs.frame, 3, gl.FLOAT, false, 0, 0);
     // The landing fade rides the colour, so the light — never the base
     // palette — is what carries F.fade to the pixel. Uploaded per frame
-    // because the fade moves per frame; at this count it is ~2 KB.
+    // because the fade moves per frame; at this count it is ~3 KB.
     for (let i = 0; i < F.n; i++) {
       const i3 = i * 3, f = F.fade[i];
       lit[i3] = F.color[i3] * f;
