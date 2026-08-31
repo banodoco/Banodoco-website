@@ -35,7 +35,7 @@ import { registerChapterInteractions } from './chapter-interactions.js';
 import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
-import { arcLength, arcLerp, azTurn, skimWindow } from './camera-path.js';
+import { arcLength, arcLerp, azTurn } from './camera-path.js';
 import { controlWrapDirection, normaliseNode } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
@@ -213,34 +213,36 @@ const EQUIP_TURN = 1;    // the rotational sense forced on every rest-departing
    at r 2.65 with its swept-side rim riding y 2.4..3.15, and no other solid
    geometry on the sweep stands past r 2.65 above y 3.0 (Final's own town crests
    y 2.92 further out). */
-let FLYBY_SKIM_R = 4.0;   // world units of held radius through the sweep —
-                          // ~1.4 clear of the rim: close enough that the cap
-                          // fills the frame and the rim slides past, far
-                          // enough that the lattice is never entered.
-let FLYBY_SKIM_Y = 3.5;   // world units of held height — just over the rim
-                          // band (2.4..3.15), under the cap top (4.37), so the
-                          // move reads as flying ALONG the edge, and clears
-                          // the town below by ~0.6.
-let FLYBY_GAZE_Y = 3.1;   // gaze height held through the sweep: the cap
-                          // itself, on the axis — a near-level look across the
-                          // rim from the skim pose, not the ground-level rest
-                          // targets, whose lerp passes almost beneath the
-                          // skim and would pitch the view ~67deg down.
-const FLYBY_IN = 0.30;    // eased-phase shoulders of the plateau window
-const FLYBY_OUT = 0.34;   // (skimWindow): dive in over the first ~30%, skim,
-                          // release over the last ~34% — the drop to Purpose's
-                          // framing is end-phased, the tgtDip precedent.
-let FLYBY_EXTRA_S = 0.42; // BASE seconds added on top of the length law. The
-                          // law prices metres, but a rim orbit's perceived
-                          // speed is angular: at the length-law's own 2.05 s
-                          // the held sweep read 190 deg/s of gaze and the dive
-                          // peaked 274 — outside the 77-217 deg/s every other
-                          // transition measures. The declared conversion: the
-                          // 'connect|final' speed row (0.70) divides the base,
-                          // so 0.42 here delivers ~0.60 s on the page — total
-                          // ~2.65 s, hold ~150 deg/s, dive peak ~210. Priced
-                          // against the wrap's own precedent: 219 deg in
-                          // 2.65 s against the wrap's 360 in 4.00.
+let FLYBY_DEPTH = 6.6;    // world units of radius pulled IN at the lobe's
+                          // peak. One sin(pi*e) lobe against the lerped base
+                          // radius gives a single closest pass — r bottoms at
+                          // ~5.0, ~2.4 clear of the rim (r 2.65) — with radial
+                          // motion spread across the WHOLE move, so the
+                          // velocity is banked off the specimen from the first
+                          // frame (the plane read, the R3 follow-up). The
+                          // first cut held r 4.0 on a flat plateau and the
+                          // owner read the shouldered dive as "zooming in,
+                          // almost hitting it, and then turning".
+let FLYBY_LIFT = 1.0;     // world units of height added at the lobe's peak:
+                          // the pass crests y ~3.5 over the rim band
+                          // (2.4..3.15), under the cap top (4.37), and sets
+                          // back down into Purpose's own 2.73.
+let FLYBY_GAZE_Y = 3.1;   // gaze height at the pass's middle: the cap itself,
+                          // on the axis — a near-level look across the rim,
+                          // not the ground-level rest targets, whose lerp
+                          // passes almost beneath the camera at closest
+                          // approach and would pitch the view ~67deg down.
+let FLYBY_EXTRA_S = 0.72; // BASE seconds added on top of the length law. The
+                          // law prices metres, but a flyby's perceived speed
+                          // is angular: at the length-law's own seconds the
+                          // sweep read ~190 deg/s of gaze — near the top of
+                          // the 77-217 deg/s every other transition measures —
+                          // and the owner still asked for slower. The declared
+                          // conversion: the 'connect|final' speed row (0.70)
+                          // divides the base, so 0.72 here delivers ~1.0 s on
+                          // the page — measured 3.07 s total, peak gaze
+                          // 187 deg/s, peak 20.8 u/s: unhurried against the
+                          // wrap's own precedent of 360 deg in 4.00 s.
 
 /* ONE JOURNEY EVER. main.js boots once; a second boot returns the handle the
    first one published rather than building a second generation. */
@@ -791,18 +793,18 @@ export function boot(opts = {}) {
   /* Length of a skim-shaped flyby path — the same "priced by the path
      actually travelled" rule as buildRoutePace, sampled the same way,
      because arcLength's mean-radius estimate is taken on the generic arc
-     and the skim excursion spends most of the sweep well inside it. */
+     and the pass's lobe spends most of the sweep well inside it. */
   const _skimPrev = new THREE.Vector3(), _skimCur = new THREE.Vector3();
   function skimPathLength(a, b, az1, k) {
     let len = 0;
     for (let i = 0; i <= ROUTE_PACE_N; i++) {
       const e = i / ROUTE_PACE_N;
       arcLerp(a, b, e, _skimCur, az1, 0, 0);
-      const w = skimWindow(e, k.in, k.out);
+      const lobe = Math.sin(Math.PI * e);
       const az = Math.atan2(_skimCur.x, _skimCur.z);
-      const r = Math.hypot(_skimCur.x, _skimCur.z) * (1 - w) + k.r * w;
+      const r = Math.hypot(_skimCur.x, _skimCur.z) - k.depth * lobe;
       _skimCur.set(Math.sin(az) * r,
-        _skimCur.y * (1 - w) + k.y * w, Math.cos(az) * r);
+        _skimCur.y + k.lift * lobe, Math.cos(az) * r);
       if (i) len += _skimCur.distanceTo(_skimPrev);
       _skimPrev.copy(_skimCur);
     }
@@ -996,12 +998,16 @@ export function boot(opts = {}) {
          the Equip grammar — and routine back-navigation keeps its brisk,
          plain arc. The path itself is shaped by `skim` (camera-blend.js):
          the generic arc would ride r 9.0 -> 15.0 the whole way, a wide
-         retreat; the plateau window instead eases r and height onto a held
-         rim-skimming pose and the gaze onto the cap for the sweep's middle,
-         then releases outward and down into Purpose's own rest, which this
-         block does not touch. An overtaking click keeps the shortest way and
-         the plain arc — a mid-flight change of mind rewinds, the same
-         grammar as the wrap's reverse gear. */
+         retreat; one sin(pi*e) lobe instead pulls the radius in toward a
+         single closest pass and lifts it over the rim, so the turn is in the
+         velocity from the first frame and the pass releases outward and down
+         into Purpose's own rest, which this block does not touch. (The first
+         cut shouldered the radius onto a FLAT plateau — dive, hold, turn —
+         and the owner read the dive as "zooming in, almost hitting it";
+         see the skim block in camera-blend.js for the banked-pass law.) An
+         overtaking click keeps the shortest way and the plain arc — a
+         mid-flight change of mind rewinds, the same grammar as the wrap's
+         reverse gear. */
       const flybyLeg = !wrap && !routeFaithful && !overtaken
         && fromChapterId === 'connect' && chapterId === 'final';
       const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
@@ -1038,9 +1044,8 @@ export function boot(opts = {}) {
       const tgtDip = equipLeg
         ? -Math.min(1.0, Math.abs(ctl.target.y - tgt0.y) * 0.35) : 0;
       const skim = flybyLeg ? {
-        r: FLYBY_SKIM_R, y: FLYBY_SKIM_Y,
+        depth: FLYBY_DEPTH, lift: FLYBY_LIFT,
         gx: 0, gy: FLYBY_GAZE_Y, gz: 0,
-        in: FLYBY_IN, out: FLYBY_OUT,
       } : null;
       // A route-faithful flight is priced by the route path it actually rides
       // (buildRoutePace above), not by the cylindrical arc it no longer follows
@@ -1062,8 +1067,8 @@ export function boot(opts = {}) {
            legs shorter than 20 units (every unforced Equip arc) are
            byte-identical to the capped law. */
         /* A flyby spends it uncapped for the same reason: its sampled path
-           runs ~30 units, and at the cap that is the whip again — plus its
-           own authored seconds (FLYBY_EXTRA_S), because a rim orbit is
+           runs ~33 units, and at the cap that is the whip again — plus its
+           own authored seconds (FLYBY_EXTRA_S), because a flyby is
            priced by the angle it sweeps, not only the metres it covers. */
         : 0.85 + 0.35 * (equipLeg || skim ? len / 20 : Math.min(len / 20, 1))
           + (skim ? FLYBY_EXTRA_S : 0);
@@ -1649,12 +1654,12 @@ export function boot(opts = {}) {
     /** QA: the Connect -> Final flyby's authored numbers, same purpose and
      *  same shipped-values rule as wrapTuning above. */
     get flybyTuning() {
-      return { r: FLYBY_SKIM_R, y: FLYBY_SKIM_Y, gazeY: FLYBY_GAZE_Y, extra: FLYBY_EXTRA_S };
+      return { depth: FLYBY_DEPTH, lift: FLYBY_LIFT, gazeY: FLYBY_GAZE_Y, extra: FLYBY_EXTRA_S };
     },
     set flybyTuning(o) {
       if (!o) return;
-      if (typeof o.r === 'number') FLYBY_SKIM_R = o.r;
-      if (typeof o.y === 'number') FLYBY_SKIM_Y = o.y;
+      if (typeof o.depth === 'number') FLYBY_DEPTH = o.depth;
+      if (typeof o.lift === 'number') FLYBY_LIFT = o.lift;
       if (typeof o.gazeY === 'number') FLYBY_GAZE_Y = o.gazeY;
       if (typeof o.extra === 'number') FLYBY_EXTRA_S = o.extra;
     },
