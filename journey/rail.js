@@ -1020,50 +1020,76 @@ export function createRail({ onNav } = {}) {
     }
     li.appendChild(a);
 
-    /* WHO / WHAT / WHY (2026-08-30, polish §3B.1) — three compact
-       closed-by-default disclosures directly under the opening statement,
-       one short paragraph each. An accordion: opening one closes the other
-       two, so the outline below never travels far and switching reads as
-       one drawer sliding, not a page reflow. The copy lives in
-       content/content.js (`site.primer`, flagged there as pending Peter's
-       editorial sign-off) so a wording swap never touches this file. The
-       buttons carry the standard aria-expanded/aria-controls pair; the
-       closed drawer is additionally aria-hidden so what a screen reader
-       walks matches what the eye can reach. */
+    /* WHO / WHAT / WHY (2026-08-30 polish §3B.1; restaged 2026-08-31 on
+       the owner's direction: the three controls sit SIDE BY SIDE on one
+       line, never stacked, with the chosen answer in a single shared
+       region below that line). The trio is a tablist whose tabs also
+       toggle: all closed at rest, choosing one closes the others, and
+       choosing the open one closes it again — so the line of controls
+       itself never moves; only what follows the answer region reflows,
+       and the CSS eases that. Copy still lives in content/content.js
+       (`site.primer`, flagged there as pending Peter's editorial
+       sign-off) so a wording swap never touches this file. Each control
+       carries aria-selected for the tablist grammar plus aria-expanded
+       for the toggle truth; all three stay in the page tab order AND
+       answer Left/Right/Home/End (focus only — opening stays a
+       deliberate Enter/Space/click); a closed answer is aria-hidden so
+       what a screen reader walks matches what the eye can reach. */
     if (section.id === 'mission' && Array.isArray(CONTENT.site.primer)) {
       const primer = el('div', 'j-menu-primer');
-      const rows = [];
+      const tabrow = el('div', 'j-menu-primer-tabs');
+      tabrow.setAttribute('role', 'tablist');
+      tabrow.setAttribute('aria-label', 'About Banodoco');
+      const panes = el('div', 'j-menu-primer-panes');
+      const tabs = [];
       for (const item of CONTENT.site.primer) {
-        const row = el('div', 'j-menu-primer-row');
         const btn = el('button', 'j-menu-primer-t');
         btn.type = 'button';
         btn.id = `j-primer-t-${item.id}`;
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', 'false');
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-controls', `j-primer-d-${item.id}`);
         btn.appendChild(el('span', 'j-menu-primer-l', item.label));
         const mark = el('span', 'j-menu-primer-c', '+');
         mark.setAttribute('aria-hidden', 'true');
         btn.appendChild(mark);
+        tabrow.appendChild(btn);
         const drawer = el('div', 'j-menu-primer-d');
         drawer.id = `j-primer-d-${item.id}`;
-        drawer.setAttribute('role', 'region');
+        drawer.setAttribute('role', 'tabpanel');
         drawer.setAttribute('aria-labelledby', btn.id);
         drawer.setAttribute('aria-hidden', 'true');
-        drawer.appendChild(el('p', 'j-menu-primer-p', item.body));
-        row.appendChild(btn);
-        row.appendChild(drawer);
-        primer.appendChild(row);
-        rows.push({ btn, row, drawer });
+        const clip = el('div', 'j-menu-primer-di');
+        clip.appendChild(el('p', 'j-menu-primer-p', item.body));
+        drawer.appendChild(clip);
+        panes.appendChild(drawer);
+        tabs.push({ btn, drawer });
         itemsOwner.listen(btn, 'click', () => {
           const wasOpen = btn.getAttribute('aria-expanded') === 'true';
-          for (const r of rows) {
-            const on = !wasOpen && r.btn === btn;
-            r.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
-            r.drawer.setAttribute('aria-hidden', on ? 'false' : 'true');
-            r.row.classList.toggle('open', on);
+          for (const t of tabs) {
+            const on = !wasOpen && t.btn === btn;
+            t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+            t.drawer.setAttribute('aria-hidden', on ? 'false' : 'true');
+            t.drawer.classList.toggle('open', on);
           }
         });
       }
+      itemsOwner.listen(tabrow, 'keydown', (e) => {
+        const at = tabs.findIndex((t) => t.btn === document.activeElement);
+        if (at < 0) return;
+        let to = -1;
+        if (e.key === 'ArrowRight') to = (at + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') to = (at + tabs.length - 1) % tabs.length;
+        else if (e.key === 'Home') to = 0;
+        else if (e.key === 'End') to = tabs.length - 1;
+        if (to < 0) return;
+        e.preventDefault();
+        tabs[to].btn.focus();
+      });
+      primer.appendChild(tabrow);
+      primer.appendChild(panes);
       li.appendChild(primer);
     }
 

@@ -5049,40 +5049,40 @@ body.j-rail-on .j-hotspots { opacity: 1; }
 }
 
 /* ============================================================
-   LANE C (2026-08-30 polish §3B.1) — WHO / WHAT / WHY.
-   Three compact disclosures directly under the panel's opening
-   statement (rail.js builds them from content.js `site.primer`).
-   Everything here is the panel's existing language — the section
-   heading's letterspaced caps, the row hover's warm tint, the
-   hairline dividers — sized down one step so the trio reads as a
-   quiet index into the thesis, not a fourth section. The drawer
-   animates its grid row (0fr -> 1fr), which keeps the surrounding
-   outline stable and costs no measured heights; reduced motion
-   snaps. Tap targets stay >= 44px tall.
-   ============================================================ */
+   LANE C (2026-08-30 polish §3B.1; restaged 2026-08-31) —
+   WHO / WHAT / WHY, side by side. One line of three controls
+   directly under the panel's opening statement (rail.js builds
+   them from content.js `site.primer`), never stacked — the
+   owner's direction — with the chosen answer sliding open in a
+   single shared region below the line. Everything here is the
+   panel's existing language — the section heading's letterspaced
+   caps, the row hover's warm tint, the hairline now standing
+   between neighbours instead of under them — sized down one step
+   so the trio reads as one quiet line of controls into the
+   thesis, not a button bar. Each answer animates its grid row
+   (0fr -> 1fr), so a switch is the old answer easing shut while
+   the new one eases open — the control line itself never moves
+   and no heights are measured; reduced motion snaps. Tap targets
+   stay >= 44px tall even at 430px, where three labels split
+   ~126px each — comfortably clear of crowding, no wrap. */
 .j-menu-primer {
   margin: -0.15rem 0 0.45rem;
   /* the thesis text column: item pad 0.5rem + 22px mark + 1rem gap */
   padding: 0 0.6rem 0 calc(0.5rem + 22px + 1rem);
 }
-.j-menu-primer-row {
-  display: grid;
-  grid-template-rows: auto 0fr;
-  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.j-menu-primer-row.open { grid-template-rows: auto 1fr; }
-.j-menu-primer-row + .j-menu-primer-row {
-  border-top: 1px solid rgba(217, 164, 65, 0.1);
+.j-menu-primer-tabs {
+  display: flex;
+  align-items: stretch;
 }
 .j-menu-primer-t {
+  flex: 1 1 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  width: calc(100% + 0.7rem);
+  justify-content: center;
+  gap: 0.3rem;
   min-height: 44px;
-  margin: 0 -0.35rem;
-  padding: 0.3rem 0.35rem;
+  min-width: 0;
+  padding: 0.3rem 0.2rem;
   background: none;
   border: 0;
   border-radius: 2px;
@@ -5091,15 +5091,23 @@ body.j-rail-on .j-hotspots { opacity: 1; }
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.22em;
+  /* uppercase + tracking leaves a stray trailing space; nudge the centred
+     pair back onto the true axis */
+  text-indent: 0.22em;
   text-transform: uppercase;
-  text-align: left;
   cursor: pointer;
   transition: color 0.3s, background 0.3s;
+}
+.j-menu-primer-t + .j-menu-primer-t {
+  border-left: 1px solid rgba(217, 164, 65, 0.1);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 .j-menu-primer-t:is(:hover, :focus-visible) {
   color: var(--gold-bright);
   background: rgba(217, 164, 65, 0.05);
 }
+.j-menu-primer-t[aria-expanded='true'] { color: var(--gold-bright); }
 /* the +: the same quiet instrument voice as the row arrows; it becomes an
    x by rotation, so open/close is one gesture with no glyph swap */
 .j-menu-primer-c {
@@ -5110,10 +5118,19 @@ body.j-rail-on .j-hotspots { opacity: 1; }
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
 }
 .j-menu-primer-t:is(:hover, :focus-visible) .j-menu-primer-c { color: var(--gold-bright); }
-.j-menu-primer-row.open .j-menu-primer-c { transform: rotate(45deg); color: var(--gold-bright); }
-.j-menu-primer-d { overflow: hidden; min-height: 0; }
+.j-menu-primer-t[aria-expanded='true'] .j-menu-primer-c {
+  transform: rotate(45deg);
+  color: var(--gold-bright);
+}
+.j-menu-primer-d {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.j-menu-primer-d.open { grid-template-rows: 1fr; }
+.j-menu-primer-di { overflow: hidden; min-height: 0; }
 .j-menu-primer-p {
-  margin: 0.05rem 0 0.7rem;
+  margin: 0.35rem 0 0.7rem;
   font-size: 0.8rem;
   line-height: 1.6;
   color: var(--muted);
@@ -5123,7 +5140,7 @@ body.j-rail-on .j-hotspots { opacity: 1; }
   .j-menu-primer { padding: 0 0 0 calc(28px + 0.85rem); margin-top: -0.3rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .j-menu-primer-row, .j-menu-primer-c { transition: none !important; }
+  .j-menu-primer-d, .j-menu-primer-c { transition: none !important; }
 }
 
 /* ============================================================

@@ -784,17 +784,18 @@
      all three paragraphs; the script below collapses them and runs the
      accordion. */
   .menu-primer { margin: 0.1rem 0 0.45rem; padding: 0 0.6rem 0 2.9rem; }
-  .menu-primer-row + .menu-primer-row { border-top: 1px solid rgba(217, 164, 65, 0.1); }
+  .menu-primer-tabs { display: flex; align-items: stretch; }
+  .menu-primer-t + .menu-primer-t { border-left: 1px solid rgba(217, 164, 65, 0.1); }
   .menu-primer-t {
-    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-    width: 100%; min-height: 44px; padding: 0.3rem 0.35rem; margin: 0 -0.35rem;
-    width: calc(100% + 0.7rem);
+    flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    min-height: 44px; min-width: 0; padding: 0.3rem 0.2rem;
     background: none; border: 0; border-radius: 2px; cursor: pointer;
     color: var(--parchment); font-family: inherit; font-size: 0.62rem;
-    font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; text-align: left;
+    font-weight: 700; letter-spacing: 0.22em; text-indent: 0.22em; text-transform: uppercase;
     transition: color 0.3s, background 0.3s;
   }
   .menu-primer-t:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
+  .menu-primer-t[aria-expanded="true"] { color: var(--gold-bright); }
   .menu-primer-c { color: rgba(217, 164, 65, 0.6); font-size: 0.9rem; font-weight: 400; line-height: 1; }
   .menu-primer-t[aria-expanded="true"] .menu-primer-c { color: var(--gold-bright); }
   .menu-primer-d[hidden] { display: none; }
@@ -1451,21 +1452,19 @@
             <span class="menu-txt"><span class="menu-line menu-thesis">We’re working to help the open-source AI art ecosystem thrive</span></span>
           </a>
           <!-- Who / What / Why (mirrors the live panel; copy from
-               content.js site.primer, every string data-src'd). Authored
-               open for the no-JS reader; the script collapses them. -->
+               content.js site.primer, every string data-src'd). One line
+               of three controls, answers below the line in row order —
+               authored open for the no-JS reader; the script collapses
+               them into a toggleable tablist, one answer at a time. -->
           <div class="menu-primer">
-            <div class="menu-primer-row">
+            <div class="menu-primer-tabs">
               <button class="menu-primer-t" type="button" id="pt-who" aria-expanded="true" aria-controls="pd-who"><span data-src="site.primer.0.label">Who</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-              <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: Banodoco is 100% shared with the people who contribute, granted 1% per month.</p></div>
-            </div>
-            <div class="menu-primer-row">
               <button class="menu-primer-t" type="button" id="pt-what" aria-expanded="true" aria-controls="pd-what"><span data-src="site.primer.1.label">What</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-              <div class="menu-primer-d" id="pd-what" role="region" aria-labelledby="pt-what"><p class="menu-primer-p" data-src="site.primer.1.body">We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.</p></div>
-            </div>
-            <div class="menu-primer-row">
               <button class="menu-primer-t" type="button" id="pt-why" aria-expanded="true" aria-controls="pd-why"><span data-src="site.primer.2.label">Why</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-              <div class="menu-primer-d" id="pd-why" role="region" aria-labelledby="pt-why"><p class="menu-primer-p" data-src="site.primer.2.body">The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.</p></div>
             </div>
+            <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: Banodoco is 100% shared with the people who contribute, granted 1% per month.</p></div>
+            <div class="menu-primer-d" id="pd-what" role="region" aria-labelledby="pt-what"><p class="menu-primer-p" data-src="site.primer.1.body">We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.</p></div>
+            <div class="menu-primer-d" id="pd-why" role="region" aria-labelledby="pt-why"><p class="menu-primer-p" data-src="site.primer.2.body">The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.</p></div>
           </div>
           </li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire" data-menu-section="inspire">
@@ -1931,24 +1930,45 @@
   });
 
   /* ---------------- menu primer: Who / What / Why ---------------- */
-  // Authored open above (the no-JS reader gets all three paragraphs);
-  // with JS running they collapse into a small accordion, one open at a
-  // time, mirroring the live panel's behaviour (journey/rail.js).
+  // Authored open above (the no-JS reader gets the control line and all
+  // three paragraphs below it, in row order); with JS running the line
+  // becomes a toggleable tablist — one answer at a time in the shared
+  // region below, choosing the open one closes it, Left/Right/Home/End
+  // move between the three — mirroring the live panel (journey/rail.js).
+  var primerRow = document.querySelector('.menu-primer-tabs');
   var primerBtns = Array.prototype.slice.call(document.querySelectorAll('.menu-primer-t'));
+  if (primerRow) primerRow.setAttribute('role', 'tablist');
+  if (primerRow) primerRow.setAttribute('aria-label', 'About Banodoco');
   primerBtns.forEach(function (btn) {
     var panel = document.getElementById(btn.getAttribute('aria-controls'));
     if (!panel) return;
     panel.hidden = true;
+    panel.setAttribute('role', 'tabpanel');
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', 'false');
     btn.setAttribute('aria-expanded', 'false');
     btn.addEventListener('click', function () {
       var wasOpen = btn.getAttribute('aria-expanded') === 'true';
       primerBtns.forEach(function (other) {
         var otherPanel = document.getElementById(other.getAttribute('aria-controls'));
         var on = !wasOpen && other === btn;
+        other.setAttribute('aria-selected', on ? 'true' : 'false');
         other.setAttribute('aria-expanded', on ? 'true' : 'false');
         if (otherPanel) otherPanel.hidden = !on;
       });
     });
+  });
+  if (primerRow) primerRow.addEventListener('keydown', function (e) {
+    var at = primerBtns.indexOf(document.activeElement);
+    if (at < 0) return;
+    var to = -1;
+    if (e.key === 'ArrowRight') to = (at + 1) % primerBtns.length;
+    else if (e.key === 'ArrowLeft') to = (at + primerBtns.length - 1) % primerBtns.length;
+    else if (e.key === 'Home') to = 0;
+    else if (e.key === 'End') to = primerBtns.length - 1;
+    if (to < 0) return;
+    e.preventDefault();
+    primerBtns[to].focus();
   });
 
   /* ---------------- routing: #/<chapter>[/<node>] ---------------- */
