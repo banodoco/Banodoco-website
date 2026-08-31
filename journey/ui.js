@@ -444,6 +444,24 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);
+    // THE THIRD-STATE CHIP (R3): a node whose interior is unbuilt wears the
+    // state on the chip itself — the NAME blurred to a shape (site.css,
+    // .j-hot--soon), a Soon pill in the site-map panel's own badge language,
+    // and a strong housing so the pair read clearly against the lit gill fan.
+    // The qualifier is the popover tier's own (content.js `preview:
+    // 'under-construction'`), so chip, preview and panel can never disagree.
+    // The pill is aria-hidden and the state is carried on the accessible name
+    // instead ("Quark, soon" — the rail's Manifesto row states it the same
+    // way), because a blurred name is a design statement to a sighted visitor
+    // and would be a garbled one to AT.
+    const soon = popover.unbuiltFor(id);
+    if (soon) {
+      btn.classList.add('j-hot--soon');
+      const badgeEl = el('span', 'j-hot-badge', 'Soon');
+      badgeEl.setAttribute('aria-hidden', 'true');
+      btn.appendChild(badgeEl);
+      btn.setAttribute('aria-label', `${label}, soon`);
+    }
     // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
     // thing the node draws, pinned to the node itself rather than to the pill
     // — the pill flips and nudges to keep a label on frame, and the target you
@@ -458,6 +476,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false, iconTab,
+      soon,
       // The tempo floor's per-chip state (DEFECT-01 #3). Written only by
       // journey/ui/hotspot-frame.js; initialised here for the same reason
       // `a`, `armAt` and `sup` are — the record states its whole shape at

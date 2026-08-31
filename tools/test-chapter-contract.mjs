@@ -3004,8 +3004,13 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   // declarations — the chapter is small enough that a hoisted body per member
   // would be indirection for its own sake — so it contributes five methods and
   // seven values and no new references.
-  assert.deepEqual(A(byShape), { method: 11, reference: 13, value: 26 },
-    'eleven inline methods, thirteen references to local declarations, twenty-six data values');
+  // 11/13/26 -> 12/13/25 with the R3 ladder reveal (2026-08-31): Equip's
+  // `nodeReveal` was a declared `null` (a data value) and is now an inline
+  // method tying each label to its own authored ring — one value becomes one
+  // method, and its body is `this`-free like every other, which is the
+  // property this check exists to hold.
+  assert.deepEqual(A(byShape), { method: 12, reference: 13, value: 25 },
+    'twelve inline methods, thirteen references to local declarations, twenty-five data values');
   assert.deepEqual(A(members.filter((m) => /^<(?:method|shorthand)>$/.test(m.body)).map((m) => m.site)), [],
     'no member reached the scan as an unresolved placeholder');
 
@@ -3021,9 +3026,12 @@ check('T6 [static] DEF-C05-01 — every capability member body is `this`-free, s
   //
   // 18 -> 23 with Equip (2026-08-30): its five inline capability methods are
   // five more unexecuted bodies in the same residue.
+  // 23 -> 24 with the R3 ladder reveal (2026-08-31): Equip's `nodeReveal`
+  // null became an inline method — the same one-value-to-one-method move the
+  // byShape pin above records.
   const isFunction = (m) => m.kind === 'method' || m.kind === 'reference-fn';
-  assert.equal(A(members.filter(isFunction).length), 23,
-    'twenty-three of the fifty members are function bodies — the F-3 residue, counted not estimated');
+  assert.equal(A(members.filter(isFunction).length), 24,
+    'twenty-four of the fifty members are function bodies — the F-3 residue, counted not estimated');
   assert.deepEqual(A(members.filter((m) => m.kind === 'reference-data').map((m) => m.site)),
     ['owned.visibility.nodeIds'],
     'and the one reference that is NOT a function is named, so the count above cannot drift silently');
