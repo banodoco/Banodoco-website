@@ -637,12 +637,17 @@ const STATIC_HAZE =
   'radial-gradient(ellipse 66% 30% at 62% 104%, rgba(214,142,58,0.085), transparent 72%),'
   + 'radial-gradient(ellipse 40% 44% at 64% 52%, rgba(226,160,74,0.045), transparent 74%)';
 
+/** The stream's ENTRY ramp, in ms. Named because handOff() has to know it:
+ *  the crossfade out of this layer is only complementary if the ramp INTO it
+ *  has finished, so the number belongs to both and can drift out of neither. */
+const ENTRY_MS = 900;
+
 const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
   // The stream has to add light to the frame the way the shed does, not
   // paint over it. plus-lighter IS addition; screen is the fallback for
   // engines that lack it and is close enough on a field this dim.
   + 'mix-blend-mode:screen;mix-blend-mode:plus-lighter;'
-  + 'opacity:0;transition:opacity 900ms ease;';
+  + `opacity:0;transition:opacity ${ENTRY_MS}ms ease;`;
 
 function createPreload() {
   const state = {
@@ -664,6 +669,9 @@ function createPreload() {
   // the scene's renderer will draw the same particles on. 1 whenever they
   // agree, which is every capture and every first visit to a retina desktop.
   let pxScale = 1;
+  // When the ENTRY_MS ramp began. -Infinity until it has, so a handOff() that
+  // somehow precedes boot() waits for nothing.
+  let entryAt = -Infinity;
 
   /** ONE requestAnimationFrame site in this module, deliberately. The
    *  hidden-tab gate (2D) parks the loop by clearing `rafId` and comes
@@ -896,6 +904,10 @@ function createPreload() {
     // zero-slack ceiling flat.
     void el.offsetWidth;
     el.style.opacity = '1';
+    // WHEN the entry ramp started, because handOff() needs to know whether it
+    // is still running. Taken after the reflow above, which is the point the
+    // transition actually begins from 0.
+    entryAt = performance.now();
     // The sequencing this module exists for is only a claim until somebody
     // can measure it. This mark sits beside index.html's 'hero-entry-start'
     // and journey/boot/handoff.js's 'hero-intro-start', so a cold-load trace
@@ -964,19 +976,55 @@ function createPreload() {
      *  a linear pair it is flat, and the only thing that changes across
      *  the seam is that the light acquires the composer's bloom.
      *
+     *  ...AND THEY ARE ONLY COMPLEMENTARY IF THE ENTRY RAMP IS DONE, which
+     *  is a RACE this file used to lose silently. The wrap enters on its own
+     *  ENTRY_MS transition; the scene arrives whenever `three` does. Hand off
+     *  at entry opacity `a` and the pair carries `a(1 - p) + p`, which is not
+     *  flat at all — it climbs from `a` to 1 across the crossfade, so the
+     *  whole stream BRIGHTENS over 0.9 s at the exact moment its light also
+     *  acquires the composer's bloom. Together those read as a filter being
+     *  switched on over spores that had already arrived, about a second in.
+     *  Nobody saw it in a probe because losing the race needs a machine fast
+     *  enough to build the scene inside 900 ms.
+     *
+     *  So the crossfade WAITS OUT the remainder of the entry ramp — on a
+     *  timer here, and as the same number handed to the scene side in
+     *  `fadeDelay` so both halves start on the same frame. Through the wait
+     *  this layer is still the only one drawing and is still the integrator,
+     *  so what is on screen is exactly the entry the visitor was already
+     *  watching; nothing is held back but the swap. The wait is zero whenever
+     *  the ramp has already finished — every capture, and every load that
+     *  takes longer than ENTRY_MS to reach a scene.
+     *
      *  Called only when a scene exists to hand to. If the scene never
      *  builds, nothing calls this, and the layer — spores, or the static
      *  haze if WebGL was refused — simply stays as the hero (2D). */
     handOff(seconds) {
       if (state.handedOff) return null;
       state.handedOff = true;
-      const carried = state.field ? { field: state.field, view: state.view } : null;
+      const wait = state.wrap
+        ? Math.max(0, Math.round(ENTRY_MS - (performance.now() - entryAt)))
+        : 0;
+      const carried = state.field
+        ? { field: state.field, view: state.view, fadeDelay: wait / 1000 }
+        : null;
       const ms = Math.round(seconds * 1000);
       if (state.wrap) {
-        state.wrap.style.transition = `opacity ${ms}ms linear`;
-        state.wrap.style.opacity = '0';
+        // A transition-DELAY would not do here, and the difference is the whole
+        // point: restyling the property replaces the running entry transition
+        // at once, so the layer would freeze at whatever opacity it had reached
+        // and sit there for the delay. Leaving the entry transition alone and
+        // arming the fade-out on a timer instead lets the stream finish
+        // arriving, which is what the visitor was already watching.
+        const fadeOut = () => {
+          if (!state.wrap) return;
+          state.wrap.style.transition = `opacity ${ms}ms linear`;
+          state.wrap.style.opacity = '0';
+        };
+        if (wait > 0) setTimeout(fadeOut, wait);
+        else fadeOut();
       }
-      setTimeout(stop, ms + 60);
+      setTimeout(stop, wait + ms + 60);
       return carried;
     },
   };
@@ -1037,7 +1085,9 @@ if (typeof document !== 'undefined') heroSpores.boot();
  * @param ctx  organism.js's shared context — `makePoints`, `pushC`,
  *             `scene`, `addAnimator` and `breeze` come down on it, which
  *             is what lets this module stay free of `three`.
- * @param carried  the preload's live field + view, or null (the scene
+ * @param carried  the preload's live field + view + `fadeDelay` (seconds to
+ *             hold before the crossfade begins — handOff() sets it to the
+ *             remainder of that layer's entry ramp), or null (the scene
  *             booted without a preload: seed a fresh one off the same law)
  * @param fadeSeconds  the crossfade beat, matched to handOff()'s own
  */
@@ -1116,7 +1166,16 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
      fast-forward skews performance.now(), so it never reads that skew. */
   const gain = pts.material.uniforms.uOpacity;
   const fadeMs = fadeSeconds * 1000;
-  const fadeFrom = performance.now();
+  /* handOff()'s own wait, carried across so BOTH halves of the crossfade start
+     on the same frame. It is the remainder of the preload layer's entry ramp,
+     and it is non-zero only when the scene beat that ramp to the screen;
+     through it the preload is still the only thing drawing this field, so
+     holding the gain at 0 shows exactly the entry already in progress. Zero on
+     every capture (?capture= waits for readiness, by which time the ramp is
+     long finished), which is what keeps the note above true: a frozen frame is
+     still shot at full brightness. */
+  const delayMs = (carried && carried.fadeDelay > 0) ? carried.fadeDelay * 1000 : 0;
+  const fadeFrom = performance.now() + delayMs;
   let fading = fadeMs > 0;
   if (fading) gain.value = 0;
 
@@ -1126,7 +1185,7 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
   // copy of it, and the transitional stand-in above is out of the picture.
   addAnimator('hero-spore-drift', (t, dt) => {
     if (fading) {
-      const p = Math.min(1, (performance.now() - fadeFrom) / fadeMs);
+      const p = Math.min(1, Math.max(0, (performance.now() - fadeFrom) / fadeMs));
       gain.value = OPACITY * p;
       if (p >= 1) fading = false;
     }
