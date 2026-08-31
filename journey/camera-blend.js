@@ -60,6 +60,12 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
     const fv = blend.fov0 * (1 - e) + cam.fov * e;
     arcLerp(blend.pos0, dstPos, e, cam.position, blend.az1, blend.bow, blend.rise);
     ctl.target.lerpVectors(blend.tgt0, dstTgt, e);
+    /* The gaze-height swell of the shaped Equip leg (directJumpTo's ONE ARC
+       block prices it; zero on every other jump, and absent from fixture
+       blends). Same sin(pi*e) family as `bow`/`rise` above, driven by the
+       SAME ease as the target it perturbs, so its velocity is zero at both
+       ends and a settled or dt = 0 frame is byte-identical by construction. */
+    if (blend.tgtDip) ctl.target.y += blend.tgtDip * Math.sin(Math.PI * e);
     cam.up.set(0, 1, 0);
     cam.lookAt(ctl.target);
     if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
