@@ -244,6 +244,20 @@ let FLYBY_EXTRA_S = 0.72; // BASE seconds added on top of the length law. The
                           // 187 deg/s, peak 20.8 u/s: unhurried against the
                           // wrap's own precedent of 360 deg in 4.00 s.
 
+const EQUIP_CONNECT_EXTRA_S = 0.66; // BASE seconds added on top of the length
+                          // law for the rest-departing Equip -> Connect exit
+                          // (the owner: "make the equip to connect transition
+                          // run at maybe 65% of its current speed"). The
+                          // FLYBY_EXTRA_S idiom, and the same declared
+                          // conversion: the 'connect|equip' speed row (0.70)
+                          // divides the base, so 0.66 here delivers ~0.94 s
+                          // on the page. Measured delivered flight, 1280x800:
+                          // 1.76 s before, 2.73 s after — 64.5% of the prior
+                          // speed, on exactly the leg the owner named. An
+                          // OVERTAKEN leg keeps the plain price: a mid-flight
+                          // change of mind rewinds a short way, and taxing
+                          // that rewind would turn a step back into a dawdle.
+
 /* ONE JOURNEY EVER. main.js boots once; a second boot returns the handle the
    first one published rather than building a second generation. */
 let booted = false;
@@ -1010,6 +1024,8 @@ export function boot(opts = {}) {
          reverse gear. */
       const flybyLeg = !wrap && !routeFaithful && !overtaken
         && fromChapterId === 'connect' && chapterId === 'final';
+      const slowedEquipExit = equipLeg && !overtaken
+        && fromChapterId === 'equip' && chapterId === 'connect';
       const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
         : equipLeg && !overtaken ? azTurn(pos0, cam.position, EQUIP_TURN)
         : flybyLeg ? azTurn(pos0, cam.position, EQUIP_TURN)
@@ -1070,8 +1086,15 @@ export function boot(opts = {}) {
            runs ~33 units, and at the cap that is the whip again — plus its
            own authored seconds (FLYBY_EXTRA_S), because a flyby is
            priced by the angle it sweeps, not only the metres it covers. */
+        /* The Equip -> Connect exit carries its own authored seconds on top
+           (EQUIP_CONNECT_EXTRA_S, declared above with its conversion): the
+           owner asked for ~65% of the delivered speed on exactly this leg,
+           whose forced +222deg sweep is the widest rest-departing exit, so
+           the slow is authored here — never by retuning the shared length
+           law or the route's speed rows, which price every other leg. */
         : 0.85 + 0.35 * (equipLeg || skim ? len / 20 : Math.min(len / 20, 1))
-          + (skim ? FLYBY_EXTRA_S : 0);
+          + (skim ? FLYBY_EXTRA_S : 0)
+          + (slowedEquipExit ? EQUIP_CONNECT_EXTRA_S : 0);
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
       // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
       // p, so a jump threw the whole world's depth to the destination's ramp on
