@@ -197,6 +197,10 @@ let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
                          // rotation, closing to a full turn). +/-1 forces a
                          // rotational sense — how the shipped path was chosen
                          // against the short way, and how it can be re-judged.
+const EQUIP_TURN = 1;    // the rotational sense forced on every rest-departing
+                         // Equip leg (the ONE LAP block below): +1 = increasing
+                         // azimuth, the sense the ride itself enters Equip with
+                         // on its own Inspire (115deg) -> Equip (200deg) arc.
 
 /* ONE JOURNEY EVER. main.js boots once; a second boot returns the handle the
    first one published rather than building a second generation. */
@@ -897,7 +901,31 @@ export function boot(opts = {}) {
          reach it needs: the wrap's arc is ~68 units against ~15.6 for the
          longest ordinary jump, so the shipped cap would run it 4x faster than
          any other transition — a whip, not a considered move. */
-      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
+      const equipLeg = !wrap && !routeFaithful
+        && (chapterId === 'equip' || fromChapterId === 'equip');
+      /* THE EQUIP VISIT IS ONE LAP (R3, the owner: "the camera should spin
+         AROUND the mushroom — like a loop around it — instead of just
+         reversing back"). Equip's rest is the one pose on the far side of the
+         specimen — az 200deg, against the -80..115deg band every other rest
+         occupies — so the generic shortest-way azimuth sends every exit back
+         out through the doorway it came in by: in-and-unwind, the exact
+         reading the WAY HOME block above rules out for the ride's own seam.
+         Force the sense instead, the same way the wrap forces its own: every
+         rest-departing Equip leg turns in EQUIP_TURN's sense. With one shared
+         sense the way in plus the way out sums to exactly 360deg for every
+         pairing, so a visit reads in -> around -> out — a lap past the
+         underside — never in-and-back. The sense is + rather than - because
+         three of the five entries already turn that way unforced (Inspire
+         +85, Connect +138, Owned +128), so the forcing is spent on the exits
+         (Connect +222 against -138 short) and on the two far-side entries
+         (Mission +212, Final +280 — inside the wrap's own 294deg precedent),
+         and the tuned approach arcs ship unchanged. A leg that OVERTAKES a
+         live blend keeps the shortest way: a mid-flight reversal rewinds —
+         the same grammar as the wrap's reverse gear — which is what keeps an
+         80 ms change of mind a step back rather than a near-full lap. */
+      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
+        : equipLeg && !overtaken ? azTurn(pos0, cam.position, EQUIP_TURN)
+        : null;
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:
          "it should be one zoom and arc at the same time ... if it has to move
          down and then up at the end, do a smooth arc and then move up at the
@@ -921,8 +949,6 @@ export function boot(opts = {}) {
          mirror out of Equip — the same two channels played backwards. The
          magnitudes ride the leg's own gaps, so a short hop bows little and a
          same-height leg dips not at all. */
-      const equipLeg = !wrap && !routeFaithful
-        && (chapterId === 'equip' || fromChapterId === 'equip');
       const radGap = Math.abs(Math.hypot(pos0.x, pos0.z)
         - Math.hypot(cam.position.x, cam.position.z));
       const bow = wrap ? WRAP_BOW : equipLeg ? Math.min(2.2, radGap * 0.35) : 0;
@@ -939,7 +965,14 @@ export function boot(opts = {}) {
       const len = routePace ? routePace.pathLen : arcLength(pos0, cam.position, az1);
       const baseDuration = wrap
         ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
-        : 0.85 + 0.35 * Math.min(len / 20, 1);
+        /* An Equip leg spends the length law UNCAPPED: the cap exists so a
+           cross-floor hop cannot dawdle, but a forced lap measures up to ~44
+           units and at the cap that is the whip the WRAP_EXTRA_S note prices
+           (57 u/s). Below the knee the law already declares its exchange rate
+           — 0.35 s per 20 units — so the marginal rate simply keeps running;
+           legs shorter than 20 units (every unforced Equip arc) are
+           byte-identical to the capped law. */
+        : 0.85 + 0.35 * (equipLeg ? len / 20 : Math.min(len / 20, 1));
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
       // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
       // p, so a jump threw the whole world's depth to the destination's ramp on
