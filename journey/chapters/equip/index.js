@@ -40,30 +40,36 @@ import { FIXED_HOTSPOTS } from '../../structure.js';
 // specimen is actually at this frame, breeze and tap-ringdown included. A
 // world literal would have been correct only in a still frame.
 //
-// STALK. On the stipe's axis, in the clear band of column between the cap's
-// underside and the copy block. The stipe occupies y 0..3.91 with radius <= 0.69
-// (measured on the live scene), and the geometric middle of that is 1.95 — which
-// is where this anchor started and where it does not work: measured at the rest,
-// 1440x900, world (0, 1.95, 0) projects to (715, 669) against a copy block whose
-// padded box is x 67..723, y 630..814, so the chip landed INSIDE it and
-// ui/hotspot-frame.js suppressed the label outright. (That suppression is
-// correct and is not something to route around — the chapter's copy owns its
-// area of the frame — but a chip that is always suppressed is a chip that does
-// not exist.) 2.30 clears the block's top edge by 21 px at the rest and reads as
-// the same thing: bare stipe, well below the throat, well above the root flare.
+// STALK. On the stipe's axis, in the clear band of column between the throat
+// and the copy block. The stipe occupies y 0..3.91 with radius <= 0.69
+// (measured on the live scene). Under the R3 steep rest the frame's whole
+// lower band belongs to the copy — at 430x932 the block spans the full width
+// with its top at y 634 — so the anchor has to sit HIGH on the column:
+// measured at the rest, (0, 2.30, 0) projects to (269, 688), inside the block,
+// and ui/hotspot-frame.js suppresses it outright (that suppression is correct
+// and is not something to route around — the chapter's copy owns its area of
+// the frame — but a chip that is always suppressed is a chip that does not
+// exist). 2.85 projects to (262, 575) there — 59 px above the block — and to
+// (820, 589) at 1440x900 and (429, 698) at 744x1133: bare column below the
+// throat on all three, checked against each frame's own copy rect.
 //
 // The anchor is on the AXIS rather than on the near surface because the camera
 // orbits it: a surface point would swing across the column as the arc comes
 // round, and the chip would appear to slide off the thing it names.
-const STALK_LOCAL = new THREE.Vector3(0, 2.30, 0);
+const STALK_LOCAL = new THREE.Vector3(0, 2.85, 0);
 
-// GILLS. On the cap's underside, out along the view-right axis of the Equip
-// rest so the two chips separate across the frame instead of stacking on the
-// stipe. Radius 1.60 against a rim radius of ~2.35 puts it two thirds of the
-// way out the gill fan — past the throat's crowded hub, inside the margin's
-// droop. Its height is the gill surface at that radius (anatomy.js
-// capUnderPt: CAP_Y 3.15 plus the skirt's own shallow rise), not the rim line.
-const GILL_LOCAL = new THREE.Vector3(-1.504, 3.15, 0.547);
+// GILLS. On the cap's underside — under the steep rest the fan is a CEILING,
+// so the chip's home is up in that ceiling rather than out along a lateral
+// fan. The point is on the camera-far side of the throat (local -x, -z), at
+// radius 1.5 against a rim radius of ~2.35 — past the throat's crowded hub,
+// inside the margin — with its height the gill surface at that radius
+// (anatomy.js capUnderPt: CAP_Y 3.15 plus the skirt's shallow rise). The far
+// side is what keeps it INSIDE all three frames: the near-side points that
+// separate nicely at 1440x900 leave the frame entirely at 430x932 (the old
+// anchor projects to x 615 of 430 there). Measured at the rest it lands at
+// (919, 148) @1440x900, (546, 273) @744x1133, (358, 225) @430x932 — in the
+// lit ceiling on every frame, clear of the copy block on every frame.
+const GILL_LOCAL = new THREE.Vector3(-0.9, 3.18, -1.2);
 
 /* ------------------------------------------------------------------ */
 /* The arrival ripple                                                  */
@@ -78,12 +84,21 @@ const GILL_LOCAL = new THREE.Vector3(-1.504, 3.15, 0.547);
 // ring before the next one starts. Priced in gate units it would have run at
 // whatever rate the wheel happened to turn.
 const RIPPLE_GATE_ON = 0.30;    // arrival gate at which the stalk rings
-const RIPPLE_GAP_S = 0.75;      // seconds from the stalk ring to the gills ring
-// A ring may not be re-triggered faster than this. The wave itself decays over
-// about 8 s (organism.js's 'tap-pulse' parks pulseT there) and there is exactly
-// ONE wave in the shader, so a hover that re-armed on every enter would let a
-// wobbling pointer restart the same ring forever and it would read as a strobe
-// rather than as an answer.
+// Seconds from the stalk ring to the gills ring — ONE CHIP BEAT (R3). The two
+// chips rise in one beatGapMs apart (constants/copy.js HOTSPOT_ARRIVAL, 540 ms,
+// through hotspot-frame's beatEnvelope), and the owner's direction ties the
+// murmur to the appearance: "as each appears, a minor pulse through the thing
+// it points at". 0.55 seats each ring on its own chip's rise; the retired 0.75
+// was authored against reading rings alone, before the chips rose with them.
+const RIPPLE_GAP_S = 0.55;
+// A POINTER ring may not be re-triggered faster than this. The wave itself
+// decays over about 8 s (organism.js's 'tap-pulse' parks pulseT there) and
+// there is exactly ONE wave in the shader, so a hover that re-armed on every
+// enter would let a wobbling pointer restart the same ring forever and it
+// would read as a strobe rather than as an answer. The AUTHORED ladder is
+// exempt (ring's `authored` flag): its two beats are the introduction itself,
+// spaced by RIPPLE_GAP_S above, and holding the second beat to a hover
+// throttle would detach it from the chip it answers.
 const RIPPLE_REARM_S = 1.10;
 // Wave profiles, in the shader's own three numbers: (speed, range falloff,
 // amplitude) — uPulseP, organism/shaders.js. The STALK borrows the hero's
@@ -140,15 +155,26 @@ export function createEquip(sceneApi) {
   let stage = 0;
   let stalkRangAt = -Infinity;
   let lastRingAt = -Infinity;
+  // When each chip's AUTHORED ring fired — the clock its label stands up on
+  // (nodeReveal below). null = not yet this arrival (label held at zero);
+  // -Infinity = settled by a dt = 0 placement (label standing, no replay).
+  // A hover ring never writes these: it re-sounds the wave, it does not
+  // re-introduce the subject.
+  const revealAt = { quark: null, brotchen: null };
+  // Seconds a label takes to stand up after its ring — the chip's rise
+  // (hotspot-frame paintSoonRise reads the same clock through h.a). Matches
+  // HOTSPOT_ARRIVAL.formMs, the site's marker-formation tempo.
+  const RISE_S = 0.7;
 
   const seconds = () => performance.now() / 1000;
 
-  function ring(id) {
+  function ring(id, authored = false) {
     const now = seconds();
-    if (now - lastRingAt < RIPPLE_REARM_S) return false;
+    if (!authored && now - lastRingAt < RIPPLE_REARM_S) return false;
     const local = LOCAL_OF[id];
     if (!local || typeof sceneApi.pulseFrom !== 'function') return false;
     lastRingAt = now;
+    if (authored) revealAt[id] = now;
     sceneApi.pulseFrom(worldOf(local), PROFILE_OF[id]);
     return true;
   }
@@ -160,25 +186,28 @@ export function createEquip(sceneApi) {
   function advanceIntro(gate) {
     if (!armed || blendOwned) return;
     if (gate < RIPPLE_GATE_ON * 0.5) {
-      // Left the arrival: re-arm so coming back rings again. Half the onset,
-      // not the onset itself, so a gate hovering on the threshold cannot
-      // ring-reset-ring.
+      // Left the arrival: re-arm so coming back rings again — and the labels
+      // sit back down with their rings, so the return is a whole replay.
+      // Half the onset, not the onset itself, so a gate hovering on the
+      // threshold cannot ring-reset-ring.
       stage = 0;
+      revealAt.quark = revealAt.brotchen = null;
       return;
     }
     if (stage === 0) {
       if (gate < RIPPLE_GATE_ON) return;
       stage = 1;
       stalkRangAt = seconds();
-      ring('quark');
+      ring('quark', true);
       return;
     }
     if (stage === 1 && seconds() - stalkRangAt >= RIPPLE_GAP_S) {
-      // The second ring is allowed to wait out the re-arm interval rather than
-      // being dropped: an arrival that spent its first ring is still
-      // mid-introduction, and losing the gills beat would leave the chapter
-      // introducing one of its two subjects.
-      if (ring('brotchen')) stage = 2;
+      // The second beat is AUTHORED: it bypasses the pointer re-arm throttle
+      // (see RIPPLE_REARM_S) so it lands on its own chip's rise rather than
+      // 1.1 s late — and it is never dropped, because an arrival that spent
+      // its first ring is still mid-introduction, and losing the gills beat
+      // would leave the chapter introducing one of its two subjects.
+      if (ring('brotchen', true)) stage = 2;
     }
   }
 
@@ -191,7 +220,7 @@ export function createEquip(sceneApi) {
       on = !!on;
       if (on === armed) return;
       armed = on;
-      if (!on) stage = 0;
+      if (!on) { stage = 0; revealAt.quark = revealAt.brotchen = null; }
     },
     get armed() { return armed; },
 
@@ -201,7 +230,11 @@ export function createEquip(sceneApi) {
      *  twice right now". Firing here would put a travelling wave into a frame
      *  that is supposed to be still, and every capture of this pose would catch
      *  the wave at whatever radius the frozen clock happened to hold. */
-    snap() { stage = 2; stalkRangAt = -Infinity; },
+    snap() {
+      stage = 2;
+      stalkRangAt = -Infinity;
+      revealAt.quark = revealAt.brotchen = -Infinity;
+    },
 
     /** NO LANDING SETTLE, AND IT MUST STAY null.
      *
@@ -224,8 +257,9 @@ export function createEquip(sceneApi) {
      *  ripple cannot fire past a scrubbing finger. */
     drive() { advanceIntro(copyEase()); },
 
-    /** A nav landing replays the introduction from the top. */
-    beginEntry() { stage = 0; },
+    /** A nav landing replays the introduction from the top — labels included:
+     *  they sit back down so each can rise again on its own ring. */
+    beginEntry() { stage = 0; revealAt.quark = revealAt.brotchen = null; },
     /** The nav entry's own 0..1 clock, smootherstepped by frame-application. */
     driveEntry(f) { advanceIntro(f); },
     /** CAMERA-PURE, and it has to be: the entry clock must not start while the
@@ -286,24 +320,32 @@ export function createEquip(sceneApi) {
        *  sort. */
       nodeIds: [...NODES],
       nodeWorld(id) { return worldOf(LOCAL_OF[id] || STALK_LOCAL).clone(); },
-      /** NO SCENE REVEAL, deliberately — and this is what makes the brief's
-       *  "interactive only once the camera settles" true without a second
-       *  clock. With `nodeReveal` null the frame falls back to the chapter's
-       *  eased copy opacity (ui/hotspot-frame.js: `gate = h.reveal ? ... :
-       *  copyGate`), which is already held down through travel and released on
-       *  settle; `h.a` then gates opacity, pointer-events AND the hit pad
-       *  together, so pointer and keyboard cannot disagree about when the
-       *  preview becomes reachable. Connect declares a reveal because its
-       *  labels name an event the visitor is watching mid-scrub; Equip's two
-       *  name a resting composition, which is exactly the case the copy gate
-       *  exists for. It must reach addHotspot as `undefined`, never as a
-       *  function. */
-      nodeReveal: null,
+      /** THE REVEAL IS THE LADDER (R3 — this chapter used to declare
+       *  `nodeReveal: null` and let both chips ride the copy ease together;
+       *  the owner's direction ties each chip's appearance to its own pulse:
+       *  "the items should appear going UP, and minor pulses sent through the
+       *  thing they're pointing at"). Each label's clock starts the moment
+       *  its AUTHORED ring fires (revealAt, written in ring()), so a chip
+       *  rises out of the same instant its anatomy answers — the Connect and
+       *  Inspire precedent, where nodeReveal ties each label to the event it
+       *  names. The old design's settle guarantee is inherited rather than
+       *  lost: the ladder itself only advances on the copy ease / entry clock
+       *  (advanceIntro), so a ring — and therefore a label — still cannot
+       *  fire past a scrubbing finger. dt = 0 placements land settled: snap()
+       *  parks both revealAt at -Infinity, and now - (-Infinity) clamps to a
+       *  standing label with no wave in frame. A hover ring never writes
+       *  revealAt — it re-sounds the wave, it does not re-run the entrance. */
+      nodeReveal(id) {
+        const at = revealAt[id];
+        if (at === null) return 0;
+        const t = Math.min(1, Math.max(0, (seconds() - at) / RISE_S));
+        return t * t * (3 - 2 * t);
+      },
       nodeRadius: null,
       labelPolicy: null,
-      /** The flag lives here because it describes THIS chapter: two chips that
-       *  form with the copy on a beat stagger rather than waiting out Connect's
-       *  0.72 arrival floor. */
+      /** The flag lives here because it describes THIS chapter: two chips
+       *  that form directly on the ladder's own reveal rather than waiting
+       *  out Connect's 0.72 arrival floor. */
       revealDirect: true,
       revealScrub: false,
       setExcludedNodes: null,

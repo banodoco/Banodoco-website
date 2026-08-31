@@ -1766,6 +1766,54 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      colour/dot response above is what makes focus equal hover (PL-2.2). */
 
   /* ============================================================
+     THE SOON CHIP (R3) — Quark and Brötchen, the two initiatives whose
+     interiors are unbuilt (ui.js sets the class off the popover tier's own
+     under-construction qualifier). Three statements, each in an existing
+     site vocabulary rather than a new one:
+       · PRESENT: a solid housing and a gold hairline — the base .j-hot wash
+         (0.3 alpha, no border) was tuned for labels against dark sky, and
+         under the R3 rest both chips sit ON the lit gill ceiling, where it
+         measured near-invisible (the owner saw one chip of two);
+       · WITHHELD: the NAME is blurred to a shape, the same statement the
+         unbuilt preview card makes of its own text (cards.css j-pop-unbuilt,
+         blur 2.9px there, 2.6px here for the smaller type) — and, like
+         there, a viewer who asks for contrast gets the word back;
+       · PROMISED: a Soon pill in the site-map panel's badge recipe
+         (j-menu-badge: border accent/28, background accent/6, gold ink).
+     The rise: --j-hot-rise is written per frame by hotspot-frame.js's
+     paintSoonRise off the chip's own arrival clock; the individual
+     `translate` property composes with the placement transform without
+     touching it (the same argument ICON-ARRIVAL makes for `scale`). */
+  .j-hot--soon {
+    background: rgba(12, 8, 3, 0.62);
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    color: rgba(228, 218, 196, 0.92);
+    translate: 0 var(--j-hot-rise, 0px);
+  }
+  .j-hot--soon:is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.78); }
+  .j-hot--soon .j-hot-label {
+    filter: blur(2.6px);
+    opacity: 0.8;
+    user-select: none;
+  }
+  @media (prefers-contrast: more) {
+    .j-hot--soon .j-hot-label { filter: none; opacity: 0.95; }
+  }
+  .j-hot-badge {
+    display: inline-block;
+    flex: 0 0 auto;
+    margin-left: 0.05rem;
+    padding: 0.12em 0.5em;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: rgba(240, 200, 119, 0.72);
+    border: 1px solid rgba(217, 164, 65, 0.3);
+    border-radius: 999px;
+    background: rgba(217, 164, 65, 0.07);
+  }
+
+  /* ============================================================
      NODE POPOVER (Hannah, 2026-08-05) — the detail, beside the chip.
 
      Built by journey/ui.js (see the POPOVER block there for the

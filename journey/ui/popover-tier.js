@@ -459,6 +459,11 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
     /** The shell, for the QA surface `createUI` returns. */
     element: pop,
     previewFor,
+    /** Is this node in the third state — a real destination whose interior
+     *  does not exist yet? Same qualifier the stage uses (unbuiltStage), so
+     *  the chip's own "soon" dress and the unbuilt preview can never disagree
+     *  about which nodes are in it. */
+    unbuiltFor: unbuiltStage,
     /** Is a panel actually on screen, in either tier? Both halves of the
      *  question, because `popNode` outlives the `.open` class through the
      *  choreographed exit. */
