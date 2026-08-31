@@ -351,9 +351,10 @@ wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCou
 const UNIFORM_NAMES_DECLARED = [
   'fogFar', 'fogNear', 'map', 'tDiffuse', 'tHistory', 'time', 'uAberration', 'uActive',
   'uActiveAmt', 'uAdosHubAlong', 'uAdosShift', 'uAmount', 'uAnon', 'uArrive', 'uArriveSpan',
-  // Lane B: hero-spores.js's four. They are RAW-GL uniforms, set through
-  // gl.getUniformLocation/gl.uniform3f rather than a three material's
-  // `uniforms` block, which is why S14 below gains them as residue too.
+  // Lane B: hero-spores.js's four, now FIVE — see `uPxScale` below. They are
+  // RAW-GL uniforms, set through gl.getUniformLocation/gl.uniform1f/3f rather
+  // than a three material's `uniforms` block, which is why S14 below gains
+  // them as residue too.
   'uAspect', 'uBase', 'uBaseA', 'uBgEncoded', 'uBgLinear', 'uBuried', 'uCellAP', 'uClampY', 'uCol', 'uCol2', 'uColDeep', 'uColGold',
   'uColHot', 'uColor', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
   'uExit', 'uExposure', 'uFade', 'uFadeOn', 'uFar', 'uFlow', 'uFocusOn', 'uFocusUv',
@@ -362,7 +363,16 @@ const UNIFORM_NAMES_DECLARED = [
   'uHead', 'uHot', 'uHoverA', 'uHoverAmt', 'uHoverIdx', 'uImgMute', 'uLift', 'uLit', 'uLitMax',
   'uMap', 'uMapA', 'uMapA2', 'uMapB', 'uMapH', 'uMapH2', 'uMapP', 'uMapP2', 'uNavPocketPx',
   'uNear', 'uOpacity',
-  'uOwner', 'uOwnerAmt', 'uPartAmp', 'uPhoto', 'uProg', 'uPull', 'uPulse', 'uPulseAmp',
+  'uOwner', 'uOwnerAmt', 'uPartAmp', 'uPhoto', 'uProg', 'uPull',
+  // R3b (organism/hero-spores.js): the preload layer's device grid over the
+  // scene renderer's. Both halves of the seeding stream write gl_PointSize in
+  // DEVICE pixels, and the two halves pick their pixel ratio independently
+  // (this layer caps at COMPOSITION[mode].dpr; the scene takes
+  // createPixelRatioPolicy().initial, i.e. the verdict remembered for the
+  // display) — so the stream changed size in one frame at adoption for every
+  // returning visitor and on every phone. Raw-GL, hence the S14 residue.
+  'uPxScale',
+  'uPulse', 'uPulseAmp',
   'uPulseC', 'uPulseColor', 'uPulseHead', 'uPulseOn', 'uPulseP', 'uPulseT', 'uPulseWidth',
   'uQuiet', 'uQuietTier', 'uReach', 'uRes', 'uResolution', 'uRevIn', 'uRim', 'uRouteAmp',
   'uScale', 'uSelAmt', 'uSelIdx', 'uSize', 'uSoft', 'uSoilCol', 'uSoilOn', 'uSolid', 'uSurge',
@@ -395,7 +405,7 @@ const UNIFORM_NAMES_BOUND = [
   'uVarB', 'uVarC', 'uVarD', 'uVignette', 'uW', 'uWaveAmt', 'uWaveC', 'uWaveR', 'uWaveW',
   'uWell', 'uWidth', 'uWin', 'uWind', 'uWobA', 'uWobB', 'uWobId', 'uWobR',
 ];
-waveManifest('S12', 'declared uniform names (136; WAS the bare size, 133)',
+waveManifest('S12', 'declared uniform names (137; WAS the bare size, 133)',
   report.shaders.uniformNameUnion, UNIFORM_NAMES_DECLARED);
 waveManifest('S13', 'bound uniform names (133; WAS the bare size, 130)',
   report.shaders.uniformBindingNameUnion, UNIFORM_NAMES_BOUND);
@@ -409,12 +419,16 @@ waveManifest('S13', 'bound uniform names (133; WAS the bare size, 130)',
    declared where the extractor can see them and bound where it cannot.
    That is extractor scope, the same class as the four names already here
    (limitations.md 2c), not four unbound uniforms.
-   WHAT THE PIN STILL CATCHES is unchanged: a NINTH entry means a uniform
+   WIDENED BY ONE at R3b: `uPxScale`, the fifth raw-GL name in that same
+   module — declared in its VERT, bound in boot() through
+   gl.getUniformLocation and written from sizeCanvas() through
+   gl.uniform1f. Same extractor blind spot, same class, one more name.
+   WHAT THE PIN STILL CATCHES is unchanged: a TENTH entry means a uniform
    declared in a three material and never bound, which is the defect this
-   row exists for. Widening it by four named raw-GL entries does not
+   row exists for. Widening it by five named raw-GL entries does not
    loosen that test; leaving it failing forever would. */
 check('S14', 'declared-but-not-bound residue', report.shaders.declaredButNeverBound,
-  ['uAspect', 'uBgEncoded', 'uBgLinear', 'uOwner', 'uOwnerAmt', 'uTanHalfFov',
+  ['uAspect', 'uBgEncoded', 'uBgLinear', 'uOwner', 'uOwnerAmt', 'uPxScale', 'uTanHalfFov',
     'uVarM', 'uVarMI']);
 check('S15', 'bound-but-not-declared residue', report.shaders.boundButNeverDeclared, ['uPullRaw']);
 check('S16', 'compiled program text is declared unmeasured, not faked',

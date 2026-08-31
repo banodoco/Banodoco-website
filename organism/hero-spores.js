@@ -10,14 +10,20 @@
  * right-hand half of the frame but an empty WebGL clear. Measured on a
  * 6x-CPU / slow-network cold load that gap runs to tens of seconds.
  *
- * So the atmosphere is decoupled from the organism. This module has
- * exactly one import — journey/boot/hero-mode.js, which is a leaf with no
- * imports of its own — and it is loaded by its OWN <script type="module">
- * in index.html, ahead of main.js. It therefore paints as soon as its own
- * 57 KB has arrived (this file plus that leaf, uncompressed), in parallel
- * with — not behind — the 1.8 MB the scene needs.
+ * So the atmosphere is decoupled from the organism. Every import in this
+ * module is a LEAF with no imports of its own — journey/boot/hero-mode.js
+ * for the viewport modes, organism/performance.js and flags.js for the one
+ * number sizeCanvas() needs — and it is loaded by its OWN <script
+ * type="module"> in index.html, ahead of main.js. It therefore paints as
+ * soon as its own graph has arrived, in parallel with — not behind — the
+ * 1.8 MB the scene needs. That graph is 24.9 KB with comments stripped as
+ * the public build strips them (20.3 this file, 3.8 hero-mode, 2.5
+ * performance, 2.3 flags); the two leaves added for the seam fix cost
+ * 4.8 KB of it, and buy a stream that does not change size the instant the
+ * scene adopts it. THE RULE THIS GRAPH LIVES UNDER: nothing that imports
+ * `three`, and nothing that imports something that does.
  *
- * AND THAT 57 KB IS NOT FREE, so it is stated here rather than discovered.
+ * AND THAT WEIGHT IS NOT FREE, so it is stated here rather than discovered.
  * Measured on a 6x CPU / 400 kbps cold load it puts first paint 1.25 s
  * later, because this page's three render-blocking stylesheets are 330 KB
  * and everything in the first batch shares the pipe. At 2 Mbps the same
@@ -64,7 +70,11 @@
  *   sprite         the 64px radial gradient makeGlowTexture() bakes,
  *                  evaluated analytically from its four stops
  *   size law       psize * twinkle * (300 / depth) * (1 + 1.35 * blur),
- *                  with the MIN_PT 1.7 floor and its area dimming
+ *                  with the MIN_PT 1.7 floor and its area dimming. Both
+ *                  sides state it in DEVICE pixels, so when the two
+ *                  renderers are on different device grids this layer
+ *                  re-expresses the floored size on its own — same CSS
+ *                  size, same subset floored (§ sizeCanvas)
  *   twinkle        0.85 + 0.15 * sin(time * 1.4 + seed * 7)
  *   depth-of-field blur = |depth - 9.5| / 8, swelling the sprite and
  *                  dimming it by 1 - 0.55 * blur
@@ -92,6 +102,11 @@
  * ==================================================================== */
 
 import { createHeroMode } from '../journey/boot/hero-mode.js';
+// Both leaves, both import-free, and both here for ONE number: the pixel ratio
+// the scene's renderer will be built with. See sizeCanvas() for why this layer
+// has to know it. (PIN_PR is parsed once, in ../flags.js — THE flag registry.)
+import { createPixelRatioPolicy } from './performance.js';
+import { PIN_PR } from '../flags.js';
 
 /* ---------------------------------------------------------------- *
  * COMPOSITION — the seeding stream. One aim per viewport mode.
@@ -514,6 +529,11 @@ attribute vec2 aMeta;    // (size, seed)
 uniform float uTanHalfFov;
 uniform float uAspect;
 uniform float uTime;
+// This layer's device grid over the scene's — 1 when they agree. See
+// sizeCanvas(): it is applied AFTER the floor, so the sprite this layer draws
+// is the one the scene will draw, floored on the scene's grid and then
+// re-expressed on this one.
+uniform float uPxScale;
 varying vec3 vColor;
 varying float vTw;
 varying float vFog;
@@ -533,7 +553,7 @@ void main() {
   // around this sprite (see BLOOM_SPREAD in the fragment). The SPRITE is
   // unchanged: it occupies the inner 1/BLOOM_SPREAD of the quad, and the
   // fragment rescales gl_PointCoord back so the gradient is identical.
-  gl_PointSize = sz * ${BLOOM_SPREAD.toFixed(1)};
+  gl_PointSize = sz * uPxScale * ${BLOOM_SPREAD.toFixed(1)};
   gl_Position = vec4(aFrame.x / (halfH * uAspect), aFrame.y / halfH, 0.0, 1.0);
 }`;
 
@@ -640,6 +660,10 @@ function createPreload() {
   let attribs = null;
   let meta = null;
   let lit = null;   // per-frame colour scratch: F.color x F.fade (draw())
+  // See sizeCanvas(): the ratio between THIS layer's device grid and the one
+  // the scene's renderer will draw the same particles on. 1 whenever they
+  // agree, which is every capture and every first visit to a retina desktop.
+  let pxScale = 1;
 
   /** ONE requestAnimationFrame site in this module, deliberately. The
    *  hidden-tab gate (2D) parks the loop by clearing `rafId` and comes
@@ -705,9 +729,67 @@ function createPreload() {
     schedule();
   }
 
+  /* THE TWO DEVICE GRIDS, AND THE ONLY THING THAT EVER CROSSED THE SEAM.
+   *
+   * Both halves of this field write `gl_PointSize` in DEVICE pixels, from the
+   * identical law and through the identical 1.7-device-pixel floor. That is
+   * deliberate — a sub-pixel sprite has to be floored on the grid it is drawn
+   * to — but it means the ON-SCREEN size of a spore is `sz / pixelRatio`, and
+   * the two halves choose their pixel ratio independently:
+   *
+   *   this layer   min(devicePixelRatio, COMPOSITION[mode].dpr)  — 2 on
+   *                desktop, 1.5 on phone and tablet, a cost ceiling for a
+   *                layer that exists to be cheap.
+   *   the scene    createPixelRatioPolicy().initial — `?pr=`, else the
+   *                verdict REMEMBERED for this display, else min(dPR, 2).
+   *
+   * On a first visit to a retina desktop both are 2 and nothing shows. Every
+   * other case they differ, and at the instant the scene adopts the field
+   * every spore in the stream changes size by their ratio, in one frame:
+   *
+   *   returning desktop visitor, remembered 1.5   2 / 1.5 = 1.33x coarser
+   *   returning desktop visitor, remembered 1     2 / 1   = 2x coarser
+   *   any phone or tablet, first visit            1.5 / 2 = 0.75x finer
+   *
+   * Measured at 1440x900 with 1 remembered, flagless, over the seam: the dots
+   * in the corridor above the headline go from 3.3 px^2 to 5.7 px^2 of area
+   * and from 12 to 35 px of light per frame — 2.9x more light in one frame,
+   * on a frame where nothing else has arrived yet to distract from it.
+   *
+   * That is the "reset when the main animation starts" — and it is invisible
+   * to a probe, because a probe runs in a fresh profile where the display has
+   * no remembered verdict and both sides happen to land on 2.
+   *
+   * So this layer keeps its cost ceiling and compensates for it. `pxScale` is
+   * this grid over the scene's, and VERT applies it AFTER the 1.7 floor: the
+   * sprite is sized and floored exactly as the scene will size and floor it,
+   * then re-expressed on whatever grid this layer could afford. Both the size
+   * and the area dimming the floor causes therefore match, which is stronger
+   * than scaling the size law would be — flooring on two different grids
+   * dims a different subset of the smallest sprites, and those are most of
+   * this field.
+   *
+   * `pxScale` is exactly 1 whenever the two ratios agree, which is every
+   * capture (tools/capture.py shoots at device scale 1, where both resolve to
+   * 1) and every first visit to a retina desktop — so no shot frame moves.
+   *
+   * WHAT THIS DOES NOT FIX, stated because it is the same root: the scene's
+   * OWN sprites are in device pixels too, so when the resolution governor
+   * steps the ratio mid-visit (organism/performance.js) every point cloud on
+   * the page changes size in one frame. That is a scene-wide question with
+   * every golden behind it, not a seam, and it does not fire at all for a
+   * visitor whose display already has a remembered verdict — which is the
+   * visitor this seam was breaking for. */
   function sizeCanvas() {
     const cap = (state.field && state.field.comp.dpr) || 2;
     const pr = Math.min(devicePixelRatio || 1, cap);
+    // The number the scene's renderer will be constructed with. Read through
+    // performance.js's own policy rather than re-derived here: the storage key
+    // encodes the calibration RULE, and a second copy of that derivation is
+    // exactly the drift the key was introduced to prevent.
+    const scenePr = createPixelRatioPolicy(PIN_PR).initial;
+    pxScale = scenePr > 0 ? pr / scenePr : 1;
+    if (state.gl && uniforms) state.gl.uniform1f(uniforms.pxScale, pxScale);
     state.el.width = Math.max(1, Math.round(innerWidth * pr));
     state.el.height = Math.max(1, Math.round(innerHeight * pr));
   }
@@ -778,6 +860,9 @@ function createPreload() {
         time: gl.getUniformLocation(prog, 'uTime'),
         tanHalfFov: gl.getUniformLocation(prog, 'uTanHalfFov'),
         aspect: gl.getUniformLocation(prog, 'uAspect'),
+        // Set from sizeCanvas() rather than per frame: it changes only when a
+        // device grid does, which is a resize and nothing else.
+        pxScale: gl.getUniformLocation(prog, 'uPxScale'),
       };
       buffers = { frame: gl.createBuffer(), color: gl.createBuffer(), meta: gl.createBuffer() };
       // organism/renderer.js clears to bg 0x1c160b; see the delta note above.
