@@ -437,9 +437,8 @@
 .j-pop-enter .hm-foot,
 .j-pop-enter .hm-door    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
 
-/* discord — header dot first, the topic rises, dots and door last */
-.j-pop-enter .dc-head { animation: card-fade 0.3s ease both; }
-.j-pop-enter .dc-body { animation: card-fade 0.4s ease both; animation-delay: 0.12s; }
+/* discord — the topic rises first, dots and door last */
+.j-pop-enter .dc-body { animation: card-fade 0.4s ease both; }
 .j-pop-enter .dc-dots,
 .j-pop-enter .dc-door { animation: card-fade 0.35s ease both; animation-delay: 0.3s; }
 
@@ -1004,7 +1003,6 @@
 /* Live data is the site's own Supabase table daily_summaries (discord.js);
    colors below borrow its TopicCard language:
      parchment #f4e4c1  — the community section's warm text tone
-     emerald   #10b981  — the pulsing "live" dot on its TopicCard (dot only)
      blurple   #5865F2  — Discord's brand blue, as a 2px left-rule nod
    Ground stays the house-dark panel (rgba(10,7,3,…) #0a0703). */
 
@@ -1021,46 +1019,14 @@
   touch-action: pan-y;
 }
 
-/* Round 3: the round-2 wordmark is gone from this row — the shell head
-   says DISCORD — and the live-status corner keeps the row alone, tucked
-   against the feed's top-right like a broadcast bug. */
-.dc-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  padding: 0.55rem 1rem 0.1rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  text-transform: uppercase;
-}
-.dc-status {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  color: rgba(244, 228, 193, 0.55);   /* parchment, dimmed */
-}
-
-.dc-beacon {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;                /* emerald, their live dot */
-  animation: dc-pulse 2s ease-in-out infinite;
-}
-.dc-fallback .dc-beacon { visibility: hidden; animation: none; } /* reserve the live-dot slot */
-
-@keyframes dc-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-  50%      { opacity: 0.5; box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
-}
-
+/* The live-status corner (round 3's beacon-plus-word row) is gone — the
+   shell head already says DISCORD, and the body's own top padding now
+   carries the top of the card (owner direction, 2026-08-31). */
 .dc-body {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
-  padding: 0.35rem 1rem 0.35rem 1.1rem;
+  padding: 0.65rem 1rem 0.35rem 1.1rem;
 }
 
 .dc-topic {
