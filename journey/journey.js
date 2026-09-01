@@ -36,7 +36,7 @@ import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
 import { arcLength, arcLerp, azTurn } from './camera-path.js';
-import { controlWrapDirection, navSense, normaliseNode } from './navigation.js';
+import { controlWrapDirection, navSense, normaliseNode, TURN_FORWARD } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
@@ -193,10 +193,11 @@ let WRAP_EXTRA_S = 2.8;  // seconds added on top of the ordinary duration law,
                          // that jump's 13: the same tempo over a longer path.
                          // At the shipped cap it would have been 1.20 s, i.e.
                          // 57 units/s — 4x every other transition on the site.
-let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
-                         // rotation, closing to a full turn). +/-1 forces a
-                         // rotational sense — how the shipped path was chosen
-                         // against the short way, and how it can be re-judged.
+let WRAP_TURN = 0;       // 0 = the law's sense (TURN_FORWARD both ways across
+                         // the seam — the WAY HOME block below). +/-1 forces a
+                         // rotational sense instead — how candidate paths were
+                         // judged against each other, and how the seam can be
+                         // re-judged without a reload.
 /* Every rest-departing jump's rotational sense is the unified turn
    grammar's — navSense(fromId, toId) in navigation.js, declared there
    (2026-09-01, the owner). The per-leg forcing constants this file used
@@ -952,29 +953,37 @@ export function boot(opts = {}) {
           : startChapterEntry(chapterId, chapters[chapterId], guarded),
       });
       placeAt(targetP, { snap: false });
-      /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
-         every other nav jump; only its PATH is authored, because the shortest
-         one says the wrong thing. Measured on the shipped route, the ride's own
-         azimuths are Mission -13.8deg, Inspire +115.0, Connect +61.8, Owned
-         +72.1, Final -79.6 — a NET -65.8deg from first rest to last. Final ->
-         Mission the short way is therefore +65.8deg: numerically minimal, and it
-         reads as the ride's net rotation being UNDONE, which is precisely the
-         rewind the brief rules out. Continuing instead in the sense the ride was
-         last travelling (Owned -> Final is -151.7deg, the largest leg on the
-         route) costs -294.2deg and brings the total to exactly -360: the camera
-         arrives at the hero pose having gone around the organism ONCE. That is
-         what closing the circle means here, and it is a property of the route's
-         own numbers rather than a taste call.
+      /* THE WAY HOME (2026-08-12 — the loop; re-judged 2026-09-01). A wrap is
+         the same transition as every other nav jump; only its PATH is
+         authored. THE SEAM ALWAYS TURNS FORWARD: both bookend wraps take
+         TURN_FORWARD's sense, the owner's own clause in the unified turn
+         grammar (navigation.js) — "beginning to end continues the forward
+         sense, and the end-to-beginning loop goes the opposite direction from
+         what it did". Measured on the shipped route, the rests sit at Mission
+         -12.7deg and Final -79.6deg, so the up-wrap earns the long ceremonial
+         lap (+293.1deg — its short way is backward) and the loop home takes
+         the short way in the same forward sense (+66.9deg).
+           The loop home is the half this order flipped. The 2026-08-12 law
+         continued the sense the ride was last travelling (Owned -> Final,
+         -151.7deg), costing -294.2deg so the round trip closed at exactly
+         -360; the owner overrode that reading on 2026-09-01 — direction of
+         travel governs every jump, and the loop home travels FORWARD across
+         the seam, so it turns forward like the rest of the ride. The old
+         argument's numbers were sound; its premise (net rotation must not be
+         undone) is the one the owner retired.
            `bow` swings the lap wide before it draws in — the ride ends far out
          (r 14.97) and begins close (r 11.53), so a plain lerp would tighten
          monotonically the whole way and the return would read as an approach
          rather than a lap. `rise` lifts it over the cap and sets it back down.
          Both are sin(PI e) on the position's own ease, so both start and end at
-         zero velocity (see arcLerp).
+         zero velocity (see arcLerp). Both survive the flip unchanged: the
+         short way home still swings wide and crests once.
            The duration is the same law, with the same 0.85 s floor, given the
-         reach it needs: the wrap's arc is ~68 units against ~15.6 for the
+         reach it needs: the up-wrap's arc is ~68 units against ~15.6 for the
          longest ordinary jump, so the shipped cap would run it 4x faster than
-         any other transition — a whip, not a considered move. */
+         any other transition — a whip, not a considered move. The flipped
+         loop's ~15.6-unit path is priced by the same expression, which scales
+         its extra seconds down with it. */
       const equipLeg = !wrap && !routeFaithful
         && (chapterId === 'equip' || fromChapterId === 'equip');
       /* THE EQUIP LEGS RIDE THE ONE GRAMMAR (R3's "spin AROUND the mushroom"
@@ -1035,7 +1044,7 @@ export function boot(opts = {}) {
          sense on a few degrees of azimuth would send it the long way round).
          A route-faithful first-leg flight rides the authored route and never
          reads az1 at all. */
-      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
+      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || TURN_FORWARD)
         : routeFaithful || overtaken || fromChapterId === chapterId ? null
         : azTurn(pos0, cam.position, navSense(fromChapterId, chapterId));
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:

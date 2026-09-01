@@ -27,8 +27,8 @@ import { JOURNEY_CHAPTER_IDS, JOURNEY_SCHEMA } from './structure.js';
    Two deliberate boundaries, owned where they act (journey.js az1):
    a leg that OVERTAKES a live blend keeps the shortest way — a
    mid-flight change of mind is a step back, not a lap — and the two
-   bookend wraps keep the seam's own authored clause (the WAY HOME
-   block). */
+   bookend wraps take the seam's own clause (the WAY HOME block):
+   the seam always turns forward. */
 export const TURN_FORWARD = 1;
 
 /** The grammar as one function: the rotational sense any rest-departing
