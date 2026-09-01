@@ -1766,9 +1766,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      colour/dot response above is what makes focus equal hover (PL-2.2). */
 
   /* ============================================================
-     THE SOON CHIP (R3) — Quark and Brötchen, the two initiatives whose
+     THE UNBUILT CHIP (R3) — Quark and Brötchen, the two initiatives whose
      interiors are unbuilt (ui.js sets the class off the popover tier's own
-     under-construction qualifier). Three statements, each in an existing
+     under-construction qualifier). Two statements, each in an existing
      site vocabulary rather than a new one:
        · PRESENT: a solid housing — the base .j-hot wash (0.3 alpha) was tuned
          for labels against dark sky, and under the R3 rest both chips sit ON
@@ -1778,9 +1778,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        · WITHHELD: the NAME is blurred to a shape, the same statement the
          unbuilt preview card makes of its own text (cards.css j-pop-unbuilt,
          blur 2.9px there, 2.6px here for the smaller type) — and, like
-         there, a viewer who asks for contrast gets the word back;
-       · PROMISED: a Soon pill in the site-map panel's badge recipe
-         (j-menu-badge: border accent/28, background accent/6, gold ink).
+         there, a viewer who asks for contrast gets the word back.
+     There WAS a third — PROMISED: a "Soon" pill in the site-map panel's badge
+     recipe, in `.j-hot-badge`, column 2 of row 2. The owner removed the word
+     from every visible Equip label on 2026-09-01, so the pill and its rule are
+     gone and this grid is one column wide again (see the anatomy note below).
+     The two statements above are the whole of the third state on the chip; the
+     rest of it is the unbuilt preview card the chip opens.
      The rise: --j-hot-rise is written per frame by hotspot-frame.js's
      paintSoonRise off the chip's own arrival clock; the individual
      `translate` property composes with the placement transform without
@@ -1800,11 +1804,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      fill. The two chips differ from an initiative marker in exactly the three
      ways above and in nothing structural.
 
-     THE SOON PILL SITS BESIDE THE NAME, not under it: a third row would make
-     these the tallest chips on the site and, at 430px, push a two-chip
-     collision the dodge would have to solve every frame. Row 2 is therefore
-     two cells wide and the tab spans both, which is why this is a two-column
-     grid where the icon-tab is one.
+     ONE COLUMN, as the icon-tab is (2026-09-01, the word removed). The pill
+     used to sit BESIDE the name in a second cell of row 2 — never under it,
+     because a third row would have made these the tallest chips on the site
+     and, at 430px, pushed a two-chip collision the dodge would have to solve
+     every frame. With the pill gone the second cell had no occupant, so the
+     column is gone with it and the name's padding is the icon-tab's symmetric
+     `2px 12px 4px` rather than the 12/2 that used to balance the capsule
+     around the pair. Do not reintroduce an empty second column: at `auto auto`
+     it collapses to zero but leaves the name off the capsule's optical centre.
 
      WHAT THE GEOMETRY OWES THE FRAME: a stacked chip anchors on its MIDPOINT,
      so ui.js marks the record `stacked` and hotspot-frame's resolveX centres
@@ -1814,7 +1822,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-hot--soon {
     --j-chip-bg: rgba(12, 8, 3, 0.66);
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: max-content;
     grid-template-rows: 22px auto;
     justify-content: center;
     align-items: start;
@@ -1915,7 +1923,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     box-sizing: border-box;
     min-height: 17px;
     margin-top: -4px;
-    padding: 2px 2px 4px 12px;
+    padding: 2px 12px 4px;
     line-height: 1.05;
     text-align: center;
     white-space: nowrap;
@@ -1926,23 +1934,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @media (prefers-contrast: more) {
     .j-hot--soon .j-hot-label { filter: none; opacity: 0.95; }
   }
-  .j-hot-badge {
-    position: relative;
-    z-index: 1;
-    grid-column: 2;
-    grid-row: 2;
-    align-self: center;
-    margin-top: -3px;
-    margin-right: 8px;
-    padding: 0.12em 0.5em;
-    font-size: 0.5rem;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    color: rgba(240, 200, 119, 0.72);
-    border: 1px solid rgba(217, 164, 65, 0.3);
-    border-radius: 999px;
-    background: rgba(217, 164, 65, 0.07);
-  }
+  /* `.j-hot-badge` — the "Soon" pill that occupied column 2 of row 2 — was
+     deleted with the word on 2026-09-01. It had exactly one author (ui.js's
+     third-state branch) and exactly one occupant, so the rule went with it
+     rather than being left as dress for an element nothing builds. */
   /* Same phone conditions as the .j-hot contrast block above: over the lit
      cap the marker needs the deeper wash the initiative tab also takes. */
   @media (max-width: 720px), (max-height: 560px) {

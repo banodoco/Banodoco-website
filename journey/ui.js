@@ -446,22 +446,25 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     btn.appendChild(labelEl);
     // THE THIRD-STATE CHIP (R3): a node whose interior is unbuilt wears the
     // state on the chip itself — the NAME blurred to a shape (site.css,
-    // .j-hot--soon), a Soon pill in the site-map panel's own badge language,
-    // and a strong housing so the pair read clearly against the lit gill fan.
-    // The qualifier is the popover tier's own (content.js `preview:
+    // .j-hot--soon) and a strong housing so it reads clearly against the lit
+    // gill fan. The qualifier is the popover tier's own (content.js `preview:
     // 'under-construction'`), so chip, preview and panel can never disagree.
-    // The pill is aria-hidden and the state is carried on the accessible name
-    // instead ("Quark, soon" — the rail's Manifesto row states it the same
-    // way), because a blurred name is a design statement to a sighted visitor
-    // and would be a garbled one to AT.
+    //
+    // THE WORD IS GONE (owner, 2026-09-01: "remove 'Soon' from the visible
+    // Equip labels"). The chip used to carry a "Soon" pill beside the name,
+    // and — because a blurred name is a design statement to a sighted visitor
+    // and a garbled one to AT — an `aria-label` of "<name>, soon" that stated
+    // the same thing to a screen reader. Both are removed: the pill was the
+    // word, and the aria-label existed only to voice it, so leaving it would
+    // have kept the word for exactly the visitors who cannot see the blur.
+    // With neither, the accessible name falls back to the label element's own
+    // text, which is the name the sighted visitor sees the shape of. What the
+    // third state still says is WITHHELD, not "not yet": the blur, the housing
+    // and the unbuilt preview card ("IN DEVELOPMENT", cards.css j-pop-unbuilt).
+    // The class, the `soon` record flag and the ring-rise arrival stay — they
+    // dress and land the whole chip, name included, and are not the word.
     const soon = popover.unbuiltFor(id);
-    if (soon) {
-      btn.classList.add('j-hot--soon');
-      const badgeEl = el('span', 'j-hot-badge', 'Soon');
-      badgeEl.setAttribute('aria-hidden', 'true');
-      btn.appendChild(badgeEl);
-      btn.setAttribute('aria-label', `${label}, soon`);
-    }
+    if (soon) btn.classList.add('j-hot--soon');
     /* MARKER ABOVE NAME (2026-08-31, the owner on the two soon chips: "those
        labels seem different to the rest too — e.g. the icon isn't above the
        text like on the others"). Every other NAMED chip on the site is an

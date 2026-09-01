@@ -59,10 +59,34 @@ assert.match(html, /class="menu-no">3\.<\/span><span class="menu-name">Connectin
 assert.match(html, /We’re working to help the open-source AI art ecosystem thrive<\/span>/);
 assert.match(html, /The open source ecosystem can accelerate a second renaissance<\/span>/);
 assert.doesNotMatch(html, /We’re creating a platform that help the community and agents accomplish together/);
-assert.equal((html.match(/class="menu-row-link menu-teaser" aria-label="Coming soon"/g) ?? []).length, 2,
+/* ACCOUNTING — 2026-09-01, "remove 'Soon' from the visible Equip labels"
+   (owner, written brief). Both pins below moved BECAUSE OF THAT CHANGE and
+   for no other reason; neither was widened to reach green.
+     · the teaser pin lost `aria-label="Coming soon"`. That override existed
+       only to voice the word to AT in place of the row's blurred name; with
+       the word gone the row reads its own name and line, so the property the
+       pin protects — Equipping exposes exactly two CONCEALED rows — is now
+       carried by the `menu-teaser` class alone (the blur), which is what is
+       pinned. The two `doesNotMatch`es below are the other half: the word may
+       not come back on these rows in either the visible or the accessible
+       layer.
+     · the badge count went 4 -> 2. The two Equipping teasers' pills were the
+       only ones removed. 2RP's (content-driven, nodes.tworp.badge) and
+       Manifesto's stay, and the very next assertion still pins Manifesto's
+       verbatim — neither is an Equip label. */
+assert.equal((html.match(/class="menu-row-link menu-teaser"/g) ?? []).length, 2,
   'Equipping exposes exactly two concealed initiative teasers');
-assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 4,
-  '2RP, two Equipping teasers and Manifesto each have one Soon badge');
+/* Anchored on the menu ANCHOR, not on `data-menu-section="equip"` alone —
+   that attribute selector also appears in this file's own <style> block, and
+   matching there would hand the following `menu-sub` (Inspire's) to the
+   assertions below. */
+const equipMenu = html.match(/<a class="menu-item" href="#\/equip"[\s\S]*?<ul class="menu-sub">([\s\S]*?)<\/ul>/)?.[1];
+assert.ok(equipMenu, 'the static Equipping menu exists');
+assert.doesNotMatch(equipMenu, /Soon/i, 'no Equipping row says Soon in any form');
+assert.doesNotMatch(equipMenu, /aria-label=/i,
+  'a concealed Equipping row states its own name rather than an overriding status');
+assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 2,
+  '2RP and Manifesto each keep one Soon badge; the two Equipping teasers no longer carry one');
 assert.match(html, /class="menu-dot-disc"[\s\S]*>Manifesto<\/span><span class="menu-is">Action at a pivotal moment<\/span><span class="menu-badge">Soon<\/span>/);
 assert.match(html, />Ownership<\/span><span class="menu-is">equity rewards collaboration<\/span>/);
 assert.match(html, /href="https:\/\/arcagidan\.com\/"[\s\S]*?<span class="menu-ia" aria-hidden="true">↗<\/span>/);
