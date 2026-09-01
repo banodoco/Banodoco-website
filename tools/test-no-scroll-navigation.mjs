@@ -31,18 +31,29 @@ for (const fromId of ids) {
   }
 }
 
-// Pin the visual meaning of those signs against the authored rest azimuths,
-// not merely the routing table: every seam crossing must exceed a half-turn.
+// Pin the visual meaning of the seam against the authored rest azimuths, not
+// merely the routing table. THE SEAM ALWAYS TURNS FORWARD (2026-09-01, the
+// owner's unified turn grammar): both bookend wraps orbit in TURN_FORWARD's
+// sense — the up-wrap earns the long ceremonial lap because its short way is
+// backward, and the loop home takes the short way in that same forward sense.
+// [Pin moved 2026-09-01: the retired assertion held |sweep| > pi for BOTH
+// crossings via the wrap sign (`-wrap`), the 2026-08-12 continue-the-ride
+// law; the owner's grammar makes the loop home short and forward, so the
+// old pin's subject no longer exists. What it protected — that the seam's
+// sense is authored, never the generic shortest way — is what the two
+// direction-specific assertions below now hold.]
 const restAzimuth = { mission: -13.8, inspire: 115.0, final: -79.6 };
 const atAzimuth = degrees => {
   const a = degrees * Math.PI / 180;
   return { x: Math.sin(a), y: 0, z: Math.cos(a) };
 };
-for (const [pair, wrap] of wrappedPairs) {
-  const [fromId, targetId] = pair.split('>');
-  const sweep = azTurn(atAzimuth(restAzimuth[fromId]), atAzimuth(restAzimuth[targetId]), -wrap);
-  assert.ok(Math.abs(sweep) > Math.PI,
-    `${pair} must visibly orbit the long way (got ${(sweep * 180 / Math.PI).toFixed(1)}deg)`);
+{
+  const upSweep = azTurn(atAzimuth(restAzimuth.mission), atAzimuth(restAzimuth.final), TURN_FORWARD);
+  assert.ok(upSweep > Math.PI,
+    `mission>final must orbit the long way in the forward sense (got ${(upSweep * 180 / Math.PI).toFixed(1)}deg)`);
+  const homeSweep = azTurn(atAzimuth(restAzimuth.final), atAzimuth(restAzimuth.mission), TURN_FORWARD);
+  assert.ok(homeSweep > 0 && homeSweep < Math.PI,
+    `final>mission must take the short way home in the forward sense (got ${(homeSweep * 180 / Math.PI).toFixed(1)}deg)`);
 }
 
 // THE UNIFIED TURN GRAMMAR is one comparator over nav order; nothing else in
@@ -72,6 +83,8 @@ for (const [pair, wrap] of wrappedPairs) {
 // settle) intact.
 {
   const src = readFileSync(new URL('../journey/journey.js', import.meta.url), 'utf8');
+  assert.match(src, /azTurn\(pos0, cam\.position, WRAP_TURN \|\| TURN_FORWARD\)/,
+    'the seam must turn forward both ways unless QA forces a sense');
   assert.match(src, /: routeFaithful \|\| overtaken \|\| fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
     'every ordinary rest-departing jump takes the grammar sense; overtakes and same-chapter settles keep the shortest way');
 }
