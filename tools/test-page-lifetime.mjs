@@ -1022,11 +1022,20 @@ pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specif
        branch, so both accountings above sum). The two new modules are
        journey/chapters/equip/index.js and journey/chapters/equip/camera.js,
        each referenced under exactly one bare specifier form — which is the
-       property this row asserts, and both zeros beside it are unchanged. */
-    referenced: 141,
+       property this row asserts, and both zeros beside it are unchanged.
+
+       RE-BASELINED 141 -> 142 and 140 -> 141 by the hero-loading v3
+       prelude (R5). The one accepted graph member is
+       organism/network-skeleton.js — the PreNetwork's shared ground data,
+       a leaf with no imports, extracted from the real groundGroup build so
+       the prelude's skeleton and the loaded network are one structure. It
+       is referenced under exactly one specifier form (hero-spores.js's
+       relative import), so both cardinalities move together by exactly
+       one and both invariant sets stay empty. */
+    referenced: 142,
     multiForm: [],
     cacheBusted: [],
-    scanned: 140,
+    scanned: 141,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 

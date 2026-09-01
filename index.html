@@ -62,9 +62,10 @@
 </script>
 <!-- THE ATMOSPHERE DOES NOT WAIT FOR THE ORGANISM. Its own module script,
      discovered here rather than at the foot of <body>, because the whole
-     point is how early it can paint: this module imports nothing but a
-     leaf (journey/boot/hero-mode.js), so the descending spores are on
-     screen once its own 57 KB has arrived, in parallel with the ~1.8 MB
+     point is how early it can paint: this module imports nothing but
+     leaves (journey/boot/hero-mode.js, the ground skeleton), so the spore
+     current is crossing the frame once its own graph has arrived, in
+     parallel with the ~1.8 MB
      main.js needs before it can draw a mushroom. That 57 KB costs first
      paint 0.25s at 2 Mbps and 1.25s at 400 kbps — measured, and stated at
      the module's own header beside what it buys. Deferred like every module

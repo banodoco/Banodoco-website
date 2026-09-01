@@ -72,9 +72,10 @@
 import { FREE_CAM } from '../../flags.js';
 import { NOTE } from './scene-note.js';
 // The preload atmosphere's singleton (ESM cache: same instance the page
-// booted). Consulted for ONE thing — the overture's ignition contract:
-// the normal release below waits for the traveling amber light to reach
-// the specimen's landing spot, so the growth reads as struck by it.
+// booted). Consulted for ONE thing — the prelude's ignition contract:
+// the normal release below waits for the prelude's convergence pulse to
+// reach the mushroom origin along the woken ground skeleton, so the
+// growth reads as caused by the landings that woke it.
 import { heroSpores } from '../../organism/hero-spores.js';
 
 /**
@@ -250,11 +251,12 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     introReleased = true;
     document.body.classList.remove('scene-preparing');
     document.body.classList.add('scene-intro-live');
-    // THE STRIKE: the overture's landing-zone glow swells on this same
-    // frame, so the draw-on below reads as lit by the light's arrival.
-    // The normal path timed this call to the light's landing; the fast
-    // and fallback paths fire it wherever the light happens to be.
-    heroSpores.overtureIgnite();
+    // THE STRIKE: the prelude's convergence pulse arrives on this same
+    // frame — the origin pool swells and the pre-network hands its light
+    // to the real web's own converging draw-on. The normal path timed
+    // this call to the pulse's arrival; the fast and fallback paths fire
+    // it with the pulse mostly arrived.
+    heroSpores.preludeStrike();
     scene.intro.start();
     performance.mark('hero-intro-start');
   }
@@ -375,25 +377,28 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         if (skipIntro || frozen) {
           document.body.classList.remove('scene-preparing');
           document.body.classList.add('scene-static');
-          // no intro, so no strike to wait for — the overture leaves quietly
-          heroSpores.overtureDismiss();
+          // no intro, so no strike to wait for — the prelude leaves quietly
+          heroSpores.preludeDismiss();
           scene.intro.finish();
           activateJourney();
         } else if (journeyInputRequested || entryQueue.peek()) {
           beginFastHandoff();
         } else {
-          /* THE IGNITION WAIT. The overture's amber light has been
-             cycling down the stream toward the specimen's spot the whole
-             load; asking for the strike here and releasing ON it is what
-             makes the growth read as CAUSED by the arrival instead of
-             coincident with a download. Bounded by construction — a
-             mid-travel light finishes its run (<= 1.8 s), a light in the
-             dwell just landed and returns 0 — and the whole release
-             beat (rail reveal, activation poll, defensive timer) shifts
-             by the same wait, so their offsets from the intro's start
-             are exactly what they were. A gesture during the wait takes
+          /* THE IGNITION WAIT. The prelude's hero spores have been
+             landing on the growth point and waking the ground skeleton
+             the whole load; asking for the strike here arms the
+             convergence pulse to arrive at the mushroom origin exactly
+             when the release fires, which is what makes the growth read
+             as CAUSED by the landings instead of coincident with a
+             download. Bounded by construction — a landed ground answers
+             within the pulse's own travel (<= ~1.2 s), and even a load
+             so fast that nothing has landed yet compresses the remaining
+             peel to a ~2.3 s worst case — and the whole release beat
+             (rail reveal, activation poll, defensive timer) shifts by
+             the same wait, so their offsets from the intro's start are
+             exactly what they were. A gesture during the wait takes
              beginFastHandoff() as ever; the guard below then yields. */
-          const strikeMs = heroSpores.overtureMsUntilStrike();
+          const strikeMs = heroSpores.preludeMsUntilStrike();
           const releaseOnStrike = () => {
             if (fastHandoffStarted || journeyActive) return;
             releaseIntro();
@@ -411,7 +416,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         stopIntroInputCapture();
         document.body.classList.remove('scene-preparing');
         document.body.classList.add('scene-intro-live');
-        heroSpores.overtureIgnite();
+        heroSpores.preludeStrike();
         scene.intro.start();
         performance.mark('journey-fallback');
         console.error('[journey-v6] failed to load', err);
