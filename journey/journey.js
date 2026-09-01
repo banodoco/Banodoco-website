@@ -36,7 +36,7 @@ import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
 import { arcLength, arcLerp, azTurn } from './camera-path.js';
-import { controlWrapDirection, navSense, normaliseNode, TURN_FORWARD } from './navigation.js';
+import { controlWrapDirection, navSense, normaliseNode } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
@@ -187,17 +187,21 @@ let WRAP_RISE = 1.9;     // world units of extra height at mid-lap: y peaks 4.4,
                          // horizon leaves frame and the shot becomes a plan
                          // view of the ground network.
 let WRAP_EXTRA_S = 2.8;  // seconds added on top of the ordinary duration law,
-                         // giving the wrap 4.00 s. NOT a licence to be slow —
-                         // the arc is 68 units against 15.6 for the longest
-                         // ordinary jump, so this runs it at 17 units/s against
-                         // that jump's 13: the same tempo over a longer path.
-                         // At the shipped cap it would have been 1.20 s, i.e.
-                         // 57 units/s — 4x every other transition on the site.
-let WRAP_TURN = 0;       // 0 = the law's sense (TURN_FORWARD both ways across
-                         // the seam — the WAY HOME block below). +/-1 forces a
-                         // rotational sense instead — how candidate paths were
-                         // judged against each other, and how the seam can be
-                         // re-judged without a reload.
+                         // giving the wrap its 4.00 s base. NOT a licence to
+                         // be slow — the ceremonial lap is ~96 units against
+                         // 15.6 for the longest ordinary jump, so this runs it
+                         // at 24 units/s against that jump's 13: one tempo
+                         // family over a much longer path. At the shipped cap
+                         // it would have been 1.20 s, i.e. 80 units/s — 6x
+                         // every other transition on the site.
+let WRAP_TURN = 0;       // 0 = the law's sense (each wrap continues its own
+                         // seam travel — the WAY HOME block below). +/-1
+                         // forces a rotational sense instead — how candidate
+                         // paths were judged against each other, and how the
+                         // seam can be re-judged without a reload. A forced
+                         // sense whose step already sweeps long keeps its
+                         // single lap, so +/-1 reproduces the retired
+                         // +/-293.1deg forms for comparison.
 /* Every rest-departing jump's rotational sense is the unified turn
    grammar's — navSense(fromId, toId) in navigation.js, declared there
    (2026-09-01, the owner). The per-leg forcing constants this file used
@@ -953,37 +957,47 @@ export function boot(opts = {}) {
           : startChapterEntry(chapterId, chapters[chapterId], guarded),
       });
       placeAt(targetP, { snap: false });
-      /* THE WAY HOME (2026-08-12 — the loop; re-judged 2026-09-01). A wrap is
+      /* THE WAY HOME (2026-08-12 — the loop; re-judged twice on 2026-09-01,
+         and the second reading is the owner-confirmed final form). A wrap is
          the same transition as every other nav jump; only its PATH is
-         authored. THE SEAM ALWAYS TURNS FORWARD: both bookend wraps take
-         TURN_FORWARD's sense, the owner's own clause in the unified turn
-         grammar (navigation.js) — "beginning to end continues the forward
-         sense, and the end-to-beginning loop goes the opposite direction from
-         what it did". Measured on the shipped route, the rests sit at Mission
-         -12.7deg and Final -79.6deg, so the up-wrap earns the long ceremonial
-         lap (+293.1deg — its short way is backward) and the loop home takes
-         the short way in the same forward sense (+66.9deg).
-           The loop home is the half this order flipped. The 2026-08-12 law
-         continued the sense the ride was last travelling (Owned -> Final,
-         -151.7deg), costing -294.2deg so the round trip closed at exactly
-         -360; the owner overrode that reading on 2026-09-01 — direction of
-         travel governs every jump, and the loop home travels FORWARD across
-         the seam, so it turns forward like the rest of the ride. The old
-         argument's numbers were sound; its premise (net rotation must not be
-         undone) is the one the owner retired.
+         authored. THE SEAM CONTINUES ITS OWN TRAVEL, ALL THE WAY AROUND:
+         each bookend wrap turns in the sense of its own seam crossing —
+         final -> mission travels FORWARD across the seam (rightward past the
+         end), mission -> final travels BACKWARD (leftward past the
+         beginning) — and takes the full ceremonial lap in that sense: one
+         whole turn around the specimen plus the short step home. The rests
+         sit at Mission -12.7deg and Final -79.6deg, a 66.9deg step, so the
+         loop home sweeps +426.9deg and the top wrap -426.9deg, its exact
+         mirror.
+           The history, because each half was overridden once. The 2026-08-12
+         law continued the sense the ride was LAST travelling (Owned -> Final,
+         -151.7deg), so the loop home lapped backward (-293.1deg) and the
+         round trip closed at exactly -360. The owner's 2026-09-01 grammar
+         retired that premise — direction of travel governs every jump — but
+         its first cut read both crossings as "forward" off nav order, which
+         collapsed the loop home to the brisk +66.9deg hop and left the top
+         wrap at +293.1deg. The owner rejected the collapse the same day
+         ("it needed to be LOOPING... we want to keep the same ceremony; it's
+         intentional that it goes around in a circle, just the other
+         direction") and clarified the earlier fumbled phrasing: each wrap
+         continues ITS OWN direction of travel around the circle. So the loop
+         home is the forward ceremony (+426.9deg) and the top wrap is the
+         mirrored ceremony (-426.9deg), reversed from the +293.1deg it held
+         for one order.
            `bow` swings the lap wide before it draws in — the ride ends far out
-         (r 14.97) and begins close (r 11.53), so a plain lerp would tighten
+         (r 14.97) and begins close (r 10.66), so a plain lerp would tighten
          monotonically the whole way and the return would read as an approach
          rather than a lap. `rise` lifts it over the cap and sets it back down.
          Both are sin(PI e) on the position's own ease, so both start and end at
-         zero velocity (see arcLerp). Both survive the flip unchanged: the
-         short way home still swings wide and crests once.
+         zero velocity (see arcLerp). Both survive the re-judgment unchanged:
+         either lap still swings wide and crests once.
            The duration is the same law, with the same 0.85 s floor, given the
-         reach it needs: the up-wrap's arc is ~68 units against ~15.6 for the
-         longest ordinary jump, so the shipped cap would run it 4x faster than
-         any other transition — a whip, not a considered move. The flipped
-         loop's ~15.6-unit path is priced by the same expression, which scales
-         its extra seconds down with it. */
+         reach it needs: the ceremonial lap's arc is ~96 units against ~15.6
+         for the longest ordinary jump, so the shipped cap would run it 6x
+         faster than any other transition — a whip, not a considered move. At
+         ~96 units both crossings price at the law's own ceiling — the 4.00 s
+         base, 5.33 s delivered through the mission|final default speed row —
+         which is the retired lap's own stately family. */
       const equipLeg = !wrap && !routeFaithful
         && (chapterId === 'equip' || fromChapterId === 'equip');
       /* THE EQUIP LEGS RIDE THE ONE GRAMMAR (R3's "spin AROUND the mushroom"
@@ -1036,15 +1050,21 @@ export function boot(opts = {}) {
       const slowedEquipExit = equipLeg && !overtaken
         && fromChapterId === 'equip' && chapterId === 'connect';
       /* ONE DECLARED SENSE PER JUMP (2026-09-01). The wrap takes the seam's
-         clause (WAY HOME above); every other rest-departing jump takes the
-         unified grammar's sense for its direction of travel. Two legs keep
-         the shortest way on purpose: an OVERTAKEN leg (a change of mind is a
-         step back, not a lap — the guard R1's reversal law depends on), and
-         a jump inside its own chapter (a settle, not travel — forcing a
-         sense on a few degrees of azimuth would send it the long way round).
-         A route-faithful first-leg flight rides the authored route and never
-         reads az1 at all. */
-      const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || TURN_FORWARD)
+         clause (WAY HOME above): its sense is the crossing's own travel —
+         the wrap dir itself — and a short step across the seam earns one
+         whole extra turn in that sense, the ceremonial lap. Every other
+         rest-departing jump takes the unified grammar's sense for its
+         direction of travel. Two legs keep the shortest way on purpose: an
+         OVERTAKEN leg (a change of mind is a step back, not a lap — the
+         guard R1's reversal law depends on), and a jump inside its own
+         chapter (a settle, not travel — forcing a sense on a few degrees of
+         azimuth would send it the long way round). A route-faithful
+         first-leg flight rides the authored route and never reads az1 at
+         all. */
+      const seamSense = WRAP_TURN || wrap;
+      const seamStep = wrap ? azTurn(pos0, cam.position, seamSense) : null;
+      const az1 = wrap
+        ? seamStep + (Math.abs(seamStep) < Math.PI ? seamSense * 2 * Math.PI : 0)
         : routeFaithful || overtaken || fromChapterId === chapterId ? null
         : azTurn(pos0, cam.position, navSense(fromChapterId, chapterId));
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:

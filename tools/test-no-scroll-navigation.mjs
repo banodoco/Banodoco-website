@@ -32,28 +32,46 @@ for (const fromId of ids) {
 }
 
 // Pin the visual meaning of the seam against the authored rest azimuths, not
-// merely the routing table. THE SEAM ALWAYS TURNS FORWARD (2026-09-01, the
-// owner's unified turn grammar): both bookend wraps orbit in TURN_FORWARD's
-// sense — the up-wrap earns the long ceremonial lap because its short way is
-// backward, and the loop home takes the short way in that same forward sense.
-// [Pin moved 2026-09-01: the retired assertion held |sweep| > pi for BOTH
-// crossings via the wrap sign (`-wrap`), the 2026-08-12 continue-the-ride
-// law; the owner's grammar makes the loop home short and forward, so the
-// old pin's subject no longer exists. What it protected — that the seam's
-// sense is authored, never the generic shortest way — is what the two
-// direction-specific assertions below now hold.]
+// merely the routing table. THE SEAM CONTINUES ITS OWN TRAVEL, ALL THE WAY
+// AROUND (2026-09-01, the owner's final clarification of the unified turn
+// grammar — superseding the same morning's always-forward reading, which
+// collapsed the loop home to a 66.9deg hop and lost the ceremony): each
+// bookend wrap turns in the sense of its own seam crossing — final ->
+// mission travels forward across the seam, mission -> final backward — and
+// sweeps one whole ceremonial turn plus the short step home (+/-426.9deg on
+// the shipped rests).
+// [CONVERTED FROM A COORDINATE PIN 2026-09-01. The old assertion was
+// re-anchored twice in one day (|sweep| > pi via the wrap sign, then
+// long-up/short-home, then this) — CONTRIBUTING §1's conversion order. What
+// every version protected — the seam's sweep is AUTHORED, never the generic
+// shortest way — is now held as one property over BOTH crossings, mirroring
+// the WAY HOME arithmetic itself: the lap's sign is the crossing's own seam
+// sense, its magnitude exceeds a full turn (the ceremony) without reaching
+// a turn and a half, and it differs from the short step by whole turns, so
+// the lap still lands exactly home.]
 const restAzimuth = { mission: -13.8, inspire: 115.0, final: -79.6 };
 const atAzimuth = degrees => {
   const a = degrees * Math.PI / 180;
   return { x: Math.sin(a), y: 0, z: Math.cos(a) };
 };
 {
-  const upSweep = azTurn(atAzimuth(restAzimuth.mission), atAzimuth(restAzimuth.final), TURN_FORWARD);
-  assert.ok(upSweep > Math.PI,
-    `mission>final must orbit the long way in the forward sense (got ${(upSweep * 180 / Math.PI).toFixed(1)}deg)`);
-  const homeSweep = azTurn(atAzimuth(restAzimuth.final), atAzimuth(restAzimuth.mission), TURN_FORWARD);
-  assert.ok(homeSweep > 0 && homeSweep < Math.PI,
-    `final>mission must take the short way home in the forward sense (got ${(homeSweep * 180 / Math.PI).toFixed(1)}deg)`);
+  const TAU = 2 * Math.PI;
+  // seam-travel sense: final -> mission continues rightward past the end
+  // (forward, +1); mission -> final continues leftward past the beginning
+  // (backward, -1). These are controlWrapDirection's own signs.
+  for (const [fromId, toId] of [['final', 'mission'], ['mission', 'final']]) {
+    const sense = controlWrapDirection(fromId, toId);
+    const step = azTurn(atAzimuth(restAzimuth[fromId]), atAzimuth(restAzimuth[toId]), sense);
+    const lap = step + (Math.abs(step) < Math.PI ? sense * TAU : 0);
+    assert.equal(Math.sign(lap), sense,
+      `${fromId}>${toId}: the ceremonial lap must turn with its own seam travel`);
+    assert.ok(Math.abs(lap) > TAU && Math.abs(lap) < TAU + Math.PI,
+      `${fromId}>${toId} must sweep one whole ceremonial turn plus the short step home `
+      + `(got ${(lap * 180 / Math.PI).toFixed(1)}deg)`);
+    const turnsOff = (lap - step) / TAU;
+    assert.ok(Math.abs(turnsOff - Math.round(turnsOff)) < 1e-9,
+      `${fromId}>${toId}: the lap must differ from the short step by whole turns, landing exactly home`);
+  }
 }
 
 // THE UNIFIED TURN GRAMMAR is one comparator over nav order; nothing else in
@@ -83,8 +101,13 @@ const atAzimuth = degrees => {
 // settle) intact.
 {
   const src = readFileSync(new URL('../journey/journey.js', import.meta.url), 'utf8');
-  assert.match(src, /azTurn\(pos0, cam\.position, WRAP_TURN \|\| TURN_FORWARD\)/,
-    'the seam must turn forward both ways unless QA forces a sense');
+  assert.match(src, /const seamSense = WRAP_TURN \|\| wrap;/,
+    'the seam sense is the crossing\'s own travel — the wrap dir itself — unless QA forces one');
+  assert.match(src, /const seamStep = wrap \? azTurn\(pos0, cam\.position, seamSense\) : null;/,
+    'the seam step is measured in the seam\'s own sense');
+  assert.match(src, /\? seamStep \+ \(Math\.abs\(seamStep\) < Math\.PI \? seamSense \* 2 \* Math\.PI : 0\)/,
+    'a short step across the seam earns one whole ceremonial turn in its own sense — '
+    + 'delete the lap term and both wraps collapse to brisk hops while every duration suite stays green');
   assert.match(src, /: routeFaithful \|\| overtaken \|\| fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
     'every ordinary rest-departing jump takes the grammar sense; overtakes and same-chapter settles keep the shortest way');
 }

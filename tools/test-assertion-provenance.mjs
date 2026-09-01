@@ -779,9 +779,15 @@ pin('AP4', 'D94 — the INVENTORY: literally-closed assertions with no census cl
        legitimately literal — a self-consistency pin between two measurements,
        with its killer beside it — but it is literal where it was not before,
        and this manifest exists so that line moves visibly. */
-    'tools/test-rest-composition.mjs :: assert.ok@351 :: DB3',
-    'tools/test-rest-composition.mjs :: assert.ok@357 :: DB3',
-    'tools/test-rest-composition.mjs :: assert.ok@382 :: DB3',
+    /* @351/@357/@382 -> @432/@438/@463 by the ceremonial-seam re-derivation,
+       2026-09-01: that file gained a header amendment, the crossfade model
+       note and two C1a source pins ABOVE these sites; the three assertions
+       themselves are untouched — the same two C3 conjuncts and the same C4b
+       vacuity tripwire. Line-anchored renumbering only, the @313 -> @373
+       species. */
+    'tools/test-rest-composition.mjs :: assert.ok@432 :: DB3',
+    'tools/test-rest-composition.mjs :: assert.ok@438 :: DB3',
+    'tools/test-rest-composition.mjs :: assert.ok@463 :: DB3',
   ],
   'FIVE rows as of 2026-08-22 (WAS: nine). FOUR LEFT WITH THEIR FILES, and they are named here '
   + 'rather than deducted from a number, because a manifest that shrinks silently buys nothing: two '

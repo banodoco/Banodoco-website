@@ -133,11 +133,16 @@ export const COMMIT_BACK_CAP_VH = 0.9;  // viewport heights
 //
 // WHY IT HAD NOTHING LEFT TO BUY, in the four figures the gate still reads out
 // of this block. A beat is spent BEFORE the wrap fires and the wrap's whole
-// copy handover is spent after it, so no hold can advance the destination by a
-// millisecond: measured 1280x800, 0 of 16 trials excluded, the destination at
-// copyEase 0.90 3894 ms forward, while the rest the wrap leaves is still on
-// screen for 1526 ms after the wrap fires — 477 ms LONGER than a whole scroll
-// arrival takes. And the 900's price was not a delay but the gesture: with the
+// copy handover is keyed to the lap's own phase after it, so no hold can
+// advance the destination by a millisecond: re-measured 2026-09-01 on the
+// ceremonial seam (+/-426.9 deg, 5333 ms laps; 1280x800, 6 down + 3 up clean
+// trials, banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/), the
+// destination at copyEase 0.90 4234 ms forward (the crossfade model's figure;
+// the page's own crossing measured ~4290 ms), while the rest the wrap leaves
+// is still on screen for 2077 ms after the wrap fires — 1028 ms LONGER than a
+// whole scroll arrival takes. (The 2026-08-21 figures these replaced: 3894 and
+// 1526, on the pre-conversion 3904 ms lap.)
+// And the 900's price was not a delay but the gesture: with the
 // wrap shut the only road ahead is the end-hold, so the refused ask resolved
 // onto p 1.0 and was DESTROYED on 14 of 14 trials at a 150 ms ask. What the
 // beat reached for is held by the ARRIVAL WALL, already a conjunct of the wrap

@@ -831,8 +831,20 @@ assert.ok(worstJitterMinGap / ARRIVE_GAP_S > ARRIVE_RATE_MIN,
    the limiters stay precisely because reading the rungs from the build let
    them survive the re-cut unchanged — which is the claim this pin makes
    checkable. */
-const WRAP_DOWN_WINDOW_S = 1.384;   // final/index.js §40, measured on real wheel-driven wraps
-const WRAP_UP_WINDOW_S = 1.450;     // idem; the looser of the two
+/* RE-MEASURED 2026-09-01 on the owner-confirmed ceremonial seam (both wraps
+   +/-426.9 deg, 5333 ms delivered laps). The 1.384/1.450 pair was the
+   2026-08-21 page's 3.87-4.00 s lap, before the wrap rode the
+   navigation-timing conversion — stale against the live page even before the
+   seam re-judgment, as the lane ledger recorded. Definitions unchanged:
+   DOWN is move-first-frame -> the chapter's own uAmount leaving 1.0 (its
+   fade now rides the retire's last light, so the window ends with the
+   ladder rather than on a leg coordinate — min over 7 clean trials,
+   3221-3252 ms); UP is the chapter's uAmount leaving 0 -> the lap landing
+   (min over 2 trials, 4335-4601 ms). Evidence:
+   banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/ceremony-window*.json
+   (probe r4b-ceremony-window.mjs). */
+const WRAP_DOWN_WINDOW_S = 3.221;   // final/index.js §40 subject, measured on real driven wraps
+const WRAP_UP_WINDOW_S = 4.335;     // idem; the looser of the two
 const DECLARED_BLEND_COST_S = 1.1655;
 const BLEND_COST_TOL_S = 0.010;     // > the 5 ms REV_JIT can move it, < a rung
 const blendCost = bandCost(LADDER, clocks().blend);
