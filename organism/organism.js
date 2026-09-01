@@ -2095,6 +2095,19 @@ if (PIN_PR === null)
     policy: pixelRatioPolicy,
     syncSizes: viewport.sync,
     calibrateAt: intro > 0 ? intro + 1.4 : 2.5,
+    /* WHEN THE FRAME TIMES START MEANING SOMETHING. The shared clock starts
+       here, at createScene — but the prelude has been carrying the page since
+       long before that and the mushroom is still arriving, so the seconds
+       after this point are the cost of BUILDING the page, not of drawing it.
+       The calibration must not read them: measured, that window's frames run
+       17-83 ms against a 20 ms budget, and the verdict is remembered for this
+       display forever (evidence/r12-stutter §5, and CAL_SAMPLE_WINDOW in
+       ./performance.js). The intro's release is the honest start line — it is
+       also the workload CAL_PROJECTION was tuned against, and it is what
+       `intro + 1.4`, "the callout power-up", always meant to be measured from.
+       A page with no intro to wait for (?nointro, a skipped or frozen entry)
+       has no boot window to sit out and settles immediately. */
+    bootSettled: () => introApi.started || introApi.complete || intro <= 0,
   }));
 
 /** Input policy (M5 — replaces the page's DOM event shield, which was the
