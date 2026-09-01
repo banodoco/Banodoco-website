@@ -27,13 +27,18 @@
  *             and middle hero — at reduced brightness behind the copy —
  *             and OUT past the right edge. Most spores belong to that
  *             larger world and simply pass through. Three depth bands,
- *             a shared wind with gentle per-particle curl, and a few
- *             larger, brighter HERO spores riding inside the flow.
- *   LANDING   two or three of those hero spores peel out of the current,
- *             arc down to the real ground network's own points — site 0
- *             IS the mushroom origin — and land: a point of light, a
- *             small burst of sparks, a soft pool of warmth. The rest of
- *             the current keeps travelling right past them.
+ *             ONE WIND — a coherent gust field with gusts and lulls that
+ *             the whole river breathes with — gentle per-particle curl,
+ *             and a few brighter HERO spores riding inside the flow, the
+ *             same grain as the mushroom's own shed, only lit harder.
+ *   SETTLING  during a lull, a hero spore riding low in the current loses
+ *             lift and FLUTTERS down — a slow falling-leaf descent with
+ *             lateral sway, decelerating into a soft settle at one of the
+ *             real ground network's own points (site 0 IS the mushroom
+ *             origin). Its glow swells as it settles — ignition is a
+ *             landing, not a strike — and the warmth pools under it. The
+ *             rest of the current keeps travelling right past it: the
+ *             landings are chance, not a schedule the sky obeys.
  *   NETWORK   each landing wakes an island of the PreNetwork — a sparse,
  *             dim skeleton of the REAL ground web (network-skeleton.js),
  *             filaments creeping outward from the impact while the
@@ -197,19 +202,24 @@ const COMPOSITION = {
   // across the upper and middle of the frame, and leaves at the right
   // edge. The lower-right quarter — where the mushroom will stand —
   // stays meaningfully dark until the landings light it.
+  // Counts were raised again (1450 -> 2900 on desktop) when the grain was
+  // brought down to the scene's own size family: the weather the owner
+  // approved is carried by NUMBER and LIGHT now, not by oversized bodies
+  // — the reference river is dense and fine-grained, and so is the shed
+  // this current must read as one species with.
   desktop: {
-    nA: 1450, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    nA: 2900, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
     fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 1280, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    nA: 2600, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
     fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    nA: 470, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    nA: 850, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
     fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5, lum: 0.9,
   },
   // iPad portrait, 744x1133. Steeper: from the upper-left edge across
@@ -217,14 +227,14 @@ const COMPOSITION = {
   // Portrait has less sky, so the weather is scaled back (`lum`): full
   // desktop light over a narrower band would swamp the column of copy.
   tablet: {
-    nA: 540, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
+    nA: 950, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
     fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5, lum: 0.85,
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 340, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 620, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
@@ -236,20 +246,26 @@ const COMPOSITION = {
  * are fractions of [depth.near, depth.far]; `lum` scales the seeded colour
  * (not the draw — same dust, carrying less light); `vel` scales speed. */
 const BANDS = [
-  // `size` scales the size draw: the far band's sprites would otherwise
-  // all land under the 1.7-device-pixel floor and its area dimming, and a
-  // band that is 50% of the population would carry almost none of the
-  // light — measured on the first shot of this composition, which read as
-  // a starfield for exactly that reason.
-  // These luminances were retuned a second time against the reference
-  // renders: the first pass (far 0.95 / mid 1.18) still read as a
-  // starfield beside the reference's river of light. The current has to
-  // read as WEATHER at a glance from normal viewing distance — the far
-  // band is the cloud's body and carries most of its glow, the midground
-  // is the legible flow, and the near passers-by stay sparse.
-  { share: 0.50, d0: 0.52, d1: 0.92, lum: 1.70, vel: 0.80, size: 2.05 }, // far haze
-  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.85, vel: 1.00, size: 1.35 }, // the body
-  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.45, vel: 1.20, size: 1.0 },  // near, blurred
+  // `size` scales the size draw — and it is now a PARITY knob, not a
+  // weather knob. Measured off the loaded scene at 1440x900 (thr-40 blob
+  // sweep over the shed's own drift grain): the scene's dust bodies sit
+  // at ~1.1 px median equivalent diameter, p90 ~3.5-4.4 px. The previous
+  // multipliers (far 2.05 / mid 1.35) rendered this current at a 5.35 px
+  // MEDIAN — the owner's "way larger than the ones coming from the
+  // mushroom", and a size discontinuity at the adoption seam, since these
+  // are the very particles the scene inherits. The far multiplier below
+  // is depth compensation only: psize x 1.28 x (300 / ~12.9) lands the
+  // far band's rendered pixels on the shed's own family; the midground
+  // rides the shed draw untouched; the near passers-by are allowed to
+  // render modestly larger through nothing but their closeness (300/d and
+  // the DOF swell — no multiplier). The weather that the bigger bodies
+  // used to carry is restored by COUNT (nA) and LIGHT (`lum`), which is
+  // how the reference river reads: dense and fine-grained, never chunky.
+  // The far band's floored sprites pay the 1.7-px area dimming, so its
+  // luminance leads — many dim fine bodies summing into a cloud.
+  { share: 0.50, d0: 0.52, d1: 0.92, lum: 2.60, vel: 0.80, size: 1.28 }, // far haze
+  { share: 0.38, d0: 0.18, d1: 0.52, lum: 2.30, vel: 1.00, size: 1.0 },  // the body
+  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.25, vel: 1.20, size: 1.0 },  // near, blurred
 ];
 // Hero spores: bigger and warmer, but from the same families — the size
 // and tone draws below are the shed's own with the exponents relaxed.
@@ -265,6 +281,11 @@ const TRAVEL_DIM = 0.32;
 // current from reading as ruled lines.
 const WOB_AMP = 0.055;              // world units of transverse ripple
 const WOB_FREQ = [0.35, 1.0];       // Hz range, drawn per particle
+// The coherent gust field (see advance's header): the wave's depth over
+// the shared gust, and the lift the whole river breathes with. 0.72 is
+// the gust functions' own working mean on both sides of the seam.
+const GUST_WAVE = 0.24;             // spatial gust wave over the shared gust
+const GUST_LIFT = 0.30;             // world units/s of lift at full gust swing
 
 // The scene's own fog, from organism/renderer.js's createRendererSetup.
 // Named here rather than imported because importing it would pull `three`
@@ -281,33 +302,44 @@ const OPACITY = 1.05;
 // legible as weather while the words stay unmistakably in front.
 const QUIET_DIM = 0.55;
 
-/* ---- the landing choreography's clock table (seconds of field time) --
+/* ---- the wind-settle choreography's clock table (field seconds) ------
  * Nominal windows from the spec §5: arrival 0.2-1.2, landings 0.8-2.2,
- * ground response 1.6-3.5, handoff 2.5-5.0. `PEEL_AT` staggers the 2-3
- * landing spores; `PEEL_S` is each arc's flight time. When sceneReady
- * arrives early the remaining peels COMPRESS (RATE_FAST) rather than
- * skip — "accelerate the next landing rather than hard-cut". */
-const PEEL_AT = [1.05, 1.85, 2.65];
-const PEEL_S = [1.00, 1.10, 1.15];
-const LAND_COLLAPSE_S = 0.24;   // the landed spore's light sinks into the ground
+ * ground response 1.6-3.5, handoff 2.5-5.0 — read as targets for the
+ * FIRST SETTLE, not for a scheduled dive. `PEEL_AT` opens each settle's
+ * window; the settle itself waits for the wind: it begins at the next
+ * LULL of the gust field (bounded by LULL_WAIT so the elastic clock
+ * still holds), because a spore that loses lift when the wind drops is
+ * CHANCE, and a spore that departs on a timer is a stunt. When
+ * sceneReady arrives early the remaining settles COMPRESS (RATE_FAST)
+ * rather than skip — "accelerate the next landing rather than hard-cut". */
+const PEEL_AT = [0.85, 2.05, 3.35];
+const FLUT_S = [2.10, 2.25, 2.35];  // base flutter durations, priced by drop
+const LULL_THR = 0.60;          // the wind is a lull below this gust value
+const LULL_WAIT = 0.9;          // longest a ripe settle waits for its lull
+const SWAY_CYC = 2.4;           // falling-leaf sway cycles per descent
+const SWAY_AMP = 0.17;          // world units of lateral sway at the widest
+const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
+const LAND_COLLAPSE_S = 0.55;   // the landed spore's light sinks into the ground
 const RESPAWN_S = 2.6;          // then the hero slot re-enters with the current
 const RATE_FAST = 1.9;          // compression when the scene is already ready
 const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
-// Ring burst: an impact throws a small ring of sparks along the ground —
-// restrained; a point of light and a faint ring, never fireworks.
-const RING_N = 9;               // 1 flash + 8 sparks per impact
-const RING_BANKS = 2;           // two impacts may overlap in the elastic hold
-const RING_S = 0.85;            // seconds of ring life
-const RING_R = 0.62;            // world radius the sparks reach
-// Comet trail: a short string of fading embers behind each descending
-// hero spore. The reference's landing bodies read as luminous comets —
-// a core with a tail — not as dots changing rows; the tail is what makes
-// the peel legible at arm's length. The embers are parked slots (like
-// the ring banks), strung along the live arc each frame, so a reframe
-// mid-flight re-aims them with the bezier for free.
-const TRAIL_N = 12;             // embers per descent
+// The settle glow: a landing swells a soft bloom at the site and the
+// ground around it glimmers awake outward at the filaments' own creeping
+// pace — an ignition, never a strike. (These slots were the impact
+// flash + spark ring; same parked banks, same draw call, re-timed.)
+const RING_N = 9;               // 1 bloom + 8 ground glimmers per settle
+const RING_BANKS = 2;           // two settles may overlap in the elastic hold
+const RING_S = 1.60;            // seconds of settle-glow life
+const RING_R = 0.62;            // world radius the glimmers reach
+// The descent carries NO comet trail. The v3 intensity pass strung
+// embers along the peel bezier because a 1-second dive needed a tail to
+// be legible; a 2-second flutter is followable on its own, and a comet
+// grammar fights the weightless read the settle now lives on. The parked
+// slots STAY — same points buffer, same draw call, dark — so the
+// draw-call and uniform pins hold without accounting games; a future
+// shimmer wake can light them again if the film asks for one.
+const TRAIL_N = 12;             // parked slots per bank (dark; see above)
 const TRAIL_BANKS = 3;          // concurrent descents (compression overlaps)
-const TRAIL_GAP = 0.045;        // arc-parameter spacing between embers
 // The ground's own tempo: how fast a woken island's filaments creep
 // outward, and the handoff pulse's run to the origin.
 const NET_GROW_V = 1.15;        // world units / second of filament creep
@@ -472,11 +504,15 @@ function seedOne(F, i, c, rand, atEntry) {
   F.band[i] = ring ? 4 : band;
   F.fade[i] = ring ? 0 : 1;
   // The shed's own draws (see the header); hero spores relax the size
-  // exponent and lift the tone floor — bigger and warmer, same families,
-  // and prominent enough that the eye can pick one out of the flow and
-  // follow it (the spec's "what the eye will follow next").
+  // exponent and lift the tone floor — the top of the SAME size family
+  // (the shed's own draw crests at 0.091; a hero sits at 0.130-0.210,
+  // the family's tail, not another species), and they are followable
+  // because they carry 3.1x light, not because they are big. The v3
+  // intensity pass had them at 0.235-0.365 and the owner read them as
+  // a different, larger breed than the mushroom's own spores — which
+  // they must never be, since the scene ADOPTS these exact particles.
   F.size[i] = hero
-    ? 0.235 + Math.pow(rand(), 1.3) * 0.130
+    ? 0.130 + Math.pow(rand(), 1.3) * 0.080
     : ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
   F.tone[i] = hero ? 0.88 + rand() * 0.12 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
   F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel * (hero ? 1.05 : 1);
@@ -492,8 +528,9 @@ function seedOne(F, i, c, rand, atEntry) {
   F.attrsDirty = true;
 }
 
-/** Ring slot construction: the flash is a larger, hotter sprite; the
- *  sparks are small embers. All parked dark until an impact claims them. */
+/** Settle-glow slot construction: the bloom is a larger, warm sprite;
+ *  the ground glimmers are small embers. All parked dark until a settle
+ *  claims them. */
 function seedRings(F, rand) {
   for (let b = 0; b < RING_BANKS; b++) {
     for (let k = 0; k < RING_N; k++) {
@@ -510,17 +547,15 @@ function seedRings(F, rand) {
   }
 }
 
-/** Trail slot construction: small warm embers, brightest sizes at the
- *  head of the string. Parked dark until a peel claims a bank. */
+/** Trail slot construction: parked ember slots, dark for the whole run —
+ *  the flutter descent carries no comet tail (see the TRAIL_N note). They
+ *  are still seeded with real sizes and tones so the buffers, the draw
+ *  call and the attribute census stay exactly as the pins expect. */
 function seedTrails(F, rand) {
   for (let b = 0; b < TRAIL_BANKS; b++) {
     for (let k = 0; k < TRAIL_N; k++) {
       const i = F.nA + F.nH + RING_BANKS * RING_N + b * TRAIL_N + k;
       const i3 = i * 3;
-      // sized to survive the 300/depth divide at the arc's ~8-10 world
-      // units: the head embers draw at ~4-5 px, the tail tapers off. The
-      // first cut used 0.05 draws, which floored out at under 2 px and
-      // made the tail invisible at any distance.
       F.size[i] = 0.130 - k * 0.0070 + rand() * 0.010;
       F.tone[i] = 0.80 + rand() * 0.12;
       F.seed[i] = rand() * Math.PI * 2;
@@ -584,10 +619,9 @@ function createField(view, seed) {
     t: 0,
     sceneReady: false,
     released: false,
-    landings: [],          // {hi, site, tPeel, dur, state, p0..p3, impactAt}
+    landings: [],          // {hi, site, tPeel, dur, state, p0, p3, swayA, phase, impactAt}
     rings: [],             // {site, bank, t0}
     ringBank: 0,
-    trailBank: 0,
     lastImpactAt: -1,
     firstImpactAt: -1,
     nextExtraAt: -1,
@@ -608,9 +642,9 @@ function planLandings(F) {
   for (let k = 0; k < F.comp.land; k++) {
     F.landings.push({
       hi: F.nA + k, site: k % LANDING_SITES.length,
-      tPeel: PEEL_AT[k], dur: PEEL_S[k],
-      state: 0, impactAt: 0,
-      p0: [0, 0, 0], p1: [0, 0, 0], p2: [0, 0, 0], p3: [0, 0, 0],
+      tPeel: PEEL_AT[k], dur: FLUT_S[k],
+      state: 0, impactAt: 0, swayA: SWAY_AMP, phase: 0,
+      p0: [0, 0, 0], p3: [0, 0, 0],
     });
   }
 }
@@ -642,19 +676,28 @@ function reframe(F, view) {
     F.frame[i3 + 1] = (e0 - F.fallJ[i] * F.aspect * (x - c.xIn)) * halfH;
   }
   frameAnchors(F, view);
-  // a spore mid-arc re-aims its remaining flight at the site's new frame
+  // a spore mid-flutter re-aims at the site's new frame: the descent
+  // restarts from where the spore is, over the time it had left
   for (const L of F.landings) {
-    if (L.state === 1) aimBezier(F, L, F.frame, L.hi * 3);
+    if (L.state === 1) {
+      aimFlutter(F, L, F.frame, L.hi * 3);
+      L.dur = Math.max(0.5, L.dur - (F.t - L.t0));
+      L.t0 = F.t;
+    }
   }
 }
 
-/** The hero spore a peel claims: whichever free hero is riding the
- *  current upwind of the site and nearest to it, so every arc is a short
- *  local departure from the flow. Falls back to the plain nearest if
- *  nothing is upwind (they recycle within seconds anyway). */
+/** The hero spore a settle claims: whichever free hero is riding the
+ *  current in the LOWER band of the flow, a shade upwind of the site —
+ *  the spot a spore would actually be in when it loses lift and flutters
+ *  down. The ideal is slightly upwind and above (a flutter is mostly
+ *  descent; the wind's remaining carry closes only a small gap), so no
+ *  chosen spore ever crosses the field to land. Falls back to the plain
+ *  nearest if nothing is upwind (they recycle within seconds anyway). */
 function pickPeeler(F, site) {
   const s3 = site * 3;
   const sxN = F.sites[s3] / (F.sites[s3 + 2] * F.tanHalfFov * F.aspect);
+  const syN = F.sites[s3 + 1] / (F.sites[s3 + 2] * F.tanHalfFov);
   let best = -1, bestScore = Infinity, fall = -1, fallD = Infinity;
   for (let i = F.nA; i < F.nA + F.nH; i++) {
     if (heldByLanding(F, i)) continue;
@@ -662,53 +705,91 @@ function pickPeeler(F, site) {
     const halfH = F.frame[i3 + 2] * F.tanHalfFov;
     const xN = F.frame[i3] / (halfH * F.aspect);
     const yN = F.frame[i3 + 1] / halfH;
-    const syN = F.sites[s3 + 1] / (F.sites[s3 + 2] * F.tanHalfFov);
     const d = Math.hypot(xN - sxN, yN - syN);
     if (d < fallD) { fallD = d; fall = i; }
     if (xN > sxN - 0.05 || xN < -1.0) continue;   // upwind of the site, on screen
-    if (d < bestScore) { bestScore = d; best = i; }
+    // distance to the natural release point: ~0.16 NDC upwind of the
+    // site, ~0.5 NDC above it — low in the current, nearly overhead
+    const score = Math.hypot(xN - (sxN - 0.16), yN - (syN + 0.50));
+    if (score < bestScore) { bestScore = score; best = i; }
   }
   return best >= 0 ? best : fall >= 0 ? fall : F.nA;
 }
 
-/** The peel arc: a cubic from the spore's current position and travel
- *  direction down to its site. P1 continues the current's own tangent —
- *  the spore is first legible as a member of the flow and visibly LEAVES
- *  it — and P2 hangs above the site so the arc arrives from the air,
- *  not from the side. Returns the arc's frame-space span, which prices
- *  the flight time. */
-function aimBezier(F, L, src, srcAt) {
+/** The flutter: aim a settle from the spore's current position down to
+ *  its site. There is no dive and no bezier any more — the descent is a
+ *  falling leaf: the spore loses lift, sinks with a decaying lateral
+ *  sway, and decelerates into the settle. The path is authored, not
+ *  steered: the sway envelope is zero at both ends, so the spore leaves
+ *  exactly from its streamline and arrives exactly at the site, and the
+ *  wind's remaining carry (p0 -> site, eased off as it descends) is what
+ *  closes the horizontal gap — which stays small, because pickPeeler
+ *  chooses a spore already hanging nearly above the site. Returns the
+ *  descent's frame-space drop, which prices the flutter's duration. */
+function aimFlutter(F, L, src, srcAt) {
   const s3 = L.site * 3;
   L.p0[0] = src[srcAt]; L.p0[1] = src[srcAt + 1]; L.p0[2] = src[srcAt + 2];
   L.p3[0] = F.sites[s3]; L.p3[1] = F.sites[s3 + 1]; L.p3[2] = F.sites[s3 + 2];
-  const D = Math.hypot(L.p3[0] - L.p0[0], L.p3[1] - L.p0[1]);
-  L.p1[0] = L.p0[0] + 0.40 * D;             // ride the wind a beat longer
-  L.p1[1] = L.p0[1] - 0.10 * D * F.fallJ[L.hi] * F.aspect;
-  L.p1[2] = L.p0[2];
-  L.p2[0] = L.p3[0] + 0.02 * D;             // then drop, nearly from above
-  L.p2[1] = L.p3[1] + 0.46 * D;
-  L.p2[2] = L.p3[2];
-  return D;
+  // the sway plane scales with the drop: a short settle sways narrow
+  L.swayA = SWAY_AMP * Math.min(1.25, Math.max(0.55,
+    (L.p0[1] - L.p3[1]) / (0.55 * L.p0[2] * F.tanHalfFov)));
+  L.phase = F.seed[L.hi];
+  return Math.max(0.001, L.p0[1] - L.p3[1]);
+}
+
+/** Where a settling spore is at descent parameter u — one closed form,
+ *  evaluated by both renderers through advance(). Vertical: a smoothstep
+ *  sink — lift dies gently, the fall runs, the settle decelerates to a
+ *  standstill (an arrival with no pace left, the opposite of the old
+ *  arc's "land with a little pace left"). Lateral: the eased remainder
+ *  of the wind's carry plus the falling-leaf sway, with a small
+ *  half-period vertical bob (a leaf checks its fall at each swing's end). */
+const FLUT_POS = [0, 0, 0];   // flutterAt's per-frame scratch
+function flutterAt(F, L, u, out) {
+  const s = u * u * (3 - 2 * u);
+  const ph = SWAY_CYC * 6.2832 * u + L.phase;
+  const env = Math.sin(Math.PI * u);
+  const sway = L.swayA * Math.sin(ph) * Math.pow(env, 0.7);
+  out[0] = L.p0[0] + (L.p3[0] - L.p0[0]) * s + sway;
+  out[1] = L.p0[1] + (L.p3[1] - L.p0[1]) * s
+    + L.swayA * 0.22 * Math.cos(2 * ph) * env;
+  out[2] = L.p0[2] + (L.p3[2] - L.p0[2]) * s;
 }
 
 /** Advance the whole field by `dt` seconds under `gust`. This is the one
  *  integrator; the preload canvas and the scene-side Points both call it,
  *  which is why the handoff cannot move a particle — and why a landing
- *  that happens across the seam is the same landing on both sides. */
+ *  that happens across the seam is the same landing on both sides.
+ *
+ *  THE WIND IS ONE WIND. `gust` is the frame's shared gust value
+ *  (preloadGust before the scene, the organism's breeze after), and it
+ *  reaches every particle through the same local law: a slow wave
+ *  traveling with the flow (GUST_WAVE) so a gust visibly MOVES through
+ *  the river, and a lift term (GUST_LIFT) so the whole current rises a
+ *  little under a gust and sags in a lull. That shared breath is what
+ *  lets a settle read as CAUSED: the river slackens, and a spore that
+ *  was riding low happens to lose its lift. */
 function advance(F, dt, gust) {
   const c = F.comp;
   const step = Math.min(dt, 0.05);
   F.t += step;
   const rate = F.sceneReady ? RATE_FAST : 1;
 
-  // ---- the stream: ambient + hero spores not currently peeling ----
+  // ---- the stream: ambient + hero spores not currently settling ----
   for (let i = 0; i < F.nA + F.nH; i++) {
     const i3 = i * 3;
     if (F.band[i] === 3 && heldByLanding(F, i)) continue;
     const d = F.frame[i3 + 2];
-    const v = F.speed[i] * gust * step;
+    const halfH0 = d * F.tanHalfFov;
+    const xN0 = F.frame[i3] / (halfH0 * F.aspect);
+    // the local wind: the shared gust, waved through the current
+    const wind = gust * (1 + GUST_WAVE * Math.sin(xN0 * 1.9 - F.t * 0.55 + d * 0.20));
+    const v = F.speed[i] * wind * step;
     F.frame[i3] += v;
     F.frame[i3 + 1] -= v * F.fallJ[i];
+    // the river breathes with the wind: lift under gusts, sag in lulls —
+    // one coherent swell, not per-particle noise
+    F.frame[i3 + 1] += (wind - 0.72) * GUST_LIFT * step;
     // gentle curl: a bounded transverse ripple (the derivative of a sine,
     // so it never walks a particle off its streamline's neighbourhood)
     F.frame[i3 + 1] += Math.cos(F.t * F.wobF[i] * 6.28 + F.seed[i]) * WOB_AMP * F.speed[i] * step * 9;
@@ -732,60 +813,50 @@ function advance(F, dt, gust) {
     if (xNdc > c.xOut) seedOne(F, i, c, F.rand, true);
   }
 
-  // ---- the landings ----
+  // ---- the settles ----
   for (const L of F.landings) {
     if (L.state === 0) {
-      // compression: a ready scene pulls the remaining peels forward
+      // compression: a ready scene pulls the remaining settles forward
       if (rate > 1 && L.tPeel > F.t + 0.15) L.tPeel = F.t + 0.15;
-      if (F.t >= L.tPeel) {
+      // A RIPE SETTLE WAITS FOR ITS LULL. tPeel opens the window; the
+      // descent begins when the shared gust actually drops (LULL_THR) —
+      // the wind slackens, the river sags, and one low-riding spore
+      // happens to lose its lift. The wait is bounded (LULL_WAIT) so the
+      // elastic clock holds, and compression skips it entirely: a ready
+      // scene gets its causality at pace, not a meteorology lesson.
+      if (F.t >= L.tPeel
+          && (rate > 1 || gust < LULL_THR || F.t >= L.tPeel + LULL_WAIT)) {
         L.state = 1;
-        // THE PEEL CHOOSES ITS SPORE AT THE LAST MOMENT: whichever free
-        // hero spore is currently riding the current upwind of the site,
-        // nearest to it. A fixed cast member could be anywhere — a spore
-        // picked from the far corner crosses half the frame in a second
-        // and reads as a meteor, which is exactly the grammar the spec
-        // rules out. Nearby, the peel reads as a choice, and the flight
-        // time scales with the actual arc so the pace stays constant.
+        // THE SETTLE CHOOSES ITS SPORE AT THE LAST MOMENT: whichever free
+        // hero spore is riding low, a shade upwind of the site — the one
+        // for whom losing lift RIGHT NOW would deliver it here. A fixed
+        // cast member could be anywhere, and a spore hauled in from the
+        // far corner is a meteor, exactly the grammar the spec rules out.
         L.hi = pickPeeler(F, L.site);
-        const D = aimBezier(F, L, F.frame, L.hi * 3);
+        const drop = aimFlutter(F, L, F.frame, L.hi * 3);
         const halfH = F.frame[L.hi * 3 + 2] * F.tanHalfFov;
-        L.dur = L.dur * Math.min(1.5, Math.max(0.7, (D / halfH) / 0.85));
-        if (rate > 1) L.dur = Math.max(0.55, L.dur / 1.5);
+        // priced by the DROP, not the arc: a flutter is mostly descent
+        L.dur = L.dur * Math.min(1.25, Math.max(0.75, (drop / halfH) / 0.60));
+        if (rate > 1) L.dur = Math.max(1.05, L.dur / 1.6);
         L.t0 = F.t;
-        // claim a trail bank for the descent's comet tail
-        L.bank = F.trailBank;
-        F.trailBank = (F.trailBank + 1) % TRAIL_BANKS;
       }
       continue;
     }
     const hi3 = L.hi * 3;
     if (L.state === 1) {
       const u = Math.min(1, (F.t - L.t0) / L.dur);
-      // ease-in, land with a little pace left — an arrival, not a hover
-      const e = u * u * (2.05 - 1.05 * u);
-      const m0 = (1 - e) * (1 - e) * (1 - e), m1 = 3 * (1 - e) * (1 - e) * e,
-        m2 = 3 * (1 - e) * e * e, m3 = e * e * e;
-      for (let k = 0; k < 3; k++) {
-        F.frame[hi3 + k] = m0 * L.p0[k] + m1 * L.p1[k] + m2 * L.p2[k] + m3 * L.p3[k];
-      }
-      // the descending core swells as it commits — the reference's
-      // landing bodies are the brightest things in the sky
-      F.fade[L.hi] = 1 + 0.4 * e;
-      // the comet tail: embers strung back along the arc behind the
-      // body, head-weighted and faint, each lighting only once the body
-      // is far enough along that it has an arc to trail
-      const tb = F.nA + F.nH + RING_BANKS * RING_N + (L.bank || 0) * TRAIL_N;
-      for (let k = 0; k < TRAIL_N; k++) {
-        const ek = e - (k + 1) * TRAIL_GAP;
-        const ti3 = (tb + k) * 3;
-        if (ek <= 0) { F.fade[tb + k] = 0; continue; }
-        const n0 = (1 - ek) * (1 - ek) * (1 - ek), n1 = 3 * (1 - ek) * (1 - ek) * ek,
-          n2 = 3 * (1 - ek) * ek * ek, n3 = ek * ek * ek;
-        F.frame[ti3] = n0 * L.p0[0] + n1 * L.p1[0] + n2 * L.p2[0] + n3 * L.p3[0];
-        F.frame[ti3 + 1] = n0 * L.p0[1] + n1 * L.p1[1] + n2 * L.p2[1] + n3 * L.p3[1];
-        F.frame[ti3 + 2] = n0 * L.p0[2] + n1 * L.p1[2] + n2 * L.p2[2] + n3 * L.p3[2];
-        F.fade[tb + k] = 0.9 * (1 - (k + 1) / (TRAIL_N + 1));
-      }
+      flutterAt(F, L, u, FLUT_POS);
+      F.frame[hi3] = FLUT_POS[0];
+      F.frame[hi3 + 1] = FLUT_POS[1];
+      F.frame[hi3 + 2] = FLUT_POS[2];
+      // the glow swells AS the spore settles — ignition is a landing,
+      // not a strike. Through the descent the body carries a soft
+      // shimmer on its own sway beat (a leaf catches the light as it
+      // turns), which is what keeps a small, honest-sized spore
+      // followable without any comet grammar.
+      const sb = u > BLOOM_IN_U ? (u - BLOOM_IN_U) / (1 - BLOOM_IN_U) : 0;
+      F.fade[L.hi] = 1.12 + 0.10 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase))
+        + 0.5 * sb * sb;
       if (u >= 1) {
         L.state = 2;
         L.impactAt = F.t;
@@ -796,17 +867,11 @@ function advance(F, dt, gust) {
       }
       continue;
     }
-    // state 2: the light sinks into the ground it just woke — from the
-    // swollen brightness the descent arrived at — and the comet tail
-    // dies behind it; then the hero slot re-enters the current upstream
-    // with fresh draws.
+    // state 2: the light sinks slowly into the ground it just woke —
+    // from the swollen brightness the settle arrived at — and then the
+    // hero slot re-enters the current upstream with fresh draws.
     const since = F.t - L.impactAt;
-    F.fade[L.hi] = Math.max(0, 1.4 * (1 - since / LAND_COLLAPSE_S));
-    const tb2 = F.nA + F.nH + RING_BANKS * RING_N + (L.bank || 0) * TRAIL_N;
-    const tk = Math.max(0, 1 - since / 0.30);
-    for (let k = 0; k < TRAIL_N; k++) {
-      F.fade[tb2 + k] = 0.9 * (1 - (k + 1) / (TRAIL_N + 1)) * tk;
-    }
+    F.fade[L.hi] = Math.max(0, 1.62 * (1 - since / LAND_COLLAPSE_S));
     if (since > RESPAWN_S) {
       L.state = 3;
       seedOne(F, L.hi, c, F.rand, true);
@@ -823,13 +888,14 @@ function advance(F, dt, gust) {
       F.nextExtraAt = -1;
       F.landings.push({
         hi: F.nA, site: (F.landings.length) % LANDING_SITES.length,
-        tPeel: F.t + 0.1, dur: 1.1, t0: 0, state: 0, impactAt: 0,
-        p0: [0, 0, 0], p1: [0, 0, 0], p2: [0, 0, 0], p3: [0, 0, 0],
+        tPeel: F.t + 0.1, dur: 2.2, t0: 0, state: 0, impactAt: 0,
+        swayA: SWAY_AMP, phase: 0,
+        p0: [0, 0, 0], p3: [0, 0, 0],
       });
     }
   }
 
-  // ---- the ring bursts ----
+  // ---- the settle glows ----
   for (let r = F.rings.length - 1; r >= 0; r--) {
     const R = F.rings[r];
     const u = (F.t - R.t0) / RING_S;
@@ -840,21 +906,33 @@ function advance(F, dt, gust) {
       continue;
     }
     const s3 = R.site * 3;
-    // the flash: a concentrated point of light, briefly brighter than the
-    // spore that carried it, decaying fast
+    // the bloom: a soft swell of warmth under the settled spore —
+    // rising as the light sinks in, breathing back down. No flash: its
+    // attack is slower than the collapse it answers, so the eye reads
+    // one continuous handing-down of light, not an impact.
     F.frame[base * 3] = F.sites[s3];
     F.frame[base * 3 + 1] = F.sites[s3 + 1];
     F.frame[base * 3 + 2] = F.sites[s3 + 2];
-    F.fade[base] = 2.3 * Math.exp(-u * 5.2);
-    // the sparks: a faint ring expanding along the ground, dying as it goes
-    const eu = 1 - (1 - u) * (1 - u);
+    const swell = u < 0.24
+      ? Math.sin((u / 0.24) * Math.PI / 2)
+      : Math.cos(((u - 0.24) / 0.76) * Math.PI / 2);
+    F.fade[base] = 1.05 * swell * swell;
+    // the ground answers at its own pace: fixed glimmer points scattered
+    // to RING_R light up in sequence as the filaments' creeping front
+    // (NET_GROW_V — the same law the skeleton wakes under) passes them,
+    // then sink with the bloom. Nothing flies: the ground is waking, not
+    // being sprayed.
+    const creep = (F.t - R.t0) * NET_GROW_V;
+    const sink = Math.pow(1 - u, 1.2);
     for (let k = 1; k < RING_N; k++) {
       const i3 = (base + k) * 3;
       const e3 = (R.site * (RING_N - 1) + (k - 1)) * 3;
-      F.frame[i3] = F.sites[s3] + (F.ringEnds[e3] - F.sites[s3]) * eu;
-      F.frame[i3 + 1] = F.sites[s3 + 1] + (F.ringEnds[e3 + 1] - F.sites[s3 + 1]) * eu;
-      F.frame[i3 + 2] = F.sites[s3 + 2] + (F.ringEnds[e3 + 2] - F.sites[s3 + 2]) * eu;
-      F.fade[base + k] = 1.35 * Math.pow(1 - u, 1.6);
+      const fk = 0.35 + 0.65 * ((k - 1) / (RING_N - 2));
+      F.frame[i3] = F.sites[s3] + (F.ringEnds[e3] - F.sites[s3]) * fk;
+      F.frame[i3 + 1] = F.sites[s3 + 1] + (F.ringEnds[e3 + 1] - F.sites[s3 + 1]) * fk;
+      F.frame[i3 + 2] = F.sites[s3 + 2] + (F.ringEnds[e3 + 2] - F.sites[s3 + 2]) * fk;
+      const litK = Math.min(1, Math.max(0, (creep - fk * RING_R) / 0.30));
+      F.fade[base + k] = 0.60 * litK * sink;
     }
   }
 }
@@ -874,11 +952,17 @@ function spawnRing(F, site) {
 /** The gust the shed rides, in the transitional layer only.
  *  organism/organism.js's `breeze()` IS the wind of this site and the
  *  migrated field below reads it directly off ctx. This is a stand-in for
- *  the seconds before that module exists — same shape, same period, and
- *  it stops being consulted the moment the scene does. */
+ *  the seconds before that module exists — same working mean (0.72), and
+ *  it stops being consulted the moment the scene does.
+ *  Reshaped for the wind-settle grammar: two slow incommensurate cycles
+ *  beat against each other under a light flutter, so the wind has real
+ *  GUSTS (cresting ~1.06) and real LULLS (sagging ~0.38) every several
+ *  seconds instead of a shallow shimmer — the lulls are when settling
+ *  spores lose their lift (LULL_THR), and the crests are when the whole
+ *  river visibly quickens and lifts (GUST_WAVE / GUST_LIFT). */
 function preloadGust(t) {
-  return 0.72 + 0.28 * (0.55 + 0.45 * Math.sin(t * 0.13 + 0.6))
-    * (0.62 * Math.sin(t * 1.20) + 0.26 * Math.sin(t * 1.83 + 1.3));
+  return 0.72 + 0.30 * Math.sin(t * 0.82 + 2.9) * Math.sin(t * 0.31 + 0.4)
+    + 0.04 * Math.sin(t * 1.61);
 }
 
 /* ---------------------------------------------------------------- *
@@ -905,8 +989,14 @@ function preloadGust(t) {
    call, no target, no second pass — and the migrated field drops it
    because by then the real bloom is doing the work. */
 const BLOOM_SPREAD = 5.0;
-const BLOOM_GAIN = 0.21;
-const BLOOM_SIGMA = 1.60;
+// Halo knobs retuned with the size-parity pass: at GAIN 0.21 / SIGMA 1.60
+// the stand-in halo was most of a dot's rendered FOOTPRINT — the blob
+// sweep showed the current's bodies at ~3x the scene grain even after the
+// sprite sizes matched, because the composer's real bloom (radius 0.45)
+// is far tighter than the halo stood in for. The weather lost with the
+// tighter halo came back as count (COMPOSITION nA) and light (BANDS lum).
+const BLOOM_GAIN = 0.14;
+const BLOOM_SIGMA = 1.45;
 
 const VERT = `
 precision highp float;
@@ -1779,11 +1869,12 @@ function createPreload() {
        moment the causal chain can deliver a convergence pulse to the
        mushroom origin: if a landing has already happened, that is the
        remainder of NET_MIN_S plus the pulse's travel; if not — a very
-       fast load — the remaining peel is compressed (advance's RATE_FAST
-       is already running by then, because handOff set sceneReady) and
-       the wait is first-impact + response + travel. Bounded by
-       construction to ~2.3 s worst case; a load slower than ~3 s (nearly
-       all of them) has landed already and waits only for the pulse. A
+       fast load — the remaining flutter is compressed (advance's
+       RATE_FAST is already running by then, because handOff set
+       sceneReady, and compression skips the lull wait) and the wait is
+       first-settle + response + travel. Bounded by construction to
+       ~2.8 s worst case; a load slower than ~4 s (nearly
+       all of them) has settled already and waits only for the pulse. A
        gesture never waits — beginFastHandoff() releases immediately and
        the strike fires with the pulse mostly arrived. */
     preludeMsUntilStrike() {
@@ -1794,14 +1885,15 @@ function createPreload() {
       if (F.firstImpactAt >= 0) {
         need = Math.max(0, NET_MIN_S - (F.t - F.firstImpactAt)) + CONV_S;
       } else {
-        // earliest impact under compression: the nearest landing, pulled
-        // forward and flown at the compressed rate (mirrors advance())
+        // earliest settle under compression: the nearest landing, pulled
+        // forward (no lull wait when the scene is ready) and fluttered
+        // at the compressed duration (mirrors advance() exactly)
         let eta = Infinity;
         for (const L of F.landings) {
           if (L.state === 2) continue;
           const peelIn = L.state === 1
             ? Math.max(0, L.dur - (F.t - L.t0))
-            : Math.max(0.15, Math.min(L.tPeel - F.t, 0.15)) + Math.max(0.55, L.dur / 1.5);
+            : Math.max(0.15, Math.min(L.tPeel - F.t, 0.15)) + Math.max(1.05, L.dur / 1.6);
           eta = Math.min(eta, peelIn);
         }
         if (!Number.isFinite(eta)) eta = 0.8;
