@@ -17,7 +17,7 @@ import { createTransitionController } from '../journey/transition/controller.js'
 import { createHeroGroundDimClaim } from '../journey/chapters/hero-ground-dim.js';
 import { railWrapNavigationProgress } from '../journey/ui/rail-handoff.js';
 
-const { controlWrapDirection } = navigationModule;
+const { controlWrapDirection, navSense, TURN_FORWARD } = navigationModule;
 const ids = ['mission', 'inspire', 'connect', 'owned', 'final'];
 const wrappedPairs = new Map([
   ['mission>final', -1],
@@ -43,6 +43,37 @@ for (const [pair, wrap] of wrappedPairs) {
   const sweep = azTurn(atAzimuth(restAzimuth[fromId]), atAzimuth(restAzimuth[targetId]), -wrap);
   assert.ok(Math.abs(sweep) > Math.PI,
     `${pair} must visibly orbit the long way (got ${(sweep * 180 / Math.PI).toFixed(1)}deg)`);
+}
+
+// THE UNIFIED TURN GRAMMAR is one comparator over nav order; nothing else in
+// the chain pins the sense any ordinary jump is forced into, and a silently
+// reversed comparator would turn every camera transition against its
+// direction of travel while every duration and shaping suite stayed green.
+// Bought (2026-09-01): the sense table itself — forward pairs +1, backward
+// pairs -1, for all ordered chapter pairs — at zero new files.
+{
+  const order = ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'];
+  assert.equal(TURN_FORWARD, 1,
+    'TURN_FORWARD is the measured azimuth sign of the owner-approved forward legs');
+  for (const fromId of order) {
+    for (const targetId of order) {
+      if (fromId === targetId) continue;
+      const expected = order.indexOf(targetId) > order.indexOf(fromId)
+        ? TURN_FORWARD : -TURN_FORWARD;
+      assert.equal(navSense(fromId, targetId), expected,
+        `${fromId}>${targetId} must be forced into the sense of its nav travel`);
+    }
+  }
+}
+
+// ...and journey.js must actually spend the law: the wrap through the seam
+// clause, every other rest-departing jump through navSense, with the two
+// deliberate shortest-way exceptions (an overtaken leg and a same-chapter
+// settle) intact.
+{
+  const src = readFileSync(new URL('../journey/journey.js', import.meta.url), 'utf8');
+  assert.match(src, /: routeFaithful \|\| overtaken \|\| fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
+    'every ordinary rest-departing jump takes the grammar sense; overtakes and same-chapter settles keep the shortest way');
 }
 
 // A route owns its shared character, while explicitly reviewed one-way
@@ -240,7 +271,10 @@ assert.ok(navigationImport, 'journey must retain an explicit navigation.js impor
 const importedNavigationNames = navigationImport[1]
   .split(',').map(name => name.trim()).filter(Boolean);
 for (const name of importedNavigationNames) {
-  assert.equal(typeof navigationModule[name], 'function',
+  // functions and declared constants alike (TURN_FORWARD is a number):
+  // the contract is that every imported name resolves, not that every
+  // export is callable.
+  assert.notEqual(navigationModule[name], undefined,
     `production graph import '${name}' must exist on navigation.js`);
 }
 assert.match(journeySource,

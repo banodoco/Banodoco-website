@@ -36,7 +36,7 @@ import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
 import { arcLength, arcLerp, azTurn } from './camera-path.js';
-import { controlWrapDirection, normaliseNode } from './navigation.js';
+import { controlWrapDirection, navSense, normaliseNode } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
@@ -197,14 +197,12 @@ let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
                          // rotation, closing to a full turn). +/-1 forces a
                          // rotational sense — how the shipped path was chosen
                          // against the short way, and how it can be re-judged.
-const EQUIP_TURN = 1;    // the rotational sense forced on every rest-departing
-                         // Equip leg (the ONE LAP block below) and on the
-                         // Connect -> Final flyby (the FLYBY block): +1 =
-                         // increasing azimuth, the sense the ride itself
-                         // enters Equip with on its own Inspire (115deg) ->
-                         // Equip (200deg) arc. One constant on purpose — the
-                         // site turns one way, and a re-judged sense should
-                         // flip every forced lap together.
+/* Every rest-departing jump's rotational sense is the unified turn
+   grammar's — navSense(fromId, toId) in navigation.js, declared there
+   (2026-09-01, the owner). The per-leg forcing constants this file used
+   to keep (EQUIP_TURN for the Equip laps and the flyby) encoded the same
+   forward sense and are folded into it; leg-specific SHAPING — bow,
+   tgtDip, skim, pacing seconds — stays with its leg below. */
 
 /* The Connect -> Final flyby's authored numbers (see directJumpTo's FLYBY
    block). `let`, and reachable through window.journey.flybyTuning, only so the
@@ -979,38 +977,40 @@ export function boot(opts = {}) {
          any other transition — a whip, not a considered move. */
       const equipLeg = !wrap && !routeFaithful
         && (chapterId === 'equip' || fromChapterId === 'equip');
-      /* THE EQUIP VISIT IS ONE LAP (R3, the owner: "the camera should spin
-         AROUND the mushroom — like a loop around it — instead of just
-         reversing back"). Equip's rest is the one pose on the far side of the
-         specimen — az 200deg, against the -80..115deg band every other rest
-         occupies — so the generic shortest-way azimuth sends every exit back
-         out through the doorway it came in by: in-and-unwind, the exact
-         reading the WAY HOME block above rules out for the ride's own seam.
-         Force the sense instead, the same way the wrap forces its own: every
-         rest-departing Equip leg turns in EQUIP_TURN's sense. With one shared
-         sense the way in plus the way out sums to exactly 360deg for every
-         pairing, so a visit reads in -> around -> out — a lap past the
-         underside — never in-and-back. The sense is + rather than - because
-         three of the five entries already turn that way unforced (Inspire
-         +85, Connect +138, Owned +128), so the forcing is spent on the exits
-         (Connect +222 against -138 short) and on the two far-side entries
-         (Mission +212, Final +280 — inside the wrap's own 294deg precedent),
-         and the tuned approach arcs ship unchanged. A leg that OVERTAKES a
-         live blend keeps the shortest way: a mid-flight reversal rewinds —
+      /* THE EQUIP LEGS RIDE THE ONE GRAMMAR (R3's "spin AROUND the mushroom"
+         lap, re-judged 2026-09-01). Equip's rest is the one pose on the far
+         side of the specimen — az 200deg, against the -80..115deg band every
+         other rest occupies — and R3 answered that geometry by forcing every
+         rest-departing Equip leg into one shared sense, so a visit's way in
+         plus way out summed to 360deg: in -> around -> out. The owner's
+         unified turn grammar (navSense, navigation.js) keeps the half of
+         that law he had approved by eye and retires the other half:
+         forward Equip legs are unchanged to the frame (Inspire -> Equip +85,
+         Mission -> Equip +213, Equip -> Connect +222, Equip -> Owned +232,
+         Equip -> Final +80 — all TURN_FORWARD already), while the backward
+         legs now turn backward with the rest of the site (Equip -> Inspire
+         -85 instead of +275, Final -> Equip -80 instead of +280, and so on).
+         A backward exit retracing its own entry's doorway is, under the new
+         law, not a defect but the point: the round trip reads as there and
+         back, the same language every non-Equip pair now speaks. What
+         remains Equip's own is the SHAPING — bow and tgtDip below — which
+         rides whichever way the grammar sends the leg. A leg that OVERTAKES
+         a live blend keeps the shortest way: a mid-flight reversal rewinds —
          the same grammar as the wrap's reverse gear — which is what keeps an
          80 ms change of mind a step back rather than a near-full lap. */
       /* THE CONNECT -> FINAL LEG IS A RIM FLYBY (R3, the owner: "the camera
          should zoom in close by the edge of the mushroom and fly along the
          edge — keep it dynamic and interesting — and then go around the other
          side, back to where the Purpose spot currently ends"). The short way
-         is -141.4deg — a retreat back across the front, the same in-and-unwind
-         reading the two blocks above rule out for their own seams — so the
-         sense is forced positive like Equip's: +218.6deg around the far side.
-         The return leg is deliberately NOT shaped: Final (-79.6deg) ->
-         Connect (+61.8deg) is +141.4deg the SHORT way, already in the same
-         sense, so the pair sums to exactly 360 — the visit reads as one lap,
-         the Equip grammar — and routine back-navigation keeps its brisk,
-         plain arc. The path itself is shaped by `skim` (camera-blend.js):
+         is -141.4deg — a retreat back across the front — and this is a
+         forward leg, so the unified grammar sends it +218.6deg around the far
+         side: the same sense R3 forced for it by hand. The return leg is
+         deliberately NOT shaped, and under the 2026-09-01 grammar it turns
+         BACKWARD like every other right-to-left jump: Final -> Connect is
+         -218.6deg, retracing the far side rather than completing R3's 360deg
+         lap (that lap-sum property is the half of R3 the owner retired — see
+         the Equip block above). The path out is shaped by `skim`
+         (camera-blend.js):
          the generic arc would ride r 9.0 -> 15.0 the whole way, a wide
          retreat; one sin(pi*e) lobe instead pulls the radius in toward a
          single closest pass and lifts it over the rim, so the turn is in the
@@ -1026,10 +1026,18 @@ export function boot(opts = {}) {
         && fromChapterId === 'connect' && chapterId === 'final';
       const slowedEquipExit = equipLeg && !overtaken
         && fromChapterId === 'equip' && chapterId === 'connect';
+      /* ONE DECLARED SENSE PER JUMP (2026-09-01). The wrap takes the seam's
+         clause (WAY HOME above); every other rest-departing jump takes the
+         unified grammar's sense for its direction of travel. Two legs keep
+         the shortest way on purpose: an OVERTAKEN leg (a change of mind is a
+         step back, not a lap — the guard R1's reversal law depends on), and
+         a jump inside its own chapter (a settle, not travel — forcing a
+         sense on a few degrees of azimuth would send it the long way round).
+         A route-faithful first-leg flight rides the authored route and never
+         reads az1 at all. */
       const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap)
-        : equipLeg && !overtaken ? azTurn(pos0, cam.position, EQUIP_TURN)
-        : flybyLeg ? azTurn(pos0, cam.position, EQUIP_TURN)
-        : null;
+        : routeFaithful || overtaken || fromChapterId === chapterId ? null
+        : azTurn(pos0, cam.position, navSense(fromChapterId, chapterId));
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:
          "it should be one zoom and arc at the same time ... if it has to move
          down and then up at the end, do a smooth arc and then move up at the
@@ -1086,13 +1094,20 @@ export function boot(opts = {}) {
            runs ~33 units, and at the cap that is the whip again — plus its
            own authored seconds (FLYBY_EXTRA_S), because a flyby is
            priced by the angle it sweeps, not only the metres it covers. */
+        /* And so does ANY leg the grammar sends the long way round
+           (|az1| > pi — the forcing overrode the short way, which is never
+           itself more than a half-turn): the widest, Inspire <-> Owned at
+           317deg, runs ~50 units, and the cap would whip it exactly as it
+           would the laps above. Legs the grammar agrees with are
+           byte-identical to the capped law. */
         /* The Equip -> Connect exit carries its own authored seconds on top
            (EQUIP_CONNECT_EXTRA_S, declared above with its conversion): the
            owner asked for ~65% of the delivered speed on exactly this leg,
            whose forced +222deg sweep is the widest rest-departing exit, so
            the slow is authored here — never by retuning the shared length
            law or the route's speed rows, which price every other leg. */
-        : 0.85 + 0.35 * (equipLeg || skim ? len / 20 : Math.min(len / 20, 1))
+        : 0.85 + 0.35 * (equipLeg || skim || (az1 !== null && Math.abs(az1) > Math.PI)
+            ? len / 20 : Math.min(len / 20, 1))
           + (skim ? FLYBY_EXTRA_S : 0)
           + (slowedEquipExit ? EQUIP_CONNECT_EXTRA_S : 0);
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
