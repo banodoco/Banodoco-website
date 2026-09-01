@@ -45,6 +45,22 @@
  * 477 ms LONGER than a whole scroll arrival takes. The budget is zero, and C3
  * derives it rather than declaring it.
  *
+ * AMENDED 2026-09-01, ON THE CEREMONIAL SEAM. The owner's confirmed seam form
+ * (both wraps one full turn plus the step home, +/-426.9 deg, the wrap law's
+ * 4.00 s base through the mission|final speed row: 5333 ms delivered) forced
+ * a re-measure, and the re-measure exposed that the in-flight paint model
+ * above had rotted: the destination's visible opacity during the lap is the
+ * WRAP TICKET CROSSFADE on the camera blend's own eased phase (chooseEase's
+ * railWrap branch, NAV_COPY_FADE_PHASE), not the armCopyEntry envelope —
+ * which still exists, still prices --j-in (how the lap is read off the page),
+ * and still owns the settle after a landing. Model re-derived at wrapEase;
+ * every figure below re-measured on the ceremonial laps (evidence
+ * banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/). The conclusion the
+ * file exists for is unchanged and stronger: the whole handover is keyed to
+ * the lap's own phase, armed at the fire, so a pre-departure hold still buys
+ * nothing, and the longer lap widens every margin (source shown 2077 ms vs a
+ * 1049 ms arrival).
+ *
  * WHAT THE BEAT CHARGED FOR THAT NOTHING, and it is not a delay. The beat
  * does not pause the gesture, it only shuts the wrap; the gesture keeps
  * delivering, and with the wrap shut the only road in front of it is the
@@ -95,6 +111,7 @@ import {
   COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI, COPY_JUMP_TAIL_S,
   COPY_JUMP_LEAD, COPY_JUMP_COPY_TAIL_S,
 } from '../journey/constants/copy.js';
+import { navigationSpeed } from '../journey/navigation-timing.js';
 import { smoothA } from '../journey/ui/bands.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -103,8 +120,12 @@ const PROVE = process.argv.slice(2).includes('--prove-failure');
 const read = (p) => readFileSync(join(REPO, p), 'utf8');
 
 /* ---- The measured inputs, each a number taken off the running page rather
-   than chosen to make a test pass. Evidence: docs/code-health/evidence/
-   2026-08-21-elegance-run-01/wrap-beat/ ---------------------------------- */
+   than chosen to make a test pass. Original evidence: docs/code-health/
+   evidence/2026-08-21-elegance-run-01/wrap-beat/. RE-MEASURED 2026-09-01 on
+   the owner-confirmed ceremonial seam (both wraps +/-426.9 deg, priced at the
+   wrap law's 4.00 s base / the mission|final default speed row): evidence
+   banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/ (ceremony-window.json,
+   up-trace-ramp.json; probes r4b-ceremony-window.mjs, r4b-trace.mjs). ------ */
 
 /** The smoothed |dp/dt| still on the books at the frame the model assigns
  *  `p = intent.target`. Source: connect-skip/compose-hold-quiet.json — kept,
@@ -112,16 +133,30 @@ const read = (p) => readFileSync(join(REPO, p), 'utf8');
 const ARRIVAL_PSPEED = 0.0551;      // p/s — connect/one, exact-landing frame
 
 /** THE WRAP'S LAP in ms, read off the page rather than re-derived: armCopyEntry
- *  writes the entry's own duration onto the destination block as `--j-in`, so
- *  blendDur falls out of it exactly. Source: wrap-beat/wrap-lap.json. */
-const WRAP_LAP_MS = 3904;
+ *  writes the entry's own duration onto the destination block as `--j-in`, and
+ *  blendDur falls out of it through the same two constants armCopyEntry
+ *  spends: lap = (jin - COPY_JUMP_COPY_TAIL_S) / (1 - COPY_JUMP_LEAD). The
+ *  derivation is written out (not a pre-multiplied number) so a moved lead or
+ *  tail reds against the C1a ceiling instead of silently re-dating the lap.
+ *  2026-09-01: --j-in 2950 ms on the up-wrap, 3/3 trials -> 5333 ms, and the
+ *  camera's own motion window agrees (5649 ms including the convergence
+ *  tail). Both crossings share the figure: the two ceremonial laps are the
+ *  same +/-426.9 deg path mirrored, so their lengths and prices are equal.
+ *  (The prior 3904 was the 2026-08-21 page, before the wrap rode the
+ *  navigation-timing conversion — stale against the live page even then, as
+ *  the lane ledger recorded.) */
+const WRAP_JIN_MS = 2950;
+const WRAP_LAP_MS = Math.round(
+  (WRAP_JIN_MS - COPY_JUMP_COPY_TAIL_S * 1000) / (1 - COPY_JUMP_LEAD));
 
-/** Two points off the recorded wrap trace, proving this file's simulation is
- *  the page's behaviour and not a plausible-looking curve.
- *  Source: wrap-beat/wrap-arrival-base.json, forward cell, 8/8 clean. */
+/** Three points off the recorded wrap trace, proving this file's simulation is
+ *  the page's behaviour and not a plausible-looking curve. Medians of 3 clean
+ *  up-wrap trials (the destination block's painted opacity), 1280x800.
+ *  Source: loop-ceremony/up-trace-ramp.json. */
 const WRAP_TRACE = [
-  { ms: 2433, ease: 0.015 },
-  { ms: 3894, ease: 0.90 },
+  { ms: 3600, ease: 0.317 },
+  { ms: 4000, ease: 0.741 },
+  { ms: 4400, ease: 0.954 },
 ];
 
 /** What "the visitor saw the section" is taken to mean. Nine tenths of the
@@ -130,10 +165,13 @@ const WRAP_TRACE = [
 const REST_COMPOSITION_TARGET = 0.9;
 /** HOW LONG THE WRAP KEEPS SHOWING THE REST IT IS LEAVING, from the frame the
  *  wrap fires to the frame the departing block's painted opacity falls under
- *  0.015. The MINIMUM over 24 clean trials is taken, so the pin is the
- *  pessimistic edge of the measurement rather than its mean (medians 1552-1669).
- *  Source: wrap-beat/wrap-gate-beat0.json, all four pause cells. */
-const WRAP_SRC_SHOWN_MS = 1526;
+ *  0.015. The MINIMUM over the clean trials is taken, so the pin is the
+ *  pessimistic edge of the measurement rather than its mean. 2026-09-01: 6
+ *  down-wrap trials on the ceremonial lap measured 2077-2092 ms; the ticket
+ *  crossfade model puts the crossing at 2069 ms of the 5333 ms lap.
+ *  Source: loop-ceremony/ceremony-window.json (was 1526 on the 2026-08-21
+ *  page, wrap-beat/wrap-gate-beat0.json). */
+const WRAP_SRC_SHOWN_MS = 2077;
 /** THE FLOOR THE ARRIVAL WALL ALREADY HOLDS. Shortest landing-to-wrap over 24
  *  clean trials with the beat at zero: the second gesture has to be made, and
  *  to earn the stream test. Source: wrap-beat/wrap-gate-beat0.json. */
@@ -174,14 +212,22 @@ function smoothingRateFromSource(src) {
 }
 
 /** The WRAP's duration law, read out of journey.js the same way. Returns the
- *  law's CEILING in ms — the longest lap it can price, and what the measured lap
- *  is checked against. `len` is geometry and cannot be recovered from source,
- *  which is exactly why the lap itself is measured. */
+ *  law's BASE ceiling in ms — the longest base it can price. `len` is geometry
+ *  and cannot be recovered from source, which is exactly why the lap itself is
+ *  measured. The DELIVERED ceiling divides this by the mission|final
+ *  navigation speed row, the conversion journey.js applies exactly once at
+ *  the duration seam (navigationDurationSeconds, pinned in
+ *  tools/test-no-scroll-navigation.mjs) — the old model omitted that
+ *  conversion and its 3904 ms input predated it, so the pair agreed with each
+ *  other while the page had moved (the lane ledger recorded the staleness);
+ *  the 2026-09-01 re-anchor added the divisor and imports the live row. */
 function wrapLapCeilingMsFromSource(src) {
   const law = src.match(
     /0\.85 \+ 0\.35 \* Math\.min\(len \/ 20, 1\) \+ WRAP_EXTRA_S \* Math\.min\(len \/ 68, 1\)/);
   const extra = src.match(/let WRAP_EXTRA_S = ([0-9.]+);/);
-  return law && extra ? (0.85 + 0.35 + Number(extra[1])) * 1000 : null;
+  return law && extra
+    ? (0.85 + 0.35 + Number(extra[1])) * 1000 / navigationSpeed('final', 'mission')
+    : null;
 }
 
 /** Milliseconds from a landing until a chapter's eased copy opacity reaches
@@ -204,16 +250,32 @@ function msToCompose(target, k, {
   return null;
 }
 
-/** The WRAP entry envelope, exactly as copy-arrival.js steps it: wait out
- *  `lead`, then smootherstep to 1 over the remainder. */
-function wrapEase(ms, {
-  lapMs = WRAP_LAP_MS, lead = COPY_JUMP_LEAD, tailS = COPY_JUMP_COPY_TAIL_S,
-} = {}) {
-  const leadMs = lapMs * lead;
-  const durMs = lapMs + tailS * 1000 - leadMs;
-  if (durMs <= 0) return ms >= leadMs ? 1 : 0;
-  const f = Math.max(0, Math.min(1, (ms - leadMs) / durMs));
+/** The WRAP entry, exactly as copy-arrival.js paints it while the wrap ticket
+ *  is live (the `railWrap` branch of chooseEase): the camera blend's own
+ *  eased phase — smootherstep of t/lap, written onto the ticket by
+ *  camera-blend.js — crossfaded through NAV_COPY_FADE_PHASE, so the
+ *  destination rises across the lap's closing fade window and the departure
+ *  fades across its opening one.
+ *
+ *  RE-DERIVED 2026-09-01 (C1a's own instruction). The previous model here —
+ *  wait out COPY_JUMP_LEAD of the lap, smootherstep over the remainder plus
+ *  COPY_JUMP_COPY_TAIL_S — was the 2026-08-21 page, and its recorded trace
+ *  points were from the same era, so C2 stayed green while the page moved
+ *  underneath both: model and evidence agreed with each other, not with the
+ *  page. The ceremonial-seam re-measure exposed the drift (fresh points sat
+ *  0.1+ off the old model). The lead/tail pair still price the arrive
+ *  envelope armCopyEntry builds (and --j-in with it, which is how the lap is
+ *  read); the VISIBLE in-flight paint is the ticket crossfade, and that is
+ *  what "the destination reaches copyEase 0.9" is a claim about. The phase
+ *  is the blend's C2 smootherstep; the crossfade is smoothA — the same
+ *  import the scroll model uses, which is bands.js's smoothstep. Verified
+ *  against the fresh trace at C2 (max deviation 0.013 across the ramp). */
+function smoother(x) {
+  const f = Math.max(0, Math.min(1, x));
   return f * f * f * (f * (f * 6 - 15) + 10);
+}
+function wrapEase(ms, { lapMs = WRAP_LAP_MS, fade = NAV_FADE } = {}) {
+  return smoothA((smoother(ms / lapMs) - (1 - fade)) / fade);
 }
 
 /** Milliseconds after the wrap fires until the destination reaches `target`;
@@ -245,6 +307,12 @@ const CONST_SRC = read('journey/constants/scroll.js');
 const JOURNEY_SRC = read('journey/journey.js');
 const SMOOTH = smoothingRateFromSource(COPY_SRC);
 const LAP_CEILING_MS = wrapLapCeilingMsFromSource(JOURNEY_SRC);
+/** The ticket crossfade's window, read from source rather than copied — the
+ *  one constant the re-derived wrapEase model turns on. */
+const NAV_FADE = (() => {
+  const m = COPY_SRC.match(/const NAV_COPY_FADE_PHASE = ([0-9.]+);/);
+  return m ? Number(m[1]) : null;
+})();
 
 /* C1 — PROVENANCE. The claims this gate exists to check must still be made by
    the code, and the numbers the model needs must still be where it reads them.
@@ -267,6 +335,19 @@ assert.ok(/if \(wrap\) guarded\('ui', \(\) => ui\.armCopyEntry\(chapterId, dur\)
   'C1a: the wrap no longer arms the copy-entry envelope, so the destination is not on the wall-clock '
   + 'ticket this gate models. Whatever replaced it is the clock the beat is now answerable to: '
   + 're-derive C2/C5 against it rather than re-anchoring this pattern.');
+assert.ok(typeof NAV_FADE === 'number' && NAV_FADE > 0 && NAV_FADE < 0.5,
+  'C1a: copy-arrival.js no longer declares `const NAV_COPY_FADE_PHASE = N;` in the form this gate '
+  + 'reads, or the crossfade window has grown past half the lap (the opening and closing fades '
+  + 'would overlap and the model\'s "one handover, no hole" framing stops holding) — re-derive the '
+  + 'wrapEase model before trusting anything below.');
+assert.ok(
+  /const phase = clamp01\(Number\(railWrap && railWrap\.phase\) \|\| 0\);/.test(COPY_SRC)
+  && /return smoothA\(\(phase - \(1 - NAV_COPY_FADE_PHASE\)\) \/ NAV_COPY_FADE_PHASE\);/.test(COPY_SRC),
+  'C1a: chooseEase no longer paints the wrap destination off the ticket\'s own phase through the '
+  + 'NAV_COPY_FADE_PHASE crossfade — the clause the re-derived wrapEase model describes (and the '
+  + 'structural reason no pre-departure hold can advance the destination: its paint is a pure '
+  + 'function of a phase that starts at the fire). Re-derive the model against whatever replaced '
+  + 'it; MUT-PHASE drives this pin red.');
 
 /* C1b — THE COMMENT AND THE ARITHMETIC ARE THE SAME STATEMENT. Re-anchored
    2026-08-26 onto the wrap's four figures; the mechanism is unchanged from the
@@ -362,7 +443,7 @@ assert.ok(realizedMs < WRAP_SWALLOW_MS,
 
 /* C4a — THE BUDGET, DERIVED AND DECLARED, AND THEY MUST AGREE. This is the
    quantity the retirement rests on: the wrap shows the rest it leaves for
-   1526 ms against a 1049 ms arrival, so there is 477 ms to spare and nothing
+   2077 ms against a 1049 ms arrival, so there is 1028 ms to spare and nothing
    at all for a pre-departure hold to add. Reopen it and the retirement below
    is no longer justified by this file's own arithmetic. Killers: M2c and M6,
    from either side of the subtraction. */
@@ -430,12 +511,26 @@ for (const [what, re, expect, tol] of DECLARED_IN_SOURCE) {
                                                  srcShown > scrollArrival
 
    Both ends are load-bearing and each has its own failure. The first is why
-   no beat can advance the destination by one millisecond: the envelope is not
-   armed until the wrap has already fired. The second is why no beat is needed
-   to show the departing rest either. Lose the first and a hold WOULD buy
-   composition and this file's framing is wrong; lose the second and the
-   budget reopens and C3's number has to move with it. */
-const wrapEntryStartMs = WRAP_LAP_MS * COPY_JUMP_LEAD;
+   no beat can advance the destination by one millisecond — and under the
+   ticket crossfade it is structural twice over: the destination's paint is a
+   pure function of a phase that starts at zero on the fire frame, and the
+   fade window sits at the phase's far end. Its numeric half below is the
+   window's placement; its structural half is the crossfade source pin at
+   C1a, driven red by MUT-PHASE. The second is why no beat is needed to show
+   the departing rest either. Lose the first and a hold WOULD buy composition
+   and this file's framing is wrong; lose the second and the budget reopens
+   and C3's number has to move with it. */
+const msToWrapFirstPaint = (over = {}) => {
+  let lo = 0;
+  let hi = 20_000;
+  if (wrapEase(hi, over) < 0.001) return hi;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (wrapEase(mid, over) >= 0.001) hi = mid; else lo = mid;
+  }
+  return hi;
+};
+const wrapEntryStartMs = msToWrapFirstPaint();
 assert.ok(wrapEntryStartMs > 0,
   `C5: the wrap's copy entry now starts ${wrapEntryStartMs.toFixed(0)} ms after the wrap fires, so `
   + 'the destination is shown from the wrap frame and a pre-departure hold could genuinely advance '
@@ -493,10 +588,8 @@ const c3Fires = (over) => {
 };
 const c4Fires = (over) => Math.abs(budgetUnder(over) - DECLARED_BUDGET_MS) > BUDGET_TOL_MS;
 const c5Fires = (over) => {
-  const lapMs = 'lapMs' in over ? over.lapMs : WRAP_LAP_MS;
-  const lead = 'lead' in over ? over.lead : COPY_JUMP_LEAD;
   const src = 'src' in over ? over.src : WRAP_SRC_SHOWN_MS;
-  return !(lapMs * lead > 0 && src > scrollArrivalUnder(over));
+  return !(msToWrapFirstPaint(over) > 0 && src > scrollArrivalUnder(over));
 };
 
 const MUTANTS = [
@@ -529,20 +622,30 @@ const MUTANTS = [
     + 'C3\'s lower end, and with the beat retired it is the whole separation',
     true, () => c3Fires({ floor: 0 })],
   ['M2c', 'the wrap stops covering its own departure (the rest it leaves is shown '
-    + '1526 -> 900 ms): the budget reopens to 149 ms, so C4a AND C5 both fire — the '
+    + '2077 -> 900 ms): the budget reopens to 149 ms, so C4a AND C5 both fire — the '
     + 'two pins are linked through the budget and this is where that shows',
     true, () => c4Fires({ src: 900 }) && c5Fires({ src: 900 })],
 
-  ['M3', 'the destination stops waiting out the lap (COPY_JUMP_LEAD 0.55 -> 0): the '
-    + 'entry is armed at the wrap frame, so a hold COULD advance it — C5\'s first '
-    + 'conjunct, and C2 with it',
-    true, () => c5Fires({ lead: 0 }) && c2Fires({ lead: 0 })],
+  ['M3', 'the crossfade window widens to the whole lap (NAV_COPY_FADE_PHASE 0.32 '
+    + '-> 1): the destination rises from the wrap frame, C1a\'s window bound would '
+    + 'refuse it, and the model stops reproducing the recorded trace — C2 fires',
+    true, () => c2Fires({ fade: 1 })],
   ['M4', 'the lap collapses (the measured lap -> 900 ms): the model no longer '
-    + 'reproduces the recorded wrap trace at either point',
+    + 'reproduces the recorded wrap trace at any point',
     true, () => c2Fires({ lapMs: 900 })],
-  ['M5', 'the entry\'s tail triples (COPY_JUMP_COPY_TAIL_S 0.55 -> 3.0): the '
-    + 'destination reaches nine tenths far later than the page recorded',
-    true, () => c2Fires({ tailS: 3.0 })],
+  ['M5', 'the crossfade window collapses (NAV_COPY_FADE_PHASE 0.32 -> 0.05): the '
+    + 'destination pops in at the lap\'s very end, far later than the page recorded',
+    true, () => c2Fires({ fade: 0.05 })],
+  /* MUT-PHASE — the structural half of C5's first conjunct, a source mutant
+     like MUT-QUEUE: the wrap destination's paint stops reading the ticket's
+     phase (the crossfade clause rewritten onto the settle envelope), and the
+     C1a crossfade pin must stop matching. Nothing is written to disk. */
+  ['MUT-PHASE', 'the wrap destination is painted off the settle envelope instead of '
+    + 'the ticket\'s own phase — the C1a crossfade source pin must lose its anchor',
+    true, () => !/return smoothA\(\(phase - \(1 - NAV_COPY_FADE_PHASE\)\) \/ NAV_COPY_FADE_PHASE\);/
+      .test(COPY_SRC.replace(
+        'return smoothA((phase - (1 - NAV_COPY_FADE_PHASE)) / NAV_COPY_FADE_PHASE);',
+        'return target * arriveE;'))],
   ['M6', 'the SCROLL arrival clock slows (COPY_IN_K 2.4 -> 0.6): a chapter takes '
     + 'longer to compose than the wrap keeps it on screen, so the budget reopens',
     true, () => c4Fires({ k: 0.6 }) && c5Fires({ k: 0.6 })],
@@ -567,11 +670,11 @@ const MUTANTS = [
      printed, so the blind spot is on the record instead of being discovered
      later as a silent pass. COPY_SETTLE_LO 0.012 -> 0.004 moves the scroll
      arrival by 32 ms, which is inside BUDGET_TOL_MS and, at a budget clamped
-     at zero by a 477 ms margin, moves nothing at all. If a future edit needs
+     at zero by a 1028 ms margin, moves nothing at all. If a future edit needs
      the LOW end of the settle gate pinned, that needs a different instrument
      (the browser ring's per-frame `settled`), not a tighter tolerance here. */
   ['L1', 'DECLARED LIMIT — COPY_SETTLE_LO 0.012 -> 0.004 moves the scroll arrival '
-    + 'only 32 ms, and the budget is clamped at zero with 477 ms of margin, so the '
+    + 'only 32 ms, and the budget is clamped at zero with 1028 ms of margin, so the '
     + 'LOW end of the settle gate is outside what this law can see',
     false, () => c4Fires({ settleLo: 0.004 }) || c5Fires({ settleLo: 0.004 })],
 ];

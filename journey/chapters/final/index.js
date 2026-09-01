@@ -282,7 +282,10 @@ export function createFinal(sceneApi) {
          the wrap DOWN is on screen for 1.384 s from the move's first frame
          (0.264 s in hand) and the wrap UP has 1.472 s between `rise` opening
          and the lap landing (0.352 s in hand). Neither is cropped mid-retire
-         and neither needs a tail.
+         and neither needs a tail. [Both windows re-measured 2026-09-01 on
+         the ceremonial seam's 5333 ms laps: DOWN 3.221 s, UP 4.335 s —
+         tools/test-declared-conversions.mjs (LD-FIT) carries the dated
+         figures and their evidence; the fit only widened.]
      (0.75, this pass's first value, does NOT fit: it needs 1.493 s against
      the wrap DOWN's real 1.384 s window. The 1.68 s it was chosen against was
      measured from the FLICK rather than from the MOVE, and the wrap's own
@@ -364,7 +367,10 @@ export function createFinal(sceneApi) {
      `rise` starts fading it out (uAmount leaves 1.0 at 1452 ms, reaches 0 at
      1535 ms; the reveal today finishes at ~1168 ms). The up-wrap gives 1.450 s
      between the chapter becoming visible and the lap landing, with the
-     convergence tail legal after that. The gaps already wider than the target
+     convergence tail legal after that. [2026-09-01, on the ceremonial seam's
+     5333 ms laps and with the fade riding the retire's own last light (the
+     stretched-retire rule below): uAmount now holds 1.0 until 3221+ ms on
+     the way out and the up window is 4.3+ s — measured, LD-FIT.] The gaps already wider than the target
      keep their shipped cost, the narrower ones cost LADDER_GAP_S each, and the
      runs below the first rung and above the last one are paid at RATE_FAST and
      at the shipped rate. Measured, not guessed.
@@ -611,6 +617,9 @@ export function createFinal(sceneApi) {
        NON-WRAP BLEND CAN REACH THIS CODE, and the rail click out of the
        epilogue is unchanged by arithmetic rather than by hope. Today only the
        wrap's 4.00 s lap clears the bar: window 2.48 s, retireScale 0.526.
+       [2026-09-01: the ceremonial seam delivers the lap at 5.33 s — window
+       3.31 s, retireScale 0.352, same arithmetic, verified live: the retire
+       driver reaches 0 at ~3.31 s of the lap, 7/7 trials.]
      · BAND_S IS INTEGRATED FROM THE BUILD, not restated: the time the shipped
        blend clock takes to cross the whole PULL_MAX band, integral du/rate(u).
        Doc 18 §13.4's standing hazard is "the ladder constants bake the camera
