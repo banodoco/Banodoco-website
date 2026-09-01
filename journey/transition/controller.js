@@ -105,6 +105,11 @@ export function createTransitionController({
 
   let heroEntry = null;   // { t, lead, dur } while a jump is flying INTO the hero
   let heroGate = 1;       // the eased arrival term; 1 = the hero is ours to show
+  /* ...and the arrival term's own two-pass placement window, the counterpart
+     of heroExit's `holdSnaps` (see clearHeroTerms). Non-zero only across the
+     placeAt passes of a jump that OVERTOOK a lap; a real placement never
+     arms it, so deep links, ?capture= and QA scrollTo still snap. */
+  let heroGateHold = 0;
   /* ...AND A DEPARTURE TERM TO MATCH (2026-08-16 — Hannah, the up-wrap:
      "there's a similar flash when I scroll UP from the top section [to] the
      last section"). A jump AWAY from the hero snapped this furniture to
@@ -449,7 +454,16 @@ export function createTransitionController({
     heroField.set(heroShownNow());
     // A placement is not an arrival: a deep link, a ?capture= still or a QA
     // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
-    if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }
+    // ...unless the two passes are a JUMP's own (clearHeroTerms armed the
+    // hold just before placeAt) — the departure term's `holdSnaps` rule,
+    // applied to the arrival term. See clearHeroTerms.
+    if (dt === 0) {
+      heroEntry = null;
+      if (heroGateHold > 0) { heroGateHold--; return heroGate; }
+      heroGate = 1;
+      return heroGate;
+    }
+    heroGateHold = 0;   // a frame of real travel ends the placement window
     if (heroEntry) {
       heroEntry.t += dt * (heroEntry.play || 1);
       const f = clamp01((heroEntry.t - heroEntry.lead) / heroEntry.dur);
@@ -485,11 +499,49 @@ export function createTransitionController({
   /** An ordinary click now presents a real continuous progress coordinate
    *  over the camera flight. Hero presence can therefore use the same pure
    *  p envelope as scroll; retire the legacy click-only timer so it cannot
-   *  race or soften that authoritative signal. */
+   *  race or soften that authoritative signal.
+   *
+   *  ...BUT THE GATE IS DROPPED, NOT RAISED (2026-09-01, measured while
+   *  giving the adopted spore field this same scalar — evidence/
+   *  r11-fieldgate/matrix.md rows C4-C6).
+   *
+   *  `heroGate = 1` here was a SNAP, and there is exactly one state it can
+   *  snap from: a ceremonial lap's arrival term, which is the only thing in
+   *  this file that ever puts the gate below 1. A lap PARKS p at its
+   *  destination before flying, so all through a final->mission lap
+   *  `heroPresence(presentedP)` already reads 1 and the gate alone is what
+   *  holds the hero dark. An ordinary click that OVERTAKES such a lap
+   *  therefore used to publish `1 * 1` on the click frame — the furniture
+   *  went from 0 to full opacity in ONE FRAME and then faded out again as
+   *  the camera left. Measured on the base tree (envelope-before.json,
+   *  L-interrupt-lap-home): 0 -> 1 across a single frame at the interrupt,
+   *  ~180 ms at full, then the ordinary presence fall. It was survivable
+   *  while the furniture was the only surface wearing this number; it is a
+   *  1512-particle field flashing on once the spores wear it too.
+   *
+   *  So: drop the AUTHORITY and never the value — the same sentence
+   *  cancelHeroEntry above is written in, and the same one the copy layer
+   *  makes. With no entry ticket the stepper's own relax branch breathes
+   *  the gate back on COPY_IN_K from wherever the lap had left it, so the
+   *  overtake continues from the painted value instead of stepping off it.
+   *
+   *  AND IT HAS TO SURVIVE THE JUMP'S OWN PLACEMENT PASSES, which is the
+   *  half that measurement caught: this is called from directJumpTo BEFORE
+   *  placeAt, and placeAt's two dt = 0 applyFrame passes reach
+   *  stepHeroEntry's "a placement is not an arrival" branch — which snapped
+   *  the gate to 1 and put the step straight back. `holdSnaps` is exactly
+   *  the same two-pass window armHeroExit already opens for the departure
+   *  term, for exactly the same reason, so the arrival term is simply given
+   *  the counterpart it never had. A REAL placement (deep link, ?capture=,
+   *  QA scrollTo) arms no hold and still snaps.
+   *
+   *  EVERY ORDINARY JUMP IS BIT-IDENTICAL: outside a lap the gate is
+   *  already 1, nothing is held, and this wrote 1 over 1. */
   function clearHeroTerms() {
     heroExit = null;
     heroEntry = null;
-    heroGate = 1;
+    if (heroGate < 1) heroGateHold = 2;   // the jump's own two placeAt passes
+    else heroGate = 1;
   }
 
   /** The tickets the jump installs BEFORE placeAt runs its two synchronous
