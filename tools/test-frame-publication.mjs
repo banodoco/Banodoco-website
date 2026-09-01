@@ -857,7 +857,17 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
        the same shape and the same justification as the four chapter modules
        already on this list. It is a chapter naming the camera to gate its own
        reveal, which is precisely what boundaries.md section B.7 admits. */
-    14, 128, false, false],
+    /* SCAN CARDINALITY 128 -> 129 at order R11, 2026-09-01. ONE file:
+       journey/hero-field.js, the adopted hero spore field's presence gate.
+       It names NO camera in code — it reads one geometry attribute off a
+       handle it is given (`sceneApi.groups.heroField`) and multiplies it, and
+       it holds no pose, no projection and no THREE object — so the
+       fourteen-file naming allow-list above and both exclusion booleans are
+       BYTE-IDENTICAL. Only the disk-derived scan cardinality moved, by the
+       one accepted file, which is the number this pin carries precisely so
+       that a scan which quietly stopped reading files reports a shrunken
+       denominator instead of a clean list. */
+    14, 129, false, false],
   'boundaries.md section B.7 pins 11 and the two publication owners are named. main.js and organism/furniture.js are in the SCANNED roots and in neither list — section B.6a\'s reclassification, and the scan is what keeps it true. The scanned cardinality is pinned beside the hits so a scan that read nothing reports 0/0 rather than a clean 12');
 
 pin('C6', 'D46 — the camera scan DOES see a code mention and does NOT see a prose one, which is the whole difference between 11 and the raw grep\'s 44',
@@ -999,13 +1009,24 @@ console.log('\nE — the source manifest');
    the new neighbour, so a later insertion anywhere in the run reds it
    exactly as before. J04e added its own row and moved nobody else's (D62);
    E2 below is unmoved and still pins that this order added exactly one
-   journey/frame entry. */
-pin('E1', 'X3 — journey/frame/publication.js is in the source manifest, in its NAMED neighbourhood: frame-application.js before it, and journey-owner.js then journey.js after',
+   journey/frame entry.
+
+   WIDENED AGAIN, and again rather than weakened, by order R11 2026-09-01.
+   journey/hero-field.js sorts BETWEEN frame/publication.js and
+   journey-owner.js ("frame/..." < "hero-field.js" < "journey-owner.js" on
+   'f' < 'h' < 'j'), so the ordered FOUR no longer holds and this reader
+   answered NOT ADJACENT — which is the pin doing its job, not a fault in
+   it. The window is now the ordered FIVE: it still says everything the
+   four said, in the same order, and additionally names the new neighbour,
+   so a later insertion anywhere in the run reds it exactly as before.
+   R11 added its own row and moved nobody else's (D62); E2 below is
+   unmoved and still pins that. */
+pin('E1', 'X3 — journey/frame/publication.js is in the source manifest, in its NAMED neighbourhood: frame-application.js before it, and hero-field.js then journey-owner.js then journey.js after',
   (i) => {
-    const m = i.src.match(/"journey\/frame-application\.js",\s*\n\s*"([^"]+)",\s*\n\s*"([^"]+)",\s*\n\s*"journey\/journey\.js",/);
-    return m ? [m[1], m[2]] : 'NOT ADJACENT';
+    const m = i.src.match(/"journey\/frame-application\.js",\s*\n\s*"([^"]+)",[\s\S]*?"([^"]+)",\s*\n\s*"([^"]+)",\s*\n\s*"journey\/journey\.js",/);
+    return m ? [m[1], m[2], m[3]] : 'NOT ADJACENT';
   }, { src: SRC.baseline },
-  ['journey/frame/publication.js', 'journey/journey-owner.js']);
+  ['journey/frame/publication.js', 'journey/hero-field.js', 'journey/journey-owner.js']);
 
 pin('E2', 'X3 — this order added exactly one manifest entry and touched nobody else\'s',
   (i) => (i.src.match(/"journey\/frame\/[a-z-]+\.js",/g) || []).length,

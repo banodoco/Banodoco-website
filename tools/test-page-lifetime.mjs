@@ -1031,11 +1031,22 @@ pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specif
        the prelude's skeleton and the loaded network are one structure. It
        is referenced under exactly one specifier form (hero-spores.js's
        relative import), so both cardinalities move together by exactly
-       one and both invariant sets stay empty. */
-    referenced: 142,
+       one and both invariant sets stay empty.
+
+       RE-BASELINED 142 -> 143 and 141 -> 142 by order R11, 2026-09-01, on
+       the same protocol. The one accepted graph member is
+       journey/hero-field.js — the adopted hero spore field's presence gate,
+       which gives the field the hero furniture's already-painted scalar
+       instead of an envelope of its own. It has NO imports (it is handed
+       `sceneApi` and reads one geometry attribute) and it is referenced
+       under exactly one specifier form: journey/transition/controller.js's
+       relative `../hero-field.js`. So both cardinalities move together by
+       exactly one, and BOTH INVARIANT SETS STAY EMPTY — which is the
+       property this row actually asserts. */
+    referenced: 143,
     multiForm: [],
     cacheBusted: [],
-    scanned: 141,
+    scanned: 142,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 
