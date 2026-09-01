@@ -191,31 +191,31 @@ const COMPOSITION = {
   // edge. The lower-right quarter — where the mushroom will stand —
   // stays meaningfully dark until the landings light it.
   desktop: {
-    nA: 680, nH: 6, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    nA: 700, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
     fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 620, nH: 6, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    nA: 640, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
     fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
   },
   // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    nA: 340, nH: 4, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    nA: 360, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
     fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5,
   },
   // iPad portrait, 744x1133. Steeper: from the upper-left edge across
   // the copy column's shoulder and out the right side above the specimen.
   tablet: {
-    nA: 400, nH: 5, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
+    nA: 430, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
     fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5,
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 260, nH: 4, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 280, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5,
   },
 };
@@ -232,9 +232,9 @@ const BANDS = [
   // band that is 50% of the population would carry almost none of the
   // light — measured on the first shot of this composition, which read as
   // a starfield for exactly that reason.
-  { share: 0.50, d0: 0.52, d1: 0.92, lum: 0.80, vel: 0.80, size: 1.5 },  // far haze
-  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.00, vel: 1.00, size: 1.0 },  // the body
-  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.05, vel: 1.20, size: 1.0 },  // near, blurred
+  { share: 0.50, d0: 0.52, d1: 0.92, lum: 0.95, vel: 0.80, size: 1.75 }, // far haze
+  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.18, vel: 1.00, size: 1.15 }, // the body
+  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.10, vel: 1.20, size: 1.0 },  // near, blurred
 ];
 // Hero spores: bigger and warmer, but from the same families — the size
 // and tone draws below are the shed's own with the exponents relaxed.
@@ -414,7 +414,7 @@ function seedOne(F, i, c, rand, atEntry) {
   // high in the entry band, so the current has a legible river running
   // its middle with haze feathered around it — a moving volume with a
   // spine, not an even wash.
-  const core = rand() < 0.45;
+  const core = rand() < 0.55;
   const eMid = core ? c.e[0] + (c.e[1] - c.e[0]) * 0.62 : (c.e[0] + c.e[1]) / 2;
   const eHalf = (c.e[1] - c.e[0]) * (core ? 0.19 : 0.5);
   const e0 = eMid + bell * eHalf;
@@ -450,7 +450,7 @@ function seedOne(F, i, c, rand, atEntry) {
   // and prominent enough that the eye can pick one out of the flow and
   // follow it (the spec's "what the eye will follow next").
   F.size[i] = hero
-    ? 0.160 + Math.pow(rand(), 1.3) * 0.100
+    ? 0.190 + Math.pow(rand(), 1.3) * 0.110
     : ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
   F.tone[i] = hero ? 0.88 + rand() * 0.12 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
   F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel * (hero ? 1.05 : 1);
