@@ -1917,7 +1917,18 @@ ctx.addAnimator = addAnimator;
    It takes no draw window on purpose. The intro inks the MUSHROOM into
    this air; the air is not something the mushroom draws. */
 const HERO_SPORE_FADE_S = 0.9;
-createHeroSporeField(ctx, heroSpores.handOff(HERO_SPORE_FADE_S), HERO_SPORE_FADE_S);
+/* ...AND THE ADOPTED FIELD IS NAMED, because it now has a reader (2026-09-01,
+   Hannah: the entry's spores belong to the first section, and leave with it).
+   journey/hero-field.js gates this object's presence on the hero furniture's
+   own painted scalar, and it reaches it through `groups.heroField` below
+   rather than by recognising it in the scene graph — the field is the only
+   direct scene child that is un-culled and carries makePoints' PARKED draw
+   window, but a shape-match is a description of today's tree, not a handle,
+   and it would go quietly wrong the first time this layer gains a sibling.
+   The return value was discarded here before this reader existed; nothing
+   about the adoption itself changes. */
+const heroSporeField = createHeroSporeField(
+  ctx, heroSpores.handOff(HERO_SPORE_FADE_S), HERO_SPORE_FADE_S);
 
 // Collected once — a full scene.traverse() per frame just to poke a uniform
 // is pure overhead once the graph is final.
@@ -2209,7 +2220,13 @@ return {
   steadyProject,
   /** Top-level scene-graph groups, for anything that wants to target one part of the specimen —
    *  e.g. a scroll-driven dive that moves the camera through `groups.ground` toward the roots. */
-  groups: { mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup, spores: sporePts },
+  /* `heroField` is the preload stream after adoption (see the THROUGH-CURRENT
+     block above) — a THREE.Points, like `spores`, not a Group. Its one reader
+     is journey/hero-field.js. */
+  groups: {
+    mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup,
+    spores: sporePts, heroField: heroSporeField && heroSporeField.points,
+  },
   /** Place the hero ground's seeded ADOS junction at an x/z world target.
    *  Passing null restores the undisturbed hero web. The local attachment
    *  weights keep its full polygon/spokes together and feather only the

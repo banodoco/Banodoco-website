@@ -124,6 +124,7 @@ const CLAIM = await import(join(REPO, 'journey/claim.js'));
 const CTRL = await import(join(REPO, CONTROLLER));
 const BLEND = await import(join(REPO, 'journey/camera-blend.js'));
 const ENTRY = await import(join(REPO, 'journey/chapter-entry.js'));
+const FIELD = await import(join(REPO, 'journey/hero-field.js'));
 const K = await import(join(REPO, 'journey/constants.js'));
 
 /* ------------------------------------------------------------------ *
@@ -411,10 +412,21 @@ function compileController(src) {
   if (!src.includes(marker)) fault('compile: ANCHOR MISS on the factory export');
   const body = noImports.replace(marker, 'return function createTransitionController');
   try {
+    /* The controller's own imports, handed in as parameters because the
+       strip above removed the statements that would have bound them. This
+       list IS the subject's import list and has to track it: 2026-09-01
+       added `createHeroFieldGate` (journey/hero-field.js — the adopted
+       spore field's presence, driven from the hero furniture's painted
+       scalar), so it is named here too. The rig's sceneApi carries no
+       `groups.heroField`, and the gate answers a missing field with a
+       no-op by contract, so every scenario below traces exactly as it did
+       before that import existed — which is what E0 then re-proves against
+       the imported module. */
     return new Function(
-      'createCameraBlendStepper', 'snapChapterLandings',
+      'createCameraBlendStepper', 'snapChapterLandings', 'createHeroFieldGate',
       'COPY_JUMP_LEAD', 'COPY_JUMP_TAIL_S', 'COPY_IN_K', body,
     )(BLEND.createCameraBlendStepper, ENTRY.snapChapterLandings,
+      FIELD.createHeroFieldGate,
       K.COPY_JUMP_LEAD, K.COPY_JUMP_TAIL_S, K.COPY_IN_K);
   } catch (e) { fault(`the controller did not compile out of its own text — ${e.message}`); }
   return null;

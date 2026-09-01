@@ -47,6 +47,7 @@
 
 import { createCameraBlendStepper } from '../camera-blend.js';
 import { snapChapterLandings } from '../chapter-entry.js';
+import { createHeroFieldGate } from '../hero-field.js';
 import { COPY_JUMP_LEAD, COPY_JUMP_TAIL_S, COPY_IN_K } from '../constants.js';
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -341,7 +342,23 @@ export function createTransitionController({
   /* ---------------------------------------------------------------- *
    * THE HERO FURNITURE'S TWO TERMS. The values are here; the DOM write
    * is journey.js's paintHeroFurniture, injected as `paintHero`.
+   *
+   * ...AND THE HERO'S SECOND SURFACE (2026-09-01 — Hannah, the entry's
+   * spores: "when I move out of the first section ... those entry dots
+   * disappear, and when I move back into it they should reappear"). The
+   * adopted spore field is the hero's, not the scene's, and it now leaves
+   * and returns on THE SAME PAINTED SCALAR as the furniture rather than
+   * on a second envelope built to look like it. Everything the two terms
+   * below were fought into shape for — the up-wrap flash, the arrival
+   * that waits out the lap, the reversal that continues from the painted
+   * value — therefore reaches the field with no clause of its own.
+   *
+   * The gate is DRIVEN FROM stepHeroEntry, one frame behind the painter,
+   * because journey/journey.js belongs to another lane this round. The
+   * single-line insertion that retires the debt is written out in the
+   * header of journey/hero-field.js; read that before touching this.
    * ---------------------------------------------------------------- */
+  const heroField = createHeroFieldGate(sceneApi);
 
   /** Arm the DEPARTURE term (see heroExit above). Called from directJumpTo
    *  BEFORE placeAt — the two dt = 0 placement passes inside placeAt are what
@@ -420,6 +437,16 @@ export function createTransitionController({
 
   /** One step of the arrival term. */
   function stepHeroEntry(dt) {
+    /* THE FIELD RIDES WHAT THE PAINTER LAST PUT UP. This is the first of
+       the two steppers the paint site calls, so `heroShownNow()` here is
+       still the value composed on the previous applyFrame — the same
+       number, one frame old, and the only reachable form of it while
+       journey.js is another lane's (hero-field.js's header carries the
+       insertion that makes it same-frame). A placement is not a special
+       case: placeAt runs two synchronous dt === 0 passes, so its second
+       pass reads the first pass's paint and the field is at the
+       destination's presence before anything is rendered. */
+    heroField.set(heroShownNow());
     // A placement is not an arrival: a deep link, a ?capture= still or a QA
     // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
     if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }

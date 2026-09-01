@@ -1311,6 +1311,18 @@ const SOURCE_MANIFEST = [
     "journey/failure-guard.js",
     "journey/frame-application.js",
     "journey/frame/publication.js",
+    /* 140 -> 141, order R11 2026-09-01 (journey/hero-field.js — the adopted
+       hero spore field's presence gate: the owner ruling that the entry's
+       spores belong to the FIRST SECTION and leave with it, expressed as one
+       reader of the hero furniture's already-painted scalar rather than as a
+       second envelope. It writes the field's own colour attribute, an
+       orthogonal channel to the uOpacity that final/index.js captures and
+       restores). ONE ENTRY, this order's own, inserted in sort position
+       between frame/publication.js and journey-owner.js ('f' < 'h' < 'j').
+       Nobody else's row was added, moved or removed (D62); the run that
+       added it had X3 reporting exactly one ADDED entry and nothing
+       REMOVED. */
+    "journey/hero-field.js",
     "journey/journey-owner.js",
     "journey/journey.js",
     /* Added at the 2026-08-28 release wave: the one shared source of Final's
