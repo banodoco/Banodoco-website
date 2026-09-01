@@ -158,8 +158,12 @@ import { LANDING_SITES, SKELETON } from './network-skeleton.js';
  * happens where nobody can see it. Every respawn takes fresh draws, so
  * however long the scene takes, the field never reads as a loop.
  *
- *   nA     ambient spore count — the current's tiny bodies (spec budget:
- *          ~300-700 desktop, reduced but same hierarchy on mobile).
+ *   nA     ambient spore count — the current's tiny bodies. Above the
+ *          spec's ~300-700 desktop STARTING point, deliberately: judged
+ *          against the reference renders, 700 still read as a starfield,
+ *          and the spec's own words are "the exact count is secondary to
+ *          the perception of a continuous moving volume". Two draw
+ *          calls, no textures — the budget holds.
  *   nH     hero spores: larger, brighter, riding inside the flow. The
  *          landing choreography draws its 2-3 landing spores from these.
  *   land   how many of the hero spores peel away and land.
@@ -182,6 +186,9 @@ import { LANDING_SITES, SKELETON } from './network-skeleton.js';
  *          — the near band crosses at ~60 px/s at 1440x900, the far band
  *          drifts, and the spread is most of the depth cue.
  *   dpr    pixel-ratio ceiling for THIS layer
+ *   lum    per-mode light scale on the ambient bodies. 1 on desktop —
+ *          the full weather — and under 1 on the portrait modes, whose
+ *          narrower sky puts the same current much closer to the copy.
  *
  * Every aim below was set by shooting the mode and looking.
  */
@@ -191,32 +198,34 @@ const COMPOSITION = {
   // edge. The lower-right quarter — where the mushroom will stand —
   // stays meaningfully dark until the landings light it.
   desktop: {
-    nA: 700, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
-    fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
+    nA: 1450, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 640, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
-    fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
+    nA: 1280, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    nA: 360, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
-    fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5,
+    nA: 470, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5, lum: 0.9,
   },
   // iPad portrait, 744x1133. Steeper: from the upper-left edge across
   // the copy column's shoulder and out the right side above the specimen.
+  // Portrait has less sky, so the weather is scaled back (`lum`): full
+  // desktop light over a narrower band would swamp the column of copy.
   tablet: {
-    nA: 430, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
-    fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5,
+    nA: 540, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
+    fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5, lum: 0.85,
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 280, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
-    fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5,
+    nA: 340, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
 
@@ -232,9 +241,15 @@ const BANDS = [
   // band that is 50% of the population would carry almost none of the
   // light — measured on the first shot of this composition, which read as
   // a starfield for exactly that reason.
-  { share: 0.50, d0: 0.52, d1: 0.92, lum: 0.95, vel: 0.80, size: 1.75 }, // far haze
-  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.18, vel: 1.00, size: 1.15 }, // the body
-  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.10, vel: 1.20, size: 1.0 },  // near, blurred
+  // These luminances were retuned a second time against the reference
+  // renders: the first pass (far 0.95 / mid 1.18) still read as a
+  // starfield beside the reference's river of light. The current has to
+  // read as WEATHER at a glance from normal viewing distance — the far
+  // band is the cloud's body and carries most of its glow, the midground
+  // is the legible flow, and the near passers-by stay sparse.
+  { share: 0.50, d0: 0.52, d1: 0.92, lum: 1.70, vel: 0.80, size: 2.05 }, // far haze
+  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.85, vel: 1.00, size: 1.35 }, // the body
+  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.45, vel: 1.20, size: 1.0 },  // near, blurred
 ];
 // Hero spores: bigger and warmer, but from the same families — the size
 // and tone draws below are the shed's own with the exponents relaxed.
@@ -242,8 +257,10 @@ const HERO_DEPTH = [0.20, 0.40];    // fractions of the depth range: midground
 // The current dims as it travels: brightness eases off across the run so
 // the upstream body reads denser than the feathered downstream fan — the
 // reference cloud's own falloff — while every particle still visibly
-// crosses the right edge at over half its light. Applied in advance().
-const TRAVEL_DIM = 0.45;
+// crosses the right edge at well over half its light. Applied in
+// advance(). (0.45 on the first pass; the reference river stays bright
+// through most of its run, so the falloff was gentled with the bands.)
+const TRAVEL_DIM = 0.32;
 // A gentle curl — the transverse ripple that keeps the body of the
 // current from reading as ruled lines.
 const WOB_AMP = 0.055;              // world units of transverse ripple
@@ -281,7 +298,16 @@ const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
 const RING_N = 9;               // 1 flash + 8 sparks per impact
 const RING_BANKS = 2;           // two impacts may overlap in the elastic hold
 const RING_S = 0.85;            // seconds of ring life
-const RING_R = 0.55;            // world radius the sparks reach
+const RING_R = 0.62;            // world radius the sparks reach
+// Comet trail: a short string of fading embers behind each descending
+// hero spore. The reference's landing bodies read as luminous comets —
+// a core with a tail — not as dots changing rows; the tail is what makes
+// the peel legible at arm's length. The embers are parked slots (like
+// the ring banks), strung along the live arc each frame, so a reframe
+// mid-flight re-aims them with the bezier for free.
+const TRAIL_N = 12;             // embers per descent
+const TRAIL_BANKS = 3;          // concurrent descents (compression overlaps)
+const TRAIL_GAP = 0.045;        // arc-parameter spacing between embers
 // The ground's own tempo: how fast a woken island's filaments creep
 // outward, and the handoff pulse's run to the origin.
 const NET_GROW_V = 1.15;        // world units / second of filament creep
@@ -410,11 +436,11 @@ function seedOne(F, i, c, rand, atEntry) {
   // current pours through a coherent window at the top-left and spreads as
   // it crosses, dense upstream and feathered downstream. `q` stores the
   // ENTRY height: with `fallJ` it is the particle's streamline identity.
-  // A CORE within the fan: 45% of the bodies draw from a tighter window
+  // A CORE within the fan: 62% of the bodies draw from a tighter window
   // high in the entry band, so the current has a legible river running
   // its middle with haze feathered around it — a moving volume with a
   // spine, not an even wash.
-  const core = rand() < 0.55;
+  const core = rand() < 0.62;
   const eMid = core ? c.e[0] + (c.e[1] - c.e[0]) * 0.62 : (c.e[0] + c.e[1]) / 2;
   const eHalf = (c.e[1] - c.e[0]) * (core ? 0.19 : 0.5);
   const e0 = eMid + bell * eHalf;
@@ -450,14 +476,18 @@ function seedOne(F, i, c, rand, atEntry) {
   // and prominent enough that the eye can pick one out of the flow and
   // follow it (the spec's "what the eye will follow next").
   F.size[i] = hero
-    ? 0.190 + Math.pow(rand(), 1.3) * 0.110
+    ? 0.235 + Math.pow(rand(), 1.3) * 0.130
     : ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
   F.tone[i] = hero ? 0.88 + rand() * 0.12 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
   F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel * (hero ? 1.05 : 1);
   F.seed[i] = rand() * Math.PI * 2;
   F.wobF[i] = WOB_FREQ[0] + (WOB_FREQ[1] - WOB_FREQ[0]) * rand();
   heatLinear(F.tone[i], F.color, i3);
-  const lg = hero ? 2.4 : lum;
+  // The river carries more light than its haze: core bodies get a lift
+  // over their band's own luminance, so the spine of the current is what
+  // the eye reads first. Hero spores outrank everything — they are the
+  // ones that will peel, and the reference's descending bodies GLOW.
+  const lg = hero ? 3.1 : lum * (c.lum || 1) * (core ? 1.25 : 1);
   F.color[i3] *= lg; F.color[i3 + 1] *= lg; F.color[i3 + 2] *= lg;
   F.attrsDirty = true;
 }
@@ -469,8 +499,30 @@ function seedRings(F, rand) {
     for (let k = 0; k < RING_N; k++) {
       const i = F.nA + F.nH + b * RING_N + k;
       const i3 = i * 3;
-      F.size[i] = k === 0 ? 0.085 : 0.026 + rand() * 0.014;
+      F.size[i] = k === 0 ? 0.115 : 0.032 + rand() * 0.018;
       F.tone[i] = k === 0 ? 0.97 : 0.78 + rand() * 0.14;
+      F.seed[i] = rand() * Math.PI * 2;
+      F.fade[i] = 0;
+      F.band[i] = 4;
+      heatLinear(F.tone[i], F.color, i3);
+      F.frame[i3] = 0; F.frame[i3 + 1] = 0; F.frame[i3 + 2] = 10;
+    }
+  }
+}
+
+/** Trail slot construction: small warm embers, brightest sizes at the
+ *  head of the string. Parked dark until a peel claims a bank. */
+function seedTrails(F, rand) {
+  for (let b = 0; b < TRAIL_BANKS; b++) {
+    for (let k = 0; k < TRAIL_N; k++) {
+      const i = F.nA + F.nH + RING_BANKS * RING_N + b * TRAIL_N + k;
+      const i3 = i * 3;
+      // sized to survive the 300/depth divide at the arc's ~8-10 world
+      // units: the head embers draw at ~4-5 px, the tail tapers off. The
+      // first cut used 0.05 draws, which floored out at under 2 px and
+      // made the tail invisible at any distance.
+      F.size[i] = 0.130 - k * 0.0070 + rand() * 0.010;
+      F.tone[i] = 0.80 + rand() * 0.12;
       F.seed[i] = rand() * Math.PI * 2;
       F.fade[i] = 0;
       F.band[i] = 4;
@@ -501,7 +553,7 @@ function frameAnchors(F, view) {
 function createField(view, seed) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const rand = makeRng(seed);
-  const n = c.nA + c.nH + RING_BANKS * RING_N;
+  const n = c.nA + c.nH + RING_BANKS * RING_N + TRAIL_BANKS * TRAIL_N;
   const F = {
     n, nA: c.nA, nH: c.nH, comp: c, rand,
     tanHalfFov: view.tanHalfFov,
@@ -535,6 +587,7 @@ function createField(view, seed) {
     landings: [],          // {hi, site, tPeel, dur, state, p0..p3, impactAt}
     rings: [],             // {site, bank, t0}
     ringBank: 0,
+    trailBank: 0,
     lastImpactAt: -1,
     firstImpactAt: -1,
     nextExtraAt: -1,
@@ -542,6 +595,7 @@ function createField(view, seed) {
   };
   for (let i = 0; i < c.nA + c.nH; i++) seedOne(F, i, c, rand, false);
   seedRings(F, rand);
+  seedTrails(F, rand);
   frameAnchors(F, view);
   planLandings(F);
   return F;
@@ -698,6 +752,9 @@ function advance(F, dt, gust) {
         L.dur = L.dur * Math.min(1.5, Math.max(0.7, (D / halfH) / 0.85));
         if (rate > 1) L.dur = Math.max(0.55, L.dur / 1.5);
         L.t0 = F.t;
+        // claim a trail bank for the descent's comet tail
+        L.bank = F.trailBank;
+        F.trailBank = (F.trailBank + 1) % TRAIL_BANKS;
       }
       continue;
     }
@@ -711,6 +768,24 @@ function advance(F, dt, gust) {
       for (let k = 0; k < 3; k++) {
         F.frame[hi3 + k] = m0 * L.p0[k] + m1 * L.p1[k] + m2 * L.p2[k] + m3 * L.p3[k];
       }
+      // the descending core swells as it commits — the reference's
+      // landing bodies are the brightest things in the sky
+      F.fade[L.hi] = 1 + 0.4 * e;
+      // the comet tail: embers strung back along the arc behind the
+      // body, head-weighted and faint, each lighting only once the body
+      // is far enough along that it has an arc to trail
+      const tb = F.nA + F.nH + RING_BANKS * RING_N + (L.bank || 0) * TRAIL_N;
+      for (let k = 0; k < TRAIL_N; k++) {
+        const ek = e - (k + 1) * TRAIL_GAP;
+        const ti3 = (tb + k) * 3;
+        if (ek <= 0) { F.fade[tb + k] = 0; continue; }
+        const n0 = (1 - ek) * (1 - ek) * (1 - ek), n1 = 3 * (1 - ek) * (1 - ek) * ek,
+          n2 = 3 * (1 - ek) * ek * ek, n3 = ek * ek * ek;
+        F.frame[ti3] = n0 * L.p0[0] + n1 * L.p1[0] + n2 * L.p2[0] + n3 * L.p3[0];
+        F.frame[ti3 + 1] = n0 * L.p0[1] + n1 * L.p1[1] + n2 * L.p2[1] + n3 * L.p3[1];
+        F.frame[ti3 + 2] = n0 * L.p0[2] + n1 * L.p1[2] + n2 * L.p2[2] + n3 * L.p3[2];
+        F.fade[tb + k] = 0.9 * (1 - (k + 1) / (TRAIL_N + 1));
+      }
       if (u >= 1) {
         L.state = 2;
         L.impactAt = F.t;
@@ -721,10 +796,17 @@ function advance(F, dt, gust) {
       }
       continue;
     }
-    // state 2: the light sinks into the ground it just woke, then the
-    // hero slot re-enters the current upstream with fresh draws.
+    // state 2: the light sinks into the ground it just woke — from the
+    // swollen brightness the descent arrived at — and the comet tail
+    // dies behind it; then the hero slot re-enters the current upstream
+    // with fresh draws.
     const since = F.t - L.impactAt;
-    F.fade[L.hi] = Math.max(0, 1 - since / LAND_COLLAPSE_S);
+    F.fade[L.hi] = Math.max(0, 1.4 * (1 - since / LAND_COLLAPSE_S));
+    const tb2 = F.nA + F.nH + RING_BANKS * RING_N + (L.bank || 0) * TRAIL_N;
+    const tk = Math.max(0, 1 - since / 0.30);
+    for (let k = 0; k < TRAIL_N; k++) {
+      F.fade[tb2 + k] = 0.9 * (1 - (k + 1) / (TRAIL_N + 1)) * tk;
+    }
     if (since > RESPAWN_S) {
       L.state = 3;
       seedOne(F, L.hi, c, F.rand, true);
@@ -763,7 +845,7 @@ function advance(F, dt, gust) {
     F.frame[base * 3] = F.sites[s3];
     F.frame[base * 3 + 1] = F.sites[s3 + 1];
     F.frame[base * 3 + 2] = F.sites[s3 + 2];
-    F.fade[base] = 1.55 * Math.exp(-u * 5.2);
+    F.fade[base] = 2.3 * Math.exp(-u * 5.2);
     // the sparks: a faint ring expanding along the ground, dying as it goes
     const eu = 1 - (1 - u) * (1 - u);
     for (let k = 1; k < RING_N; k++) {
@@ -772,7 +854,7 @@ function advance(F, dt, gust) {
       F.frame[i3] = F.sites[s3] + (F.ringEnds[e3] - F.sites[s3]) * eu;
       F.frame[i3 + 1] = F.sites[s3 + 1] + (F.ringEnds[e3 + 1] - F.sites[s3 + 1]) * eu;
       F.frame[i3 + 2] = F.sites[s3 + 2] + (F.ringEnds[e3 + 2] - F.sites[s3 + 2]) * eu;
-      F.fade[base + k] = 1.0 * Math.pow(1 - u, 1.6);
+      F.fade[base + k] = 1.35 * Math.pow(1 - u, 1.6);
     }
   }
 }
@@ -823,8 +905,8 @@ function preloadGust(t) {
    call, no target, no second pass — and the migrated field drops it
    because by then the real bloom is doing the work. */
 const BLOOM_SPREAD = 5.0;
-const BLOOM_GAIN = 0.115;
-const BLOOM_SIGMA = 1.45;
+const BLOOM_GAIN = 0.21;
+const BLOOM_SIGMA = 1.60;
 
 const VERT = `
 precision highp float;
@@ -1043,7 +1125,7 @@ const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
  * landing has earned it: no pre-lit pool, no traveling light, no
  * skeleton ink. The ground is earned by impact.
  */
-const NET_ALPHA = 0.65;
+const NET_ALPHA = 1.55;
 
 let ground = null;
 
@@ -1141,13 +1223,17 @@ function createGround(view, reduced) {
       `radial-gradient(ellipse 46% 44% at ${Math.min(94, px[0][0] + 10).toFixed(1)}% 56%, rgba(214,142,58,0.05), transparent 74%),`
       + 'radial-gradient(ellipse 30% 58% at 103% 60%, rgba(226,160,74,0.042), transparent 76%)';
     groundWash.style.background =
-      `radial-gradient(ellipse 52% 20% at ${px[0][0].toFixed(1)}% ${Math.min(104, px[0][1] + 9).toFixed(1)}%, rgba(224,152,66,0.105), transparent 70%)`;
+      `radial-gradient(ellipse 52% 20% at ${px[0][0].toFixed(1)}% ${Math.min(104, px[0][1] + 9).toFixed(1)}%, rgba(224,152,66,0.16), transparent 70%)`;
     pools.forEach((p, s) => {
-      const w = s === 0 ? 26 : 15;
-      const h = s === 0 ? 11 : 6.5;
-      const a = s === 0 ? 0.15 : 0.11;
+      // Compact and hot, not broad and washy: the reference's impact
+      // pools are concentrated orbs of warmth the size of the strike,
+      // and spreading the same light across a third of the frame is what
+      // made the first cut read as fog instead of a glowing pool.
+      const w = s === 0 ? 18 : 11;
+      const h = s === 0 ? 7.5 : 4.8;
+      const a = s === 0 ? 0.68 : 0.5;
       p.style.background =
-        `radial-gradient(ellipse ${w}% ${h}% at ${px[s][0].toFixed(1)}% ${px[s][1].toFixed(1)}%, rgba(255,196,106,${a}), rgba(224,146,60,0.06) 48%, transparent 72%)`;
+        `radial-gradient(ellipse ${w}% ${h}% at ${px[s][0].toFixed(1)}% ${px[s][1].toFixed(1)}%, rgba(255,196,106,${a}), rgba(224,146,60,0.10) 48%, transparent 72%)`;
     });
   }
   reframeGlow(view);
@@ -1199,7 +1285,7 @@ function createGround(view, reduced) {
       k *= 0.82 + 0.18 * Math.sin(t * 0.9 + island[v] * 2.1 + dSite[v] * 1.7);
       if (spine[v] && pulseU >= 0) {
         const d = dOrig[v] * 0.28 - pulseU + 0.45;
-        k *= 1 + 0.9 * Math.exp(-(d * d) / 0.012);
+        k *= 1 + 1.2 * Math.exp(-(d * d) / 0.012);
       }
       if (convFront >= 0) {
         const d = dOrig[v] - convFront;
@@ -1217,7 +1303,7 @@ function createGround(view, reduced) {
       const w = state.wakeAt[s];
       if (w < 0) continue;
       state.poolLit[s] = Math.max(state.poolLit[s], Math.min(1, (t - w) / 0.3));
-      let o = state.poolLit[s] * (0.34 + 0.05 * Math.sin(nowMs / 1000 * 1.1 + s));
+      let o = state.poolLit[s] * (0.85 + 0.08 * Math.sin(nowMs / 1000 * 1.1 + s));
       if (s === 0 && state.struckAt >= 0) {
         // THE STRIKE: one larger swell breathing under the growth's start
         o += 0.9 * Math.exp(-(nowMs - state.struckAt) / 800);
@@ -1229,7 +1315,7 @@ function createGround(view, reduced) {
       state.wakeAt[0] < 0 ? 0 : Math.min(1, (t - state.wakeAt[0]) / 1.2),
       state.wakeAt[1] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[1]) / 1.5),
       state.wakeAt[2] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[2]) / 1.5));
-    groundWash.style.opacity = (0.55 * act * exitK).toFixed(3);
+    groundWash.style.opacity = (0.72 * act * exitK).toFixed(3);
     return any;
   }
 
