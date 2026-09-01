@@ -1805,10 +1805,21 @@ export function boot(opts = {}) {
     const r = sceneApi.renderer;
     if (!r) throw new Error('No WebGL renderer for journey preparation');
     const gl = r.getContext();
-    const debugInfo = gl.getExtension && gl.getExtension('WEBGL_debug_renderer_info');
-    const rendererName = debugInfo
-      ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '')
-      : '';
+    /* THE NAME IS ASKED FOR ONCE, AT CONTEXT CONSTRUCTION, AND THIS READS THE
+       ANSWER. Both halves of the probe below are synchronous round-trips to
+       the GPU process, and by the time preparation runs the command queue is
+       at its deepest: measured 228 ms in getExtension + 185 ms in getParameter
+       = 413 ms of the entry, with the prelude's spore stream frozen for all of
+       it (evidence/r12-stutter §3, hitch class C). organism/renderer.js now
+       reads it while the queue is still empty, where the identical two calls
+       cost ~0, and hands it out on the scene API. The fallback keeps this
+       function honest on any scene that predates that field. */
+    const rendererName = typeof sceneApi.rendererName === 'string'
+      ? sceneApi.rendererName
+      : (() => {
+        const debugInfo = gl.getExtension && gl.getExtension('WEBGL_debug_renderer_info');
+        return debugInfo ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '') : '';
+      })();
     const softwareRenderer = /swiftshader|llvmpipe|software rasterizer/i.test(rendererName);
 
     // Image decode plus both initial Canvas2D atlas bakes must finish before
@@ -1835,6 +1846,14 @@ export function boot(opts = {}) {
     // frames; shader compilation above is sufficient there, and avoids making
     // a performance optimisation an availability gate.
     if (!softwareRenderer) for (const id of Object.keys(chapters)) {
+      /* ONE CHAPTER PER FRAME, NOT ALL OF THEM IN ONE TASK. This loop used to
+         run start to finish inside a single task: measured 617 ms at
+         1440x900, 834 ms under a 4x CPU throttle, during which the prelude's
+         one rAF site cannot run at all (evidence/r12-stutter §3, hitch class
+         D). Yielding to a real animation frame between chapters costs the
+         preparation nothing — it is already async and already bounded by the
+         GPU — and hands the spore stream a frame back between each. */
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       const g = chapters[id] && chapters[id].group;
       if (!g) continue;
       let anchor = g;
