@@ -392,8 +392,8 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
              as CAUSED by the landings instead of coincident with a
              download. Bounded by construction — a landed ground answers
              within the pulse's own travel (<= ~1.2 s), and even a load
-             so fast that nothing has landed yet compresses the remaining
-             peel to a ~2.3 s worst case — and the whole release beat
+             so fast that nothing has settled yet compresses the
+             remaining flutter to a ~2.8 s worst case — and the whole release beat
              (rail reveal, activation poll, defensive timer) shifts by
              the same wait, so their offsets from the intro's start are
              exactly what they were. A gesture during the wait takes
