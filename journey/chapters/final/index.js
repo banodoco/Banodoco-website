@@ -285,7 +285,13 @@ export function createFinal(sceneApi) {
          and neither needs a tail. [Both windows re-measured 2026-09-01 on
          the ceremonial seam's 5333 ms laps: DOWN 3.221 s, UP 4.335 s —
          tools/test-declared-conversions.mjs (LD-FIT) carries the dated
-         figures and their evidence; the fit only widened.]
+         figures and their evidence; the fit only widened.] [Same day, §43:
+         the 4.335 s UP figure was the flash defect itself — first light at
+         ~1.0 s of the lap, off the early territory crossing. With the
+         arriving lap held dark, first light is the genuine approach and the
+         UP window is 1.198 s; the arrival legally finishes in the
+         convergence tail (§41), and LD-FIT's UP pin now holds exactly
+         that.]
      (0.75, this pass's first value, does NOT fit: it needs 1.493 s against
      the wrap DOWN's real 1.384 s window. The 1.68 s it was chosen against was
      measured from the FLICK rather than from the MOVE, and the wrap's own
@@ -370,7 +376,11 @@ export function createFinal(sceneApi) {
      convergence tail legal after that. [2026-09-01, on the ceremonial seam's
      5333 ms laps and with the fade riding the retire's own last light (the
      stretched-retire rule below): uAmount now holds 1.0 until 3221+ ms on
-     the way out and the up window is 4.3+ s — measured, LD-FIT.] The gaps already wider than the target
+     the way out and the up window is 4.3+ s — measured, LD-FIT.] [Same day,
+     §43: that up figure was the on/off/on flash — first light off the lap's
+     EARLY territory crossing. Held dark until the genuine approach the up
+     window is 1.198 s, the arrival rides the convergence tail, and the
+     budget below binds only the DOWN direction.] The gaps already wider than the target
      keep their shipped cost, the narrower ones cost LADDER_GAP_S each, and the
      runs below the first rung and above the last one are paid at RATE_FAST and
      at the shipped rate. Measured, not guessed.
@@ -874,6 +884,81 @@ export function createFinal(sceneApi) {
   let floorHold = null;             // monotone restore, latched while retiring
   let lastReach = 1;                // the floor dim this chapter last RENDERED
 
+  /* ---- §43. THE CEREMONIAL LAP'S ARRIVAL RIDES THE TICKET, NOT THE SWING
+     (2026-09-01, the owner, on the b1fe4b3 seam — mission -> final, the
+     -426.9deg lap: "the mushrooms light up when I start, then disappear,
+     only to reappear again.")
+
+     THE FAULT, TRACED (evidence banodoco-brief-v16/evidence/r6-lapfade/
+     before-trace-*.json). Both camera-pure terms of the arriving side read
+     the FINAL LEG's own coordinate, camera x, on a path that now crosses it
+     twice. The >360deg lap leaves Mission by swinging STRAIGHT THROUGH this
+     chapter's x-territory: measured, `rise` opens at 1.04 s of the 5.33 s
+     lap (eff 0 -> 0.95 by 1.25 s), `pure` opens the slew ceiling and the
+     field kindles to pull 0.49 by 2.2 s — then the swing exits the far side
+     and `rise` snuffs the lit field 1 -> 0 in 190 ms at 2.4 s, the driver
+     freezes mid-band (bed 0.41, sky 0.67 held over open view for two whole
+     seconds), and the genuine approach at 4.0 s pops it all back on. That is
+     the owner's on/off/on, exactly. §27's retire met this same class on the
+     way out ("a leg coordinate read on a path that does not travel along
+     it") and was moved onto the move's own room; the arrival kept the leg
+     reading because on every path measured then, an arriving blend crossed
+     the territory once. The ceremonial seam retired that premise.
+
+     THE LAW, and it is the retire's own, mirrored: THE LAP'S FIRST
+     RETIRE_SPAN BELONGS TO THE WORLD BEING LEFT; ONLY ITS REMAINDER MAY
+     ARRIVE. A virgin ceremonial lap INTO this chapter (`lapArrive` — armed
+     on the blend's arming edge by the same has-it-room arithmetic as
+     `bedSpread`, so no non-wrap blend can ever reach it) holds its reveal
+     driver at the dark rest value for RETIRE_SPAN of the move (`lapHoldS`),
+     and composes on its OWN FIRST LIGHT — `arriveEff`, the exact mirror of
+     `retireEff`: a monotone-latched smoothstep of the driver over
+     [0, LADDER[0]], the dead road below the first rung, so the amplitude and
+     the first body rise together and no frame composes an empty lit shell
+     over a field the ticket has not yet earned. Off the hold the driver
+     adopts the camera-pure value again and the shipped slew does the rest:
+     the ceiling `max(pure, held)` is untouched, so this can only ever HOLD
+     DARK, never create light — §41's one-sidedness, applied to the other
+     end of the lap.
+
+     WHY RETIRE_SPAN IS THE RIGHT RELEASE, twice over. Geometrically, the
+     lap stands clear of the territory between ~0.45 and ~0.71 of the move
+     (measured on both laps: territory exit x -4.6 at 2.4 s, re-entry for
+     good at ~3.8 s of 5.33 s), and inside that window the release instant
+     is invisible by construction — `pure` is 0 there, and the ceiling holds
+     the driver at 0 until the genuine approach regardless. 0.62 sits in the
+     window with margin on both sides. And it is already the move's own
+     measured "the departing world has left frame" span, so the two bookends
+     state one law between them rather than two constants.
+
+     THE SAME TRACE CAUGHT THE MIRROR GHOST ON THE WAY OUT. The down-lap's
+     retire is monotone and finishes at 3.31 s — and then the lap's tail
+     swings back through the territory, the visibility gate's off-screen
+     reset adopted `pullOf(camera.x)` mid-lap, and the bed/sky relit to 0.34
+     / 0.58 over the Mission approach (before-trace-down, 3.77 s) before
+     fading a second time. So while a ceremonial lap OWNS the driver — a
+     fitted retire, or an arriving hold — the off-screen reset keeps the
+     lap's own value instead of the camera-pure one; the guarantee "off
+     screen, the reveal state IS pullOf(camera.x)" resumes the frame the lap
+     ends. A retired chapter therefore stays dark for the remainder of the
+     move: one monotone fade, one monotone rise, in either direction.
+
+     AND THE LANDING HANDS THE BED TO THE TAIL IT IS STILL RIDING. An
+     arrival released this late is still converging when the lap lands —
+     which §41 made legal ("an ARRIVAL has no window at all") — but §38
+     clears `bedSpread` with the blend, which would step the bed from
+     smoothstep(shownPull/span) to eff = 1 on the landing frame (0.18 on the
+     pre-fix page, worse the later the kindle starts). `spreadTail` — armed
+     only at a lapArrive landing that is actually lagging, cleared the frame
+     the lag converges or any new blend arms — keeps the spread arithmetic
+     over the convergence tail, so the bed finishes its one rise on the same
+     driver that carries the lights. G6's zero-lag landing premise was the
+     3.9 s lap's; the ceremonial lap lands lagging by design. */
+  let lapArrive = false;   // a virgin ceremonial lap INTO this chapter
+  let lapHoldS = 0;        // seconds of that lap's arrival hold still unspent
+  let arriveEff = 0;       // monotone rise, latched while the lap arrives
+  let spreadTail = false;  // the spread outlives a still-lagging lap landing
+
   /* ---- WHICH DEAL THE REVEAL READS (2026-08-16, Hannah's eighth pass:
      the entry "should feel like starting from the front and working
      backwards, in terms of the mushrooms turning on"; the leaving sequence
@@ -1180,6 +1265,9 @@ export function createFinal(sceneApi) {
     // report hysteresis that is really a stale write. Written here, the sweep
     // measures zero and the audit means what it says.
     canopy.setPresence(surfacedOf(sceneApi.camera.position));
+    // §43's hold clock spends the lap's own time, visible or not — the whole
+    // point is that the chapter is dark while it runs.
+    if (blending && lapHoldS > 0 && dt > 0) lapHoldS = Math.max(0, lapHoldS - dt);
     const rise = riseOf(sceneApi.camera.position.x);
     // A STRETCHED RETIRE FADES ON ITS OWN LAST LIGHT, not on `rise`. See the
     // RETIRE_SPAN block: on the leg the reveal always finishes before the fade
@@ -1196,8 +1284,17 @@ export function createFinal(sceneApi) {
       const s = u * u * (3 - 2 * u);
       if (s < retireEff) retireEff = s;
     }
+    // ...and §43's arriving mirror rises on the SAME dead road, latched the
+    // other way: the amplitude and the first body arrive together, and a
+    // mid-lap wobble of the driver cannot dip what has already risen.
+    if (blending && lapArrive) {
+      const u = LADDER.length && shownPull !== null
+        ? Math.max(0, Math.min(1, shownPull / LADDER[0])) : 1;
+      const s = u * u * (3 - 2 * u);
+      if (s > arriveEff) arriveEff = s;
+    }
     const eff = blending
-      ? (retiring && retireScale < 1 ? retireEff : rise)
+      ? (retiring && retireScale < 1 ? retireEff : lapArrive ? arriveEff : rise)
       : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // THE BED'S OWN FADE (§31). Read off `shownPull` — last frame's value, the
     // same one `retireEff` above is read from and for the same reason: this
@@ -1218,7 +1315,7 @@ export function createFinal(sceneApi) {
     // landing is for, and costs nothing because the lag at a wrap's landing is
     // 0.0000 in both directions (G6).
     let bed = eff, skyv = eff;
-    if (bedSpread && blending && shownPull !== null) {
+    if (((bedSpread && blending) || spreadTail) && shownPull !== null) {
       // Normalised to the span THIS blend spends (spreadSpan — latched at the
       // arming edge, PULL_MAX on every full-band path so these two lines are
       // the shipped arithmetic bit-for-bit there; see the spreadSpan note).
@@ -1245,8 +1342,17 @@ export function createFinal(sceneApi) {
       // renders while this holds, so a lag can never be latched behind the
       // gate and carried into the next entry — the guarantee is that whenever
       // this chapter is off screen, its reveal state IS pullOf(camera.x).
-      shownPull = lastPull;
-      lagging = false;
+      // ONE carve-out (§43): while a ceremonial lap OWNS the driver — a
+      // fitted retire, or an arriving lap still inside its hold — the lap's
+      // path re-crosses this chapter's x-territory mid-move, so adopting the
+      // camera-pure value here is exactly the relight/early-flash the
+      // section exists to remove. The driver keeps the lap's own value (its
+      // dark rest, 0) and the guarantee resumes the frame the lap ends.
+      if (!(blending && (retiring ? retireScale < 1 : lapArrive && lapHoldS > 0))) {
+        shownPull = lastPull;
+        lagging = false;
+        spreadTail = false;
+      }
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
       if (wasVisible) {
         // One last INACTIVE tick as the chapter goes dark, so the ring drops
@@ -1317,13 +1423,16 @@ export function createFinal(sceneApi) {
       // does too. Reachable only because snap() no longer discards the lag;
       // see the note there.
       shownPull = slewPull(shownPull, pure, pure, dt);
-      if (Math.abs(shownPull - pure) < 1e-4) { shownPull = pure; lagging = false; }
+      // ...and the spread's tail (§43) ends the frame the lag does: bed and
+      // eff read the same number here, so the hand-back is a no-op.
+      if (Math.abs(shownPull - pure) < 1e-4) { shownPull = pure; lagging = false; spreadTail = false; }
     } else if (!blending) {
       // Camera-pure, bit-exactly. This is the scrub path, and the dt = 0
       // freezeTime path (?capture=, hidden tab): a frozen frame is a
       // placement, and a placement is camera-pure.
       shownPull = pure;
       lagging = false;
+      spreadTail = false;
     }
     const pull = shownPull;
     // hero floor-network dim rides amount x pull — eases in with the
@@ -1535,6 +1644,14 @@ export function createFinal(sceneApi) {
       const wasBlending = blending;
       blending = !!on;
       if (!blending) {
+        /* §43: a ceremonial arrival lands still converging, and clearing the
+           spread here would step the bed onto `eff` mid-rise. Latch the tail
+           BEFORE the flags fall; `lagging` is the test because a rewound lap
+           that landed home dark has nothing left to converge. spreadSpan is
+           reset below to the full band, which is bit-for-bit the span every
+           lapArrive path latched (max(0, blendPull) = PULL_MAX). */
+        spreadTail = lapArrive && lagging;
+        lapArrive = false; lapHoldS = 0; arriveEff = 0;
         retiring = false; retireScale = 1; retireCost = 0; retireEff = 1;
         floorHold = null; bedSpread = false;
         spreadSpan = PULL_MAX;
@@ -1569,6 +1686,22 @@ export function createFinal(sceneApi) {
          second armer, put the wrap's spread on an ordinary gestured leg. */
       bedSpread = typeof durS === 'number' && durS > 0
         && RETIRE_SPAN * durS > BAND_S;
+      /* §43 ARMS ON THE ARMING EDGE AND ONLY THERE — the same edge that
+         latches spreadSpan, by the same has-it-room arithmetic as bedSpread,
+         so no non-wrap blend can reach it. A steering re-announcement never
+         re-arms the hold: a lap steered back INTO this chapter is the
+         2026-08-16 relight case (the field must follow the returning camera,
+         `rise`), and one steered home keeps whatever ticket it armed with —
+         a virgin arriving lap stays a dark one for the whole rewind. A steer
+         that turns the move into a departure hands it to the retire whole. */
+      spreadTail = false;
+      if (!wasBlending) {
+        lapArrive = !retiring && bedSpread;
+        lapHoldS = lapArrive ? RETIRE_SPAN * durS : 0;
+        arriveEff = 0;
+      } else if (retiring) {
+        lapArrive = false; lapHoldS = 0;
+      }
       if (retiring && typeof durS === 'number' && durS > 0) {
         const window = RETIRE_SPAN * durS;
         /* THE RETIRE IS FITTED TO THE LIGHT IT ACTUALLY CARRIES (the epilogue
