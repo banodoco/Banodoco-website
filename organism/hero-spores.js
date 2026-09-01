@@ -1,6 +1,6 @@
 /* ==================================================================== *
- * organism/hero-spores.js — THE TEXT-SIDE SPORES: one particle law,
- * rendered twice.
+ * organism/hero-spores.js — THE PRELUDE: a through-current of spores,
+ * a few that take root, and the ground that answers them.
  *
  * WHY THIS FILE EXISTS, AND WHY IT IMPORTS NOTHING HEAVY.
  * The hero copy and the navigation are legible about one animation frame
@@ -13,34 +13,75 @@
  * So the atmosphere is decoupled from the organism. Every import in this
  * module is a LEAF with no imports of its own — journey/boot/hero-mode.js
  * for the viewport modes, organism/performance.js and flags.js for the one
- * number sizeCanvas() needs — and it is loaded by its OWN <script
- * type="module"> in index.html, ahead of main.js. It therefore paints as
- * soon as its own graph has arrived, in parallel with — not behind — the
- * 1.8 MB the scene needs. That graph is ~33.9 KB with comments stripped
- * (26.0 this file, 3.5 hero-mode, 2.2 performance, 2.1 flags); the two
- * leaves added for the seam fix cost 4.8 KB of it, R4's overture — the
- * thicker stream, the ambient washes and the traveling ignition light —
- * costs ~5.7 KB of this file's share, and together they buy a wait that
- * reads as a precursor rather than an empty rectangle. THE RULE THIS
- * GRAPH LIVES UNDER: nothing that imports `three`, and nothing that
- * imports something that does.
+ * number sizeCanvas() needs, organism/network-skeleton.js for the ground
+ * data — and it is loaded by its OWN <script type="module"> in
+ * index.html, ahead of main.js. It therefore paints as soon as its own
+ * graph has arrived, in parallel with — not behind — the 1.8 MB the
+ * scene needs. THE RULE THIS GRAPH LIVES UNDER: nothing that imports
+ * `three`, and nothing that imports something that does.
  *
- * AND THAT WEIGHT IS NOT FREE, so it is stated here rather than discovered.
- * Measured on a 6x CPU / 400 kbps cold load it puts first paint 1.25 s
- * later, because this page's three render-blocking stylesheets are 330 KB
- * and everything in the first batch shares the pipe. At 2 Mbps the same
- * cost is 0.25 s. What it buys is the whole of the rest of that load: on
- * the same 2 Mbps trace the spores are on screen at 2.2 s and the mushroom
- * at 56.5 s, so the right-hand half of the frame stops being an empty
- * rectangle for fifty-four seconds.
+ * THE CHOREOGRAPHY (hero-loading v3), in the order a visitor reads it:
+ *
+ *   STREAM    a broad current of spores is already crossing the page on
+ *             first paint: in from off-screen top-left, through the upper
+ *             and middle hero — at reduced brightness behind the copy —
+ *             and OUT past the right edge. Most spores belong to that
+ *             larger world and simply pass through. Three depth bands,
+ *             a shared wind with gentle per-particle curl, and a few
+ *             larger, brighter HERO spores riding inside the flow.
+ *   LANDING   two or three of those hero spores peel out of the current,
+ *             arc down to the real ground network's own points — site 0
+ *             IS the mushroom origin — and land: a point of light, a
+ *             small burst of sparks, a soft pool of warmth. The rest of
+ *             the current keeps travelling right past them.
+ *   NETWORK   each landing wakes an island of the PreNetwork — a sparse,
+ *             dim skeleton of the REAL ground web (network-skeleton.js),
+ *             filaments creeping outward from the impact while the
+ *             stream still moves above. Once two islands are awake,
+ *             faint pulses run the spine paths between them.
+ *   HANDOFF   when the journey is prepared, a brightness pulse runs the
+ *             spine paths inward and the intro is released as it reaches
+ *             the origin — the real ground web converges in under the
+ *             fading skeleton (organism/intro.js draws it inward over the
+ *             same beat) and the mushroom grows from the same spot. One
+ *             continuous event, not a crossfade between two worlds.
+ *
+ *   The machine is elastic, not a five-second movie. sceneReady can
+ *   arrive at any time: landings compress rather than skip, causality
+ *   (cloud -> landing -> ground -> convergence) is always preserved, and
+ *   a slow load holds gracefully — the current keeps flowing (every
+ *   recycle is a fresh draw, so it never reads as a loop), occasional
+ *   extra spores peel away and land, and the woken network breathes.
+ *
+ * WHAT THIS SUPERSEDES (R4's overture), stated per piece:
+ *   - the converging land-at-the-spot stream: the biggest correction —
+ *     the current no longer terminates at the mushroom site. Most of it
+ *     exits off-screen right; only the hero spores land.
+ *   - the traveling amber light: replaced by the hero-spore landings.
+ *     A repeating light aimed at the spot both pre-marked the target
+ *     ("no ghost") and read as a finished loop waiting on a slow load.
+ *   - the pre-lit breathing pool: the ground is earned by impact now.
+ *     The pools exist but stay dark until a spore lands on them.
+ *   - the ambient washes: partially kept. The general back/right warmth
+ *     survives ("meaningful darkness, never dead" — it marks nothing);
+ *     the landing-zone ground wash now fades in WITH the network's
+ *     activation instead of preceding it.
+ *   - the ignition contract survives with new semantics: handoff.js asks
+ *     preludeMsUntilStrike() when the journey is ready, the convergence
+ *     pulse is armed to arrive exactly then, and preludeStrike() fires
+ *     as the intro releases.
  *
  * THE TWO HALVES, AND THE ONE LAW BETWEEN THEM.
  *
- *   heroSpores              a dependency-free WebGL point-sprite layer on
- *                           its own canvas, above #stage — the singleton
- *                           this module exports and self-starts. Lives only
- *                           until the scene exists, then releases its
- *                           context: there is no permanent second renderer.
+ *   heroSpores              a dependency-free WebGL layer on its own
+ *                           canvas, above #stage — the singleton this
+ *                           module exports and self-starts. Draws the
+ *                           stream (points) and the PreNetwork (lines).
+ *                           The stream half lives until the scene exists
+ *                           and crossfades to the scene's own Points; the
+ *                           network half lives on until the strike, then
+ *                           the canvas releases its context: there is no
+ *                           permanent second renderer.
  *   createHeroSporeField()  the SAME particles, rebuilt as a THREE.Points
  *                           inside the organism's scene through ctx's own
  *                           makePoints — so they inherit the bloom, the
@@ -50,20 +91,20 @@
  *                           builder comes down on `ctx`.
  *
  * Both run `advance()` over the same `(a, b, d)` state in the same frozen
- * camera frame, so the handoff moves no particle. The preload canvas
- * cross-fades out while the scene-side Points fades in over the same beat;
- * the only thing that changes across the seam is that the light acquires
- * bloom. THE SCENE GAINS THE MUSHROOM — it does not swap particle systems.
+ * camera frame, so the handoff moves no particle — and because the
+ * landing choreography lives INSIDE advance(), on the field itself, a
+ * spore that is mid-peel across the seam keeps its arc to the pixel.
  *
  * THE FRAME IS CAMERA-RELATIVE AND THEN FROZEN, and that is the whole
  * trick. A particle is stored as `(a, b, d)`: two offsets across the hero
- * camera's view plane and one depth along its forward axis. Authoring the
- * composition there is what lets 2B.1 say "narrower, between the text and
- * the mushroom on a phone" in terms a designer can set. At handoff the
- * basis is FROZEN at the hero pose and every later position is derived
- * through it, so the field is world-static from then on: the journey's
- * camera flies away from it and finds it again on the way back, exactly
- * as it does the mushroom's own shed.
+ * camera's view plane and one depth along its forward axis. At handoff
+ * the basis is FROZEN at the hero pose and every later position is
+ * derived through it, so the field is world-static from then on: the
+ * journey's camera flies away from it and finds it again on the way
+ * back, exactly as it does the mushroom's own shed. The landing sites
+ * and the skeleton are WORLD points (network-skeleton.js) pushed through
+ * the same camera, which is what makes the prelude's ground and the
+ * loaded scene's ground the same place on screen.
  *
  * WHAT IS DELIBERATELY THE SAME AS organism/spores.js, one for one:
  *   size draw      Math.pow(rand(), 1.8) * 0.072 + 0.019
@@ -83,24 +124,13 @@
  *   fog            the scene's own FOG_NEAR 7.0 / FOG_FAR 20
  *   blending       additive, no depth write
  *
- * WHAT IS DELIBERATELY DIFFERENT, and it is four things and no more:
- *   1. VERTICAL DIRECTION. The mushroom's shed rides BREEZE_DIR upward
- *      (1, 0.62, 0.17). These settle: the same left-to-right wind with
- *      gravity in it. `fall` is a per-mode composition parameter because
- *      the descent has to read at aspect 1.6 and at aspect 0.46, and the
- *      NDC slope a world ratio buys is multiplied by the aspect.
- *   2. REGION. The shed is emitted from the gills; this field is the
- *      OTHER END of the same wind — a stream that falls in from off the
- *      upper-left and lands at the mushroom's own ground (§ COMPOSITION).
- *   3. RESTRAINT. Opacity 1.05 against the shed's 2.4. The brief's words
- *      are "the headline remains dominant and calm", and one global gain
- *      is the honest knob for that — the draws above are untouched, so it
- *      is the same dust carrying less light, not different dust.
- *   4. LANDING. The shed's dots ride the wind out of frame; these are
- *      absorbed. Over the last stretch of its streamline a particle's
- *      light ramps to zero — seeding the ground, not bouncing off it —
- *      and it re-enters at the origin under the same law (§ the fade
- *      note in advance()).
+ * WHAT IS DELIBERATELY DIFFERENT: direction (a through-current riding
+ * the same left-to-right wind with a gentle descent, entering off the
+ * top-left and leaving past the right edge), restraint (opacity 1.05
+ * against the shed's 2.4 — "the headline remains dominant and calm" —
+ * plus a measured extra dimming where the current crosses the hero
+ * copy's own box), and the landing choreography above, which the shed
+ * does not have.
  * ==================================================================== */
 
 import { createHeroMode } from '../journey/boot/hero-mode.js';
@@ -109,168 +139,155 @@ import { createHeroMode } from '../journey/boot/hero-mode.js';
 // has to know it. (PIN_PR is parsed once, in ../flags.js — THE flag registry.)
 import { createPixelRatioPolicy } from './performance.js';
 import { PIN_PR } from '../flags.js';
+// The PreNetwork's shared ground data — world-space polylines extracted from
+// the REAL ground web, and the three points the hero spores land on. A leaf.
+import { LANDING_SITES, SKELETON } from './network-skeleton.js';
 
 /* ---------------------------------------------------------------- *
- * COMPOSITION — the seeding stream. One aim per viewport mode.
+ * COMPOSITION — the through-current. One aim per viewport mode.
  * ---------------------------------------------------------------- *
- * THE OWNER'S DIRECTION, and the whole shape of this table: the spores
- * come in from the top-left of the screen and land where the mushroom
- * is — "a stream of them that just happened to be landing there ...
- * like they're the ones that are actually SEEDING the mushroom."
- * During preload there IS no mushroom, and that is the point: the
- * stream lands on the spot the specimen will stand, so when the intro
- * draws it in, it materialises under an arrival that was already
- * feeding that ground.
+ * THE SPEC'S FIRST LAW (hero-loading v3 §2): the first frame must read
+ * as a living current passing THROUGH the world, not particles aimed at
+ * a target. The stream is authored in the streamline coordinate: every
+ * particle travels a near-shared NDC slope (`fall` x aspect — the depth
+ * cancels, because a world step scales x and y by the same 1/depth), so
+ * a particle is identified for all time by `q`: the NDC height it will
+ * have when it reaches `xOut`. Both edges of the run are OFF-SCREEN —
+ * xIn past the left edge, xOut past the right — so the current enters
+ * already in motion, exits still in motion, and the recycle teleport
+ * happens where nobody can see it. Every respawn takes fresh draws, so
+ * however long the scene takes, the field never reads as a loop.
  *
- * The stream is authored in the streamline coordinate, not as a
- * rectangle. Every particle travels its own near-shared NDC slope
- * (`fall` x aspect — the depth cancels, because a world step scales x
- * and y by the same 1/depth), so a particle is identified for all time
- * by `q`: the NDC height it will have when it reaches `xOut`. And
- * because `xOut` now SITS AT THE MUSHROOM, q is the LANDING interval:
- * "where does the stream land" is written directly below, in the same
- * numbers the anatomy was measured in. Particles cannot leave the
- * stream, the density along it cannot drift, and re-entry after
- * absorption is at `xIn` with a fresh q from the same interval — the
- * stationary distribution is the seeded one, so the field neither
- * thins nor densifies however long the scene takes (2D), and because
- * every draw is fresh it never reads as a loop.
- *
- *   n      particle count. Sparse on purpose; see the cap note in 2D.
+ *   nA     ambient spore count — the current's tiny bodies (spec budget:
+ *          ~300-700 desktop, reduced but same hierarchy on mobile).
+ *   nH     hero spores: larger, brighter, riding inside the flow. The
+ *          landing choreography draws its 2-3 landing spores from these.
+ *   land   how many of the hero spores peel away and land.
  *   xIn    NDC x a particle enters at (off-frame upper-left)
- *   xOut   NDC x the stream lands at — set just past the stalk, so the
- *          absorption tail (advance()) dies across the stem's own air
- *   q      [lo, hi] NDC y landing band, measured AT xOut: the ground/
- *          stem zone. Aim lives here, from live anatomy projections
- *          (evidence/fb-seed/aim-before/aim-report.json):
- *            mode        stalk x   ground y   stem-mid y
- *            desktop      +0.42     -0.68      -0.34
- *            deskNarrow   +0.43     -0.60      -0.31   (at 1280x900)
- *            compact      +0.36     -0.66      -0.34   (at 900x520)
- *            tablet       -0.02     -0.70      -0.47
- *            mobile       +0.05     -0.45      -0.28
- *   depth  [near, far] view depth in world units. The stem stands
- *          10.8-12.4 from the hero camera by mode, so the far end lands
- *          the stream in the mushroom's own air while the near end
- *          brings some of it forward for parallax.
- *   fall   THE ON-SCREEN DESCENT, IN ITS OWN UNIT. It is authored as
- *          world descent per unit of world travel to the right, and that
- *          happens to be exactly `tan(the angle a reviewer sees)`: NDC
- *          slope is fall x aspect, screen pixels re-divide by that same
- *          aspect, and the two cancel. So 0.56 IS 29 degrees on every
- *          frame it is read on. The portrait values are steep because
- *          the frames are: from the upper-left edge to a centred stem
- *          there is far more screen height to spend than width, and a
- *          shallow slope would arrive from the LEFT, not the TOP-left.
- *   gain   speed multiplier over the shed's own base draw
- *   dpr    pixel-ratio ceiling for THIS layer (2D)
- *   gx     [lo, hi] NDC x range of the GROUND MOTES only — the stand-in
- *          ground keeps its full width while the stream above it aims;
- *          motes are placement, not travel, so they do not follow xOut.
- *   ov     the OVERTURE'S AIM (R4): NDC (x, y) of the stalk base — the
- *          measured anatomy pairs from the table above, verbatim, NOT
- *          xOut. The stream lands just PAST the stalk so its absorption
- *          dies across the stem's own air, but the mushroom GROWS at the
- *          stalk, and the pool glow, the ground wash and the traveling
- *          light's landing all belong to the spot the specimen will
- *          actually stand on (§ THE OVERTURE below).
+ *   xOut   NDC x the recycle fires at (off-frame right)
+ *   e      [lo, hi] NDC y ENTRY window, measured AT xIn. The current is
+ *          authored as a fan: it pours in through this window off the
+ *          top-left, and each particle's own `fall` spreads the body as
+ *          it crosses — dense and coherent upstream, feathered and wide
+ *          downstream, the way the reference cloud reads. Both draws are
+ *          bell-shaped, so the current has a body and no rims.
+ *   fall   [lo, hi] world descent per unit of rightward travel (NDC
+ *          slope is fall x aspect), drawn per particle. Shallow on
+ *          landscape — a drift, not a dive; steeper on portrait so the
+ *          diagonal still reads on a frame taller than it is wide.
+ *   depth  [near, far] view depth in world units, split into three
+ *          bands by BANDS below.
+ *   gain   speed multiplier over the shed's own base draw. Far above the
+ *          shed's own 2.2: a CURRENT has to read as travel, not twinkle
+ *          — the near band crosses at ~60 px/s at 1440x900, the far band
+ *          drifts, and the spread is most of the depth cue.
+ *   dpr    pixel-ratio ceiling for THIS layer
  *
- * Every aim below was set by shooting the mode and looking; the landing
- * bands are the measured anatomy plus soft width, not a series.
- *
- * THE R4 DENSITY RAISE, owner-directed: "make the entry pixels a thicker
- * stream". Every count below went up ~50-60% over the first shipped
- * table (desktop 150 -> 235, deskNarrow 140 -> 220, compact 100 -> 148,
- * tablet 110 -> 175, mobile 100 -> 145), judged on throttled cold-load
- * captures at all three shot viewports. The per-dot light is untouched
- * (same OPACITY, same draws), so this is more of the same dust, not
- * brighter dust — the stream reads as a body of weather instead of a
- * scatter, and the headline corridor stays air because the dots that
- * cross it carry the same brightness they always did. The portrait
- * counts rise least: their streams cross the copy column, and the
- * copy's dominance is the composition's first law.
+ * Every aim below was set by shooting the mode and looking.
  */
 const COMPOSITION = {
-  // 1440x900. The specimen stands right of centre, so the diagonal runs
-  // the long way: in off the top-left corner, under the cap's left rim,
-  // dissolving across the stem base and root flare. A few streamlines
-  // cross the headline's upper-right shoulder on the way down; at this
-  // brightness they read as air, and the copy stays dominant.
+  // 1440x900. The current pours in over the headline's shoulder, fans
+  // across the upper and middle of the frame, and leaves at the right
+  // edge. The lower-right quarter — where the mushroom will stand —
+  // stays meaningfully dark until the landings light it.
   desktop: {
-    n: 235, xIn: -1.30, xOut: 0.58, q: [-0.80, -0.46],
-    depth: [6.0, 12.4], fall: 0.56, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
-    ov: [0.42, -0.68],
+    nA: 680, nH: 6, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
-  // windows. Same reading as desktop, a shade steeper because the frame
-  // is shorter for its width and the stalk sits a touch higher.
+  // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    n: 220, xIn: -1.30, xOut: 0.58, q: [-0.74, -0.40],
-    depth: [6.2, 12.6], fall: 0.62, gain: 2.2, dpr: 2, gx: [-1.05, 1.15],
-    ov: [0.43, -0.60],
+    nA: 620, nH: 6, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2,
   },
-  // Short landscape (a phone on its side; a very shallow window). The
-  // same aim with almost no vertical room: the shallowest descent here,
-  // and the count comes down with the frame.
+  // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    n: 148, xIn: -1.28, xOut: 0.52, q: [-0.76, -0.42],
-    depth: [6.0, 12.0], fall: 0.50, gain: 2.0, dpr: 1.5, gx: [-1.0, 1.1],
-    ov: [0.36, -0.66],
+    nA: 340, nH: 4, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5,
   },
-  // iPad portrait, 744x1133. The specimen is centred and low, so the
-  // stream enters high on the left edge, drops steeply past the cap's
-  // left rim and lands down the stem's visible length. Steep is honest
-  // here: this is the angle at which a line from the upper-left actually
-  // reaches a centred stem base on a frame this tall.
+  // iPad portrait, 744x1133. Steeper: from the upper-left edge across
+  // the copy column's shoulder and out the right side above the specimen.
   tablet: {
-    n: 175, xIn: -1.24, xOut: 0.14, q: [-0.80, -0.52],
-    depth: [6.5, 13.0], fall: 1.65, gain: 1.7, dpr: 1.5, gx: [-1.0, 1.1],
-    ov: [-0.02, -0.70],
+    nA: 400, nH: 5, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
+    fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5,
   },
-  // Phone portrait, 430x932. The steepest and sparsest: in at the upper
-  // left beside the headline's first line, down across the copy column
-  // (few dots, dim — the copy keeps dominance), landing on the short
-  // visible stem between cap and ground. Well under desktop's count over
-  // a much smaller frame — never snowfall.
+  // Phone portrait, 430x932. The steepest and sparsest — the current
+  // crosses the copy column (few dots, dimmed by the corridor) and exits
+  // right at mid-height. Never snowfall.
   mobile: {
-    n: 145, xIn: -1.22, xOut: 0.16, q: [-0.64, -0.36],
-    depth: [6.5, 12.6], fall: 1.9, gain: 1.6, dpr: 1.5, gx: [-1.0, 1.1],
-    ov: [0.05, -0.45],
+    nA: 260, nH: 4, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5,
   },
 };
 
-// THE LANDING, in the streamline's own parameter. u is the fraction of
-// the xIn -> xOut span a particle has travelled; from LAND_U onward its
-// light ramps smoothly to zero, reaching exactly 0 at xOut — where the
-// recycle teleports it back to xIn invisibly. Authored as a fraction so
-// every mode's absorption occupies the same last stretch of its own
-// approach: the stream dims INTO the ground/stem zone rather than
-// stopping at a curtain.
-const LAND_U = 0.88;
-// Per-particle descent jitter (multiplicative, ±10%). The shed is
-// turbulent; a strictly parallel ribbon aimed at a point reads drawn.
-// A tenth of slope of scatter keeps every streamline aimed at the same
-// landing band while the body of the stream breathes like weather.
-const SLOPE_JIT = 0.10;
+/* The three depth bands (spec §2: "at least three depth bands"). Fractions
+ * of the ambient population, each with its own slice of the composition's
+ * depth range and its own light/speed scale — tiny dim distant bodies, a
+ * denser midground flow, and a few blurred foreground passers-by. `d0/d1`
+ * are fractions of [depth.near, depth.far]; `lum` scales the seeded colour
+ * (not the draw — same dust, carrying less light); `vel` scales speed. */
+const BANDS = [
+  // `size` scales the size draw: the far band's sprites would otherwise
+  // all land under the 1.7-device-pixel floor and its area dimming, and a
+  // band that is 50% of the population would carry almost none of the
+  // light — measured on the first shot of this composition, which read as
+  // a starfield for exactly that reason.
+  { share: 0.50, d0: 0.52, d1: 0.92, lum: 0.80, vel: 0.80, size: 1.5 },  // far haze
+  { share: 0.38, d0: 0.18, d1: 0.52, lum: 1.00, vel: 1.00, size: 1.0 },  // the body
+  { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.05, vel: 1.20, size: 1.0 },  // near, blurred
+];
+// Hero spores: bigger and warmer, but from the same families — the size
+// and tone draws below are the shed's own with the exponents relaxed.
+const HERO_DEPTH = [0.20, 0.40];    // fractions of the depth range: midground
+// The current dims as it travels: brightness eases off across the run so
+// the upstream body reads denser than the feathered downstream fan — the
+// reference cloud's own falloff — while every particle still visibly
+// crosses the right edge at over half its light. Applied in advance().
+const TRAVEL_DIM = 0.45;
+// A gentle curl — the transverse ripple that keeps the body of the
+// current from reading as ruled lines.
+const WOB_AMP = 0.055;              // world units of transverse ripple
+const WOB_FREQ = [0.35, 1.0];       // Hz range, drawn per particle
 
 // The scene's own fog, from organism/renderer.js's createRendererSetup.
 // Named here rather than imported because importing it would pull `three`
 // and this module's whole reason to exist is that it does not.
 const FOG_NEAR = 7.0, FOG_FAR = 20;
-// organism/organism.js builds the shed with makePoints(..., 2.4). See
-// RESTRAINT in the header for why this field carries less.
+// organism/organism.js builds the shed with makePoints(..., 2.4). The
+// brief's words are "the headline remains dominant and calm", and one
+// global gain is the honest knob for that.
 const OPACITY = 1.05;
-// A few dim points low in the frame stand in for the ground while the
-// real mycelial network is still a download (2C: "only a faint low amber
-// haze or a few dim ground points" — never a duplicate network). They are
-// the same particles parked under the stream's landing, nearly still and
-// at the dark end of the palette, and they do not migrate: the real
-// ground arrives underneath them and this layer fades off it. Their x
-// placement is `gx`, not the stream's span — the ground keeps its full
-// width while the stream above it aims at the stem.
-// (R4: 26 -> 34 alongside the stream's own density raise, so the seeded
-// ground thickens in step with the weather feeding it.)
-const GROUND_MOTES = 34;
+// Extra dimming where the current crosses the hero copy's own box —
+// spec §2: travel BEHIND the text at reduced alpha rather than cutting a
+// hole around it. The box is measured off the live .hero element
+// (readCopyBox), the falloff is soft, and the factor keeps the dots
+// legible as weather while the words stay unmistakably in front.
+const QUIET_DIM = 0.55;
+
+/* ---- the landing choreography's clock table (seconds of field time) --
+ * Nominal windows from the spec §5: arrival 0.2-1.2, landings 0.8-2.2,
+ * ground response 1.6-3.5, handoff 2.5-5.0. `PEEL_AT` staggers the 2-3
+ * landing spores; `PEEL_S` is each arc's flight time. When sceneReady
+ * arrives early the remaining peels COMPRESS (RATE_FAST) rather than
+ * skip — "accelerate the next landing rather than hard-cut". */
+const PEEL_AT = [1.05, 1.85, 2.65];
+const PEEL_S = [1.00, 1.10, 1.15];
+const LAND_COLLAPSE_S = 0.24;   // the landed spore's light sinks into the ground
+const RESPAWN_S = 2.6;          // then the hero slot re-enters with the current
+const RATE_FAST = 1.9;          // compression when the scene is already ready
+const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
+// Ring burst: an impact throws a small ring of sparks along the ground —
+// restrained; a point of light and a faint ring, never fireworks.
+const RING_N = 9;               // 1 flash + 8 sparks per impact
+const RING_BANKS = 2;           // two impacts may overlap in the elastic hold
+const RING_S = 0.85;            // seconds of ring life
+const RING_R = 0.55;            // world radius the sparks reach
+// The ground's own tempo: how fast a woken island's filaments creep
+// outward, and the handoff pulse's run to the origin.
+const NET_GROW_V = 1.15;        // world units / second of filament creep
+const NET_MIN_S = 0.35;         // ground response legible before convergence
+const CONV_S = 0.85;            // the convergence pulse's travel time
+const NET_EXIT_S = 1.35;        // skeleton fade under the real web's draw-on
 
 /* ---------------------------------------------------------------- *
  * THE PALETTE, IN THE WORKING COLOR SPACE.
@@ -361,66 +378,132 @@ function basisOf(view) {
   return { fx, fy, fz, rx, ry, rz, ux, uy, uz };
 }
 
-/** The absorption ramp (§ LAND_U): full light through most of the
- *  approach, then a smoothstep down to exactly zero at xOut, so the
- *  recycle teleport is invisible even in mid-frame. Ground motes never
- *  pass through here — they are placement, not travel. */
-function landFade(c, xNdc) {
-  const u = (xNdc - c.xIn) / (c.xOut - c.xIn);
-  if (u <= LAND_U) return 1;
-  const t = Math.min(1, (u - LAND_U) / (1 - LAND_U));
-  return 1 - t * t * (3 - 2 * t);
+/** WORLD -> the camera's view-plane frame `(a, b, d)`. The exact inverse
+ *  of project() in createHeroSporeField — same basis, same origin — which
+ *  is what makes a landing site or a skeleton vertex authored in world
+ *  coordinates land on the same pixel in both renderers. */
+function worldToFrame(view, B, x, y, z, out, at) {
+  const px = x - view.camX, py = y - view.camY, pz = z - view.camZ;
+  out[at] = px * B.rx + py * B.ry + pz * B.rz;
+  out[at + 1] = px * B.ux + py * B.uy + pz * B.uz;
+  out[at + 2] = px * B.fx + py * B.fy + pz * B.fz;
 }
 
-/** Seed (or re-seed) one particle. `atEntry` places it on the inflow edge
- *  — the recycle case; otherwise it is scattered along the stream, which
- *  is what makes the composition complete on the very first painted frame
- *  instead of sweeping in from the corner while somebody reads it. */
+/** Seed (or re-seed) one STREAM particle — ambient or hero. `atEntry`
+ *  places it on the inflow edge (the recycle case); otherwise it is
+ *  scattered along the stream, which is what makes the composition
+ *  complete on the very first painted frame instead of sweeping in from
+ *  the corner while somebody reads it. Ring slots never come through
+ *  here after construction; their light is choreography (advance). */
 function seedOne(F, i, c, rand, atEntry) {
   const i3 = i * 3;
-  const ground = i >= F.n - GROUND_MOTES;
-  const x = ground
-    ? (atEntry ? c.gx[0] : c.gx[0] + (c.gx[1] - c.gx[0]) * rand())
-    : (atEntry ? c.xIn : c.xIn + (c.xOut - c.xIn) * rand());
+  const hero = i >= F.nA && i < F.nA + F.nH;
+  const ring = i >= F.nA + F.nH;
+  const x = atEntry ? c.xIn : c.xIn + (c.xOut - c.xIn) * rand();
   // THE STREAM HAS NO EDGE. A uniform draw across [lo, hi] gives it two
   // visible rims and reads as a beam; three summed draws give an
-  // Irwin-Hall bell, so occupancy tapers to nothing at the landing band's
-  // limits and the stream has a body and no boundary. Same trick, same
-  // reason, as the release arc's single-peaked density in organism/spores.js.
+  // Irwin-Hall bell, so occupancy tapers to nothing at the band's limits
+  // and the current has a body and no boundary. Same trick, same reason,
+  // as the release arc's single-peaked density in organism/spores.js.
   const bell = (rand() + rand() + rand() - 1.5) / 1.5;
-  const q = (c.q[0] + c.q[1]) / 2 + bell * (c.q[1] - c.q[0]) / 2;
-  const depth = c.depth[0] + (c.depth[1] - c.depth[0]) * rand();
-  // Each particle's own descent, the shared slope breathed by SLOPE_JIT.
-  const fallJ = c.fall * (1 + SLOPE_JIT * (rand() * 2 - 1));
-  // Ground motes hang low, deep, and barely move: a handful of dim
-  // points where the network will be, not a picture of the network.
-  const y = ground ? -0.62 - 0.30 * rand() : q + fallJ * F.aspect * (c.xOut - x);
-  const d = ground ? c.depth[1] * (0.86 + 0.14 * rand()) : depth;
-  const halfH = d * F.tanHalfFov;
+  // THE FAN: entry height and descent are two independent bell draws — the
+  // current pours through a coherent window at the top-left and spreads as
+  // it crosses, dense upstream and feathered downstream. `q` stores the
+  // ENTRY height: with `fallJ` it is the particle's streamline identity.
+  // A CORE within the fan: 45% of the bodies draw from a tighter window
+  // high in the entry band, so the current has a legible river running
+  // its middle with haze feathered around it — a moving volume with a
+  // spine, not an even wash.
+  const core = rand() < 0.45;
+  const eMid = core ? c.e[0] + (c.e[1] - c.e[0]) * 0.62 : (c.e[0] + c.e[1]) / 2;
+  const eHalf = (c.e[1] - c.e[0]) * (core ? 0.19 : 0.5);
+  const e0 = eMid + bell * eHalf;
+  const bell2 = (rand() + rand() + rand() - 1.5) / 1.5;
+  const fMid = core ? c.fall[0] + (c.fall[1] - c.fall[0]) * 0.45 : (c.fall[0] + c.fall[1]) / 2;
+  const fHalf = (c.fall[1] - c.fall[0]) * (core ? 0.22 : 0.5);
+  const fallJ = fMid + bell2 * fHalf;
+  // band assignment: hero spores ride the midground; ambient spores draw
+  // their band from BANDS' shares. Ring slots sit parked at depth 10.
+  let dLo, dHi, lum = 1, vel = 1, szMul = 1, band = 3;
+  if (hero) {
+    dLo = HERO_DEPTH[0]; dHi = HERO_DEPTH[1];
+  } else if (ring) {
+    dLo = 0.3; dHi = 0.3;
+  } else {
+    const r = rand();
+    band = r < BANDS[0].share ? 0 : r < BANDS[0].share + BANDS[1].share ? 1 : 2;
+    ({ d0: dLo, d1: dHi, lum, vel, size: szMul } = BANDS[band]);
+  }
+  const span = c.depth[1] - c.depth[0];
+  const depth = c.depth[0] + span * (dLo + (dHi - dLo) * rand());
+  const y = e0 - fallJ * F.aspect * (x - c.xIn);
+  const halfH = depth * F.tanHalfFov;
   F.frame[i3] = x * halfH * F.aspect;
   F.frame[i3 + 1] = y * halfH;
-  F.frame[i3 + 2] = d;
-  F.q[i] = ground ? y : q;
+  F.frame[i3 + 2] = depth;
+  F.q[i] = e0;
   F.fallJ[i] = fallJ;
-  F.fade[i] = ground ? 1 : landFade(c, x);
-  // The shed's own draws, one for one (see the header).
-  F.size[i] = Math.pow(rand(), 1.8) * 0.072 + 0.019;
-  F.tone[i] = ground
-    ? 0.20 + Math.pow(rand(), 1.6) * 0.22   // the dark end of heat(): soil, not light
-    : 0.64 + Math.pow(rand(), 1.9) * 0.36;
-  F.speed[i] = (0.028 + rand() * 0.055) * c.gain * (ground ? 0.10 : 1);
+  F.band[i] = ring ? 4 : band;
+  F.fade[i] = ring ? 0 : 1;
+  // The shed's own draws (see the header); hero spores relax the size
+  // exponent and lift the tone floor — bigger and warmer, same families,
+  // and prominent enough that the eye can pick one out of the flow and
+  // follow it (the spec's "what the eye will follow next").
+  F.size[i] = hero
+    ? 0.160 + Math.pow(rand(), 1.3) * 0.100
+    : ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
+  F.tone[i] = hero ? 0.88 + rand() * 0.12 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
+  F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel * (hero ? 1.05 : 1);
   F.seed[i] = rand() * Math.PI * 2;
+  F.wobF[i] = WOB_FREQ[0] + (WOB_FREQ[1] - WOB_FREQ[0]) * rand();
   heatLinear(F.tone[i], F.color, i3);
+  const lg = hero ? 2.4 : lum;
+  F.color[i3] *= lg; F.color[i3 + 1] *= lg; F.color[i3 + 2] *= lg;
   F.attrsDirty = true;
+}
+
+/** Ring slot construction: the flash is a larger, hotter sprite; the
+ *  sparks are small embers. All parked dark until an impact claims them. */
+function seedRings(F, rand) {
+  for (let b = 0; b < RING_BANKS; b++) {
+    for (let k = 0; k < RING_N; k++) {
+      const i = F.nA + F.nH + b * RING_N + k;
+      const i3 = i * 3;
+      F.size[i] = k === 0 ? 0.085 : 0.026 + rand() * 0.014;
+      F.tone[i] = k === 0 ? 0.97 : 0.78 + rand() * 0.14;
+      F.seed[i] = rand() * Math.PI * 2;
+      F.fade[i] = 0;
+      F.band[i] = 4;
+      heatLinear(F.tone[i], F.color, i3);
+      F.frame[i3] = 0; F.frame[i3 + 1] = 0; F.frame[i3 + 2] = 10;
+    }
+  }
+}
+
+/** The landing sites and each site's ring-spark end points, in frame
+ *  coordinates. Recomputed on reframe: world -> frame is affine, so a
+ *  spark's flight can interpolate between two projected endpoints. */
+function frameAnchors(F, view) {
+  const B = basisOf(view);
+  for (let s = 0; s < LANDING_SITES.length; s++) {
+    const [x, y, z] = LANDING_SITES[s];
+    worldToFrame(view, B, x, y, z, F.sites, s * 3);
+    for (let k = 0; k < RING_N - 1; k++) {
+      const a = (k / (RING_N - 1)) * Math.PI * 2 + s * 0.7;
+      worldToFrame(view, B,
+        x + Math.cos(a) * RING_R, y, z + Math.sin(a) * RING_R * 0.8,
+        F.ringEnds, (s * (RING_N - 1) + k) * 3);
+    }
+  }
 }
 
 /** Build the field for the current composition. */
 function createField(view, seed) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const rand = makeRng(seed);
-  const n = c.n;
+  const n = c.nA + c.nH + RING_BANKS * RING_N;
   const F = {
-    n, comp: c, rand,
+    n, nA: c.nA, nH: c.nH, comp: c, rand,
     tanHalfFov: view.tanHalfFov,
     aspect: view.aspect,
     frame: new Float32Array(n * 3),      // (a, b, d) in the camera's view plane
@@ -435,13 +518,47 @@ function createField(view, seed) {
     // in NDC, so the on-screen slope is fallJ * aspect and the depth
     // cancels — one aim at every depth, breathed by SLOPE_JIT.
     fallJ: new Float32Array(n),
-    // The landing absorption, 1 -> 0 over the approach (landFade). Both
+    // The choreography's light multiplier: 1 for the stream, the collapse
+    // ramp for a landed spore, the burst envelope for ring slots. Both
     // renderers multiply it into the light, so the seam carries it too.
     fade: new Float32Array(n),
+    wobF: new Float32Array(n),
+    band: new Uint8Array(n),
+    // frame-space anchors: the three landing sites and their spark ends
+    sites: new Float32Array(LANDING_SITES.length * 3),
+    ringEnds: new Float32Array(LANDING_SITES.length * (RING_N - 1) * 3),
+    // ---- the elastic choreography's state, ON the field, so whichever
+    // renderer is integrating carries it forward ----
+    t: 0,
+    sceneReady: false,
+    released: false,
+    landings: [],          // {hi, site, tPeel, dur, state, p0..p3, impactAt}
+    rings: [],             // {site, bank, t0}
+    ringBank: 0,
+    lastImpactAt: -1,
+    firstImpactAt: -1,
+    nextExtraAt: -1,
     attrsDirty: true,
   };
-  for (let i = 0; i < n; i++) seedOne(F, i, c, rand, false);
+  for (let i = 0; i < c.nA + c.nH; i++) seedOne(F, i, c, rand, false);
+  seedRings(F, rand);
+  frameAnchors(F, view);
+  planLandings(F);
   return F;
+}
+
+/** The initial landing plan: `land` of the hero spores, staggered per
+ *  PEEL_AT, one per site in order (site 0 — the mushroom origin — first). */
+function planLandings(F) {
+  F.landings.length = 0;
+  for (let k = 0; k < F.comp.land; k++) {
+    F.landings.push({
+      hi: F.nA + k, site: k % LANDING_SITES.length,
+      tPeel: PEEL_AT[k], dur: PEEL_S[k],
+      state: 0, impactAt: 0,
+      p0: [0, 0, 0], p1: [0, 0, 0], p2: [0, 0, 0], p3: [0, 0, 0],
+    });
+  }
 }
 
 /** Re-frame an existing field for a new viewport without re-seeding it:
@@ -450,66 +567,226 @@ function createField(view, seed) {
 function reframe(F, view) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const oldAspect = F.aspect;
-  // Crossing a breakpoint re-aims the whole field: each particle's jitter
-  // survives, rescaled onto the new mode's descent.
-  const fallScale = c.fall / F.comp.fall;
+  // Crossing a breakpoint re-aims the whole field: each particle's own
+  // descent survives, rescaled onto the new mode's fan, and its streamline
+  // identity is re-derived so it still pours through the new entry window.
+  const fallScale = (c.fall[0] + c.fall[1]) / (F.comp.fall[0] + F.comp.fall[1]);
   F.comp = c;
   F.tanHalfFov = view.tanHalfFov;
   F.aspect = view.aspect;
-  for (let i = 0; i < F.n; i++) {
+  for (let i = 0; i < F.nA + F.nH; i++) {
     const i3 = i * 3;
-    const ground = i >= F.n - GROUND_MOTES;
     const d = F.frame[i3 + 2];
     const halfH = d * F.tanHalfFov;
     const xPrev = F.frame[i3] / (halfH * oldAspect);
-    if (ground) {
-      const x = Math.min(c.gx[1], Math.max(c.gx[0], xPrev));
-      F.frame[i3] = x * halfH * F.aspect;
-      F.frame[i3 + 1] = F.q[i] * halfH;
-      continue;
-    }
     // hold each particle on its own streamline, re-derived in the new frame
-    const q = Math.min(c.q[1], Math.max(c.q[0], F.q[i]));
+    const e0 = Math.min(c.e[1], Math.max(c.e[0], F.q[i]));
     const x = Math.min(c.xOut, Math.max(c.xIn, xPrev));
-    F.q[i] = q;
+    F.q[i] = e0;
     F.fallJ[i] *= fallScale;
     F.frame[i3] = x * halfH * F.aspect;
-    F.frame[i3 + 1] = (q + F.fallJ[i] * F.aspect * (c.xOut - x)) * halfH;
-    F.fade[i] = landFade(c, x);
+    F.frame[i3 + 1] = (e0 - F.fallJ[i] * F.aspect * (x - c.xIn)) * halfH;
   }
+  frameAnchors(F, view);
+  // a spore mid-arc re-aims its remaining flight at the site's new frame
+  for (const L of F.landings) {
+    if (L.state === 1) aimBezier(F, L, F.frame, L.hi * 3);
+  }
+}
+
+/** The hero spore a peel claims: whichever free hero is riding the
+ *  current upwind of the site and nearest to it, so every arc is a short
+ *  local departure from the flow. Falls back to the plain nearest if
+ *  nothing is upwind (they recycle within seconds anyway). */
+function pickPeeler(F, site) {
+  const s3 = site * 3;
+  const sxN = F.sites[s3] / (F.sites[s3 + 2] * F.tanHalfFov * F.aspect);
+  let best = -1, bestScore = Infinity, fall = -1, fallD = Infinity;
+  for (let i = F.nA; i < F.nA + F.nH; i++) {
+    if (heldByLanding(F, i)) continue;
+    const i3 = i * 3;
+    const halfH = F.frame[i3 + 2] * F.tanHalfFov;
+    const xN = F.frame[i3] / (halfH * F.aspect);
+    const yN = F.frame[i3 + 1] / halfH;
+    const syN = F.sites[s3 + 1] / (F.sites[s3 + 2] * F.tanHalfFov);
+    const d = Math.hypot(xN - sxN, yN - syN);
+    if (d < fallD) { fallD = d; fall = i; }
+    if (xN > sxN - 0.05 || xN < -1.0) continue;   // upwind of the site, on screen
+    if (d < bestScore) { bestScore = d; best = i; }
+  }
+  return best >= 0 ? best : fall >= 0 ? fall : F.nA;
+}
+
+/** The peel arc: a cubic from the spore's current position and travel
+ *  direction down to its site. P1 continues the current's own tangent —
+ *  the spore is first legible as a member of the flow and visibly LEAVES
+ *  it — and P2 hangs above the site so the arc arrives from the air,
+ *  not from the side. Returns the arc's frame-space span, which prices
+ *  the flight time. */
+function aimBezier(F, L, src, srcAt) {
+  const s3 = L.site * 3;
+  L.p0[0] = src[srcAt]; L.p0[1] = src[srcAt + 1]; L.p0[2] = src[srcAt + 2];
+  L.p3[0] = F.sites[s3]; L.p3[1] = F.sites[s3 + 1]; L.p3[2] = F.sites[s3 + 2];
+  const D = Math.hypot(L.p3[0] - L.p0[0], L.p3[1] - L.p0[1]);
+  L.p1[0] = L.p0[0] + 0.40 * D;             // ride the wind a beat longer
+  L.p1[1] = L.p0[1] - 0.10 * D * F.fallJ[L.hi] * F.aspect;
+  L.p1[2] = L.p0[2];
+  L.p2[0] = L.p3[0] + 0.02 * D;             // then drop, nearly from above
+  L.p2[1] = L.p3[1] + 0.46 * D;
+  L.p2[2] = L.p3[2];
+  return D;
 }
 
 /** Advance the whole field by `dt` seconds under `gust`. This is the one
  *  integrator; the preload canvas and the scene-side Points both call it,
- *  which is why the handoff cannot move a particle — and why the landing
- *  fade written here is the same brightness on both sides of the seam. */
+ *  which is why the handoff cannot move a particle — and why a landing
+ *  that happens across the seam is the same landing on both sides. */
 function advance(F, dt, gust) {
   const c = F.comp;
   const step = Math.min(dt, 0.05);
-  for (let i = 0; i < F.n; i++) {
+  F.t += step;
+  const rate = F.sceneReady ? RATE_FAST : 1;
+
+  // ---- the stream: ambient + hero spores not currently peeling ----
+  for (let i = 0; i < F.nA + F.nH; i++) {
     const i3 = i * 3;
-    const ground = i >= F.n - GROUND_MOTES;
+    if (F.band[i] === 3 && heldByLanding(F, i)) continue;
     const d = F.frame[i3 + 2];
     const v = F.speed[i] * gust * step;
     F.frame[i3] += v;
-    F.frame[i3 + 1] -= v * (ground ? c.fall : F.fallJ[i]);
+    F.frame[i3 + 1] -= v * F.fallJ[i];
+    // gentle curl: a bounded transverse ripple (the derivative of a sine,
+    // so it never walks a particle off its streamline's neighbourhood)
+    F.frame[i3 + 1] += Math.cos(F.t * F.wobF[i] * 6.28 + F.seed[i]) * WOB_AMP * F.speed[i] * step * 9;
     // The shed's wind carries 0.17 of z per unit of x, toward the viewer.
     // Keeping it here is what stops the stream reading as a flat plane.
     F.frame[i3 + 2] = Math.max(c.depth[0] * 0.8, d - v * 0.17);
     const halfH = F.frame[i3 + 2] * F.tanHalfFov;
     const xNdc = F.frame[i3] / (halfH * F.aspect);
-    if (ground) {
-      // motes hold their light and idle across their own full-width range
-      if (xNdc > c.gx[1]) seedOne(F, i, c, F.rand, true);
-      continue;
+    // The current dims across its run — upstream body, downstream feather
+    // (TRAVEL_DIM) — but never below half light: every ambient spore is
+    // still visibly travelling when it crosses the right edge. Hero spores
+    // keep full light; the eye is meant to hold onto them.
+    if (F.band[i] < 3) {
+      const u = Math.min(1, Math.max(0, (xNdc - c.xIn) / (c.xOut - c.xIn)));
+      F.fade[i] = 1 - TRAVEL_DIM * u * u * (3 - 2 * u);
     }
-    // THE SEEDING ITSELF: light ramps out across the approach to the
-    // ground/stem zone, hits exactly zero at xOut, and the streamline
-    // respawn (2D) carries the particle back to the origin. Absorbed and
-    // re-blown, never bounced, never piled.
-    F.fade[i] = landFade(c, xNdc);
+    // THE RECYCLE — off-screen right, back to off-screen left, with fresh
+    // draws. The current continues past the frame on both edges, so most
+    // spores visibly pass through and leave (the spec's hard world-building
+    // requirement), and the stationary distribution never thins or loops.
     if (xNdc > c.xOut) seedOne(F, i, c, F.rand, true);
   }
+
+  // ---- the landings ----
+  for (const L of F.landings) {
+    if (L.state === 0) {
+      // compression: a ready scene pulls the remaining peels forward
+      if (rate > 1 && L.tPeel > F.t + 0.15) L.tPeel = F.t + 0.15;
+      if (F.t >= L.tPeel) {
+        L.state = 1;
+        // THE PEEL CHOOSES ITS SPORE AT THE LAST MOMENT: whichever free
+        // hero spore is currently riding the current upwind of the site,
+        // nearest to it. A fixed cast member could be anywhere — a spore
+        // picked from the far corner crosses half the frame in a second
+        // and reads as a meteor, which is exactly the grammar the spec
+        // rules out. Nearby, the peel reads as a choice, and the flight
+        // time scales with the actual arc so the pace stays constant.
+        L.hi = pickPeeler(F, L.site);
+        const D = aimBezier(F, L, F.frame, L.hi * 3);
+        const halfH = F.frame[L.hi * 3 + 2] * F.tanHalfFov;
+        L.dur = L.dur * Math.min(1.5, Math.max(0.7, (D / halfH) / 0.85));
+        if (rate > 1) L.dur = Math.max(0.55, L.dur / 1.5);
+        L.t0 = F.t;
+      }
+      continue;
+    }
+    const hi3 = L.hi * 3;
+    if (L.state === 1) {
+      const u = Math.min(1, (F.t - L.t0) / L.dur);
+      // ease-in, land with a little pace left — an arrival, not a hover
+      const e = u * u * (2.05 - 1.05 * u);
+      const m0 = (1 - e) * (1 - e) * (1 - e), m1 = 3 * (1 - e) * (1 - e) * e,
+        m2 = 3 * (1 - e) * e * e, m3 = e * e * e;
+      for (let k = 0; k < 3; k++) {
+        F.frame[hi3 + k] = m0 * L.p0[k] + m1 * L.p1[k] + m2 * L.p2[k] + m3 * L.p3[k];
+      }
+      if (u >= 1) {
+        L.state = 2;
+        L.impactAt = F.t;
+        F.lastImpactAt = F.t;
+        if (F.firstImpactAt < 0) F.firstImpactAt = F.t;
+        spawnRing(F, L.site);
+        if (ground && !ground.gone) ground.wake(L.site, F.t);
+      }
+      continue;
+    }
+    // state 2: the light sinks into the ground it just woke, then the
+    // hero slot re-enters the current upstream with fresh draws.
+    const since = F.t - L.impactAt;
+    F.fade[L.hi] = Math.max(0, 1 - since / LAND_COLLAPSE_S);
+    if (since > RESPAWN_S) {
+      L.state = 3;
+      seedOne(F, L.hi, c, F.rand, true);
+    }
+  }
+
+  // ---- the elastic hold: occasional extra peels while nothing releases —
+  // the world stays alive on a slow load without ever restarting ----
+  if (!F.released && F.firstImpactAt >= 0
+      && F.landings.every((L) => L.state >= 2)) {
+    if (F.nextExtraAt < 0) {
+      F.nextExtraAt = F.t + EXTRA_PEEL_S * (0.8 + 0.4 * F.rand());
+    } else if (F.t >= F.nextExtraAt) {
+      F.nextExtraAt = -1;
+      F.landings.push({
+        hi: F.nA, site: (F.landings.length) % LANDING_SITES.length,
+        tPeel: F.t + 0.1, dur: 1.1, t0: 0, state: 0, impactAt: 0,
+        p0: [0, 0, 0], p1: [0, 0, 0], p2: [0, 0, 0], p3: [0, 0, 0],
+      });
+    }
+  }
+
+  // ---- the ring bursts ----
+  for (let r = F.rings.length - 1; r >= 0; r--) {
+    const R = F.rings[r];
+    const u = (F.t - R.t0) / RING_S;
+    const base = F.nA + F.nH + R.bank * RING_N;
+    if (u >= 1) {
+      for (let k = 0; k < RING_N; k++) F.fade[base + k] = 0;
+      F.rings.splice(r, 1);
+      continue;
+    }
+    const s3 = R.site * 3;
+    // the flash: a concentrated point of light, briefly brighter than the
+    // spore that carried it, decaying fast
+    F.frame[base * 3] = F.sites[s3];
+    F.frame[base * 3 + 1] = F.sites[s3 + 1];
+    F.frame[base * 3 + 2] = F.sites[s3 + 2];
+    F.fade[base] = 1.55 * Math.exp(-u * 5.2);
+    // the sparks: a faint ring expanding along the ground, dying as it goes
+    const eu = 1 - (1 - u) * (1 - u);
+    for (let k = 1; k < RING_N; k++) {
+      const i3 = (base + k) * 3;
+      const e3 = (R.site * (RING_N - 1) + (k - 1)) * 3;
+      F.frame[i3] = F.sites[s3] + (F.ringEnds[e3] - F.sites[s3]) * eu;
+      F.frame[i3 + 1] = F.sites[s3 + 1] + (F.ringEnds[e3 + 1] - F.sites[s3 + 1]) * eu;
+      F.frame[i3 + 2] = F.sites[s3 + 2] + (F.ringEnds[e3 + 2] - F.sites[s3 + 2]) * eu;
+      F.fade[base + k] = 1.0 * Math.pow(1 - u, 1.6);
+    }
+  }
+}
+
+function heldByLanding(F, i) {
+  for (const L of F.landings) {
+    if (L.hi === i && (L.state === 1 || L.state === 2)) return true;
+  }
+  return false;
+}
+
+function spawnRing(F, site) {
+  F.rings.push({ site, bank: F.ringBank, t0: F.t });
+  F.ringBank = (F.ringBank + 1) % RING_BANKS;
 }
 
 /** The gust the shed rides, in the transitional layer only.
@@ -524,7 +801,7 @@ function preloadGust(t) {
 
 /* ---------------------------------------------------------------- *
  * HALF ONE — the preload layer. No three, no post-processing, no
- * textures, one draw call.
+ * textures, two draw calls (the stream's points, the PreNetwork's lines).
  * ---------------------------------------------------------------- */
 
 /* THE MISSING PASS IS THE BLOOM, AND IT HAS TO BE ANSWERED FOR.
@@ -536,7 +813,7 @@ function preloadGust(t) {
    dense enough to sum into a cloud, and they pass through
    UnrealBloomPass(0.62, 0.45, 0.1), which spreads every bright core into
    a soft halo. This layer has neither, and post-processing is exactly
-   what 2B forbids in the preload path.
+   what the budget forbids in the preload path.
 
    So the halo is folded into the sprite instead of being a pass: the
    quad is drawn BLOOM_SPREAD times the sprite's own diameter, the
@@ -562,6 +839,10 @@ uniform float uTime;
 // is the one the scene will draw, floored on the scene's grid and then
 // re-expressed on this one.
 uniform float uPxScale;
+// The hero copy's box in NDC (x0, y0, x1, y1), measured off the live DOM.
+// The current travels BEHIND the copy at reduced brightness — a soft dim,
+// not a hole (spec §2). Degenerate box = no dimming.
+uniform vec4 uQuiet;
 varying vec3 vColor;
 varying float vTw;
 varying float vFog;
@@ -583,6 +864,14 @@ void main() {
   // fragment rescales gl_PointCoord back so the gradient is identical.
   gl_PointSize = sz * uPxScale * ${BLOOM_SPREAD.toFixed(1)};
   gl_Position = vec4(aFrame.x / (halfH * uAspect), aFrame.y / halfH, 0.0, 1.0);
+  // the copy-corridor dim rides vShrink — it is a light multiplier too
+  float S = 0.16;
+  vec2 p = gl_Position.xy;
+  float inQ = smoothstep(uQuiet.x - S, uQuiet.x + S, p.x)
+            * (1.0 - smoothstep(uQuiet.z - S, uQuiet.z + S, p.x))
+            * smoothstep(uQuiet.y - S, uQuiet.y + S, p.y)
+            * (1.0 - smoothstep(uQuiet.w - S, uQuiet.w + S, p.y));
+  vShrink *= 1.0 - ${QUIET_DIM.toFixed(2)} * inQ;
 }`;
 
 /* THE LIGHT IS ADDED AS A DELTA, NOT AS A COLOUR, and that is what keeps
@@ -644,6 +933,56 @@ void main() {
   gl_FragColor = vec4(delta, max(delta.r, max(delta.g, delta.b)));
 }`;
 
+/* The PreNetwork's own pair: thin additive lines, the same fog and the
+   same delta-encode as the points so a skeleton strand lands on the pixel
+   value the real web's strand will land on. All choreography — reveal,
+   breath, pulses, the convergence run — is CPU-lit into aColor per frame
+   (a few hundred vertices), so the shader stays this small. */
+const LINE_VERT = `
+precision highp float;
+attribute vec3 aFrame;
+attribute vec3 aColor;
+uniform float uTanHalfFov;
+uniform float uAspect;
+varying vec3 vColor;
+void main() {
+  float halfH = aFrame.z * uTanHalfFov;
+  float fog = clamp((${FOG_FAR.toFixed(1)} - aFrame.z) / ${(FOG_FAR - FOG_NEAR).toFixed(1)}, 0.0, 1.0);
+  vColor = aColor * fog;
+  gl_Position = vec4(aFrame.x / (halfH * uAspect), aFrame.y / halfH, 0.0, 1.0);
+}`;
+
+const LINE_FRAG = `
+precision highp float;
+varying vec3 vColor;
+uniform vec3 uBgLinear;
+uniform vec3 uBgEncoded;
+vec3 rrtAndOdtFit(vec3 v) {
+  vec3 a = v * (v + 0.0245786) - 0.000090537;
+  vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+  return a / b;
+}
+vec3 encode(vec3 color) {
+  const mat3 inMat = mat3(
+    vec3(0.59719, 0.07600, 0.02840),
+    vec3(0.35458, 0.90834, 0.13383),
+    vec3(0.04823, 0.01566, 0.83777));
+  const mat3 outMat = mat3(
+    vec3(1.60475, -0.10208, -0.00327),
+    vec3(-0.53108, 1.10813, -0.07276),
+    vec3(-0.07367, -0.00605, 1.07602));
+  color *= 0.95 / 0.6;
+  color = outMat * rrtAndOdtFit(inMat * color);
+  color = clamp(color, 0.0, 1.0);
+  return mix(color * 12.92,
+             1.055 * pow(max(color, 1e-5), vec3(0.41666)) - 0.055,
+             step(vec3(0.0031308), color));
+}
+void main() {
+  vec3 delta = max(encode(uBgLinear + vColor) - uBgEncoded, 0.0);
+  gl_FragColor = vec4(delta, max(delta.r, max(delta.g, delta.b)));
+}`;
+
 function compile(gl, type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
@@ -654,7 +993,18 @@ function compile(gl, type, src) {
   return s;
 }
 
-/* The graceful static hero (2D). If WebGL is refused — a blocked context,
+function linkProgram(gl, vertSrc, fragSrc) {
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, vertSrc));
+  gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, fragSrc));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    throw new Error('hero-spores link: ' + gl.getProgramInfoLog(prog));
+  }
+  return prog;
+}
+
+/* The graceful static hero. If WebGL is refused — a blocked context,
    a driver the browser will not trust, a machine with no GPU left — the
    visitor gets a restrained painted atmosphere rather than an empty
    rectangle or a spinner: one low amber haze where the ground will be and
@@ -678,194 +1028,240 @@ const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
   + `opacity:0;transition:opacity ${ENTRY_MS}ms ease;`;
 
 /* ---------------------------------------------------------------- *
- * THE OVERTURE — ambient amber light for the wait (R4).
+ * THE GROUND — the PreNetwork singleton: skeleton choreography, the
+ * landing pools, and the ambient warmth. Module-scope because advance()
+ * reports impacts into it from EITHER integrator, the way the old
+ * overture took ticks from both drivers.
  * ---------------------------------------------------------------- *
- * THE OWNER'S DIRECTION, near verbatim: "ambient amber lighting that
- * goes across the back and the side before stuff is there — lighting up
- * around the bottom of where the mushroom will be", and "an amber light
- * that travels subtly down to where the mushroom starts — behind the
- * trail of spores — and when it hits, that's when it grows."
- *
- * So the pre-load frame carries three DOM glows under the stream, and
- * none of them is a WebGL draw:
- *
- *   wash   still radial gradients: a low amber pool across the ground
- *          under the landing band, a faint warmth across the back of
- *          the frame and along its right side. The same colour family
- *          the loaded page warms into (hero.css's .spill, and the
- *          static hero's own haze above).
- *   pool   the landing-zone glow, breathing quietly and swelling each
- *          time the traveling light lands — anticipation pooled on the
- *          exact spot the specimen will stand.
- *   light  a soft luminance that runs down the stream's centre
- *          streamline from the entry edge to the landing, on a
- *          repeating cycle, under the particles.
- *
- * WHY DOM AND NOT A SECOND DRAW CALL, stated so nobody folds it into
- * the shader later: these are large ultra-soft gradients — exactly what
- * CSS rasterises well — and putting them in the canvas would tie their
- * LIFETIME to the canvas, which is wrong. The spore canvas leaves at
- * handOff(), when the scene is BUILT; the ignition strike belongs to a
- * later beat, when the journey is PREPARED and the intro releases. A
- * separate element under the spore layer survives that gap, keeps this
- * path at one draw call and one rAF site, adds no listener — and under
- * plus-lighter, addition commutes, so "behind the spores" is the same
- * pixel sum in either paint order.
- *
- * THE IGNITION CONTRACT, one consumer: journey/boot/handoff.js asks
- * overtureMsUntilStrike() when the journey is ready, delays its normal
- * releaseIntro() by exactly that long, and calls overtureIgnite() as it
- * starts the intro — so the specimen's draw-on begins on the beat the
- * light reaches the ground it was seeding, and the pool's strike swell
- * breathes under the growth. The wait is bounded by OV_TRAVEL_S: a
- * light mid-travel completes its run; a light in the dwell just landed,
- * so the pool is still lit and ignition fires at once. Worst case adds
- * 1.8 s to a load that already took seconds; the mean over a uniform
- * arrival phase is ~0.6 s; a load slower than one cycle (nearly all of
- * them) waits only for the current run to land. A gesture never waits —
- * beginFastHandoff() releases immediately, and the strike fires
- * wherever the light happens to be.
- *
- * Reduced motion gets the wash and the resting pool, painted once, no
- * traveling light and no loop — the same rule as the particle field.
- * The no-WebGL static hero keeps its own composed haze and takes none
- * of this. A hidden tab advances nothing: the cycle runs on ticks from
- * the preload loop and, after adoption, from the scene's own animator,
- * both of which park when the document hides.
+ * The GL half (the skeleton lines) draws on the preload canvas; the DOM
+ * half is three soft glows that CSS rasterises better than a shader
+ * would: a general warmth across the back and right of the frame
+ * (present from boot — "meaningful darkness, never dead" — and aimed at
+ * nothing), a ground wash under the landing zone that fades in WITH the
+ * network's activation, and one pool per landing site that lights when
+ * a spore strikes it. Nothing here marks the mushroom's spot before a
+ * landing has earned it: no pre-lit pool, no traveling light, no
+ * skeleton ink. The ground is earned by impact.
  */
-const OV_TRAVEL_S = 1.8;  // entry edge -> landing, one run of the light
-const OV_DWELL_S = 0.9;   // the pool cools before the next run launches
-const OV_CYCLE_S = OV_TRAVEL_S + OV_DWELL_S;
-// The landing swell's decay (seconds). Slow enough that an ignition
-// anywhere in the dwell still reads as riding the light that just landed.
-const OV_POOL_TAU = 0.55;
+const NET_ALPHA = 0.65;
 
-/** The overture singleton for this page, or null before boot / after the
- *  layer has left. Module-scope because BOTH drivers need it: the preload
- *  tick while that canvas lives, the scene-side animator after adoption. */
-let overture = null;
+let ground = null;
 
-function createOverture(view, comp, reduced) {
+function createGround(view, reduced) {
+  // ---- geometry: skeleton polylines -> line-segment buffers ----
+  let segCount = 0;
+  for (const pl of SKELETON) segCount += pl.p.length / 3 - 1;
+  const nV = segCount * 2;
+  const pos = new Float32Array(nV * 3);      // frame coords, refreshed on reframe
+  const base = new Float32Array(nV * 3);     // heat(h) per vertex
+  const lit = new Float32Array(nV * 3);      // per-frame choreographed light
+  const dSite = new Float32Array(nV);        // world distance from the island's site
+  const dOrig = new Float32Array(nV);        // world distance from site 0
+  const island = new Uint8Array(nV);
+  const spine = new Uint8Array(nV);
+  {
+    let v = 0;
+    const c = [0, 0, 0];
+    for (const pl of SKELETON) {
+      const s = LANDING_SITES[pl.i];
+      const npt = pl.p.length / 3;
+      for (let k = 0; k < npt - 1; k++) {
+        for (const kk of [k, k + 1]) {
+          const x = pl.p[kk * 3], z = pl.p[kk * 3 + 2];
+          heatLinear(pl.h * (0.85 + 0.3 * (kk / npt)), c, 0);
+          base[v * 3] = c[0]; base[v * 3 + 1] = c[1]; base[v * 3 + 2] = c[2];
+          dSite[v] = Math.hypot(x - s[0], z - s[2]);
+          dOrig[v] = Math.hypot(x - LANDING_SITES[0][0], z - LANDING_SITES[0][2]);
+          island[v] = pl.i;
+          spine[v] = pl.s;
+          v++;
+        }
+      }
+    }
+  }
+  function projectAll(vw) {
+    const B = basisOf(vw);
+    let v = 0;
+    for (const pl of SKELETON) {
+      const npt = pl.p.length / 3;
+      for (let k = 0; k < npt - 1; k++) {
+        for (const kk of [k, k + 1]) {
+          worldToFrame(vw, B,
+            pl.p[kk * 3], pl.p[kk * 3 + 1], pl.p[kk * 3 + 2], pos, v * 3);
+          v++;
+        }
+      }
+    }
+  }
+  projectAll(view);
+
+  // ---- the DOM glows ----
   const el = document.createElement('div');
   el.setAttribute('aria-hidden', 'true');
   el.style.cssText = LAYER_CSS; // same shell as the spores: fixed, additive, entry fade
-  const wash = document.createElement('div');
-  const pool = document.createElement('div');
-  const light = document.createElement('div');
-  for (const d of [wash, pool]) {
+  const warmth = document.createElement('div');
+  const groundWash = document.createElement('div');
+  for (const d of [warmth, groundWash]) {
     d.style.cssText = 'position:absolute;inset:0;';
     el.appendChild(d);
   }
-  light.style.cssText = 'position:absolute;left:0;top:0;border-radius:50%;';
-  el.appendChild(light);
+  groundWash.style.opacity = '0';
+  const pools = LANDING_SITES.map(() => {
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;inset:0;opacity:0;';
+    el.appendChild(p);
+    return p;
+  });
 
-  let E = null, L = null, lightD = 0; // the light's run, in layer pixels
-  let phase = 0, lastMs = 0, ignitedAt = 0, gone = false;
+  const state = {
+    wakeAt: [-1, -1, -1],
+    poolLit: [0, 0, 0],
+    convStartAt: -1,     // choreography-clock time the pulse leaves the islands
+    struckAt: -1,        // wall-clock ms of the strike (releaseIntro's frame)
+    exitAt: -1,          // choreography-clock time the skeleton fade began
+    gone: false,
+  };
 
-  /** All geometry derives from the SAME composition the stream flies —
-   *  the landing band aims the pool, the centre streamline aims the
-   *  light's run — so the glow foreshadows exactly where the particles
-   *  already land, per mode, with no second aim table to drift. */
-  function reframe(v, c) {
-    const W = innerWidth, H = innerHeight;
-    const qMid = (c.q[0] + c.q[1]) / 2;
-    const slope = c.fall * v.aspect;
-    // the centre streamline, entered at whichever frame edge it crosses
-    let ex = -1.06, ey = qMid + slope * (c.xOut + 1.06);
-    if (ey > 1.06) { ey = 1.06; ex = c.xOut - (1.06 - qMid) / slope; }
-    E = { x: (ex + 1) / 2 * W, y: (1 - ey) / 2 * H };
-    // the run lands ON the stalk base (c.ov), not at the stream's own
-    // absorption point past it — the growth happens where the light hits
-    L = { x: (c.ov[0] + 1) / 2 * W, y: (1 - c.ov[1]) / 2 * H };
-    const lx = +((c.ov[0] + 1) / 2 * 100).toFixed(1);
-    const ly = +((1 - c.ov[1]) / 2 * 100).toFixed(1);
-    const groundY = Math.min(104, ly + 9).toFixed(1);
-    wash.style.background =
-      `radial-gradient(ellipse 52% 20% at ${lx}% ${groundY}%, rgba(224,152,66,0.105), transparent 70%),`
-      + `radial-gradient(ellipse 46% 44% at ${Math.min(94, lx + 10)}% 56%, rgba(214,142,58,0.05), transparent 74%),`
+  /** Screen anchors derive from the SAME landing sites the spores aim at
+   *  — projected per mode, so the glow sits under the impacts with no
+   *  second aim table to drift. */
+  function reframeGlow(vw) {
+    const B = basisOf(vw);
+    const out = [0, 0, 0];
+    const px = [];
+    for (const s of LANDING_SITES) {
+      worldToFrame(vw, B, s[0], s[1], s[2], out, 0);
+      const halfH = out[2] * vw.tanHalfFov;
+      px.push([
+        ((out[0] / (halfH * vw.aspect)) + 1) / 2 * 100,
+        (1 - out[1] / halfH) / 2 * 100,
+      ]);
+    }
+    warmth.style.background =
+      `radial-gradient(ellipse 46% 44% at ${Math.min(94, px[0][0] + 10).toFixed(1)}% 56%, rgba(214,142,58,0.05), transparent 74%),`
       + 'radial-gradient(ellipse 30% 58% at 103% 60%, rgba(226,160,74,0.042), transparent 76%)';
-    pool.style.background =
-      `radial-gradient(ellipse 26% 11% at ${lx}% ${ly}%, rgba(255,196,106,0.15), rgba(224,146,60,0.06) 48%, transparent 72%)`;
-    lightD = Math.round(0.52 * Math.min(W, H));
-    light.style.width = light.style.height = lightD + 'px';
-    light.style.background =
-      'radial-gradient(circle, rgba(255,199,112,0.16), rgba(228,148,58,0.05) 46%, transparent 70%)';
+    groundWash.style.background =
+      `radial-gradient(ellipse 52% 20% at ${px[0][0].toFixed(1)}% ${Math.min(104, px[0][1] + 9).toFixed(1)}%, rgba(224,152,66,0.105), transparent 70%)`;
+    pools.forEach((p, s) => {
+      const w = s === 0 ? 26 : 15;
+      const h = s === 0 ? 11 : 6.5;
+      const a = s === 0 ? 0.15 : 0.11;
+      p.style.background =
+        `radial-gradient(ellipse ${w}% ${h}% at ${px[s][0].toFixed(1)}% ${px[s][1].toFixed(1)}%, rgba(255,196,106,${a}), rgba(224,146,60,0.06) 48%, transparent 72%)`;
+    });
   }
-  reframe(view, comp);
+  reframeGlow(view);
 
   if (reduced) {
-    // the still overture: wash and a resting pool, no run and no loop
-    pool.style.opacity = '0.55';
-    light.style.display = 'none';
+    // the still ground: general warmth plus a gentle resting ground
+    // illumination, painted once — no wake fronts, no pulses, no loop
+    groundWash.style.opacity = '0.4';
   }
 
-  function place(u) {
-    // gentle in, gentle out: the light leans into its run and settles
-    // onto the landing rather than striking it like a cursor
-    const e = u * u * (3 - 2 * u);
-    const x = E.x + (L.x - E.x) * e - lightD / 2;
-    const y = E.y + (L.y - E.y) * e - lightD / 2;
-    light.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+  function wake(site, t) {
+    if (state.wakeAt[site] < 0) state.wakeAt[site] = t;
+    else state.poolLit[site] = Math.min(1.6, state.poolLit[site] + 0.8); // a re-landing re-pulses
   }
 
-  /** Advance off wall deltas measured HERE, so the two drivers can only
-   *  split a frame's advance between them, never double it — through the
-   *  crossfade both the preload tick and the scene animator call this. */
-  function tick() {
-    if (gone || reduced) return;
-    const now = performance.now();
-    const dt = lastMs ? Math.min(0.08, (now - lastMs) / 1000) : 0;
-    lastMs = now;
-    if (!ignitedAt) phase += dt;
-    const p = phase % OV_CYCLE_S;
-    let boost = 0;
-    if (ignitedAt) {
-      // THE STRIKE: one larger swell, breathing under the growth's start
-      boost = 1.5 * Math.exp(-(now - ignitedAt) / (OV_POOL_TAU * 1400));
-    } else if (phase >= OV_TRAVEL_S) {
-      const since = p >= OV_TRAVEL_S ? p - OV_TRAVEL_S : p + OV_DWELL_S;
-      boost = Math.exp(-since / OV_POOL_TAU);
+  const awakeCount = () => state.wakeAt.filter((w) => w >= 0).length;
+
+  /** The per-frame choreography, CPU-lit into `lit`. `t` is the FIELD's
+   *  clock (advance's), so a hidden tab freezes the ground exactly as it
+   *  freezes the stream. Returns true when any vertex carries light —
+   *  the caller skips the draw call entirely on a dark network. */
+  function relight(t) {
+    if (state.gone) return false;
+    let any = false;
+    // convergence front: distance-from-origin sweeping DMAX -> 0
+    let convFront = -1;
+    if (state.convStartAt >= 0 && t >= state.convStartAt) {
+      convFront = 3.4 * (1 - Math.min(1, (t - state.convStartAt) / CONV_S));
     }
-    const breath = 0.05 * Math.sin(now / 1000 * 1.1);
-    pool.style.opacity = Math.min(1, 0.42 + breath + 0.58 * boost).toFixed(3);
-    if (ignitedAt) {
-      light.style.opacity = Math.max(0, 1 - (now - ignitedAt) / 300).toFixed(3);
-    } else if (p < OV_TRAVEL_S) {
-      const u = p / OV_TRAVEL_S;
-      place(u);
-      // rise over the first stretch; near the landing the run's light is
-      // handed to the pool, which is swelling to receive it
-      const rise = Math.min(1, u / 0.15);
-      const land = u < 0.86 ? 1 : 1 - ((u - 0.86) / 0.14) * 0.8;
-      light.style.opacity = (rise * land).toFixed(3);
-    } else {
-      light.style.opacity = '0';
+    // the exit: after the strike the real web is drawing itself in
+    // underneath (organism/intro.js's converging ground windows), and the
+    // skeleton hands its light down over the same beat
+    let exitK = 1;
+    if (state.exitAt >= 0) {
+      exitK = Math.max(0, 1 - (t - state.exitAt) / NET_EXIT_S);
     }
+    // spine pulses once two islands are joined: quiet energy running the
+    // shared paths toward the origin every few seconds
+    const joined = awakeCount() >= 2;
+    const pulseU = joined ? (t * 0.38) % 1.6 : -1;
+    for (let v = 0; v < nV; v++) {
+      const w = state.wakeAt[island[v]];
+      if (w < 0) { lit[v * 3] = 0; lit[v * 3 + 1] = 0; lit[v * 3 + 2] = 0; continue; }
+      // filaments creep outward from the impact: a soft-edged front
+      const R = (t - w) * NET_GROW_V;
+      let k = Math.max(0, Math.min(1, (R - dSite[v]) / 0.45));
+      if (k <= 0) { lit[v * 3] = 0; lit[v * 3 + 1] = 0; lit[v * 3 + 2] = 0; continue; }
+      // the woken network breathes — low amplitude, never a beacon
+      k *= 0.82 + 0.18 * Math.sin(t * 0.9 + island[v] * 2.1 + dSite[v] * 1.7);
+      if (spine[v] && pulseU >= 0) {
+        const d = dOrig[v] * 0.28 - pulseU + 0.45;
+        k *= 1 + 0.9 * Math.exp(-(d * d) / 0.012);
+      }
+      if (convFront >= 0) {
+        const d = dOrig[v] - convFront;
+        k *= 1 + 1.5 * Math.exp(-(d * d) / 0.11);
+      }
+      k *= NET_ALPHA * exitK;
+      lit[v * 3] = base[v * 3] * k;
+      lit[v * 3 + 1] = base[v * 3 + 1] * k;
+      lit[v * 3 + 2] = base[v * 3 + 2] * k;
+      any = true;
+    }
+    // DOM glows follow the same clock
+    const nowMs = performance.now();
+    for (let s = 0; s < pools.length; s++) {
+      const w = state.wakeAt[s];
+      if (w < 0) continue;
+      state.poolLit[s] = Math.max(state.poolLit[s], Math.min(1, (t - w) / 0.3));
+      let o = state.poolLit[s] * (0.34 + 0.05 * Math.sin(nowMs / 1000 * 1.1 + s));
+      if (s === 0 && state.struckAt >= 0) {
+        // THE STRIKE: one larger swell breathing under the growth's start
+        o += 0.9 * Math.exp(-(nowMs - state.struckAt) / 800);
+      }
+      pools[s].style.opacity = Math.min(1, o).toFixed(3);
+      state.poolLit[s] *= Math.pow(0.5, ((t - w) > 0.3 ? 0.016 : 0) / 3.5); // slow settle of re-pulses
+    }
+    const act = Math.max(
+      state.wakeAt[0] < 0 ? 0 : Math.min(1, (t - state.wakeAt[0]) / 1.2),
+      state.wakeAt[1] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[1]) / 1.5),
+      state.wakeAt[2] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[2]) / 1.5));
+    groundWash.style.opacity = (0.55 * act * exitK).toFixed(3);
+    return any;
   }
 
   function remove() {
-    gone = true;
+    state.gone = true;
     if (el.parentNode) el.parentNode.removeChild(el);
   }
 
   return {
-    el, tick, reframe,
-    get gone() { return gone; },
-    msUntilStrike() {
-      if (reduced || gone || ignitedAt) return 0;
-      const p = phase % OV_CYCLE_S;
-      // mid-travel: let this run land, and grow on the landing. In the
-      // dwell: the light just landed and the pool is still lit — now IS
-      // the strike.
-      return p < OV_TRAVEL_S ? Math.round((OV_TRAVEL_S - p) * 1000) : 0;
+    el, pos, lit, nV, projectAll, reframeGlow, relight, wake, state,
+    get gone() { return state.gone; },
+    awakeCount,
+    /** Arm the convergence pulse so it ARRIVES at the origin in
+     *  `needSeconds` of field time. */
+    armConvergence(t, needSeconds) {
+      if (state.convStartAt < 0) {
+        state.convStartAt = t + Math.max(0, needSeconds - CONV_S);
+      }
     },
-    ignite() {
-      if (gone || ignitedAt) return;
-      ignitedAt = performance.now();
-      // hold the strike under the first beats of the draw-on, then leave:
-      // by the fade's end the scene's own spill and ground carry the warmth
+    /** The strike: the intro is releasing on this frame. The origin pool
+     *  swells under the stalk's draw-on, the skeleton begins handing its
+     *  light to the real web, and the whole layer leaves once the growth
+     *  carries the warmth itself. */
+    strike(t) {
+      if (state.gone || state.struckAt >= 0) return;
+      state.struckAt = performance.now();
+      if (state.convStartAt < 0 || state.convStartAt > t) {
+        state.convStartAt = t - CONV_S * 0.6; // un-armed strike: pulse mostly arrived
+      }
+      state.exitAt = t;
       setTimeout(() => {
-        if (gone) return;
+        if (state.gone) return;
         el.style.transition = 'opacity 2600ms linear';
         el.style.opacity = '0';
         setTimeout(remove, 2700);
@@ -875,7 +1271,8 @@ function createOverture(view, comp, reduced) {
      *  ?nointro, ?capture, reduced motion. Fast but not a pop, and gone
      *  long before any capture's readiness gate opens its shutter. */
     dismiss() {
-      if (gone) return;
+      if (state.gone) return;
+      state.gone = true;
       el.style.transition = 'opacity 250ms linear';
       el.style.opacity = '0';
       setTimeout(remove, 350);
@@ -897,8 +1294,13 @@ function createPreload() {
   let buffers = null;
   let uniforms = null;
   let attribs = null;
+  let lineBuffers = null;
+  let lineUniforms = null;
+  let lineAttribs = null;
+  let progPoints = null;
+  let progLines = null;
   let meta = null;
-  let lit = null;   // per-frame colour scratch: F.color x F.fade (draw())
+  let lit = null;   // per-frame colour scratch: F.color x F.fade x streamGain
   // See sizeCanvas(): the ratio between THIS layer's device grid and the one
   // the scene's renderer will draw the same particles on. 1 whenever they
   // agree, which is every capture and every first visit to a retina desktop.
@@ -906,9 +1308,15 @@ function createPreload() {
   // When the ENTRY_MS ramp began. -Infinity until it has, so a handOff() that
   // somehow precedes boot() waits for nothing.
   let entryAt = -Infinity;
+  // The stream's half of the crossfade (see handOff): linear on the wall
+  // clock, complementary to the scene-side Points' own linear ramp. The
+  // canvas itself STAYS — the PreNetwork keeps drawing on it until the
+  // strike — so the fade rides the per-frame colour upload, not the wrap.
+  let fadeFrom = Infinity;
+  let fadeMs = 0;
 
   /** ONE requestAnimationFrame site in this module, deliberately. The
-   *  hidden-tab gate (2D) parks the loop by clearing `rafId` and comes
+   *  hidden-tab gate parks the loop by clearing `rafId` and comes
    *  back through this same door, so the file keeps a single request and
    *  a single matching cancel. */
   function schedule() {
@@ -922,37 +1330,65 @@ function createPreload() {
     }
   }
 
+  function streamGain() {
+    if (fadeFrom === Infinity) return 1;
+    const p = (performance.now() - fadeFrom) / fadeMs;
+    return p <= 0 ? 1 : p >= 1 ? 0 : 1 - p;
+  }
+
   function draw(now) {
     const gl = state.gl, F = state.field;
     gl.viewport(0, 0, state.el.width, state.el.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.frame);
-    gl.bufferData(gl.ARRAY_BUFFER, F.frame, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(attribs.frame, 3, gl.FLOAT, false, 0, 0);
-    // The landing fade rides the colour, so the light — never the base
-    // palette — is what carries F.fade to the pixel. Uploaded per frame
-    // because the fade moves per frame; at this count it is ~3 KB.
-    for (let i = 0; i < F.n; i++) {
-      const i3 = i * 3, f = F.fade[i];
-      lit[i3] = F.color[i3] * f;
-      lit[i3 + 1] = F.color[i3 + 1] * f;
-      lit[i3 + 2] = F.color[i3 + 2] * f;
+    const gain = streamGain();
+    if (gain > 0) {
+      gl.useProgram(progPoints);
+      gl.enableVertexAttribArray(attribs.meta);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.frame);
+      gl.bufferData(gl.ARRAY_BUFFER, F.frame, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(attribs.frame, 3, gl.FLOAT, false, 0, 0);
+      // The choreography's fade and the crossfade's gain ride the colour,
+      // so the light — never the base palette — is what reaches the pixel.
+      // Uploaded per frame because both move per frame; at this count it
+      // is ~6 KB.
+      for (let i = 0; i < F.n; i++) {
+        const i3 = i * 3, f = F.fade[i] * gain;
+        lit[i3] = F.color[i3] * f;
+        lit[i3 + 1] = F.color[i3 + 1] * f;
+        lit[i3 + 2] = F.color[i3 + 2] * f;
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+      gl.bufferData(gl.ARRAY_BUFFER, lit, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(attribs.color, 3, gl.FLOAT, false, 0, 0);
+      if (F.attrsDirty) {
+        for (let i = 0; i < F.n; i++) { meta[i * 2] = F.size[i]; meta[i * 2 + 1] = F.seed[i]; }
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.meta);
+        gl.bufferData(gl.ARRAY_BUFFER, meta, gl.DYNAMIC_DRAW);
+        gl.vertexAttribPointer(attribs.meta, 2, gl.FLOAT, false, 0, 0);
+        F.attrsDirty = false;
+      }
+      gl.uniform1f(uniforms.time, now);
+      gl.uniform1f(uniforms.tanHalfFov, F.tanHalfFov);
+      gl.uniform1f(uniforms.aspect, F.aspect);
+      gl.drawArrays(gl.POINTS, 0, F.n);
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-    gl.bufferData(gl.ARRAY_BUFFER, lit, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(attribs.color, 3, gl.FLOAT, false, 0, 0);
-    if (F.attrsDirty) {
-      for (let i = 0; i < F.n; i++) { meta[i * 2] = F.size[i]; meta[i * 2 + 1] = F.seed[i]; }
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.meta);
-      gl.bufferData(gl.ARRAY_BUFFER, meta, gl.DYNAMIC_DRAW);
-      gl.vertexAttribPointer(attribs.meta, 2, gl.FLOAT, false, 0, 0);
-      F.attrsDirty = false;
+    // the PreNetwork — only ever lit after a landing has woken an island.
+    // The reduced-motion still never calls relight: its ground illumination
+    // is createGround's own painted-once wash, and relight would overwrite it.
+    if (ground && !ground.gone && !state.reduced && ground.relight(F.t)) {
+      gl.useProgram(progLines);
+      gl.disableVertexAttribArray(attribs.meta);
+      gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.frame);
+      gl.bufferData(gl.ARRAY_BUFFER, ground.pos, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(lineAttribs.frame, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.color);
+      gl.bufferData(gl.ARRAY_BUFFER, ground.lit, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(lineAttribs.color, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(lineUniforms.tanHalfFov, state.field.tanHalfFov);
+      gl.uniform1f(lineUniforms.aspect, state.field.aspect);
+      gl.drawArrays(gl.LINES, 0, ground.nV);
     }
-    gl.uniform1f(uniforms.time, now);
-    gl.uniform1f(uniforms.tanHalfFov, F.tanHalfFov);
-    gl.uniform1f(uniforms.aspect, F.aspect);
-    gl.drawArrays(gl.POINTS, 0, F.n);
   }
 
   function tick(ms) {
@@ -965,10 +1401,9 @@ function createPreload() {
     // scene-side Points is only a second view of the same buffer — one
     // advance per frame, two projections of it, so the two pictures are
     // pixel-identical for as long as both are on screen. Ownership
-    // transfers when this layer leaves, not when the scene arrives.
+    // transfers when this layer stops, not when the scene arrives.
     advance(state.field, dt, preloadGust(now));
     draw(now);
-    if (overture && !overture.gone) overture.tick();
     schedule();
   }
 
@@ -1032,9 +1467,32 @@ function createPreload() {
     // exactly the drift the key was introduced to prevent.
     const scenePr = createPixelRatioPolicy(PIN_PR).initial;
     pxScale = scenePr > 0 ? pr / scenePr : 1;
-    if (state.gl && uniforms) state.gl.uniform1f(uniforms.pxScale, pxScale);
+    if (state.gl && uniforms) {
+      state.gl.useProgram(progPoints);
+      state.gl.uniform1f(uniforms.pxScale, pxScale);
+    }
     state.el.width = Math.max(1, Math.round(innerWidth * pr));
     state.el.height = Math.max(1, Math.round(innerHeight * pr));
+  }
+
+  /** The hero copy's live box -> the corridor-dim uniform (VERT's uQuiet).
+   *  Measured off the DOM so every viewport gets its own corridor and no
+   *  mode table can drift from a layout change. */
+  function readCopyBox() {
+    if (!state.gl || !uniforms) return;
+    const hero = document.querySelector('.hero');
+    let x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    if (hero) {
+      const r = hero.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        x0 = (r.left / innerWidth) * 2 - 1;
+        x1 = (r.right / innerWidth) * 2 - 1;
+        y0 = 1 - (r.bottom / innerHeight) * 2;
+        y1 = 1 - (r.top / innerHeight) * 2;
+      }
+    }
+    state.gl.useProgram(progPoints);
+    state.gl.uniform4f(uniforms.quiet, x0, y0, x1, y1);
   }
 
   function showStatic() {
@@ -1085,35 +1543,43 @@ function createPreload() {
     lit = new Float32Array(state.field.n * 3);
 
     try {
-      const prog = gl.createProgram();
-      gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
-      gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
-      gl.linkProgram(prog);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        throw new Error('hero-spores link: ' + gl.getProgramInfoLog(prog));
-      }
-      gl.useProgram(prog);
+      progPoints = linkProgram(gl, VERT, FRAG);
+      progLines = linkProgram(gl, LINE_VERT, LINE_FRAG);
+      gl.useProgram(progPoints);
       attribs = {
-        frame: gl.getAttribLocation(prog, 'aFrame'),
-        color: gl.getAttribLocation(prog, 'aColor'),
-        meta: gl.getAttribLocation(prog, 'aMeta'),
+        frame: gl.getAttribLocation(progPoints, 'aFrame'),
+        color: gl.getAttribLocation(progPoints, 'aColor'),
+        meta: gl.getAttribLocation(progPoints, 'aMeta'),
       };
       for (const a of Object.values(attribs)) gl.enableVertexAttribArray(a);
       uniforms = {
-        time: gl.getUniformLocation(prog, 'uTime'),
-        tanHalfFov: gl.getUniformLocation(prog, 'uTanHalfFov'),
-        aspect: gl.getUniformLocation(prog, 'uAspect'),
+        time: gl.getUniformLocation(progPoints, 'uTime'),
+        tanHalfFov: gl.getUniformLocation(progPoints, 'uTanHalfFov'),
+        aspect: gl.getUniformLocation(progPoints, 'uAspect'),
         // Set from sizeCanvas() rather than per frame: it changes only when a
         // device grid does, which is a resize and nothing else.
-        pxScale: gl.getUniformLocation(prog, 'uPxScale'),
+        pxScale: gl.getUniformLocation(progPoints, 'uPxScale'),
+        quiet: gl.getUniformLocation(progPoints, 'uQuiet'),
       };
       buffers = { frame: gl.createBuffer(), color: gl.createBuffer(), meta: gl.createBuffer() };
       // organism/renderer.js clears to bg 0x1c160b; see the delta note above.
       const bgLin = [0x1c, 0x16, 0x0b].map((v) => srgbToLinear(v / 255));
-      gl.uniform1f(gl.getUniformLocation(prog, 'uOpacity'), OPACITY);
-      gl.uniform3f(gl.getUniformLocation(prog, 'uBgLinear'), bgLin[0], bgLin[1], bgLin[2]);
+      gl.uniform1f(gl.getUniformLocation(progPoints, 'uOpacity'), OPACITY);
+      gl.uniform3f(gl.getUniformLocation(progPoints, 'uBgLinear'), bgLin[0], bgLin[1], bgLin[2]);
       const enc = encodeOnCpu(bgLin);
-      gl.uniform3f(gl.getUniformLocation(prog, 'uBgEncoded'), enc[0], enc[1], enc[2]);
+      gl.uniform3f(gl.getUniformLocation(progPoints, 'uBgEncoded'), enc[0], enc[1], enc[2]);
+      gl.useProgram(progLines);
+      lineAttribs = {
+        frame: gl.getAttribLocation(progLines, 'aFrame'),
+        color: gl.getAttribLocation(progLines, 'aColor'),
+      };
+      lineUniforms = {
+        tanHalfFov: gl.getUniformLocation(progLines, 'uTanHalfFov'),
+        aspect: gl.getUniformLocation(progLines, 'uAspect'),
+      };
+      gl.uniform3f(gl.getUniformLocation(progLines, 'uBgLinear'), bgLin[0], bgLin[1], bgLin[2]);
+      gl.uniform3f(gl.getUniformLocation(progLines, 'uBgEncoded'), enc[0], enc[1], enc[2]);
+      lineBuffers = { frame: gl.createBuffer(), color: gl.createBuffer() };
       gl.disable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE);
@@ -1123,14 +1589,15 @@ function createPreload() {
       return;
     }
 
-    // The overture rides the live path only: the static hero already
+    // The ground rides the live path only: the static hero already
     // composes its own haze, and a page with no working WebGL has no
-    // intro to strike under. Inserted BEFORE the spore wrap, so the DOM
+    // landings to answer. Inserted BEFORE the spore wrap, so the DOM
     // reads background -> glow -> stream, whatever addition thinks of it.
-    overture = createOverture(state.view, state.field.comp, state.reduced);
-    stage.parentNode.insertBefore(overture.el, state.wrap);
+    ground = createGround(state.view, state.reduced);
+    stage.parentNode.insertBefore(ground.el, state.wrap);
 
     sizeCanvas();
+    readCopyBox();
     state.live = true;
     // While this layer is on screen it is the field's integrator; the
     // scene-side animator reads the flag and only projects. See tick().
@@ -1147,7 +1614,7 @@ function createPreload() {
     void el.offsetWidth;
     el.style.opacity = '1';
     // the glows arrive on the stream's own beat: same reflow, same ramp
-    overture.el.style.opacity = '1';
+    ground.el.style.opacity = '1';
     // WHEN the entry ramp started, because handOff() needs to know whether it
     // is still running. Taken after the reflow above, which is the point the
     // transition actually begins from 0.
@@ -1162,16 +1629,22 @@ function createPreload() {
       if (!state.live) return;
       state.view = readView(state.heroMode);
       reframe(state.field, state.view);
-      if (overture && !overture.gone) overture.reframe(state.view, state.field.comp);
+      if (ground && !ground.gone) {
+        ground.projectAll(state.view);
+        ground.reframeGlow(state.view);
+      }
       sizeCanvas();
+      readCopyBox();
       if (state.reduced) draw(0);
     };
     addEventListener('resize', onResize);
-    // 2D — a hidden tab pays for nothing. rAF is already suspended by
+    // A hidden tab pays for nothing. rAF is already suspended by
     // every current engine when the document is hidden; parking the loop
     // explicitly also covers the cases where it is not (an occluded but
     // "visible" window, a restored bfcache entry) and makes the intent
-    // reviewable rather than inherited from the platform.
+    // reviewable rather than inherited from the platform. The field's own
+    // clock (F.t) advances only in ticks, so the choreography — landings,
+    // wake fronts, the armed convergence — freezes with the pixels.
     onVisibility = () => {
       if (document.hidden) stopLoop();
       else if (state.live) { last = 0; schedule(); }
@@ -1179,16 +1652,18 @@ function createPreload() {
     document.addEventListener('visibilitychange', onVisibility);
 
     // Reduced motion gets the composed field, painted once, and no loop
-    // at all (2D). It is the same picture the moving layer rests at.
+    // at all. A few slow ambient spores' worth of light, the gentle
+    // ground illumination (createGround's reduced path), then the
+    // crossfade when the scene arrives — no trajectories, no flashes.
     if (!state.reduced) schedule();
   }
 
   /** Release everything this layer attached, and take its canvas off the
-   *  page. Idempotent, and safe before boot() ever ran. THE OVERTURE IS
-   *  DELIBERATELY NOT TOUCHED HERE: this runs when the crossfade out of
-   *  the canvas completes, and the traveling light has to keep running
-   *  until the intro releases — its ticks come from the scene's animator
-   *  from here on, and its exit is ignite() or dismiss(), never stop(). */
+   *  page. Idempotent, and safe before boot() ever ran. THE GROUND'S DOM
+   *  GLOW IS DELIBERATELY NOT TOUCHED HERE: its exit is strike() or
+   *  dismiss(), on CSS transitions that need no further ticks — the
+   *  warmth holds under the growth's first beats and hands off to the
+   *  scene's own spill. */
   function stop() {
     stopLoop();
     state.live = false;
@@ -1211,13 +1686,61 @@ function createPreload() {
   return {
     boot,
     stop,
-    /* THE OVERTURE'S PUBLIC FACE — three forwards, so the one consumer
-       (journey/boot/handoff.js) never holds the layer object itself and a
-       page whose overture never existed (static hero, node imports)
-       answers 0 / no-op instead of throwing. */
-    overtureMsUntilStrike() { return overture && !overture.gone ? overture.msUntilStrike() : 0; },
-    overtureIgnite() { if (overture) overture.ignite(); },
-    overtureDismiss() { if (overture) overture.dismiss(); },
+    /* THE IGNITION CONTRACT, one consumer: journey/boot/handoff.js asks
+       preludeMsUntilStrike() when the journey is prepared, delays its
+       normal releaseIntro() by exactly that long, and calls
+       preludeStrike() as it starts the intro. The number is the earliest
+       moment the causal chain can deliver a convergence pulse to the
+       mushroom origin: if a landing has already happened, that is the
+       remainder of NET_MIN_S plus the pulse's travel; if not — a very
+       fast load — the remaining peel is compressed (advance's RATE_FAST
+       is already running by then, because handOff set sceneReady) and
+       the wait is first-impact + response + travel. Bounded by
+       construction to ~2.3 s worst case; a load slower than ~3 s (nearly
+       all of them) has landed already and waits only for the pulse. A
+       gesture never waits — beginFastHandoff() releases immediately and
+       the strike fires with the pulse mostly arrived. */
+    preludeMsUntilStrike() {
+      if (state.reduced || !state.live || !ground || ground.gone) return 0;
+      const F = state.field;
+      if (ground.state.struckAt >= 0) return 0;
+      let need;
+      if (F.firstImpactAt >= 0) {
+        need = Math.max(0, NET_MIN_S - (F.t - F.firstImpactAt)) + CONV_S;
+      } else {
+        // earliest impact under compression: the nearest landing, pulled
+        // forward and flown at the compressed rate (mirrors advance())
+        let eta = Infinity;
+        for (const L of F.landings) {
+          if (L.state === 2) continue;
+          const peelIn = L.state === 1
+            ? Math.max(0, L.dur - (F.t - L.t0))
+            : Math.max(0.15, Math.min(L.tPeel - F.t, 0.15)) + Math.max(0.55, L.dur / 1.5);
+          eta = Math.min(eta, peelIn);
+        }
+        if (!Number.isFinite(eta)) eta = 0.8;
+        need = eta + NET_MIN_S + CONV_S;
+      }
+      ground.armConvergence(F.t, need);
+      return Math.round(need * 1000);
+    },
+    preludeStrike() {
+      if (ground) ground.strike(state.field ? state.field.t : 0);
+      if (state.field) state.field.released = true;
+      // the skeleton needs its canvas through the fade — and a strike that
+      // arrives inside the stream's own crossfade (a gesture on a fast
+      // machine) must not cut that fade's preload half short either
+      if (state.live) {
+        const fadeLeft = fadeFrom === Infinity ? 0
+          : Math.max(0, fadeFrom + fadeMs - performance.now());
+        setTimeout(stop, Math.max((NET_EXIT_S + 0.25) * 1000, fadeLeft + 100));
+      }
+    },
+    preludeDismiss() {
+      if (ground) ground.dismiss();
+      if (state.field) state.field.released = true;
+      if (state.live && state.handedOff) setTimeout(stop, 400);
+    },
     get failed() { return state.failed; },
     get field() { return state.field; },
     get view() { return state.view; },
@@ -1230,7 +1753,10 @@ function createPreload() {
      *  `p * scene + (1 - p) * preload` of the same spore; with an eased
      *  pair the sum bulges in the middle and the stream visibly flares. On
      *  a linear pair it is flat, and the only thing that changes across
-     *  the seam is that the light acquires the composer's bloom.
+     *  the seam is that the light acquires the composer's bloom. The
+     *  preload's half rides the per-frame colour upload (streamGain) so
+     *  the canvas can stay behind for the PreNetwork; it is the same
+     *  linear wall-clock ramp the wrap's CSS fade used to be.
      *
      *  ...AND THEY ARE ONLY COMPLEMENTARY IF THE ENTRY RAMP IS DONE, which
      *  is a RACE this file used to lose silently. The wrap enters on its own
@@ -1253,25 +1779,30 @@ function createPreload() {
      *  takes longer than ENTRY_MS to reach a scene.
      *
      *  Called only when a scene exists to hand to. If the scene never
-     *  builds, nothing calls this, and the layer — spores, or the static
-     *  haze if WebGL was refused — simply stays as the hero (2D). */
+     *  builds, nothing calls this, and the layer — stream, landings,
+     *  network and all, or the static haze if WebGL was refused — simply
+     *  stays as the hero. sceneReady is the choreography's compression
+     *  signal: from here the remaining landings accelerate rather than
+     *  waiting out their nominal windows. */
     handOff(seconds) {
       if (state.handedOff) return null;
       state.handedOff = true;
+      if (state.field) state.field.sceneReady = true;
       const wait = state.wrap
         ? Math.max(0, Math.round(ENTRY_MS - (performance.now() - entryAt)))
         : 0;
       const carried = state.field
         ? { field: state.field, view: state.view, fadeDelay: wait / 1000 }
         : null;
-      const ms = Math.round(seconds * 1000);
-      if (state.wrap) {
-        // A transition-DELAY would not do here, and the difference is the whole
-        // point: restyling the property replaces the running entry transition
-        // at once, so the layer would freeze at whatever opacity it had reached
-        // and sit there for the delay. Leaving the entry transition alone and
-        // arming the fade-out on a timer instead lets the stream finish
-        // arriving, which is what the visitor was already watching.
+      const ms = Math.max(1, Math.round(seconds * 1000));
+      if (!state.live || state.reduced) {
+        // The paths with no frame loop to carry a per-frame gain — the
+        // reduced-motion still and the no-WebGL static haze — cross over
+        // on the wrap's own CSS fade instead, exactly the old contract:
+        // CSS transitions run without rAF, so the still fades under the
+        // arriving scene and the canvas (or haze) then leaves entirely.
+        // Restyling the property would replace a still-running entry
+        // transition at once, so the fade is armed on a timer, after it.
         const fadeOut = () => {
           if (!state.wrap) return;
           state.wrap.style.transition = `opacity ${ms}ms linear`;
@@ -1279,8 +1810,11 @@ function createPreload() {
         };
         if (wait > 0) setTimeout(fadeOut, wait);
         else fadeOut();
+        setTimeout(stop, wait + ms + 60);
+        return carried;
       }
-      setTimeout(stop, wait + ms + 60);
+      fadeMs = ms;
+      fadeFrom = performance.now() + wait;
       return carried;
     },
   };
@@ -1310,9 +1844,10 @@ function encodeOnCpu(lin) {
 
 /* ---------------------------------------------------------------- *
  * THE SINGLETON. index.html loads this module ahead of main.js, so the
- * stream is composed before the scene's graph has finished arriving;
- * main.js imports the same specifier and therefore the same instance
- * (ESM module cache), and hands the field over when the scene exists.
+ * current is crossing the frame before the scene's graph has finished
+ * arriving; main.js imports the same specifier and therefore the same
+ * instance (ESM module cache), and hands the field over when the scene
+ * exists.
  * ---------------------------------------------------------------- */
 export const heroSpores = createPreload();
 
@@ -1323,7 +1858,7 @@ export const heroSpores = createPreload();
 if (typeof document !== 'undefined') heroSpores.boot();
 
 /* ---------------------------------------------------------------- *
- * HALF TWO — the same field inside the organism's scene (2C).
+ * HALF TWO — the same field inside the organism's scene.
  * ---------------------------------------------------------------- */
 
 /**
@@ -1370,12 +1905,12 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
   const buf = pts.geometry.attributes.position;
   const colAttr = pts.geometry.attributes.color;
 
-  /** The scene-side half of the landing fade: the same F.color x F.fade
-   *  the preload canvas uploads, written into this Points' own colour
-   *  attribute — one brightness law, two renderers, so the absorption at
-   *  the stem is identical on both sides of the seam. (This also keeps a
-   *  recycled particle's fresh tone, which the build-time colours alone
-   *  would not.) */
+  /** The scene-side half of the choreography's light: the same
+   *  F.color x F.fade the preload canvas uploads, written into this
+   *  Points' own colour attribute — one brightness law, two renderers,
+   *  so a landing collapse or a ring burst is identical on both sides of
+   *  the seam. (This also keeps a recycled particle's fresh tone, which
+   *  the build-time colours alone would not.) */
   function inkFades() {
     const carr = colAttr.array;
     for (let i = 0; i < F.n; i++) {
@@ -1414,12 +1949,12 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
 
   /* The complementary half of handOff()'s linear fade — and it is priced
      on the WALL CLOCK, not on the frame loop's `t`, because the thing it
-     has to stay level with is a CSS transition and CSS transitions are
-     wall-clock. Two consequences, both wanted: ?capture= freezes the
-     scene clock at t = 0 with dt = 0 and this ramp still completes, so a
-     frozen frame is shot at full brightness rather than at nothing; and
-     the ramp is over inside a second, long before organism/intro.js's
-     fast-forward skews performance.now(), so it never reads that skew. */
+     has to stay level with is the preload's own wall-clock ramp. Two
+     consequences, both wanted: ?capture= freezes the scene clock at t = 0
+     with dt = 0 and this ramp still completes, so a frozen frame is shot
+     at full brightness rather than at nothing; and the ramp is over
+     inside a second, long before organism/intro.js's fast-forward skews
+     performance.now(), so it never reads that skew. */
   const gain = pts.material.uniforms.uOpacity;
   const fadeMs = fadeSeconds * 1000;
   /* handOff()'s own wait, carried across so BOTH halves of the crossfade start
@@ -1448,11 +1983,6 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
     if (!F.preloadDriven) advance(F, dt, 0.72 + 0.28 * breeze(t));
     project();
     inkFades();
-    // The overture's second driver: once this animator exists the preload
-    // loop is on its way out, and the traveling light still has an intro
-    // to wait for. Wall-delta advance inside tick() keeps the overlap
-    // frame-exact — two callers split a frame, they never double it.
-    if (overture && !overture.gone) overture.tick();
   });
 
   return { points: pts, field: F };

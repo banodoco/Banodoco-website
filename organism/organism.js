@@ -1891,17 +1891,21 @@ const { animators, addAnimator } = animationLifecycle;
 ctx.animators = animators;
 ctx.addAnimator = addAnimator;
 
-/* ---- THE SEEDING STREAM WAS ALREADY HERE (Lane B, 2B/2C) -------------
-   organism/hero-spores.js has been dropping a sparse stream of spores
-   from the upper-left into the specimen's own ground since long before
-   this module finished downloading — it rides its own <script
-   type="module"> in index.html and imports nothing heavier than a leaf,
-   so it paints while `three` is still on the wire. Adopting its LIVE
-   field here (same particles, same offsets, same phase, same integrator)
-   is what makes this moment read as the MUSHROOM MATERIALISING UNDER THE
-   STREAM THAT WAS SEEDING ITS SPOT, instead of one particle system
-   swapping for another: the preload canvas cross-fades out over the same
-   beat this Points fades in, and no particle moves across the seam.
+/* ---- THE THROUGH-CURRENT WAS ALREADY HERE (Lane B; hero-loading v3) --
+   organism/hero-spores.js has been carrying a broad current of spores
+   across the frame — in off the top-left, out past the right edge, with
+   a few hero spores peeling away to land on the specimen's own ground —
+   since long before this module finished downloading. It rides its own
+   <script type="module"> in index.html and imports nothing heavier than
+   a leaf, so it paints while `three` is still on the wire. Adopting its
+   LIVE field here (same particles, same offsets, same phase, same
+   integrator, same mid-arc landings) is what makes this moment read as
+   ONE WORLD GAINING ITS ORGANISM instead of one particle system swapping
+   for another: the preload's stream fades out over the same beat this
+   Points fades in, and no particle moves across the seam. The preload
+   CANVAS outlives this swap — its PreNetwork keeps answering landings
+   until the intro's release strikes — but from this call on, the stream's
+   pixels are this object's.
 
    THREE THINGS ABOUT THIS POSITION, all load-bearing:
      · after ctx.addAnimator exists, because the field registers one;

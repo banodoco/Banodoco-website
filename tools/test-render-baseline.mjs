@@ -306,7 +306,13 @@ check('S9', 'every slot resolved to source text', report.shaders.unresolvedSlotC
  * ------------------------------------------------------------------ */
 // S10 10 -> 12: hero-spores.js's own VERT and FRAG. Two chunks, one module,
 // and they are the whole of this delta.
-wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 12);
+// S10 12 -> 14 (hero-loading v3, R5): the same module's LINE_VERT and
+// LINE_FRAG — the PreNetwork's raw-GL line pair, carrying the identical
+// fog and ACES delta-encode as the point pair so a skeleton strand lands
+// on the pixel value the real web's strand will land on. They declare NO
+// new uniform names (uTanHalfFov/uAspect/uBgLinear/uBgEncoded, all already
+// in the unions), which is why S12-S15 are byte-unchanged by the same edit.
+wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 14);
 wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCount, 24);
 // S12/S13 — THE NAME MANIFESTS, not their size (coordinator decision D36, the
 // same conversion X3 records below and for the same reason).
@@ -635,7 +641,17 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
    and a module that animates CSS opacity by hand spells the word a lot.
    S12-S15 are byte-unchanged by the same edit, confirming no shader or
    uniform moved — the overture is deliberately not a GL surface. */
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 254);
+/* M1 254 -> 255 (hero-loading v3, R5). The prelude rework REPLACED the
+   overture's DOM glow (traveling light + pre-lit pool, 8 `opacity` sites)
+   with the ground's landing-driven glow (per-site pools, activation-keyed
+   ground wash, strike/dismiss fades, 9 `opacity` sites) — a net +1, all
+   in organism/hero-spores.js's createGround(), and NOT ONE IS A MATERIAL
+   FLAG: every one is a CSS `style.opacity` write or an `opacity:` in an
+   inline stylesheet string, the same extractor scope as the two entries
+   directly above. Measured per flag: `opacity` 55 -> 56; M2/M3/M4 and
+   `premultipliedAlpha` unmoved — the cross-check that no real material
+   site was touched. */
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 255);
 wave('M2', 'transparent: sites', flag('transparent'), 33);
 wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
 wave('M4', 'blending: sites', flag('blending'), 33);
@@ -1357,6 +1373,16 @@ const SOURCE_MANIFEST = [
     "organism/hero-spores.js",
     "organism/intro-clock.js",
     "organism/intro.js",
+    /* 139 -> 140, the hero-loading v3 prelude (R5): organism/
+       network-skeleton.js — the PreNetwork's shared ground data, a leaf
+       extracted from the real groundGroup build (landing sites + 24 of
+       the web's own polylines in world coordinates), so the prelude's
+       skeleton and the loaded network are one structure rather than two
+       aim tables that can drift. ONE ENTRY, this order's own, in sort
+       position between intro.js and organism.js ('n' < 'o'). Nobody
+       else's row was added, moved or removed (D62); the run that added
+       it had X3 reporting exactly one ADDED entry and nothing REMOVED. */
+    "organism/network-skeleton.js",
     "organism/organism.js",
     "organism/performance.js",
     "organism/random.js",
