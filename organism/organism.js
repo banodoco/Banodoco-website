@@ -140,6 +140,7 @@ const { rand, randRange, gauss, heat } = createRandomGeometryHelpers();
 // =====================================================================
 const {
   scene, camera, renderer, controls, pixelRatioPolicy, FOG_NEAR, FOG_FAR,
+  rendererName,
 } = createRendererSetup({
   panX, container, camY, camZ, targetY, camAzimuth, bg, fov, pinPr: PIN_PR,
 });
@@ -2207,6 +2208,12 @@ return {
   camera,
   /** The THREE.WebGLRenderer attached to `container` (or document.body). */
   renderer,
+  /** UNMASKED_RENDERER_WEBGL, read once at context construction (see the
+   *  GPU'S NAME note in organism/renderer.js). '' when the probe is
+   *  unavailable. Its one consumer is journey preparation's
+   *  software-rasteriser test, which must NOT re-read it mid-load: the same
+   *  two GL calls cost 413 ms of the entry when the command queue is deep. */
+  rendererName,
   /** The THREE.EffectComposer (render pass + bloom + output) — render through this, not `renderer`. */
   composer,
   /** The OrbitControls instance attached to `camera`. */

@@ -20,6 +20,29 @@ export function createRendererSetup({ panX, container, camY, camZ, targetY, camA
   renderer.toneMappingExposure = 0.95;
   (container || document.body).appendChild(renderer.domElement);
 
+  /* THE GPU'S NAME, READ HERE BECAUSE HERE IS THE ONLY PLACE IT IS FREE.
+     journey/boot's prepareGpu needs it for one test — is this a software
+     rasteriser, in which case the hidden warm draws must be skipped — and it
+     used to read it itself, four seconds into the load. Both halves of that
+     read (`getExtension('WEBGL_debug_renderer_info')` and the
+     `getParameter(UNMASKED_RENDERER_WEBGL)` behind it) are SYNCHRONOUS
+     round-trips to the GPU process, so each one parks the main thread for
+     however deep the command queue happens to be. Measured on a cold
+     1440x900 load with the prelude flowing (evidence/r12-stutter §3, class C):
+     228 ms + 185 ms = 413 ms of the entry spent asking what kind of GPU this
+     is. Read at context construction the queue is empty and the same two
+     calls cost ~0 — the answer is a property of the machine and never
+     changes, so the only question was where to stand when asking.
+     Guarded for the fake renderer the contract suites construct, which has no
+     getContext(); an unavailable name reads as '' exactly as the old
+     expression did when the extension was missing. */
+  let rendererName = '';
+  try {
+    const gl = typeof renderer.getContext === 'function' ? renderer.getContext() : null;
+    const info = gl && gl.getExtension ? gl.getExtension('WEBGL_debug_renderer_info') : null;
+    if (gl && info) rendererName = String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL) || '');
+  } catch { rendererName = ''; } // a refused probe is not a reason to refuse a page
+
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(panX, targetY, 0);
   controls.enableDamping = true;
@@ -52,7 +75,7 @@ export function createRendererSetup({ panX, container, camY, camZ, targetY, camA
     }
   }
 
-  return { scene, camera, renderer, controls, pixelRatioPolicy, FOG_NEAR, FOG_FAR, dispose };
+  return { scene, camera, renderer, controls, pixelRatioPolicy, FOG_NEAR, FOG_FAR, rendererName, dispose };
 }
 
 /**
