@@ -843,8 +843,31 @@ assert.ok(worstJitterMinGap / ARRIVE_GAP_S > ARRIVE_RATE_MIN,
    (min over 2 trials, 4335-4601 ms). Evidence:
    banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/ceremony-window*.json
    (probe r4b-ceremony-window.mjs). */
+/* THE UP WINDOW RE-MEASURED AND ITS PIN CONVERTED, 2026-09-01 (final/index.js
+   §43 — the owner: on mission -> final "the mushrooms light up when I start,
+   then disappear, only to reappear again"). The 4.335 s figure WAS the
+   defect: uAmount left 0 at ~1.0 s of the -426.9deg lap because `rise` reads
+   the Final LEG's camera x, and the ceremonial lap swings through that
+   territory on its way OUT of Mission before crossing it again to land. §43
+   holds the arriving lap dark for the origin's own RETIRE_SPAN of the move
+   and opens it on its own first light, so uAmount now leaves 0 on the
+   genuine approach (measured 4079 ms of a 47..5277 ms motion window, 3/3
+   trials: window 1.198 s; evidence
+   banodoco-brief-v16/evidence/r6-lapfade/ceremony-window-postfix.json,
+   probe r4b-ceremony-window.mjs on :8583).
+     The old assertion (departure cost < up window) lost its subject with the
+   flash: nothing departs inside the up window any more, and §41 already
+   legalised an arrival that outlives its lap ("an ARRIVAL has no window at
+   all"). What the re-derived pin holds instead is §43's own load-bearing
+   consequence: the arrival clock's full-band cost EXCEEDS the window the
+   genuine approach leaves, so the ceremonial arrival is still converging
+   when the lap lands and the spread MUST ride the convergence tail
+   (`spreadTail`). Its killer: quicken the arrive clock (or re-cut the
+   ladder) until the band fits inside the window and the tail machinery goes
+   dead silently — this pin reds first and asks for the §43 hand-off to be
+   re-read, not for the number to be moved. */
 const WRAP_DOWN_WINDOW_S = 3.221;   // final/index.js §40 subject, measured on real driven wraps
-const WRAP_UP_WINDOW_S = 4.335;     // idem; the looser of the two
+const WRAP_UP_WINDOW_S = 1.198;     // §43 subject: first light -> landing on the held lap
 const DECLARED_BLEND_COST_S = 1.1655;
 const BLEND_COST_TOL_S = 0.010;     // > the 5 ms REV_JIT can move it, < a rung
 const blendCost = bandCost(LADDER, clocks().blend);
@@ -856,15 +879,20 @@ assert.ok(blendCost < WRAP_DOWN_WINDOW_S,
   + 'light that goes out after the colony has left frame goes out where nobody can see it. '
   + 'Lower LADDER_GAP_S, or re-measure the window on the page and rewrite it here with the '
   + 'evidence. Do not widen this.');
-assert.ok(blendCost < WRAP_UP_WINDOW_S,
-  `LD-FIT: the departure clock costs ${blendCost.toFixed(3)} s against the wrap UP's `
-  + `${WRAP_UP_WINDOW_S} s window`);
+const arriveCost = bandCost(LADDER, clocks().arrive);
+assert.ok(arriveCost > WRAP_UP_WINDOW_S,
+  `LD-FIT: the arrival clock crosses the band in ${arriveCost.toFixed(3)} s, INSIDE the wrap `
+  + `UP's ${WRAP_UP_WINDOW_S} s first-light window — §43's convergence-tail hand-off `
+  + '(`spreadTail`) is dead code and the ceremonial arrival now completes mid-lap. Re-read '
+  + 'final/index.js §43 before touching either side of this.');
 
 REPORT.push(['LADDER', [
   `24 rungs, span ${(LADDER[23] - LADDER[0]).toFixed(4)} pull, tightest gap `
   + `${worstJitterMinGap.toFixed(5)} at worst jitter`,
   `blend band ${blendCost.toFixed(4)} s inside the wrap DOWN's ${WRAP_DOWN_WINDOW_S} s `
   + `(${((WRAP_DOWN_WINDOW_S - blendCost) * 1000).toFixed(0)} ms in hand)`,
+  `arrive band ${arriveCost.toFixed(4)} s outside the wrap UP's ${WRAP_UP_WINDOW_S} s `
+  + `first-light window (tail carries ${((arriveCost - WRAP_UP_WINDOW_S) * 1000).toFixed(0)} ms)`,
   `one-sidedness margin ${(-oneSidednessViolation(LADDER)).toFixed(4)} pull/s worst-case, `
   + 'and 0 violations over 400 generated ladders',
 ]]);
