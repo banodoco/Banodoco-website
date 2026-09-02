@@ -21,7 +21,7 @@
  * re-measure that moves the number a little does not quietly become a
  * different design, and drive every pin red with a named mutant.
  *
- * THREE SUBJECTS, ONE LAW.
+ * FOUR SUBJECTS, ONE LAW.
  *
  *   BRAKE  (census A1) journey/route.js's FORWARD_BRAKE_TAIL_S — a budget
  *          declared in SECONDS whose delivered value is set by a
@@ -39,6 +39,12 @@
  *          DOES NOT IMPORT. That is the law's own pre-fault definition of the
  *          defect: a beat whose implementation coordinate and whose stated
  *          purpose live in files that never refer to each other.
+ *   ORBIT  (rider, added 2026-08-30 with Equip) journey/portrait.js's zero
+ *          head against journey/chapters/inspire/camera.js's ARRIVAL_DEAD —
+ *          a FRACTION of a leg, duplicated in a file that cannot import it
+ *          (portrait.js is deliberately three-free), whose product with the
+ *          live Inspire rest is the p that actually ships. It was a literal
+ *          until the route moved under it.
  *
  * WHERE THE TWO ENDS NEVER MEET, SAID OUT LOUD. Each subject below names the
  * two modules and whether either imports the other. None of the three pairs
@@ -238,8 +244,8 @@ globalThis.window = { innerHeight: 900, addEventListener: addListener };
 const { createScrollModel } = await import('../journey/scroll.js');
 const { SNAP_K, SNAP_DEAD_P, COMMIT_GLIDE_PX, COMMIT_GLIDE_MAX_S } =
   await import('../journey/constants/scroll.js');
-const { REST_STOPS, REST_OWNER, transitSeconds, forwardBrakeTailSeconds, FORWARD_BRAKE_TAIL_S } =
-  await import('../journey/route.js');
+const { REST_STOPS, REST_OWNER, restProgress, transitSeconds, forwardBrakeTailSeconds,
+  FORWARD_BRAKE_TAIL_S } = await import('../journey/route.js');
 
 const scroll = createScrollModel();
 scroll.attach();
@@ -379,7 +385,7 @@ const ROUTE_SRC = flat('journey/route.js');
    measurement, and nothing would have stopped a fourth being added on a
    guess. */
 const ENTRIED = LEGS.filter((l) => forwardBrakeTailSeconds(l.lo, l.hi, 1)).map((l) => l.name);
-assert.deepEqual(ENTRIED, ['mission>inspire', 'inspire>connect', 'connect>owned'],
+assert.deepEqual(ENTRIED, ['mission>inspire', 'inspire>equip', 'equip>connect', 'connect>owned'],
   'BR-ENUM: the set of forward legs carrying a FORWARD_BRAKE_TAIL_S budget has changed. Every '
   + "entry in that table is a MEASUREMENT — route.js's own comment says the readings are "
   + 'measurements, not algebra — so a new entry owes this file its delivered tail and its K_eff, '
@@ -441,30 +447,31 @@ for (const b of BRAKE) {
    sixteen times this tolerance. */
 const TAIL_TOL_MS = 1;
 const [dialS, dialInspire, dialConnect] = declaredIn(ROUTE_SRC,
-  /Declared ([0-9.]+) delivers ([0-9]+) ms on Inspire -> Connect and ([0-9]+) ms on Connect -> Owned/,
+  /Declared ([0-9.]+) delivers ([0-9]+) ms on Inspire -> Equip and ([0-9]+) ms on Connect -> Owned/,
   "the dial's delivered tails on the two 2026-08-17/24 entries");
 const [missionFlick, missionGentle] = declaredIn(ROUTE_SRC,
   /Delivered \(measured, not algebra\): ([0-9]+) ms flick \/ ([0-9]+) ms gentle/,
   "mission>inspire's two gesture classes");
 const [declaredKeff, declaredTail] = declaredIn(ROUTE_SRC,
-  /inspire>connect fwd ([0-9.]+) ([0-9]+) ms/,
-  "the K_eff ladder's inspire>connect row");
+  /equip>connect fwd ([0-9.]+) ([0-9]+) ms/,
+  "the K_eff ladder's equip>connect row");
 
 const measured = (name, gesture) => BRAKE.find((b) => b.name === name && b.gesture === gesture);
-near(measured('inspire>connect', 'flick').tailMs, dialInspire, TAIL_TOL_MS, 'BR-NUMBER',
-  'the tail Inspire -> Connect delivers against its declared 0.35 s dial');
+near(measured('inspire>equip', 'flick').tailMs, dialInspire, TAIL_TOL_MS, 'BR-NUMBER',
+  'the tail Inspire -> Equip delivers against its declared 0.35 s dial');
 near(measured('connect>owned', 'flick').tailMs, dialConnect, TAIL_TOL_MS, 'BR-NUMBER',
   'the tail Connect -> Owned delivers against its declared 0.35 s dial');
 near(measured('mission>inspire', 'flick').tailMs, missionFlick, TAIL_TOL_MS, 'BR-NUMBER',
   "the tail Mission -> Inspire delivers on a 12-notch flick");
 near(measured('mission>inspire', 'gentle').tailMs, missionGentle, TAIL_TOL_MS, 'BR-NUMBER',
   'the tail Mission -> Inspire delivers on a gentle release');
-near(measured('inspire>connect', 'flick').keffMeasured, declaredKeff, 0.01, 'BR-NUMBER',
-  "the K_eff route.js's own measured ladder records for inspire>connect");
-assert.equal(declaredTail, dialInspire,
-  'BR-NUMBER: route.js states the inspire>connect delivered tail twice — in the dial paragraph '
-  + `(${dialInspire} ms) and in the K_eff ladder (${declaredTail} ms) — and the two no longer agree. `
-  + 'One of them was updated and the other was not; this file will not choose between them.');
+near(measured('equip>connect', 'flick').keffMeasured, declaredKeff, 0.01, 'BR-NUMBER',
+  "the K_eff route.js's own measured ladder records for equip>connect");
+assert.equal(declaredTail, measured('equip>connect', 'flick').tailMs.toFixed(0) * 1,
+  'BR-NUMBER: route.js states the equip>connect delivered tail twice — in the five-leg table '
+  + `and in the K_eff ladder (${declaredTail} ms) — and the ladder no longer agrees with what the `
+  + 'rig delivers. One of them was updated and the other was not; this file will not choose '
+  + 'between them.');
 for (const b of BRAKE) {
   if (!b.tailS) continue;
   near(+b.tailS.toFixed(3), dialS, 1e-9, 'BR-NUMBER',
@@ -824,8 +831,43 @@ assert.ok(worstJitterMinGap / ARRIVE_GAP_S > ARRIVE_RATE_MIN,
    the limiters stay precisely because reading the rungs from the build let
    them survive the re-cut unchanged — which is the claim this pin makes
    checkable. */
-const WRAP_DOWN_WINDOW_S = 1.384;   // final/index.js §40, measured on real wheel-driven wraps
-const WRAP_UP_WINDOW_S = 1.450;     // idem; the looser of the two
+/* RE-MEASURED 2026-09-01 on the owner-confirmed ceremonial seam (both wraps
+   +/-426.9 deg, 5333 ms delivered laps). The 1.384/1.450 pair was the
+   2026-08-21 page's 3.87-4.00 s lap, before the wrap rode the
+   navigation-timing conversion — stale against the live page even before the
+   seam re-judgment, as the lane ledger recorded. Definitions unchanged:
+   DOWN is move-first-frame -> the chapter's own uAmount leaving 1.0 (its
+   fade now rides the retire's last light, so the window ends with the
+   ladder rather than on a leg coordinate — min over 7 clean trials,
+   3221-3252 ms); UP is the chapter's uAmount leaving 0 -> the lap landing
+   (min over 2 trials, 4335-4601 ms). Evidence:
+   banodoco-brief-v16/evidence/r4-grammar/loop-ceremony/ceremony-window*.json
+   (probe r4b-ceremony-window.mjs). */
+/* THE UP WINDOW RE-MEASURED AND ITS PIN CONVERTED, 2026-09-01 (final/index.js
+   §43 — the owner: on mission -> final "the mushrooms light up when I start,
+   then disappear, only to reappear again"). The 4.335 s figure WAS the
+   defect: uAmount left 0 at ~1.0 s of the -426.9deg lap because `rise` reads
+   the Final LEG's camera x, and the ceremonial lap swings through that
+   territory on its way OUT of Mission before crossing it again to land. §43
+   holds the arriving lap dark for the origin's own RETIRE_SPAN of the move
+   and opens it on its own first light, so uAmount now leaves 0 on the
+   genuine approach (measured 4079 ms of a 47..5277 ms motion window, 3/3
+   trials: window 1.198 s; evidence
+   banodoco-brief-v16/evidence/r6-lapfade/ceremony-window-postfix.json,
+   probe r4b-ceremony-window.mjs on :8583).
+     The old assertion (departure cost < up window) lost its subject with the
+   flash: nothing departs inside the up window any more, and §41 already
+   legalised an arrival that outlives its lap ("an ARRIVAL has no window at
+   all"). What the re-derived pin holds instead is §43's own load-bearing
+   consequence: the arrival clock's full-band cost EXCEEDS the window the
+   genuine approach leaves, so the ceremonial arrival is still converging
+   when the lap lands and the spread MUST ride the convergence tail
+   (`spreadTail`). Its killer: quicken the arrive clock (or re-cut the
+   ladder) until the band fits inside the window and the tail machinery goes
+   dead silently — this pin reds first and asks for the §43 hand-off to be
+   re-read, not for the number to be moved. */
+const WRAP_DOWN_WINDOW_S = 3.221;   // final/index.js §40 subject, measured on real driven wraps
+const WRAP_UP_WINDOW_S = 1.198;     // §43 subject: first light -> landing on the held lap
 const DECLARED_BLEND_COST_S = 1.1655;
 const BLEND_COST_TOL_S = 0.010;     // > the 5 ms REV_JIT can move it, < a rung
 const blendCost = bandCost(LADDER, clocks().blend);
@@ -837,15 +879,20 @@ assert.ok(blendCost < WRAP_DOWN_WINDOW_S,
   + 'light that goes out after the colony has left frame goes out where nobody can see it. '
   + 'Lower LADDER_GAP_S, or re-measure the window on the page and rewrite it here with the '
   + 'evidence. Do not widen this.');
-assert.ok(blendCost < WRAP_UP_WINDOW_S,
-  `LD-FIT: the departure clock costs ${blendCost.toFixed(3)} s against the wrap UP's `
-  + `${WRAP_UP_WINDOW_S} s window`);
+const arriveCost = bandCost(LADDER, clocks().arrive);
+assert.ok(arriveCost > WRAP_UP_WINDOW_S,
+  `LD-FIT: the arrival clock crosses the band in ${arriveCost.toFixed(3)} s, INSIDE the wrap `
+  + `UP's ${WRAP_UP_WINDOW_S} s first-light window — §43's convergence-tail hand-off `
+  + '(`spreadTail`) is dead code and the ceremonial arrival now completes mid-lap. Re-read '
+  + 'final/index.js §43 before touching either side of this.');
 
 REPORT.push(['LADDER', [
   `24 rungs, span ${(LADDER[23] - LADDER[0]).toFixed(4)} pull, tightest gap `
   + `${worstJitterMinGap.toFixed(5)} at worst jitter`,
   `blend band ${blendCost.toFixed(4)} s inside the wrap DOWN's ${WRAP_DOWN_WINDOW_S} s `
   + `(${((WRAP_DOWN_WINDOW_S - blendCost) * 1000).toFixed(0)} ms in hand)`,
+  `arrive band ${arriveCost.toFixed(4)} s outside the wrap UP's ${WRAP_UP_WINDOW_S} s `
+  + `first-light window (tail carries ${((arriveCost - WRAP_UP_WINDOW_S) * 1000).toFixed(0)} ms)`,
   `one-sidedness margin ${(-oneSidednessViolation(LADDER)).toFixed(4)} pull/s worst-case, `
   + 'and 0 violations over 400 generated ladders',
 ]]);
@@ -1114,6 +1161,80 @@ REPORT.push(['EMBER', [
   + `copy's ${copyBreatheMs.toFixed(0)} ms`,
 ]]);
 
+/* ===================================================================== *
+ * 4. ORBIT — census rider. journey/portrait.js's zero-field head against
+ *    journey/chapters/inspire/camera.js's arrival dead band.
+ *
+ * THE TWO ENDS AND WHY THEY NEVER MEET. inspire/camera.js authors the
+ * arrival's dead band as ARRIVAL_DEAD, a FRACTION of the arrival gesture —
+ * the stretch at the head of the leg that holds the hero pose exactly and
+ * buys zero world units of path. journey/portrait.js's three correction
+ * ladders (KEYS, TAB_KEYS, PHONE_KEYS) all begin with a zero key that must
+ * sit at the p where that band ENDS: the file's own note says the field is
+ * exactly zero at and below the orbit start because below it the camera is
+ * the hero's pose verbatim, and a zero key placed late leaves a window of
+ * real orbit with the correction still pinned at zero.
+ *
+ * portrait.js CANNOT import the fraction. It is deliberately three-free so
+ * that DOM-free suites can import it in Node, and inspire/camera.js imports
+ * three. So the fraction is DECLARED TWICE, in two files that never refer to
+ * each other — CONTRIBUTING.md §5's own pre-fault definition — and this is
+ * where the two ends are computed against each other.
+ *
+ * WHAT IT BOUGHT, since tools/ mass is a gated number. Until 2026-08-30 the
+ * orbit start was a LITERAL 0.040 in portrait.js, which was the product only
+ * while the Inspire rest sat at p 0.26. Equip's arrival moved that rest to
+ * 0.20 and the product to 0.0308; the literal would have gone on passing
+ * every suite in the tree while leaving 0.0092 of p — nearly a third of the
+ * dead band's own width — of real orbit with all three ladders pinned at zero.
+ * Nothing in tools/ could see it. This pin is what makes the rest a route
+ * lookup rather than a copied number, and it reds if either end moves alone.
+ * ===================================================================== */
+const PORTRAIT_SRC = code('journey/portrait.js');
+const ORBIT_DEAD_FRACTION = localNum(PORTRAIT_SRC, 'ORBIT_DEAD_FRACTION', 'portrait.js');
+const ARRIVAL_DEAD = localNum(code('journey/chapters/inspire/camera.js'),
+  'ARRIVAL_DEAD', 'inspire/camera.js');
+
+near(ORBIT_DEAD_FRACTION, ARRIVAL_DEAD, 1e-12, 'OR-FRACTION',
+  "portrait.js's copy of inspire/camera.js's arrival dead band");
+
+/* THE PRODUCT, not just the two factors. The number that actually ships is
+   the fraction times the LIVE Inspire rest, and the failure this catches is a
+   route re-timing that moves the rest while both declarations sit still. */
+const orbitP0 = ARRIVAL_DEAD * restProgress('inspire');
+const [declaredOrbitP0] = declaredIn(flat('journey/portrait.js'),
+  /ARRIVAL_DEAD, a FRACTION of the arrival, and the product it forms with the live Inspire rest is ([0-9.]+)\./,
+  "portrait.js's stated product of the dead fraction and the Inspire rest");
+near(orbitP0, declaredOrbitP0, 5e-4, 'OR-PRODUCT',
+  "the orbit start portrait.js's own prose computes against the live route");
+
+/* REGIME, so a legitimate re-timing that moves the number a little does not
+   quietly become a different design: the zero head must stay INSIDE the
+   Mission leg and must not collapse onto p 0. A head at 0 would put the
+   correction ladder's first key on the hero pose itself, where the field is
+   the hero's own responsive table and not this file's. */
+assert.ok(orbitP0 > 0 && orbitP0 < REST_STOPS[1],
+  `OR-REGIME: the orbit start is ${orbitP0.toFixed(4)}, outside the open interval `
+  + `(0, ${REST_STOPS[1]}) between the hero and the Inspire rest. The zero head belongs inside `
+  + 'the arrival it is the dead band OF.');
+
+/* ALL THREE LADDERS SHARE THE HEAD, asserted rather than assumed. The
+   landscape field and the tablet/phone bands are three separate ladders and
+   the note above is about all of them; a head that moved on one would leave
+   the other two describing a different camera. */
+const orbitHeads = [...PORTRAIT_SRC.matchAll(/\{\s*p:\s*ORBIT_P0\s*,/g)].length;
+assert.equal(orbitHeads, 3,
+  `OR-LADDERS: ${orbitHeads} of portrait.js's ladders begin at ORBIT_P0, not 3. KEYS, TAB_KEYS `
+  + 'and PHONE_KEYS all bloom off the same zero head; one of them has been re-anchored to a '
+  + 'literal, or a fourth ladder arrived without one.');
+
+REPORT.push(['ORBIT', [
+  `dead fraction ${ARRIVAL_DEAD} declared in both inspire/camera.js and portrait.js`,
+  `x Inspire rest ${restProgress('inspire')} = orbit start ${orbitP0.toFixed(4)} `
+  + `(prose says ${declaredOrbitP0})`,
+  `3 ladders share the head; regime (0, ${REST_STOPS[1]}) holds`,
+]]);
+
 /* ------------------------------------------------------------------ *
  * Report
  * ------------------------------------------------------------------ */
@@ -1158,7 +1279,7 @@ console.log('\n--- mutants: the NULL CONTROLS run first and must NOT fire ---\n'
    recomputation together, so BR-MECH correctly stays green — the mechanism is
    intact — and BR-NUMBER reds because the prose no longer describes what
    ships. That split is the whole design. */
-const BR_LEG = BRAKE.find((b) => b.name === 'inspire>connect' && b.gesture === 'flick');
+const BR_LEG = BRAKE.find((b) => b.name === 'equip>connect' && b.gesture === 'flick');
 const brMechFires = (o = {}) => {
   const k = o.k ?? solveK(BR_LEG.pRate, o.tailS ?? BR_LEG.tailS, o);
   return Math.abs(k / (1 - k * DT) - BR_LEG.keffMeasured) > 0.001;
@@ -1172,9 +1293,14 @@ const brRegimeFires = (o = {}) => {
 /* BR-NUMBER's own axis is the shipped prose against the rig, so its killer
    perturbs the PROSE — the only end of that comparison a pure suite can
    move. Nothing is written to disk. */
+/* The subject leg of the prose comparison is Inspire -> Equip since 2026-08-30
+   — the half of the retired Inspire -> Connect entry whose delivered tail the
+   dial paragraph now quotes. BR_LEG stays equip>connect (it is the K_eff
+   ladder's row), so this reader takes its own. */
+const BR_PROSE_LEG = BRAKE.find((b) => b.name === 'inspire>equip' && b.gesture === 'flick');
 const brNumberFires = (src) => {
-  const m = src.match(/delivers ([0-9]+) ms on Inspire -> Connect/);
-  return !m || Math.abs(Number(m[1]) - BR_LEG.tailMs) > TAIL_TOL_MS;
+  const m = src.match(/delivers ([0-9]+) ms on Inspire -> Equip/);
+  return !m || Math.abs(Number(m[1]) - BR_PROSE_LEG.tailMs) > TAIL_TOL_MS;
 };
 
 /* ---- LADDER axes. */
@@ -1203,7 +1329,42 @@ const emPerformedFires = (o = {}) => {
   return !(form >= 5 * bloomsMs(o)[0] && onsetsMs(o)[2] + form > gateMs(0.9, o.k));
 };
 
+/* ---- ORBIT axes. Both ends of this conversion are TEXT — one is a literal
+   in a file the suite cannot import for its own reason, the other a sentence
+   — so the killers perturb the recomputation and the prose, the only ends a
+   pure suite can move. Nothing is written to disk. */
+const orFractionFires = (o = {}) =>
+  Math.abs((o.portraitFraction ?? ORBIT_DEAD_FRACTION) - (o.arrivalDead ?? ARRIVAL_DEAD)) > 1e-12;
+const orProductFires = (o = {}) =>
+  Math.abs((o.arrivalDead ?? ARRIVAL_DEAD) * (o.inspireRest ?? restProgress('inspire'))
+    - (o.declared ?? declaredOrbitP0)) > 5e-4;
+const orRegimeFires = (o = {}) => {
+  const p0 = (o.arrivalDead ?? ARRIVAL_DEAD) * (o.inspireRest ?? restProgress('inspire'));
+  return !(p0 > 0 && p0 < REST_STOPS[1]);
+};
+
 const MUTANTS = [
+  ['NULL-ORBIT', 'the Inspire rest is nudged by half the product pin\'s own tolerance '
+    + '(0.20 -> 0.2010, worth 0.00015 of p in the product) — inside every ORBIT pin, so a '
+    + 'route re-timing too small to matter must not fire one',
+  false, () => orProductFires({ inspireRest: 0.2010 }) || orRegimeFires({ inspireRest: 0.2010 })
+    || orFractionFires({})],
+  ['MUT-OR-FRACTION', 'portrait.js\'s copy of the dead fraction drifts one part in a thousand '
+    + '(0.153846 -> 0.153) while inspire/camera.js keeps the original — the duplicated-constant '
+    + 'failure this pin exists for, and the one no other suite in the tree can see',
+  true, () => orFractionFires({ portraitFraction: 0.153 })],
+  ['MUT-OR-PRODUCT', 'the ROUTE moves under both declarations: the Inspire rest goes back to '
+    + 'its pre-Equip 0.26 with the fraction and the prose untouched. This is the live defect '
+    + 'the pin was written for, and it fires the product WITHOUT firing the fraction',
+  true, () => orProductFires({ inspireRest: 0.26 })],
+  ['MUT-OR-PRODUCT-SPLIT', 'and the split is asserted in the other direction too: the same '
+    + 'route move must leave OR-FRACTION green, because both copies of the fraction still agree '
+    + 'with each other — one pin, not two names for one pin',
+  false, () => orFractionFires({ inspireRest: 0.26 })],
+  ['MUT-OR-REGIME', 'the dead band is zeroed — the fraction goes to 0, which puts the zero head '
+    + 'on the hero pose itself where the correction field is the hero\'s own responsive table '
+    + 'and not portrait.js\'s',
+  true, () => orRegimeFires({ arrivalDead: 0 })],
   ['NULL-BRAKE', 'a route constant no clock in this section reads is perturbed '
     + '(the backward COMMIT_BRAKE_TAIL_S arm, which brakeK only reaches on dir < 0)',
   false, () => brMechFires({}) || brRegimeFires({}) || brNumberFires(ROUTE_SRC)],
@@ -1240,13 +1401,13 @@ const MUTANTS = [
     + 'and that is still the design — scored on the one axis it actually drives',
   true, () => brMechFires({ dead: 0.006 })],
   ['MUT-PROSE', 'BR-NUMBER\'s own killer, and the only end of that comparison a pure suite can '
-    + 'move: route.js\'s "delivers 183 ms on Inspire -> Connect" is rewritten to 220 in a copy '
+    + 'move: route.js\'s "delivers 233 ms on Inspire -> Equip" is rewritten to 270 in a copy '
     + 'held in memory. Nothing is written to disk',
-  true, () => brNumberFires(ROUTE_SRC.replace('delivers 183 ms on Inspire', 'delivers 220 ms on Inspire'))],
+  true, () => brNumberFires(ROUTE_SRC.replace('delivers 233 ms on Inspire', 'delivers 270 ms on Inspire'))],
   ['MUT-PROSE-NULL', 'and its own null: rewriting the figure to a value inside the 1 ms tolerance '
-    + '(183 -> 183) must NOT fire, so MUT-PROSE is proved to be about the NUMBER and not about '
+    + '(233 -> 233) must NOT fire, so MUT-PROSE is proved to be about the NUMBER and not about '
     + 'the string having been touched',
-  false, () => brNumberFires(ROUTE_SRC.replace('delivers 183 ms on Inspire', 'delivers 183 ms on Inspire'))],
+  false, () => brNumberFires(ROUTE_SRC.replace('delivers 233 ms on Inspire', 'delivers 233 ms on Inspire'))],
 
   /* --- LADDER. */
   ['MUT-GAP', 'the arrival stagger is cut below the departure stagger (ARRIVE_GAP_S 0.130 -> '
@@ -1395,12 +1556,13 @@ const MUTANTS = [
     + 'only',
   false, () => bandCost(LADDER, clocks({ ladderGapS: 0.020 }).blend) >= WRAP_DOWN_WINDOW_S],
   ['L3', 'DECLARED LIMIT — BR-REGIME is computed at the NOMINAL cruise, so it cannot see a '
-    + 'gesture-class effect: the desktop transit cap holds inspire>connect\'s realized cruise at '
-    + '75% of nominal and both gesture classes deliver the same 183 ms. A leg whose flick and '
-    + 'gentle tails diverge (mission>inspire: 267 / 217) is caught by BR-NUMBER, not here',
+    + 'gesture-class effect: the desktop transit cap holds equip>connect\'s realized cruise at '
+    + 'its own fraction of nominal and both gesture classes deliver the same 200 ms. A leg whose '
+    + 'flick and gentle tails diverge (mission>inspire: 283 / 233) is caught by BR-NUMBER, not '
+    + 'here',
   false, () => {
-    const flick = BRAKE.find((b) => b.name === 'inspire>connect' && b.gesture === 'flick');
-    const gentle = BRAKE.find((b) => b.name === 'inspire>connect' && b.gesture === 'gentle');
+    const flick = BRAKE.find((b) => b.name === 'equip>connect' && b.gesture === 'flick');
+    const gentle = BRAKE.find((b) => b.name === 'equip>connect' && b.gesture === 'gentle');
     return Math.abs(flick.tailMs - gentle.tailMs) > TAIL_TOL_MS;
   }],
 ];
@@ -1413,7 +1575,7 @@ for (const [id, why, shouldFire, run] of MUTANTS) {
   console.log(`  [${fired ? 'red' : 'green'}] ${id} ${ok ? 'OK ' : 'BAD'} — ${why}`);
 }
 
-console.log(`\n  brake: inspire>connect delivers ${BR_LEG.tailMs.toFixed(1)} ms of a `
+console.log(`\n  brake: ${BR_LEG.name} delivers ${BR_LEG.tailMs.toFixed(1)} ms of a `
   + `${BR_LEG.tailS} s dial (${(shortfall(BR_LEG.pRate, BR_LEG.tailS) * 100).toFixed(1)}% short), `
   + `K_eff ${BR_LEG.keffMeasured.toFixed(4)}`);
 console.log(`  ladder: band ${blendCost.toFixed(4)} s, one-sidedness margin `

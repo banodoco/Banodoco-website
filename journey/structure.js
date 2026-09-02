@@ -1,23 +1,59 @@
 // Canonical identity and cross-module metadata for the journey. Scene geometry
 // and chapter-local animation data remain owned by their chapter modules.
+//
+// EQUIP, 2026-08-30. The sixth row below is new, and the three numbers it moved
+// on its neighbours are the whole of what a reviewer needs to check:
+//
+//   · SPAN. Equip's 12 units come ENTIRELY out of Inspire's 24. Nothing at or
+//     above p 0.38 renormalises, which is deliberate rather than tidy —
+//     journey/portrait.js and chapters/owned/leg.js hang absolute-p literals
+//     off the spans above that boundary, and chapters/connect/index.js's light
+//     schedule is leg-local to a span that has not moved. route.js's LEGACY
+//     table carries the full statement.
+//   · REST. Inspire's rest moves 0.26 -> 0.20 and the copy system is what
+//     bought it: COPY_BANDS are rest-relative offsets with a 0.020 fade skirt
+//     at each edge, so two rests closer than ~0.10 of p cross-fade over each
+//     other. Inspire at 0.20 and Equip at 0.32 both close cleanly. No camera
+//     pose moves with it — every leg is authored in leg-local time.
+//   · ROAD. `scrollVh` is re-split three times, and each is a separate answer.
+//     mission 3.5 -> 4.9 with inspire seg 0 3.5 -> 2.1 keeps the hero arrival's
+//     viewport-heights-per-GESTURE flat now that the mission/inspire knot falls
+//     at gesture u 0.70 instead of 0.538. Equip's own 6.0 is a new chapter's
+//     road. connect seg 0 8.00 -> 13.00 is compensation, not appetite: Equip's
+//     rest looks UP, Connect's ground reveal is camera-pure in forward.y, and
+//     the network's first draw slides 0.351 -> 0.431 of p as that unwinds — so
+//     the light schedule's front bound had to move, and the road is what keeps
+//     the pre-existence lead and the light travel where six "slower" passes put
+//     them. The arithmetic is in chapters/connect/index.js at LIGHT_LO.
+//
+// The page grows 40.92 -> 51.32 vh: 6.0 of it a chapter that did not exist,
+// 5.0 of it Connect's compensation, 1.4 of it the arrival re-split. That is a
+// number worth stating rather than discovering.
 
 const chapters = [
   {
-    id: 'mission', span: 14, nav: 'Intro', stops: [0.0], scrollVh: 3.5,
+    id: 'mission', span: 14, nav: 'Intro', stops: [0.0], scrollVh: 4.9,
     symbol: 'mission', copyPosition: null, copyBand: { lo: null, hi: 0.042 },
     copySurface: { host: 'hero', deferred: true, flightLead: 'hero' },
     runtime: false, hotspots: { kind: 'none' },
   },
   {
-    id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 6.7,
-    segVh: [3.5, 3.2], symbol: 'inspire', copyPosition: 'pos-bottom',
-    copyBand: { lo: -0.012, hi: 0.078 }, runtime: true,
+    id: 'inspire', span: 12, nav: 'Inspire', scrollVh: 4.7,
+    segVh: [2.1, 2.6], symbol: 'inspire', copyPosition: 'pos-bottom',
+    copyBand: { lo: -0.012, hi: 0.058 }, runtime: true,
     copySurface: { host: 'block', deferred: false, flightLead: 'standard' },
     hotspots: { kind: 'fixed', cardinality: 3, ids: ['artcompute', 'arca', 'tworp'] },
   },
   {
-    id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.85,
-    segVh: [8.00, 2.85], shape: { seg: 0, k: [1.10, 1.00] },
+    id: 'equip', span: 12, nav: 'Equip', stops: [0.5], scrollVh: 6.0,
+    segVh: [2.6, 3.4], symbol: 'equip', copyPosition: 'pos-bottomleft',
+    copyBand: { lo: -0.012, hi: 0.058 }, runtime: true,
+    copySurface: { host: 'block', deferred: false, flightLead: 'standard' },
+    hotspots: { kind: 'fixed', cardinality: 2, ids: ['quark', 'brotchen'] },
+  },
+  {
+    id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 15.85,
+    segVh: [13.00, 2.85], shape: { seg: 0, k: [1.10, 1.00] },
     symbol: 'connect', copyPosition: 'pos-topright', runtime: true,
     copyBand: { lo: -0.014, hi: 0.058 },
     copySurface: { host: 'block', deferred: false, flightLead: 'standard' },

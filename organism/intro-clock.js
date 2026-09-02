@@ -26,7 +26,24 @@ export function createIntroClock({
     if (accelerated || startedAt === null) return false;
     const rampT0 = now();
     const remaining = Math.max(0, totalMs - (rampT0 - startedAt));
-    if (remaining < 200) return false;
+    /* `remaining < 200` REJECTS A SHORT RAMP BUT NOT A POISONED ONE. Both
+       guards above are NaN-transparent: Math.max(0, NaN) is NaN, and every
+       comparison against NaN is false, so a NaN totalMs walks straight
+       through this line, sets `skew` to NaN for the life of the page, and
+       makes elapsedMs() return NaN forever. What that costs is not a wrong
+       animation — it is a RENDER CRASH, every frame, and a silent one:
+       intro.js's draw progress feeds the stem clip plane's constant, three
+       uploads the clipping planes as `uniform vec4 clippingPlanes[N]`, and
+       WebGLUniforms' flatten() tests for "is this a number" with
+       `firstElem <= 0 || firstElem > 0` — which NaN fails. flatten then
+       treats the NaN as an object and calls `.toArray()` on it, throwing
+       `firstElem.toArray is not a function` inside RenderPass every frame
+       (the Round 7 regression: "The interactive journey could not load").
+       Neither `npm run check` nor browser-smoke can see it — live-journey's
+       interaction timeout masks a per-frame render throw — so the guard has
+       to be here, at the door. Requiring a finite number costs one call and
+       closes the class. */
+    if (!Number.isFinite(remaining) || remaining < 200) return false;
     accelerated = true;
     const duration = Math.max(80, rampMs);
     (function ramp() {

@@ -133,7 +133,7 @@ main() {
   python3 tools/package-public.py "$CHECK_TMP/public" \
     --origin https://www.banodoco.ai --revision "$CHECK_REVISION" \
     || die "public artifact allowlist/roundtrip verification failed"
-  pass "public artifact matches its allowlist and substituted source bytes"
+  pass "public artifact matches its allowlist, declared-placeholder ORIGIN substitution, and byte-identical source elsewhere"
 
   step "CHECK PRECONDITIONS"
   if ! curl -fsS "$CHECK_ORIGIN/index.html" -o "$CHECK_TMP/index.html" 2>/dev/null; then

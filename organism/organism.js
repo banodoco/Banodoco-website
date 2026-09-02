@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
+import { heroSpores, createHeroSporeField } from './hero-spores.js';
 import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
 import { createRandomGeometryHelpers } from './random.js';
@@ -1890,6 +1891,45 @@ const { animators, addAnimator } = animationLifecycle;
 ctx.animators = animators;
 ctx.addAnimator = addAnimator;
 
+/* ---- THE THROUGH-CURRENT WAS ALREADY HERE (Lane B; hero-loading v3) --
+   organism/hero-spores.js has been carrying a broad current of spores
+   across the frame — in off the top-left, out past the right edge, with
+   a few hero spores peeling away to land on the specimen's own ground —
+   since long before this module finished downloading. It rides its own
+   <script type="module"> in index.html and imports nothing heavier than
+   a leaf, so it paints while `three` is still on the wire. Adopting its
+   LIVE field here (same particles, same offsets, same phase, same
+   integrator, same mid-arc landings) is what makes this moment read as
+   ONE WORLD GAINING ITS ORGANISM instead of one particle system swapping
+   for another: the preload's stream fades out over the same beat this
+   Points fades in, and no particle moves across the seam. The preload
+   CANVAS outlives this swap — its PreNetwork keeps answering landings
+   until the intro's release strikes — but from this call on, the stream's
+   pixels are this object's.
+
+   THREE THINGS ABOUT THIS POSITION, all load-bearing:
+     · after ctx.addAnimator exists, because the field registers one;
+     · before the _timeUniforms traverse below, so its twinkle gets the
+       shared clock like every other point cloud;
+     · before setupIntro, whose scene.children destructuring wants `motes`
+       and `spores` as the first two uWin-bearing children — this object
+       is added third and is therefore invisible to that pair.
+   It takes no draw window on purpose. The intro inks the MUSHROOM into
+   this air; the air is not something the mushroom draws. */
+const HERO_SPORE_FADE_S = 0.9;
+/* ...AND THE ADOPTED FIELD IS NAMED, because it now has a reader (2026-09-01,
+   Hannah: the entry's spores belong to the first section, and leave with it).
+   journey/hero-field.js gates this object's presence on the hero furniture's
+   own painted scalar, and it reaches it through `groups.heroField` below
+   rather than by recognising it in the scene graph — the field is the only
+   direct scene child that is un-culled and carries makePoints' PARKED draw
+   window, but a shape-match is a description of today's tree, not a handle,
+   and it would go quietly wrong the first time this layer gains a sibling.
+   The return value was discarded here before this reader existed; nothing
+   about the adoption itself changes. */
+const heroSporeField = createHeroSporeField(
+  ctx, heroSpores.handOff(HERO_SPORE_FADE_S), HERO_SPORE_FADE_S);
+
 // Collected once — a full scene.traverse() per frame just to poke a uniform
 // is pure overhead once the graph is final.
 const _timeUniforms = [];
@@ -1957,6 +1997,56 @@ registerTrackers(ctx);
 // 'intro-draw' animator lands last in the hero's registration order.
 // Returns the intro lifecycle handle exposed on the public API (M5).
 const introApi = setupIntro(ctx);
+
+/* ---- THE MYCELIUM WAS ALREADY THERE; THE MUSHROOM LIGHTS IT (2C) -----
+   The ground's own ink CONVERGES — every floor vertex is re-keyed by
+   distance from the base, outermost first, so the web streams inward and
+   arrives at the foot of the stem exactly as the stalk fires upward
+   (organism/intro.js convergeDraw). That is the network being DRAWN. What
+   it never carried is the network being ENERGISED, and biologically the
+   energy runs the other way: the fruiting body draws on a mycelium that
+   was already in the soil, and the surge spreads laterally OUT from the
+   point of contact.
+
+   That surge already exists in this file. PULSE_GLSL is a multiplicative
+   brightness ring — 1.0 at rest, >1.0 inside a travelling front — bound
+   into every ground material at :468-470, :528-530 and :646-648, advanced
+   by 'tap-pulse' above and parked the moment it decays. A floor tap has
+   used it since the beginning. So this is a CALL SITE, not new shader
+   work: the same wave the finger raises, raised instead by the stalk
+   landing, from the stem's own contact point.
+
+   uPulseP (2.35, 0.30, 1.15) against the floor tap's (2.6, 0.33, 1.4):
+   a touch slower and a touch quieter than a finger, because a mushroom
+   arriving is not a knock. Range falloff 0.30 carries it out past the
+   root flare while exp(-1.15 t) retires it inside ~3.5 s — so a MINORITY
+   of paths brighten as the front passes them and the rest simply finish
+   inking behind it. Nothing here is a top-to-bottom reveal, and nothing
+   here holds a brightness afterwards; the wave leaves the ground exactly
+   where the intro's own draw left it.
+
+   0.296 is not a taste value — it is intro.js's WINDOWS table, the first
+   frame of `stemVerts`, i.e. the frame the stalk begins to rise. Held to
+   one shot by the animator retiring itself, and never armed at all when
+   the intro is skipped (?nointro / ?capture / reduced motion park drawU
+   at 2 before the first frame), which is what keeps every frozen capture
+   and every reduced-motion visitor free of it. */
+const STEM_CONTACT_DRAW_U = 0.296;
+addAnimator('stem-contact-pulse', () => {
+  // `started` is false for every path that has no rising stalk to answer:
+  // the deferred frame before releaseIntro(), ?introat's pinned pose, and
+  // intro = 0 (?nointro / ?capture / prefers-reduced-motion), where drawU
+  // is parked at 2 from the first frame and this retires without firing.
+  if (!introApi.started) {
+    if (drawU.value > 1) animators.delete('stem-contact-pulse');
+    return;
+  }
+  if (drawU.value < STEM_CONTACT_DRAW_U) return;
+  pulseC.value.set(0, groundY(0, 0), 0);
+  pulseT.value = 0;
+  pulseP.value.set(2.35, 0.30, 1.15);
+  animators.delete('stem-contact-pulse');
+});
 
 // Deterministic freeze (M5, ?capture=): while frozen, every animator sees
 // t = the latched value and dt = 0 — one shared clock is the ONLY time
@@ -2102,6 +2192,11 @@ function setView({ panX: p = 0, camY: cy = 2.05, camZ: cz = 8.8, targetY: ty = 2
   });
 }
 
+// A single subscriber, not a list: the one thing that needs to know the
+// picture has come back is the ride's input model, and a list would invite
+// registrations nobody can enumerate at the one moment it fires.
+let renderResumeHook = null;
+
 // =====================================================================
 // 13. PUBLIC API — the object returned by createScene()
 // =====================================================================
@@ -2125,7 +2220,13 @@ return {
   steadyProject,
   /** Top-level scene-graph groups, for anything that wants to target one part of the specimen —
    *  e.g. a scroll-driven dive that moves the camera through `groups.ground` toward the roots. */
-  groups: { mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup, spores: sporePts },
+  /* `heroField` is the preload stream after adoption (see the THROUGH-CURRENT
+     block above) — a THREE.Points, like `spores`, not a Group. Its one reader
+     is journey/hero-field.js. */
+  groups: {
+    mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup,
+    spores: sporePts, heroField: heroSporeField && heroSporeField.points,
+  },
   /** Place the hero ground's seeded ADOS junction at an x/z world target.
    *  Passing null restores the undisturbed hero web. The local attachment
    *  weights keep its full polygon/spokes together and feather only the
@@ -2157,6 +2258,19 @@ return {
   consts: { CAP_Y, CAP_R },
   /** Ease a highlighted region ('spores' | 'stem' | 'ground') toward on/off; unknown names are ignored. */
   setHighlight: highlights.setHighlight,
+  /** Start the touch wave from an arbitrary WORLD point — the same single wave
+   *  the pointer tap above plants, exposed so a caller outside this module can
+   *  answer in the specimen's own language instead of inventing a second one.
+   *  `profile` is uPulseP verbatim: [wave speed, range falloff, amplitude];
+   *  omit it to keep whatever the last trigger set. There is exactly ONE wave
+   *  in the shader, so this REPLACES any ring still travelling rather than
+   *  adding to it — callers that want two rings must space them in time. */
+  pulseFrom(world, profile) {
+    if (!world) return;
+    pulseC.value.copy(world);
+    pulseT.value = 0;
+    if (profile && profile.length === 3) pulseP.value.set(profile[0], profile[1], profile[2]);
+  },
   /** Recompose the camera (panX/camY/camZ/targetY/fov). seconds=0 snaps; seconds>0 eases via a
    *  cancellable 'view-tween' animator — see the setView JSDoc above for full behavior. */
   setView,
@@ -2179,6 +2293,38 @@ return {
    *  `freezeTime(0)` freezes at the t = 0 phase; `freezeTime(null)` resumes
    *  live time (no dt spike — the raw clock keeps being tracked). */
   freezeTime: animationLifecycle.freezeTime,
+  /** Gate the composer without stopping the frame loop: `false` skips the
+   *  per-frame render, `true` resumes it. The one caller is main.js's WebGL
+   *  context-loss pair — rendering into a lost context buys nothing and costs
+   *  a full frame each time. The clock, the animators and the rAF cadence are
+   *  deliberately left alone; organism/animation.js's gate carries the
+   *  measurement behind that choice. */
+  setRenderEnabled(on) {
+    animationLifecycle.setRenderEnabled(on);
+    // Fired on the RESUME edge only, and before the resumed frame renders:
+    // the subscriber's job is to decide what happens to input that was in
+    // flight when the picture stopped, and it has to have decided by then.
+    if (on && renderResumeHook) renderResumeHook();
+  },
+  /** Subscribe to the resume edge of setRenderEnabled() — the moment the
+   *  scene starts painting again after a stretch the visitor watched nothing
+   *  through. Pass null to unsubscribe. One subscriber; a second call
+   *  replaces the first. */
+  setRenderResumeHook(fn) {
+    renderResumeHook = typeof fn === 'function' ? fn : null;
+  },
+  /** Drop the TAA accumulation history so the next rendered frame starts a
+   *  fresh average instead of blending against whatever the pass last held.
+   *  A restored WebGL context has lost the history texture's CONTENTS but not
+   *  its dimensions, and only `setSize` clears `validHistory` — so this calls
+   *  it at the size already in force, which the vendored render target treats
+   *  as a no-op apart from the flag (it disposes only when a dimension
+   *  actually changes). Deliberately narrower than `viewport.sync()`, which
+   *  reaches the same flag by reallocating three render targets. */
+  invalidateFrameHistory() {
+    const db = renderer.getDrawingBufferSize(_taaDb);
+    taaPass.setSize(db.width, db.height);
+  },
   /** The spore SYSTEM handle (merge doc §3) — the same dots as
    *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
    *  chapter claims it with `setDriver({ exits })` and passes per-frame

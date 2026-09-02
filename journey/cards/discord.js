@@ -34,7 +34,7 @@ const clean = (s) => String(s ?? '')
   .replace(/`([^`]+)`/g, '$1')
   .trim();
 
-let stage, headerLabel, topicEl, titleEl, textEl, metaEl, dotsEl, thumbEl;
+let stage, topicEl, titleEl, textEl, metaEl, dotsEl, thumbEl;
 let dots = [];
 let topics = [];        // normalized { title, text, channel, date }
 let index = 0;
@@ -71,12 +71,14 @@ function relDate(d) {
   return d;
 }
 
+// The topic's provenance as compact tag chips (round 2: the written-out
+// uppercase meta line read as more copy; a channel and a day are tags).
 function metaFor(t) {
   const parts = [];
   if (t.channel) parts.push(`#${t.channel}`);
   const rd = relDate(t.date);
   if (rd) parts.push(rd);
-  return parts.join(' · ');
+  return parts;
 }
 
 /* First showable image for a topic: mainMediaUrls, then the sub-topics'.
@@ -242,7 +244,12 @@ function renderTopic(animate = true) {
   if (!t) return;
   titleEl.textContent = t.title;
   textEl.textContent = t.text;
-  metaEl.textContent = metaFor(t);
+  metaEl.replaceChildren(...metaFor(t).map((txt) => {
+    const chip = document.createElement('span');
+    chip.className = 'dc-tag';
+    chip.textContent = txt;
+    return chip;
+  }));
   // the topic's image, very small (Hannah, 2026-08-18) — shown only once
   // it actually loads; an expired CDN link just leaves the text layout
   thumbEl.classList.remove('on');
@@ -351,10 +358,6 @@ function present() {
 function applySnapshot(snapshot) {
   topics = snapshot.topics;
   index = 0;
-  headerLabel.textContent = snapshot.live
-    ? 'LIVE FROM THE DISCORD'
-    : `FROM THE DISCORD · ${snapshot.capturedAt}`.trim();
-  stage.classList.toggle('dc-fallback', !snapshot.live);
   buildDots();
   present();
 }
@@ -364,25 +367,10 @@ export default {
     stage = s;
     stage.classList.add('dc');
 
-    const head = document.createElement('div');
-    head.className = 'dc-head';
-    const beacon = document.createElement('span');
-    beacon.className = 'dc-beacon';
-    beacon.setAttribute('aria-hidden', 'true');
-    headerLabel = document.createElement('span');
-    headerLabel.className = 'dc-label';
-    headerLabel.textContent = 'FROM THE DISCORD';
-    // the door, right-aligned in the head; revealed on hover/pin by the
-    // shared card-cta rule (margin-left:auto in css)
-    const cta = document.createElement('a');
-    cta.className = 'dc-cta card-cta';
-    cta.href = 'https://discord.gg/NnFxGvx94b';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'JOIN →';
-    head.append(beacon, headerLabel, cta);
-
+    // The live-status corner (beacon plus "LIVE UPDATES"/snapshot-date word)
+    // is gone — the shell head already says DISCORD, and the body opens
+    // straight onto the topic walk (owner direction, 2026-08-31: "let's
+    // remove that live updates thing in the Discord card").
     const body = document.createElement('div');
     body.className = 'dc-body';
     topicEl = document.createElement('div');
@@ -391,7 +379,7 @@ export default {
     titleEl.className = 'dc-title';
     textEl = document.createElement('p');
     textEl.className = 'dc-text';
-    metaEl = document.createElement('p');
+    metaEl = document.createElement('div');
     metaEl.className = 'dc-meta';
     // Stable cold-edge floor for a direct link that arrives before the
     // module-level preparation has parsed the bundled snapshot. The stage's
@@ -440,8 +428,17 @@ export default {
     stage.addEventListener('pointerup', onSwipeUp, { passive: true });
     stage.addEventListener('pointercancel', () => { swipe = null; });
 
-    stage.append(head, body, dotsEl);
-    stage.classList.add('dc-fallback');
+    // the ending — the invite as a full-width band in their blurple, the
+    // walk's dots resting just above it
+    const door = document.createElement('a');
+    door.className = 'dc-door card-door card-cta';
+    door.href = 'https://discord.gg/NnFxGvx94b';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'JOIN THE DISCORD →';
+
+    stage.append(body, dotsEl, door);
   },
 
   activate() {

@@ -16,7 +16,12 @@
     {
       "path": "assets",
       "include": ["*.js", "*.json", "*.jpg", "*.mp4", "*.png", "*.svg", "*.woff2"],
-      "exclude": ["brand/favicon-source.png", "brand/mark-b-source.png"]
+      "exclude": [
+        "brand/favicon-source.png",
+        "brand/favicon-source-small.png",
+        "brand/favicon-small.svg",
+        "brand/mark-b-source.png"
+      ]
     },
     {
       "path": "content",

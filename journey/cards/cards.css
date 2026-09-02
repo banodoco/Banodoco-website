@@ -94,15 +94,109 @@
   animation: j-mycelium-wake 0.62s ease-out both;
 }
 
-/* THE STAGE IS THE WHOLE CARD (Hannah, 2026-08-18: "we shouldn't have the
-   bottom part … explain everything in the main part") — the house block
-   below is hidden on rich cards and each stage carries its own name, copy
-   and door in its project's voice. The elements stay in the DOM: the short
-   line is still the chip's aria-describedby text, so what a screen reader
-   hears is unchanged. */
-.j-pop-rich .j-pop-t,
-.j-pop-rich .j-pop-s,
-.j-pop-rich .j-pop-link { display: none; }
+/* ONE PARENT STRUCTURE, SIX INTERIORS (2026-08-31, round 3). Round 1 put
+   the whole house block around every stage and the six read as the old
+   cards with a new border; round 2 removed the shell's words entirely and
+   moved identity into each world, and the owner's verdict came back the
+   other way: the shared skeleton is what makes the six navigable — "each
+   of the cards should have a parent structure … the name and description
+   at the top and then the button below it at the bottom. It's important
+   that ALL of them share that in common."
+
+   So the synthesis keeps both halves. The shell HEAD is back on every
+   card — accent-coloured name, house short line, same place and same type
+   on all six — and every card still closes on ONE full-width door band at
+   the foot. What round 2 won stays won INSIDE the window: the record as
+   chips and cells rather than sentences, no title said twice (the in-world
+   identity bands that duplicated the head are gone), each door keeping its
+   own label and accent voice (.card-door below), and the world-lit
+   surface. The shell's own generic link stays retired for built cards —
+   the door is the stage's, in its own voice, in the shell's place.
+
+   The short line keeps double duty as the chip's aria-describedby text
+   throughout, and the unbuilt pair (quark, brotchen) wear all four shell
+   parts exactly as before. */
+.j-pop.j-pop-rich {
+  align-items: stretch;
+  gap: 0;
+}
+.j-pop-rich:not(.j-pop-unbuilt) .j-pop-link { display: none; }
+/* Built and unbuilt alike keep the shell-head composition the third state
+   was drawn around: accented name, house short line, stage as the body. */
+.j-pop-rich .j-pop-t {
+  order: 0;
+  margin: 0.42rem 0.5rem 0.08rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--card-accent, var(--parchment));
+}
+.j-pop-rich .j-pop-s {
+  order: 1;
+  margin: 0 0.5rem 0.55rem;
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+.j-pop-rich .j-pop-frame { order: 2; }
+
+/* Each initiative's accent — the one colour the shell borrows from the world
+   behind its window. Sources: arca's site red warmed to read on the house
+   dark; ArtCompute's own #39ff14; 2RP as print parchment; ADOS's white mark;
+   Hivemind wears the house gold (it has no brand colour, by its own note
+   below); Discord's blurple lifted for small-caps legibility. */
+.j-pop[data-node="arca"]       { --card-accent: #e0745f; }
+.j-pop[data-node="artcompute"] { --card-accent: #39ff14; }
+.j-pop[data-node="tworp"]      { --card-accent: #f4e4c1; }
+.j-pop[data-node="ados"]       { --card-accent: #ffffff; }
+.j-pop[data-node="hivemind"]   { --card-accent: #d9a441; }
+.j-pop[data-node="discord"]    { --card-accent: #8891f2; }
+
+/* THE SURFACE IS LIT BY THE WORLD (2026-08-30, §2D). Two quiet moves push
+   the panel from "sits on the site" toward "revealed from it":
+
+   1) MATERIAL — the mat is not a flat swatch: a barely-there top-light
+      gradient gives the frame the same falling light the organism's ember
+      field casts, so the card reads as a surface in the scene rather than
+      an overlay above it.
+   2) CONTACT — the edge nearest the chip answers the filament: a soft,
+      warm bloom sits where the filament touches (keyed off the same
+      data-side placement the filament reads), as if its light lands on the
+      surface it just grew. Static after entry; never brighter than the
+      filament's own ping, never a border animation (the monotone gate's
+      territory), never ornament. */
+.j-pop.j-pop-rich {
+  background: linear-gradient(168deg, rgba(19, 13, 5, 0.95), rgba(11, 7, 2, 0.965) 62%);
+}
+.j-pop-rich:not(.j-pop-unbuilt)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: 2px;
+  pointer-events: none;
+  background: radial-gradient(58% 44% at 0% 50%, rgba(240, 190, 90, 0.14), transparent 70%);
+}
+.j-pop-rich[data-side="left"]:not(.j-pop-unbuilt)::after {
+  background: radial-gradient(58% 44% at 100% 50%, rgba(240, 190, 90, 0.14), transparent 70%);
+}
+.j-pop-rich[data-side="below"]:not(.j-pop-unbuilt)::after {
+  background: radial-gradient(48% 38% at 50% 0%, rgba(240, 190, 90, 0.14), transparent 70%);
+}
+/* ...and the hairline itself warms on that side — a static value, never a
+   keyframe (the entry's shared border animation simply lands on it) */
+.j-pop-rich[data-side="right"]:not(.j-pop-unbuilt) { border-left-color: rgba(233, 184, 90, 0.55); }
+.j-pop-rich[data-side="left"]:not(.j-pop-unbuilt) { border-right-color: rgba(233, 184, 90, 0.55); }
+.j-pop-rich[data-side="below"]:not(.j-pop-unbuilt) { border-top-color: rgba(233, 184, 90, 0.55); }
+/* the bloom arrives with the filament's ping and then simply holds */
+.j-pop.j-pop-enter.j-pop-rich:not(.j-pop-unbuilt)::after {
+  animation: card-fade 0.62s ease-out both;
+}
+/* THE FILAMENT RESTS LIT, faintly, for a built card (round 2, §2D): the
+   entry still pings it once at full brightness (site.css), but instead of
+   going out entirely it settles to a quarter-glow, so the card stays
+   visibly grown from its node for as long as it is open. The generic
+   popover keeps site.css's dark rest. */
+.j-pop.j-pop-rich:not(.j-pop-unbuilt)::before { opacity: 0.25; }
 
 .j-pop-stage {
   position: relative;
@@ -112,37 +206,36 @@
   overflow: hidden;
 }
 
-/* THE DOOR SHOWS WHEN YOU REACH FOR IT (Hannah, 2026-08-18: "for all we
-   could have a CTA show on hover") — every stage's link starts quiet and
-   rises in when the pointer enters the card, when it is pinned, or when
-   focus lands inside (touch and keyboard see what mouse users see). */
-.card-cta {
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  pointer-events: none;
-  text-decoration: none;
-}
-.j-pop:hover .card-cta,
-.j-pop:focus-within .card-cta,
-.j-pop.j-pop-pinned .card-cta {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
+/* THE ENDING IS PART OF THE COMPOSITION (2026-08-30, round 2). The hover-
+   revealed corner CTA and the shell's anchored door are both gone: a card
+   that ends with an empty band looks unfinished in every still, and the
+   owner asked for endings that fit each card rather than one door with six
+   labels. Every stage now closes with its own always-present band — an
+   action (arca, artcompute, ados, hivemind, discord) or a status (2RP) —
+   set quiet and brightening under the pointer via each card's own rule.
+   The shared .card-cta reveal machinery went with the corner doors. */
+.card-cta { text-decoration: none; }
 
-/* ON TOUCH THE DOOR IS ALWAYS OPEN (2026-08-19): a finger has no hover,
-   and pinning is the second tap — so the old reveal made the CTA cost two
-   taps on every phone. Under (hover: none) the door shows the moment its
-   card opens: the transient first-tap reveal IS the open, not a hover to
-   be earned. (The closed popover is visibility:hidden, so this leaks
-   nothing.) */
-@media (hover: none) {
-  .j-pop .card-cta {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-  }
+/* THE DOOR IS THE SHARED FOOT (round 3). The six endings keep their round-2
+   words and colours, but they stand in ONE place with ONE geometry: a
+   full-width band on the card's bottom edge — same padding, same tracked
+   micro-type, same quiet-until-reached-for behaviour — so the eye that has
+   learned one card's exit has learned them all. Each card's own rule keeps
+   only its voice: face, colour, hover, hairline tint. 2RP's status band
+   wears the same skeleton with nothing behind it, which is the point. */
+.card-door {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.52rem 0.6rem 0.58rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;               /* trailing-tracking comp, centred */
+  text-transform: uppercase;
+  transition: color 0.25s ease, background 0.25s ease;
 }
 
 /* Keep the contact filament above stage media. */
@@ -154,6 +247,7 @@
 @media (prefers-reduced-motion: reduce) {
   .j-pop-stage, .j-pop-stage * { animation: none !important; transition: none !important; }
   .j-pop-frame::before { animation: none !important; }
+  .j-pop-rich::after { animation: none !important; }
 }
 
 /* ---- arca — arcagidan.com's hero, miniaturized ------------------------ */
@@ -180,7 +274,7 @@
 .ag-panels {
   display: grid;
   grid-template-columns: repeat(4, 1fr);   /* their hero grid */
-  height: 196px;                           /* full stage: the info line overlays */
+  height: 178px;                           /* the art; the record sits below it */
 }
 .ag-panel { position: relative; margin: 0; overflow: hidden; }
 .ag-panel img,
@@ -189,8 +283,14 @@
   inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  /* REST IS VIBRANT, exactly as the site's hero is — dimming is what
-     HOVER does to everyone else (their bg-black/70-style drop) */
+  /* REST IS TEMPERED (round 3). The site's hero rests fully vibrant, but
+     under the restored shell head the full-strength poster palette — the
+     acid green especially — read as a second header shouting over the
+     first. The art now rests a step dimmer and quieter, integrated into
+     the house dark, and earns its full colour back under the spotlight
+     (.lit below) — dimming further is still what HOVER does to everyone
+     else (their bg-black/70-style drop). */
+  filter: saturate(0.72) brightness(0.86);
   transition: filter 0.3s ease;            /* their duration-300 */
 }
 /* the figure's video panel surfaces only once frames are rendering —
@@ -207,13 +307,17 @@
   from { transform: scale(1.05) translateY(0); }
   to   { transform: scale(1.14) translateY(-2.5%); }
 }
+/* the spotlight buys the full palette back */
+.ag .ag-panel.lit img,
+.ag .ag-panel.lit .ag-video { filter: none; }
 .ag.ag-hovering .ag-panel:not(.lit) img,
 .ag.ag-hovering .ag-panel:not(.lit) .ag-video { filter: brightness(0.28) saturate(0.5); }
 
 .ag-word {
   position: absolute;
-  inset: 0 0 22px 0;                       /* true optical centre: half the
-                                              info scrim's height, no more */
+  inset: 0 0 auto 0;
+  height: 178px;                           /* covers the art exactly — the
+                                              record below stays un-shadowed */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -228,22 +332,19 @@
     0 0 6px rgba(0, 0, 0, 0.85),
     0 0 2px rgba(0, 0, 0, 1);
 }
-.ag-eyebrow {
-  font-family: 'Eubergine', 'Didot', Georgia, serif;
-  font-size: 0.5rem;
-  letter-spacing: 0.5em;                   /* their tracking-[0.5em] */
-  padding-left: 0.5em;                     /* their trailing-tracking comp */
-  transition: opacity 0.3s ease;
-}
-/* their "The"/"Prize" step aside while a figure holds the light */
-.ag.ag-hovering .ag-eyebrow { opacity: 0; }
-
 .ag-title {
   font-family: 'Eubergine', 'Didot', Georgia, serif;  /* their h1 face */
-  font-size: 2.05rem;
+  /* Under the shell head that already says ARCA GIDAN PRIZE, the in-art
+     wordmark steps down from headline to signature (round 3): smaller and
+     a touch translucent, it reads as part of the artwork's character — and
+     it stays, because the syllables ARE the site's hover instrument. The
+     THE/PRIZE eyebrows are gone with the same stroke; the head says PRIZE
+     now, and two saying it 40px apart was the duplication being cured. */
+  font-size: 1.72rem;
   letter-spacing: 0.12em;                  /* their tracking-[0.12em] */
   line-height: 0.9;                        /* their lineHeight .9 */
   white-space: nowrap;
+  opacity: 0.94;
 }
 .ag-syl {
   pointer-events: auto;                    /* the syllables ARE the hover zones */
@@ -253,49 +354,47 @@
 .ag-syl:nth-child(3) { margin-left: 0.3em; }  /* their w-[0.3em] word gap */
 .ag-syl.lit { color: #7b0b0b; transform: scale(1.1); }  /* their hover state */
 
-/* what-it-is over the record, IN the art (Hannah, 2026-08-17/18) — two
-   stacked microlines on one soft scrim, the 2RP cover's grammar */
-.ag-info {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  padding: 1.15rem 0.5rem 0.4rem;
-  font-family: 'Geosans Light', 'Inter', sans-serif;  /* their body face */
-  text-align: center;
-  /* deep enough that the lines read over ANY of the four artworks
-     (Hannah, 2026-08-18: more readable) — the art still glows through
-     the gradient's upper half */
-  background: linear-gradient(to top,
-    rgba(8, 8, 8, 0.92), rgba(8, 8, 8, 0.55) 55%, rgba(8, 8, 8, 0));
-  pointer-events: none;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
+/* THE RECORD SITS UNDER THE ARTWORK (round 3): three cells on the ink
+   plate, the value in their own Eubergine over a microlabel, hairlines
+   between. The round-2 caption line above them is gone — it was the shell
+   head's short line word for word, and the head says it now. */
+.ag-foot {
+  position: relative;
+  background: #141414;
+  font-family: 'Geosans Light', 'Inter', sans-serif;
 }
-.ag-desc {
-  margin: 0 0 2px;
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
-  color: #fff;                             /* the descriptor leads */
+.ag-band {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(245, 240, 235, 0.12);
 }
-.ag-stats {
-  margin: 0;
-  font-size: 0.64rem;
-  letter-spacing: 0.05em;
-  color: rgba(250, 246, 240, 0.88);        /* the record follows, quieter
-                                              but never squinted at */
+.ag-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.55rem 0.25rem 0.5rem;
+}
+.ag-stat + .ag-stat { border-left: 1px solid rgba(245, 240, 235, 0.1); }
+.ag-num {
+  font-family: 'Eubergine', 'Didot', Georgia, serif;   /* their h1 face */
+  font-size: 1.02rem;
+  line-height: 1;
+  color: #f5f0eb;
+}
+.ag-lab {
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  padding-left: 0.24em;                    /* trailing-tracking comp */
+  color: rgba(245, 240, 235, 0.5);
 }
 
-/* the door — their cream on ink, hairline plaque, top-right */
-.ag-cta {
-  position: absolute;
-  top: 8px; right: 8px;
-  padding: 3px 7px;
-  font-family: 'Geosans Light', 'Inter', sans-serif;
-  font-size: 0.56rem;
-  letter-spacing: 0.14em;
-  color: #f5f0eb;
-  background: rgba(26, 26, 26, 0.72);
-  border: 1px solid rgba(245, 240, 235, 0.25);
+/* the ending — their cream on ink; geometry is .card-door's */
+.ag-door {
+  border-top-color: rgba(245, 240, 235, 0.12);
+  color: rgba(245, 240, 235, 0.62);
 }
-.ag-cta:is(:hover, :focus-visible) { border-color: rgba(245, 240, 235, 0.6); }
+.ag-door:is(:hover, :focus-visible) { color: #f5f0eb; }
 
 /* ---- entry choreography (Hannah, 2026-08-17: "make sure every card has a
    nice little entry animation") ----------------------------------------
@@ -312,34 +411,36 @@
 .j-pop-enter .ag-panel:nth-child(3) { animation-delay: 0.14s; }
 .j-pop-enter .ag-panel:nth-child(4) { animation-delay: 0.21s; }
 .j-pop-enter .ag-word  { animation: card-fade 0.4s ease both; animation-delay: 0.3s; }
-.j-pop-enter .ag-info  { animation: card-fade 0.4s ease both; animation-delay: 0.38s; }
+.j-pop-enter .ag-foot  { animation: card-fade 0.4s ease both; animation-delay: 0.38s; }
 
 /* artcompute — a terminal painting itself in, band by band, with the same
    steps() flicker the house link-strike uses */
-.j-pop-enter .ac-header { animation: card-fade 0.24s steps(2, end) both; }
-.j-pop-enter .ac-grid   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.12s; }
-.j-pop-enter .ac-badges { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.26s; }
-.j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.4s; }
+.j-pop-enter .ac-grid   { animation: card-fade 0.26s steps(2, end) both; }
+.j-pop-enter .ac-ledger-label,
+.j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.14s; }
+.j-pop-enter .ac-door   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.28s; }
 
 /* ados — the window fades up, then the centred identity stack rises */
 .j-pop-enter .ad-media { animation: card-fade 0.5s ease both; }
 .j-pop-enter .ad-word  { animation: card-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.15s; }
+.j-pop-enter .ad-door  { animation: card-fade 0.4s ease both; animation-delay: 0.32s; }
 
 /* tworp — the cover fades, the masthead stamps down like a printed cover */
 @keyframes rp-stamp { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
 .j-pop-enter .rp-cover { animation: card-fade 0.5s ease both; }
 .j-pop-enter .rp-head  { animation: rp-stamp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.12s; }
-.j-pop-enter .rp-soon  { animation: card-fade 0.4s ease both; animation-delay: 0.34s; }
+.j-pop-enter .rp-foot  { animation: card-fade 0.4s ease both; animation-delay: 0.34s; }
 
 /* hivemind — the console lamp comes up (the typing itself is the real
    entrance, started by activate()), the stat footer after */
 .j-pop-enter .hm-console { animation: card-fade 0.35s ease both; animation-delay: 0.05s; }
-.j-pop-enter .hm-foot    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
+.j-pop-enter .hm-foot,
+.j-pop-enter .hm-door    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
 
-/* discord — header dot first, the topic rises, dots last */
-.j-pop-enter .dc-head { animation: card-fade 0.3s ease both; }
-.j-pop-enter .dc-body { animation: card-fade 0.4s ease both; animation-delay: 0.12s; }
-.j-pop-enter .dc-dots { animation: card-fade 0.35s ease both; animation-delay: 0.3s; }
+/* discord — the topic rises first, dots and door last */
+.j-pop-enter .dc-body { animation: card-fade 0.4s ease both; }
+.j-pop-enter .dc-dots,
+.j-pop-enter .dc-door { animation: card-fade 0.35s ease both; animation-delay: 0.3s; }
 
 /* ---- exit choreography (Hannah, 2026-08-18: "a nice exit animation for
    when we dehover") ----------------------------------------------------
@@ -389,82 +490,52 @@
   pointer-events: none;
 }
 
-/* ---- band 1: header ---- */
-.ac-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.7rem 0.85rem 0.6rem;
-}
-.ac-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.25em;              /* their wide micro-label */
-  color: rgba(255, 255, 255, 0.5);
-}
-.ac-dot {
-  width: 6px; height: 6px;
-  background: #39ff14;                 /* steady; no pulse = no fake liveness */
-}
-
-/* ---- band 2: stat grid (their gap-px hairline grid) ---- */
+/* ---- band 1: stat grid (their gap-px hairline grid). Round 3: the
+   round-2 identity band above it — wordmark, tagline, status dot — is
+   gone; the shell head says ARTCOMPUTE now, and the terminal opens
+   straight onto its data, which is its personality. ---- */
 .ac-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1px;                            /* hairline shows through */
   background: rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .ac-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0.7rem 0.85rem 0.65rem;
+  gap: 3px;
+  padding: 0.6rem 0.7rem 0.55rem;
   background: #0a0a0a;
 }
 .ac-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: rgba(57, 255, 20, 0.4);       /* green micro-label, #39ff14 at 40% */
 }
 .ac-value {
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.1;
   color: rgba(255, 255, 255, 0.85);    /* white/85 */
 }
-.ac-sub {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.4);     /* white/40 */
-}
+.ac-value--green  { color: #39ff14; }              /* the hero number */
+.ac-value--violet { color: #a78bfa; }              /* their secondary */
 
-/* ---- band 3a: grant badges (their badge pill, translated) ---- */
-.ac-badges {
-  display: flex;
-  flex-wrap: wrap;                     /* 62vw phones wrap, don't clip */
-  gap: 6px;
-  padding: 0.6rem 0.85rem 0.5rem;
-}
-.ac-badge {
-  font-size: 9px;
+/* ---- band 3: cycling ledger under its micro-label ---- */
+.ac-ledger-label {
+  display: block;
+  padding: 0.55rem 0.85rem 0.2rem;
+  font-size: 8px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 2px 8px;
-  border: 1px solid;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.35);
 }
-/* palette: border accent/20, background accent/5, color accent/60 */
-.ac-badge--green  { border-color: rgba(57, 255, 20, 0.2);  background: rgba(57, 255, 20, 0.05);  color: rgba(57, 255, 20, 0.6); }
-.ac-badge--violet { border-color: rgba(167, 139, 250, 0.2); background: rgba(167, 139, 250, 0.05); color: rgba(167, 139, 250, 0.6); }
-.ac-badge--sky    { border-color: rgba(56, 189, 248, 0.2);  background: rgba(56, 189, 248, 0.05);  color: rgba(56, 189, 248, 0.6); }
-
-/* ---- band 3b: cycling ledger ---- */
 .ac-ledger {
   position: relative;
   height: 22px;
-  margin: 0.15rem 0.85rem 0.75rem;
+  margin: 0 0.85rem 0.6rem;
 }
 .ac-ledger-row {
   position: absolute;
@@ -524,12 +595,18 @@
 }
 
 .j-pop-stage.ad {
-  height: 185px;
   background: #0a0a0a;   /* their theme-color ground */
   /* horizontal swipes are the card's (the ‹ › walker), never the page's:
      pan-y keeps vertical pans native and leaves horizontal gestures to the
      swipe listeners in ados.js (2026-08-19) */
   touch-action: pan-y;
+}
+
+/* the bounded event window: media, scrim, identity and walker in one frame */
+.ad-frame {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
 }
 
 /* Full-bleed event-media window: poster underneath, animated preview over. */
@@ -591,20 +668,19 @@
 }
 .ad-mark {
   font-family: 'Pilowlava', 'Arial Black', sans-serif;  /* their hero face */
-  font-size: 2rem;
+  /* Round 3: the shell head above the window already says ADOS, so the
+     in-art mark steps down a size and a step of opacity — kept, because
+     the Pilowlava mark over the event footage IS the site's identity, but
+     reading as the artwork's signature under the head, not a second head.
+     Its AI ART GATHERINGS eyebrow is gone with the same stroke — the
+     head's short line is the one descriptor this card gets. */
+  font-size: 1.72rem;
   line-height: 1;
-  color: #fff;
-}
-.ad-eyebrow {
-  font-size: 8px;
-  letter-spacing: 0.35em;          /* their tracking-[0.35em] subtitle */
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.7);    /* their white/70 */
+  color: rgba(255, 255, 255, 0.92);
 }
 /* the scrim is lightest at the top, so a halo keeps the mark legible over
    arbitrary poster art — same reasoning as arca's word shadow */
-.ad-mark,
-.ad-eyebrow {
+.ad-mark {
   text-shadow: 0 1px 10px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.7);
 }
 
@@ -643,8 +719,15 @@
   gap: 6px;
 }
 .ad-mark { order: 1; }
-.ad-eyebrow { order: 2; }
 .ad-center { order: 0; }
+
+/* THE ACTION ENDS THE CARD (round 2): the site's own eyebrow voice, on the
+   shared foot; geometry is .card-door's. */
+.ad-door {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+}
+.ad-door:is(:hover, :focus-visible) { color: #fff; }
 
 /* The 620px portrait rule that used to carry this composition is gone: it
    said `inset: 0 38px`, `position: static`, `order: 0`, `min-height: 0` --
@@ -697,8 +780,14 @@
 }
 
 .j-pop-stage.rp {
-  height: 200px;
   background: #000;   /* fallback behind the cover art */
+}
+
+/* the cover plate: media, scrim and masthead share one bounded frame */
+.rp-media {
+  position: relative;
+  height: 176px;
+  overflow: hidden;
 }
 
 .rp-cover {
@@ -746,16 +835,15 @@
   text-align: center;
   pointer-events: none;
 }
-.rp-dek {
-  font-size: 7px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.62);
-}
 .rp-masthead {
-  font-size: 2.6rem;
+  /* Round 3: the shell head already says 2RP and carries the publication
+     line, so the round-2 dek above the mark is gone and the masthead —
+     which IS the artwork: the rotating face is the site's identity — steps
+     down half a size to read as the cover's mark under the head rather
+     than a second head. */
+  font-size: 2.25rem;
   line-height: 0.9;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.94);
   /* the face rotates per session (set inline in build); the halo keeps the
      white mark legible over arbitrary cover art */
   text-shadow:
@@ -763,12 +851,31 @@
     0 0 4px rgba(0,0,0,0.7);
 }
 
-/* The launch status completes the centred editorial stack below the mark. */
+/* THE STATUS ENDS THE CARD (round 2): a letterpress band under the cover —
+   the promise gets the same defined foot the other five give their doors,
+   so the unlaunched thing no longer trails off inside its own art. Round 3:
+   it wears the shared .card-door skeleton (same band, same type) with the
+   compositor's rules flanking the words and nothing behind it — the one
+   foot on the family sheet that is a status, not an exit. */
+.rp-foot {
+  display: flex;                             /* over .card-door's block: the
+                                                flanking rules need a row */
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  text-indent: 0;                            /* rules are symmetric; no comp */
+  background: #120b06;                       /* warm print-ink ground */
+  border-top-color: rgba(244, 228, 193, 0.16);
+}
+.rp-foot::before,
+.rp-foot::after {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: rgba(244, 228, 193, 0.28);     /* compositor's rules */
+}
 .rp-soon {
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.7);
+  color: rgba(244, 228, 193, 0.78);          /* parchment on ink */
 }
 
 /* ---- hivemind — a replayed query, in the house's own light ------------ */
@@ -788,22 +895,14 @@
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
 }
 
-/* the console's title bar: what it is, in one line */
-.hm-head {
-  padding: 0.55rem 1rem 0.45rem;
-  border-bottom: 1px solid rgba(217, 164, 65, 0.15);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-}
-.hm-name {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: rgba(217, 164, 65, 0.75);      /* house gold */
-}
-
+/* Round 3: the round-2 title bar — wordmark plus descriptor — is gone;
+   the shell head says HIVEMIND and carries the one thesis line, so the
+   console opens straight onto the replayed query, which is the
+   personality. */
 .hm-console {
+  position: relative;                   /* the librarian's corner */
   flex: 1 1 auto;
-  padding: 0.55rem 1rem 0.2rem;
+  padding: 0.7rem 1rem 0.2rem;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 0.72rem;
   line-height: 1.55;
@@ -851,38 +950,50 @@
   overflow: hidden;
 }
 
+/* THE RECORD IS A CHIP BAND (round 2, kept): the corpus as two compact
+   chips — tag-like units, not a sentence. Round 3 moves the repo door out
+   of this band onto the shared full-width foot below it, so Hivemind ends
+   exactly where the other five do. */
 .hm-foot {
-  position: relative;
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;           /* stats over door — a narrow pane
-                                       stacks instead of overflowing the
-                                       stage's fixed height */
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px;
-  min-height: 44px;                 /* clears the mascot's 44px */
-  padding: 0.35rem 0 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  padding: 0.45rem 1rem 0.5rem;
   border-top: 1px solid rgba(217, 164, 65, 0.15);
-}
-
-.hm-stats {
-  margin: 0;
-  padding: 0 3.2rem 0 1rem;             /* right pad clears the mascot */
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.02em;
-  line-height: 1.5;                     /* wraps to two console lines on
-                                           narrow panes — never truncates
-                                           the corpus out of its own stat */
-  color: rgba(217, 164, 65, 0.6);       /* house gold, dimmed */
 }
+.hm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.hm-chip {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border: 1px solid rgba(217, 164, 65, 0.28);
+  color: rgba(217, 164, 65, 0.62);
+  white-space: nowrap;
+}
+.hm-chip b {
+  font-weight: 700;
+  color: rgba(240, 200, 119, 0.92);     /* the number leads the tag */
+}
+/* the ending — house gold in the console's mono; geometry is .card-door's */
+.hm-door {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  border-top-color: rgba(217, 164, 65, 0.15);
+  color: rgba(217, 164, 65, 0.8);       /* house gold, resting */
+}
+.hm-door:is(:hover, :focus-visible) { color: #f0c87a; }
 
 .hm-mascot {
   position: absolute;
-  right: 0.65rem;
-  bottom: 0;
-  height: 44px;
+  right: 0.7rem;
+  bottom: 0.15rem;
+  height: 40px;
   width: auto;
   image-rendering: pixelated;
   opacity: 0.9;
@@ -892,7 +1003,6 @@
 /* Live data is the site's own Supabase table daily_summaries (discord.js);
    colors below borrow its TopicCard language:
      parchment #f4e4c1  — the community section's warm text tone
-     emerald   #10b981  — the pulsing "live" dot on its TopicCard (dot only)
      blurple   #5865F2  — Discord's brand blue, as a 2px left-rule nod
    Ground stays the house-dark panel (rgba(10,7,3,…) #0a0703). */
 
@@ -909,37 +1019,14 @@
   touch-action: pan-y;
 }
 
-.dc-head {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.6rem 1rem 0.15rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(244, 228, 193, 0.55);   /* parchment, dimmed */
-}
-
-.dc-beacon {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;                /* emerald, their live dot */
-  animation: dc-pulse 2s ease-in-out infinite;
-}
-.dc-fallback .dc-beacon { visibility: hidden; animation: none; } /* reserve the live-dot slot */
-
-@keyframes dc-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-  50%      { opacity: 0.5; box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
-}
-
+/* The live-status corner (round 3's beacon-plus-word row) is gone — the
+   shell head already says DISCORD, and the body's own top padding now
+   carries the top of the card (owner direction, 2026-08-31). */
 .dc-body {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
-  padding: 0.35rem 1rem 0.35rem 1.1rem;
+  padding: 0.65rem 1rem 0.35rem 1.1rem;
 }
 
 .dc-topic {
@@ -984,20 +1071,41 @@
   overflow: hidden;
 }
 
+/* provenance as tags (round 2): a channel and a day are chips, not copy */
 .dc-meta {
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 8px;
-  letter-spacing: 0.06em;
+}
+.dc-tag {
+  font-size: 7px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(244, 228, 193, 0.4);
+  padding: 1px 6px 2px;
+  border: 1px solid rgba(244, 228, 193, 0.22);
+  border-radius: 999px;
+  color: rgba(244, 228, 193, 0.5);
+  white-space: nowrap;
 }
 
 .dc-dots {
   display: flex;
   justify-content: center;
   gap: 6px;
-  padding: 0 0 0.6rem;
+  padding: 0 0 0.5rem;
+}
+
+/* THE INVITE ENDS THE CARD (round 2): their blurple, quiet until reached
+   for; geometry is .card-door's. */
+.dc-door {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  border-top-color: rgba(88, 101, 242, 0.28);
+  color: rgba(136, 145, 242, 0.75);   /* blurple, lifted */
+}
+.dc-door:is(:hover, :focus-visible) {
+  color: #a6adf7;
+  background: rgba(88, 101, 242, 0.08);
 }
 
 .dc-dot {
@@ -1033,62 +1141,17 @@
 /* no cycle running (single topic, REDUCE, fallback): the pill reads full */
 .dc-dot.is-on:not(.dc-filling)::after { transform: none; }
 
-/* ---- the doors and the thumbs (2026-08-18 refactor: no house block —
-   each stage carries its own CTA in its own voice; all reveal via the
-   shared .card-cta rule in the shell section) ------------------------- */
+/* ---- the endings (round 2): each stage closes in its own voice ------- */
 
-/* artcompute — their green CTA treatment, in the header's flex flow
-   between wordmark and status dot (never overlaps at any width) */
-.ac-cta {
-  flex: none;
-  margin-left: auto;
-  padding: 2px 7px;
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
+/* artcompute — their green CTA voice; geometry is .card-door's */
+.ac-door {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: rgba(57, 255, 20, 0.65);
+}
+.ac-door:is(:hover, :focus-visible) {
   color: #39ff14;
-  background: rgba(57, 255, 20, 0.15);   /* their bg-[#39ff14]/15 */
-  border: 1px solid rgba(57, 255, 20, 0.3);
+  background: rgba(57, 255, 20, 0.06);   /* their bg-[#39ff14] wash */
 }
-.ac-cta:is(:hover, :focus-visible) { background: rgba(57, 255, 20, 0.25); }
-.ac-header { gap: 0.6rem; }              /* title · cta · dot breathing room */
-
-/* ados — its eyebrow voice as a top-right tag, like its event chips */
-.ad-cta {
-  position: absolute;
-  top: 10px; right: 10px;
-  padding: 3px 8px;
-  font-size: 8px;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(10, 10, 10, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;                  /* their tag pills are rounded */
-}
-.ad-cta:is(:hover, :focus-visible) { border-color: rgba(255, 255, 255, 0.6); }
-
-/* hivemind — a gold mono door on the foot's second line */
-.hm-link {
-  flex: none;
-  margin-left: 1rem;                     /* aligns under the stats' indent */
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 0.62rem;
-  color: #d9a441;                        /* house gold */
-}
-.hm-link:is(:hover, :focus-visible) { color: #f0c87a; }
-
-/* discord — a quiet blurple door on the head's right */
-.dc-cta {
-  margin-left: auto;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: #5865F2;
-}
-.dc-cta:is(:hover, :focus-visible) { color: #8891f2; }
 
 /* discord — the topic's image, very small, beside the copy (live data
    only; the baked fallback has no media and an expired link never shows) */
@@ -1268,4 +1331,149 @@
     transform: none;
     transition: none;
   }
+}
+
+/* ==================================================================== *
+ * THE WINDOW WITH NOTHING BEHIND IT YET — Equip's two initiatives.
+ * ====================================================================
+ * Quark and Brötchen are real destinations whose interiors do not exist,
+ * and this is that fact drawn rather than written. The shell is the SAME
+ * shell the six built cards use — accented name, house short line, the
+ * stage as the body, a door at the foot — and every one of those four
+ * parts is present. What is missing is legibility, deliberately: the
+ * description is out of focus, the stage is an abstract field where the
+ * artwork will be, and the door is a door SHAPE with no destination
+ * behind it (content/content.js gives these nodes no link, so the real
+ * `.j-pop-link` is hidden and nothing in the accessible tree pretends to
+ * lead anywhere).
+ *
+ * ONE THING STAYS SHARP, and it is the whole difference between
+ * "intriguing" and "broken": the small caption at the foot of the field.
+ * A blurred card with no legible word in it reads as a rendering failure;
+ * a blurred card that says IN DEVELOPMENT reads as a promise. It is also
+ * the only honest thing to hand a screen reader, which is why it is real
+ * text and not a background.
+ *
+ * There is no module in journey/cards/ for either node. The interior is
+ * this stylesheet's, keyed off `.j-pop-unbuilt` — see the third-state note
+ * in journey/ui/popover-tier.js for why a builder that draws nothing would
+ * have been the wrong shape.                                            */
+
+.j-pop[data-node="quark"]    { --card-accent: #f0c274; --uc-a: #f0c274; --uc-b: #7fb2a4; --uc-c: #c98a5e; }
+.j-pop[data-node="brotchen"] { --card-accent: #9fbcd0; --uc-a: #9fbcd0; --uc-b: #c9a2d8; --uc-c: #6f93a8; }
+/* Two more stable crops of the same underground organism, so the pair sit
+   in the same world as the six built cards rather than beside it. */
+.j-pop[data-node="quark"]    { --myc-x: 4px;  --myc-y: -4px; --myc-w: 103%; --myc-h: 101%; }
+.j-pop[data-node="brotchen"] { --myc-x: -5px; --myc-y: 3px;  --myc-w: 99%;  --myc-h: 105%; }
+
+/* THE DESCRIPTION IS PRESENT AND OUT OF FOCUS — AND SO IS THE NAME (R3:
+   "even the name should be blurred"). The words are real, the title is the
+   chip's accessible name and the short line its aria-describedby text, and a
+   screen reader reads both in full — only the pixels are withheld. The name
+   keeps a lighter blur than the line: at its size and letter-spacing 2.2px
+   makes it a coloured shape while 2.9px would make it a smear, and a shape
+   in the card's accent is what still says "this window is somebody's". */
+.j-pop.j-pop-unbuilt .j-pop-t {
+  filter: blur(2.2px);
+  opacity: 0.78;
+  user-select: none;
+}
+.j-pop.j-pop-unbuilt .j-pop-s {
+  filter: blur(2.9px);
+  opacity: 0.62;
+  user-select: none;
+}
+/* ...and a viewer who has asked for more contrast gets them back. An
+   unreadable line is a design statement to most people and an obstacle to
+   some, and the statement is worth less than the sentence. */
+@media (prefers-contrast: more) {
+  .j-pop.j-pop-unbuilt .j-pop-t,
+  .j-pop.j-pop-unbuilt .j-pop-s { filter: none; opacity: 0.9; }
+}
+
+/* THE FIELD. Four soft colour masses over the house dark, blurred past any
+   readable form, with the card's own two accents in them so the abstraction
+   still belongs to this initiative and not to the other one. */
+.j-pop-stage.j-pop-unbuilt {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 3px;
+  background:
+    radial-gradient(48% 56% at 24% 32%, color-mix(in oklab, var(--uc-a) 92%, transparent) 0%, transparent 70%),
+    radial-gradient(44% 52% at 76% 28%, color-mix(in oklab, var(--uc-b) 82%, transparent) 0%, transparent 68%),
+    radial-gradient(56% 50% at 60% 80%, color-mix(in oklab, var(--uc-c) 74%, transparent) 0%, transparent 72%),
+    radial-gradient(38% 40% at 46% 54%, color-mix(in oklab, var(--uc-a) 40%, transparent) 0%, transparent 76%),
+    radial-gradient(75% 75% at 40% 58%, rgba(34, 21, 8, 0.72) 0%, rgba(11, 8, 3, 0.94) 100%);
+  filter: blur(13px) saturate(1.3) brightness(1.12);
+  transform: scale(1.06);          /* hide the blur's own soft edge inside the box */
+  transform-origin: 50% 50%;
+  overflow: hidden;
+}
+/* The blur is on the field, so the caption and the door ride a sibling layer
+   that is never blurred with it. */
+.j-pop-stage.j-pop-unbuilt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 4, 1, 0) 46%, rgba(6, 4, 1, 0.42) 100%);
+}
+.j-pop.j-pop-unbuilt .j-pop-frame {
+  position: relative;
+  /* The blurred short line's own soft edge would otherwise sit on the field's;
+     one line of air keeps the two out-of-focus surfaces legibly separate. */
+  margin-top: 0.18rem;
+}
+/* THE CAPTION — the one legible thing, and the reason the card reads as
+   intentional. Sits over the field's own foot, in the card's accent. */
+.j-pop.j-pop-unbuilt .j-pop-frame::after {
+  content: "IN DEVELOPMENT";
+  position: absolute;
+  left: 0.62rem;
+  bottom: 2.1rem;
+  z-index: 3;
+  font-size: 0.55rem;
+  letter-spacing: 0.26em;
+  color: var(--card-accent, var(--gold-bright));
+  opacity: 0.92;
+  pointer-events: none;
+}
+/* THE DOOR SHAPE. The same geometry `.j-pop-rich .j-pop-link` occupies —
+   a hairline, a label's worth of width, an arrow's worth of gap — with no
+   text, no href and no tab stop. It is the fourth part of the structure,
+   present and unreadable like the rest. */
+.j-pop.j-pop-unbuilt .j-pop-frame > .j-pop-stage + * { display: none; }
+.j-pop.j-pop-unbuilt::after {
+  content: "";
+  order: 3;
+  display: block;
+  height: 1.6rem;
+  margin: 0.55rem 0 0;
+  border-top: 1px solid rgba(217, 164, 65, 0.16);
+  background:
+    linear-gradient(90deg,
+      color-mix(in oklab, var(--card-accent) 34%, transparent) 0 42%,
+      transparent 42% 88%,
+      color-mix(in oklab, var(--card-accent) 44%, transparent) 88% 100%);
+  background-size: 100% 0.42rem;
+  background-position: 0 0.62rem;
+  background-repeat: no-repeat;
+  filter: blur(2.4px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* The field breathes, slowly, and only while the card is open — the same
+   rule the six built stages follow, and it parks under reduced motion with
+   everything else (the block at the top of this file). */
+@keyframes j-uc-drift {
+  0%   { transform: scale(1.06) translate3d(0, 0, 0); }
+  50%  { transform: scale(1.10) translate3d(-1.4%, -1.1%, 0); }
+  100% { transform: scale(1.06) translate3d(0, 0, 0); }
+}
+.j-pop.j-pop-open .j-pop-stage.j-pop-unbuilt,
+.j-pop:hover .j-pop-stage.j-pop-unbuilt {
+  animation: j-uc-drift 14s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-pop-stage.j-pop-unbuilt { animation: none !important; }
 }

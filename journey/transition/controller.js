@@ -47,6 +47,7 @@
 
 import { createCameraBlendStepper } from '../camera-blend.js';
 import { snapChapterLandings } from '../chapter-entry.js';
+import { createHeroFieldGate } from '../hero-field.js';
 import { COPY_JUMP_LEAD, COPY_JUMP_TAIL_S, COPY_IN_K } from '../constants.js';
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -104,6 +105,11 @@ export function createTransitionController({
 
   let heroEntry = null;   // { t, lead, dur } while a jump is flying INTO the hero
   let heroGate = 1;       // the eased arrival term; 1 = the hero is ours to show
+  /* ...and the arrival term's own two-pass placement window, the counterpart
+     of heroExit's `holdSnaps` (see clearHeroTerms). Non-zero only across the
+     placeAt passes of a jump that OVERTOOK a lap; a real placement never
+     arms it, so deep links, ?capture= and QA scrollTo still snap. */
+  let heroGateHold = 0;
   /* ...AND A DEPARTURE TERM TO MATCH (2026-08-16 — Hannah, the up-wrap:
      "there's a similar flash when I scroll UP from the top section [to] the
      last section"). A jump AWAY from the hero snapped this furniture to
@@ -341,7 +347,23 @@ export function createTransitionController({
   /* ---------------------------------------------------------------- *
    * THE HERO FURNITURE'S TWO TERMS. The values are here; the DOM write
    * is journey.js's paintHeroFurniture, injected as `paintHero`.
+   *
+   * ...AND THE HERO'S SECOND SURFACE (2026-09-01 — Hannah, the entry's
+   * spores: "when I move out of the first section ... those entry dots
+   * disappear, and when I move back into it they should reappear"). The
+   * adopted spore field is the hero's, not the scene's, and it now leaves
+   * and returns on THE SAME PAINTED SCALAR as the furniture rather than
+   * on a second envelope built to look like it. Everything the two terms
+   * below were fought into shape for — the up-wrap flash, the arrival
+   * that waits out the lap, the reversal that continues from the painted
+   * value — therefore reaches the field with no clause of its own.
+   *
+   * The gate is DRIVEN FROM stepHeroEntry, one frame behind the painter,
+   * because journey/journey.js belongs to another lane this round. The
+   * single-line insertion that retires the debt is written out in the
+   * header of journey/hero-field.js; read that before touching this.
    * ---------------------------------------------------------------- */
+  const heroField = createHeroFieldGate(sceneApi);
 
   /** Arm the DEPARTURE term (see heroExit above). Called from directJumpTo
    *  BEFORE placeAt — the two dt = 0 placement passes inside placeAt are what
@@ -420,9 +442,28 @@ export function createTransitionController({
 
   /** One step of the arrival term. */
   function stepHeroEntry(dt) {
+    /* THE FIELD RIDES WHAT THE PAINTER LAST PUT UP. This is the first of
+       the two steppers the paint site calls, so `heroShownNow()` here is
+       still the value composed on the previous applyFrame — the same
+       number, one frame old, and the only reachable form of it while
+       journey.js is another lane's (hero-field.js's header carries the
+       insertion that makes it same-frame). A placement is not a special
+       case: placeAt runs two synchronous dt === 0 passes, so its second
+       pass reads the first pass's paint and the field is at the
+       destination's presence before anything is rendered. */
+    heroField.set(heroShownNow());
     // A placement is not an arrival: a deep link, a ?capture= still or a QA
     // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
-    if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }
+    // ...unless the two passes are a JUMP's own (clearHeroTerms armed the
+    // hold just before placeAt) — the departure term's `holdSnaps` rule,
+    // applied to the arrival term. See clearHeroTerms.
+    if (dt === 0) {
+      heroEntry = null;
+      if (heroGateHold > 0) { heroGateHold--; return heroGate; }
+      heroGate = 1;
+      return heroGate;
+    }
+    heroGateHold = 0;   // a frame of real travel ends the placement window
     if (heroEntry) {
       heroEntry.t += dt * (heroEntry.play || 1);
       const f = clamp01((heroEntry.t - heroEntry.lead) / heroEntry.dur);
@@ -458,11 +499,49 @@ export function createTransitionController({
   /** An ordinary click now presents a real continuous progress coordinate
    *  over the camera flight. Hero presence can therefore use the same pure
    *  p envelope as scroll; retire the legacy click-only timer so it cannot
-   *  race or soften that authoritative signal. */
+   *  race or soften that authoritative signal.
+   *
+   *  ...BUT THE GATE IS DROPPED, NOT RAISED (2026-09-01, measured while
+   *  giving the adopted spore field this same scalar — evidence/
+   *  r11-fieldgate/matrix.md rows C4-C6).
+   *
+   *  `heroGate = 1` here was a SNAP, and there is exactly one state it can
+   *  snap from: a ceremonial lap's arrival term, which is the only thing in
+   *  this file that ever puts the gate below 1. A lap PARKS p at its
+   *  destination before flying, so all through a final->mission lap
+   *  `heroPresence(presentedP)` already reads 1 and the gate alone is what
+   *  holds the hero dark. An ordinary click that OVERTAKES such a lap
+   *  therefore used to publish `1 * 1` on the click frame — the furniture
+   *  went from 0 to full opacity in ONE FRAME and then faded out again as
+   *  the camera left. Measured on the base tree (envelope-before.json,
+   *  L-interrupt-lap-home): 0 -> 1 across a single frame at the interrupt,
+   *  ~180 ms at full, then the ordinary presence fall. It was survivable
+   *  while the furniture was the only surface wearing this number; it is a
+   *  1512-particle field flashing on once the spores wear it too.
+   *
+   *  So: drop the AUTHORITY and never the value — the same sentence
+   *  cancelHeroEntry above is written in, and the same one the copy layer
+   *  makes. With no entry ticket the stepper's own relax branch breathes
+   *  the gate back on COPY_IN_K from wherever the lap had left it, so the
+   *  overtake continues from the painted value instead of stepping off it.
+   *
+   *  AND IT HAS TO SURVIVE THE JUMP'S OWN PLACEMENT PASSES, which is the
+   *  half that measurement caught: this is called from directJumpTo BEFORE
+   *  placeAt, and placeAt's two dt = 0 applyFrame passes reach
+   *  stepHeroEntry's "a placement is not an arrival" branch — which snapped
+   *  the gate to 1 and put the step straight back. `holdSnaps` is exactly
+   *  the same two-pass window armHeroExit already opens for the departure
+   *  term, for exactly the same reason, so the arrival term is simply given
+   *  the counterpart it never had. A REAL placement (deep link, ?capture=,
+   *  QA scrollTo) arms no hold and still snaps.
+   *
+   *  EVERY ORDINARY JUMP IS BIT-IDENTICAL: outside a lap the gate is
+   *  already 1, nothing is held, and this wrote 1 over 1. */
   function clearHeroTerms() {
     heroExit = null;
     heroEntry = null;
-    heroGate = 1;
+    if (heroGate < 1) heroGateHold = 2;   // the jump's own two placeAt passes
+    else heroGate = 1;
   }
 
   /** The tickets the jump installs BEFORE placeAt runs its two synchronous
@@ -484,9 +563,17 @@ export function createTransitionController({
    *  destination pose (which is what makes the duration and both grade
    *  endpoints knowable). Taken as authored rather than re-assembled here:
    *  the stepper reads twenty-two named fields off it, and a spread would
-   *  put this file in the business of knowing which. */
+   *  put this file in the business of knowing which.
+   *
+   *  ONE FIELD IS SET RATHER THAN READ, and it is the lap's own odometer.
+   *  `advanced` answers "has this lap put any of its clock behind it?" — the
+   *  question rewoundHome below has to ask before it may land one. A lap
+   *  handed a clock that is already running has, by construction; a lap
+   *  authored at its own first frame (every jump directJumpTo builds) has
+   *  not, until stepCamBlend says so. */
   function beginBlend(blend) {
     camBlend = blend;
+    camBlend.advanced = camBlend.t > 0;
   }
 
   /* ---------------------------------------------------------------- *
@@ -506,6 +593,10 @@ export function createTransitionController({
    *  abandons the blend instead — the camera keeps the destination pose the
    *  director just wrote, which is where the jump was going anyway. */
   function stepCamBlend(dt) {
+    // The lap's odometer (see beginBlend). A dt of 0 is a PLACEMENT, not a
+    // frame of travel — it composes the same pose twice and moves the clock
+    // nowhere — so it may not buy the lap the right to land.
+    if (camBlend && dt > 0) camBlend.advanced = true;
     try { stepper(camBlend, railWrap || railFlight, dt); }
     catch (err) {
       console.error('[journey] camera blend threw — the jump lands directly:', err);
@@ -522,8 +613,30 @@ export function createTransitionController({
     get railFlight() { return railFlight; },
     get cameraStateDisagree() { return cameraStateDisagree; },
     get heroExiting() { return !!heroExit; },
-    /** A fully rewound wrap: the lap has run back past its own first frame. */
-    get rewoundHome() { return !!camBlend && camBlend.play < 0 && camBlend.t <= 0; },
+    /** A fully rewound wrap: the lap has run back past its own first frame.
+     *
+     *  ...AND IT MUST HAVE HAD A FIRST FRAME TO RUN BACK PAST (2026-08-30 —
+     *  the rapid-bookend report: the view resets, and the move that should
+     *  have transitioned arrives already finished). Two bookend controls
+     *  pressed between two animation frames — Purpose, then Intro — reach
+     *  steerWrapTo() while the lap they name is still standing on t = 0.
+     *  steerWrapBlend sets play = -1, and without the odometer below this
+     *  getter was true on the spot, so the very next spineFrame landed a lap
+     *  that had flown NOTHING: placeAt(homeP) with the placement snap, every
+     *  chapter thrown to its home target, the camera handed back to the hero
+     *  — the heaviest reset in this file, fired in the middle of an
+     *  interaction, with no travel to unwind and no frame of it drawn.
+     *
+     *  `advanced` delays a genuine landing by at most one frame (the next
+     *  stepCamBlend arms it, and that step composes the lap's own first frame
+     *  — which is the home pose, so nothing jumps). What it buys is that the
+     *  ticket stays LIVE across a reversal that arrived too early: a third
+     *  press steers the same lap, as steerWrapTo was written to, instead of
+     *  meeting a journey that has already been re-placed underneath it. */
+    get rewoundHome() {
+      return !!camBlend && camBlend.advanced
+        && camBlend.play < 0 && camBlend.t <= 0;
+    },
     get chapterEntry() { return chapterEntry; },
     set chapterEntry(v) { chapterEntry = v; },
 

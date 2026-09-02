@@ -38,14 +38,20 @@ const savedDocument = globalThis.document;
 globalThis.document = { createElementNS };
 
 assert.equal(VIEW_BOX, "0 0 22 22", '[symbols fixture] VIEW_BOX drifted');
+// Re-recorded 2026-08-30. `equip` used to be LAST because it was the one mark
+// with no chapter behind it and rode along explicitly after the schema-derived
+// set (journey/symbols/data.js said so, at length). Equip is a chapter now, so
+// the mark arrives through the same map as every other and sits where its
+// chapter sits — between `inspire` and `connect`. The SET is unchanged; only
+// the order moved, and it moved because the explicit ride-along was deleted.
 assert.deepEqual(Object.keys(SYMBOLS), [
   "mission",
   "inspire",
+  "equip",
   "connect",
   "owned",
   "final",
-  "menu",
-  "equip"
+  "menu"
 ], '[symbols fixture] SYMBOLS key set/order drifted');
 
 assert.deepEqual(
@@ -89,6 +95,18 @@ const EXPECTED = [
     "childCount": 7,
     "signature": "p:M3.6 16.4 Q11 1.8 18.4 16.4|p:M3.6 16.4 H18.4|c:15.4,10.4,0.95|c:17.2,8.8,0.82|c:15.4,7.4,0.68|c:18,6,0.7|c:16.2,4.2,0.58",
     "signatureSha256": "2be0501b220d204db4dd696cf38b439f6bcb31eb6f812f42e6ef7dfc53909167"
+  },
+  {
+    "id": "equip",
+    "label": "the cap from beneath",
+    "partCount": 11,
+    "svgClass": "j-sym j-sym-equip",
+    "svgViewBox": "0 0 22 22",
+    "svgAriaHidden": "true",
+    "svgFocusable": "false",
+    "childCount": 11,
+    "signature": "p:M2.4 10 A8.6 4.6 0 1 1 19.6 10 A8.6 4.6 0 1 1 2.4 10|p:M8.7 12.6 A2.3 1.4 0 1 0 13.3 12.6 A2.3 1.4 0 1 0 8.7 12.6|p:M8.8 12.1 L2.4 10|p:M9.2 11.5 L3.55 7.7|p:M10.2 11.25 L6.7 6.0|p:M11 11.2 L11 5.4|p:M11.8 11.25 L15.3 6.0|p:M12.8 11.5 L18.45 7.7|p:M13.2 12.1 L19.6 10|p:M9.2 13.4 L3.55 12.3|p:M12.8 13.4 L18.45 12.3",
+    "signatureSha256": "4849ee806414623b8fedbf8c971c2e61558257971ecd93a4f76ababa45af04cb"
   },
   {
     "id": "connect",
@@ -138,18 +156,6 @@ const EXPECTED = [
     "signature": "c:4.2,6.4,0.85|p:M7.6 6.4 H18.4|c:4.2,11,0.85|p:M7.6 11 H18.4|c:4.2,15.6,0.85|p:M7.6 15.6 H16.2",
     "signatureSha256": "51a316d8554b562f39064906189cdf31e53868bfe009a1e2fb37af3e2da855ec"
   },
-  {
-    "id": "equip",
-    "label": "the cap from beneath",
-    "partCount": 11,
-    "svgClass": "j-sym j-sym-equip",
-    "svgViewBox": "0 0 22 22",
-    "svgAriaHidden": "true",
-    "svgFocusable": "false",
-    "childCount": 11,
-    "signature": "p:M2.4 10 A8.6 4.6 0 1 1 19.6 10 A8.6 4.6 0 1 1 2.4 10|p:M8.7 12.6 A2.3 1.4 0 1 0 13.3 12.6 A2.3 1.4 0 1 0 8.7 12.6|p:M8.8 12.1 L2.4 10|p:M9.2 11.5 L3.55 7.7|p:M10.2 11.25 L6.7 6.0|p:M11 11.2 L11 5.4|p:M11.8 11.25 L15.3 6.0|p:M12.8 11.5 L18.45 7.7|p:M13.2 12.1 L19.6 10|p:M9.2 13.4 L3.55 12.3|p:M12.8 13.4 L18.45 12.3",
-    "signatureSha256": "4849ee806414623b8fedbf8c971c2e61558257971ecd93a4f76ababa45af04cb"
-  }
 ];
 
 for (const exp of EXPECTED) {

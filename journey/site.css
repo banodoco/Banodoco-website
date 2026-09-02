@@ -227,8 +227,18 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      visible)`, not `:focus-within`, so a click-focused link neither keeps
      folded tiles hit-testable nor holds the fan (keyboard focus does both,
      deliberately). */
-  .j-rail:not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
+  .j-rail:not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible)):not(.j-rail-preboot)
     .j-rail-slot:not(.now) .j-rail-item { pointer-events: none; }
+  /* THE PREBOOT SHELL IS FLAT, SO THE FOLD DOES NOT APPLY TO IT. Nothing is
+     stacked behind anything here — index.html authors all five tiles in their
+     final places and no JS ever adds `j-rail-hot` to this shell, so the rule
+     above would hold four of the five tiles unpressable for the whole window
+     the shell is the page's only navigation. The tiles are spans rather than
+     links (the shell is aria-hidden and out of the tab order — see the note
+     in index.html), so their hit areas have to be turned on here rather than
+     falling out of the `a.j-rail-item` pair above. Purely a HIT-MODEL change:
+     no paint rule reads `.j-rail-preboot`, so first paint is byte-identical.  */
+  .j-rail-preboot .j-rail-item { pointer-events: auto; }
 
   .j-rail-mark {
     position: relative;
@@ -1330,6 +1340,32 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        three small floating tags (Hannah's tablet note E). The pill measures
        itself at runtime (ui.js pillW), so a media-scoped size is safe. */
     .j-hot { font-size: 0.7rem; }
+    /* THE EPILOGUE COPY RIDES THE PURPOSE LIFT (2026-08-30, owner on iPad Mini
+       portrait: the final section's text block "sits too low"). The cause is
+       structural. Every bottom-anchored block reserves the navigator's band
+       with `--nav-centre-bottom + --nav-major / 2 + 30px`, but at Purpose the
+       row itself rises by `--purpose-rail-lift-max` and the base seat does not
+       know that, so the reservation is short by exactly that lift. Measured at
+       744x1133: the block's box bottom landed 22px BELOW the row's top — a
+       52px deficit against a rule that promises 30px of air.
+       THE INK DID NOT TOUCH, and that is why this reads as a composition note
+       and not a hit-target fault: the last sub line ended ~26px clear of the
+       row. (The phone band runs a negative BOX gap on purpose for the same
+       reason — its max-width 480 rule below pays part of the lift in its own
+       currency, --final-composition-lift + --final-copy-nav-air, and was
+       signed off on measured INK.) What the tablet band had was no rule at
+       all, so it was short by the whole lift rather than by a reviewed amount.
+       Paying it with the lift variable rather than a number keeps the two ends
+       answerable to each other: this is the CSS twin of rail-geometry.js's
+       `purposeLift`, so the copy rises by precisely what the row rises by and
+       the 30px contract holds by construction. Measured after: box gap +30.0
+       at 744x1133 AND at 768x1024. Shot against 0 / 48 / 72 / 96 — 72 starts
+       to float the block off its bottom anchor and 96 detaches it. */
+    .j-block.pos-bottomleft[data-chapter="final"] {
+      bottom: max(calc(9vh + var(--purpose-rail-lift-max)),
+                  calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
+                       + var(--purpose-rail-lift-max)));
+    }
   }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
   /* Owned's sub is centred prose now rather than a centred list, so it needs
@@ -1728,6 +1764,186 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   /* .j-hot's focus RING is the shared journey treatment further down; the
      colour/dot response above is what makes focus equal hover (PL-2.2). */
+
+  /* ============================================================
+     THE UNBUILT CHIP (R3) — Quark and Brötchen, the two initiatives whose
+     interiors are unbuilt (ui.js sets the class off the popover tier's own
+     under-construction qualifier). Two statements, each in an existing
+     site vocabulary rather than a new one:
+       · PRESENT: a solid housing — the base .j-hot wash (0.3 alpha) was tuned
+         for labels against dark sky, and under the R3 rest both chips sit ON
+         the lit gill ceiling, where it measured near-invisible (the owner saw
+         one chip of two). 0.66 desktop / 0.78 phone, a step above the
+         initiative marker's own 0.48 / 0.66, plus a gold hairline on the body;
+       · WITHHELD: the NAME is blurred to a shape, the same statement the
+         unbuilt preview card makes of its own text (cards.css j-pop-unbuilt,
+         blur 2.9px there, 2.6px here for the smaller type) — and, like
+         there, a viewer who asks for contrast gets the word back.
+     There WAS a third — PROMISED: a "Soon" pill in the site-map panel's badge
+     recipe, in `.j-hot-badge`, column 2 of row 2. The owner removed the word
+     from every visible Equip label on 2026-09-01, so the pill and its rule are
+     gone and this grid is one column wide again (see the anatomy note below).
+     The two statements above are the whole of the third state on the chip; the
+     rest of it is the unbuilt preview card the chip opens.
+     The rise: --j-hot-rise is written per frame by hotspot-frame.js's
+     paintSoonRise off the chip's own arrival clock; the individual
+     `translate` property composes with the placement transform without
+     touching it (the same argument ICON-ARRIVAL makes for `scale`).
+
+     ------------------------------------------------------------
+     THE HOUSE ANATOMY (2026-08-31, the owner: "those labels seem different to
+     the rest too — e.g. the icon isn't above the text like on the others").
+     These two were the last NAMED chips in the old dot-beside-name row. The
+     skeleton below is `.j-hot--icon-tab`'s, deliberately restated rather than
+     shared by selector list: that rule lives in cards.css and is authored
+     around a 13px pictograph and the ICON-ARRIVAL condense, neither of which
+     this chip has. What IS copied is the geometry that makes them read as one
+     family — a 22px marker tab, a body starting at y=16 exactly where the
+     tab's backing ends (adjacent, never overlapping, or alpha accumulates
+     into a dirty seam at the join), the name centred beneath, one optical
+     fill. The two chips differ from an initiative marker in exactly the three
+     ways above and in nothing structural.
+
+     ONE COLUMN, as the icon-tab is (2026-09-01, the word removed). The pill
+     used to sit BESIDE the name in a second cell of row 2 — never under it,
+     because a third row would have made these the tallest chips on the site
+     and, at 430px, pushed a two-chip collision the dodge would have to solve
+     every frame. With the pill gone the second cell had no occupant, so the
+     column is gone with it and the name's padding is the icon-tab's symmetric
+     `2px 12px 4px` rather than the 12/2 that used to balance the capsule
+     around the pair. Do not reintroduce an empty second column: at `auto auto`
+     it collapses to zero but leaves the name off the capsule's optical centre.
+
+     WHAT THE GEOMETRY OWES THE FRAME: a stacked chip anchors on its MIDPOINT,
+     so ui.js marks the record `stacked` and hotspot-frame's resolveX centres
+     the button (and with it the hit pad) on the projected node. Changing these
+     rows back to a row layout without clearing that flag would put the chip
+     half its own width off its node. */
+  .j-hot--soon {
+    --j-chip-bg: rgba(12, 8, 3, 0.66);
+    display: grid;
+    grid-template-columns: max-content;
+    grid-template-rows: 22px auto;
+    justify-content: center;
+    align-items: start;
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: rgba(228, 218, 196, 0.92);
+    translate: 0 var(--j-hot-rise, 0px);
+  }
+  /* The body: the capsule under the tab, carrying the housing and the one
+     gold hairline. `top: 16px` is the tab backing's own height — see above. */
+  .j-hot--soon::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 16px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 999px;
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    background: var(--j-chip-bg);
+    pointer-events: none;
+  }
+  .j-hot--soon:is(:hover, .hot, :focus-visible) {
+    --j-chip-bg: rgba(18, 12, 4, 0.82);
+    background: transparent;
+  }
+  /* The marker tab. The ember dot is the site's generic node mark and stays
+     the mark here — an unbuilt node has no pictograph to give it, and the
+     absence is part of what it says. `<i class="j-hot-dot">` has no children,
+     so the tab's backing and the ember itself are its two pseudo-elements:
+     ::before is the 22x16 rounded-top patch (the icon tab's own), ::after the
+     9px ember, centred over the body's midline. */
+  .j-hot--soon .j-hot-dot {
+    position: relative;
+    z-index: 1;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+    box-sizing: border-box;
+    width: 22px; height: 22px;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    /* NOT --j-dot-dy. The collision dodge pins a side-set ember back onto its
+       world node while the pill above it is raised; a stacked marker moves
+       with its capsule as ONE object, exactly as the icon tab does, or the
+       dodge would tear the tab off the body. The invisible hit pad keeps the
+       node truthful either way (.j-hot-hit). */
+    transform: none;
+  }
+  .j-hot--soon .j-hot-dot::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0; left: 0;
+    width: 22px; height: 16px;
+    border-radius: 5px 5px 0 0;
+    background: var(--j-chip-bg);
+    pointer-events: none;
+  }
+  .j-hot--soon .j-hot-dot::after {
+    content: "";
+    position: absolute;
+    top: 4px; left: 6.5px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: rgba(240, 200, 119, 0.6);
+    box-shadow: 0 0 8px rgba(240, 170, 60, 0.45);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  /* The generic hotspot hover grows its DOT, and here the dot is the TAB, so
+     the same argument the icon tab makes applies: scaling it would split the
+     silhouette. Only the ember inside breathes. This selector matches the
+     generic rule's specificity and follows it, which is what it takes to win. */
+  .j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+  .j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot::after {
+    background: rgba(255, 226, 160, 1);
+    transform: scale(1.35);
+    box-shadow: 0 0 12px rgba(255, 200, 100, 0.9), 0 0 28px rgba(240, 170, 60, 0.5);
+  }
+  .j-hot--soon .j-hot-label {
+    position: relative;
+    /* Above the body paint, for the reason the icon tab's label is: at z=0
+       the translucent capsule composites over the glyphs and the whole marker
+       looks muddy though the geometry is right. */
+    z-index: 1;
+    grid-column: 1;
+    grid-row: 2;
+    box-sizing: border-box;
+    min-height: 17px;
+    margin-top: -4px;
+    padding: 2px 12px 4px;
+    line-height: 1.05;
+    text-align: center;
+    white-space: nowrap;
+    filter: blur(2.6px);
+    opacity: 0.8;
+    user-select: none;
+  }
+  @media (prefers-contrast: more) {
+    .j-hot--soon .j-hot-label { filter: none; opacity: 0.95; }
+  }
+  /* `.j-hot-badge` — the "Soon" pill that occupied column 2 of row 2 — was
+     deleted with the word on 2026-09-01. It had exactly one author (ui.js's
+     third-state branch) and exactly one occupant, so the rule went with it
+     rather than being left as dress for an element nothing builds. */
+  /* Same phone conditions as the .j-hot contrast block above: over the lit
+     cap the marker needs the deeper wash the initiative tab also takes. */
+  @media (max-width: 720px), (max-height: 560px) {
+    .j-hot--soon { --j-chip-bg: rgba(12, 8, 3, 0.78); }
+    .j-hot--soon:is(:hover, .hot, :focus-visible) { --j-chip-bg: rgba(18, 12, 4, 0.88); }
+  }
 
   /* ============================================================
      NODE POPOVER (Hannah, 2026-08-05) — the detail, beside the chip.
@@ -2348,6 +2564,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      square controls it was written for and would flatten a pill. The outline
      follows the element's radius, so the pair states its own. */
   .j-act:focus-visible { border-radius: 999px; }
+  /* And the stacked marker states 0, for the same reason from the other
+     direction: its ring wraps a tab-over-capsule silhouette, where a 2px
+     round reads as a nick taken out of each corner rather than as a radius.
+     The INITIATIVE marker already lands on 0 — but by accident of the
+     cascade, not by saying so: cards.css writes `.j-hot.j-hot--icon-tab
+     { border-radius: 0 }` at two classes, which ties the shared ring above
+     and wins on order. The soon chip's own rule is one class and loses it,
+     so the pair drew two different rings (measured 2026-08-31: 2px on Quark,
+     0px on Arca and Tworp) — the exact family split this order set out to
+     close. Stated here rather than by thickening `.j-hot--soon` itself: that
+     rule also carries `color`, and raising it over the generic hover would
+     take the gold-brighten off the chip to win a corner. */
+  .j-hot--soon:focus-visible { border-radius: 0; }
   .j-card-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
   .j-card-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
 
@@ -3418,7 +3647,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .j-hot, .j-hot-dot, .j-card { transition: none; }
+    /* `.j-hot--soon .j-hot-dot::after` is the ember of a stacked marker, a
+       pseudo-element rather than the `<i>` itself, so it needs naming here to
+       get the same flattening the plain dot has always had. */
+    .j-hot, .j-hot-dot, .j-hot--soon .j-hot-dot::after, .j-card { transition: none; }
     /* The initiative marker's condense (ICON-ARRIVAL): cards.css already
        flattens the entry's opacity/transform variables under reduced motion;
        this flattens the `scale` axis site.css added beside them. What
@@ -4234,6 +4466,37 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 }
 
 /* ---- the items --------------------------------------------------------- */
+/* ONE BRIGHTNESS, TWO WRITERS, AND THE POINTER'S HALF HAS A CLOCK OF ITS OWN
+   (2026-08-30 — the illumination dip).
+
+   The journey writes --glyph-r/g/b/alpha per frame from the row's own
+   coordinate; the pointer used to answer by REPLACING the whole colour with
+   --gold-bright at a selector that carried :not(.now):not(.active). Two
+   authorities over one channel, and the second one stops applying in the
+   middle of the first one's move — so the button went DARK while it was being
+   pressed. Measured at 1440x900 with the pointer parked on Connect through a
+   Mission -> Connect jump: relative luminance held at 0.7947 for the move's
+   first 1.13s and fell to 0.6510 on the single frame the slot gained `active`,
+   i.e. the tile dimmed 18% at the moment it became the destination, then took
+   another 0.66s to climb back. Letting go mid-move was worse: 0.7947 -> 0.4989
+   in one frame, a 37% collapse, and a cursor flicked on and off during a long
+   loop produced that step once per flick.
+
+   --glyph-hot is that second authority, expressed in the first one's terms. It
+   is a REGISTERED property, so it interpolates: the pointer's contribution
+   eases in and out on its own 0.22s clock and — this is the part a colour swap
+   could not do — an interruption starts from the value currently rendered,
+   because that is what transitioning a registered custom property means.
+   Composed with max() rather than by replacement, so the term can only ever
+   BRIGHTEN: an item the journey has already lit past gold (the arrived tile
+   rests at 246,208,126 against gold-bright's 240,200,119) is not pulled back
+   down by a hover, which is the #34 constraint below stated as arithmetic
+   instead of as a :not() pair.
+
+   The `transition: none` note that stood here is still true and still the
+   reason the ITEM's colour has no transition: the journey's half must not
+   chase the ring a second time. Only the pointer's term has a clock. */
+@property --glyph-hot { syntax: "<number>"; inherits: false; initial-value: 0; }
 .j-rail .j-rail-item,
 .j-rail:not(.j-rail-column) .j-rail-item {
   position: relative;
@@ -4243,18 +4506,32 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   justify-content: center;
   width: var(--item-d);
   height: var(--nav-major);
-  color: rgba(
-    var(--glyph-r, 202),
-    var(--glyph-g, 202),
-    var(--glyph-b, 198),
-    var(--glyph-alpha, 0.72)
+  --glyph-ink: rgb(
+    max(var(--glyph-r, 202), calc(var(--glyph-r, 202) + (240 - var(--glyph-r, 202)) * var(--glyph-hot)))
+    max(var(--glyph-g, 202), calc(var(--glyph-g, 202) + (200 - var(--glyph-g, 202)) * var(--glyph-hot)))
+    max(var(--glyph-b, 198), calc(var(--glyph-b, 198) + (119 - var(--glyph-b, 198)) * var(--glyph-hot)))
+    / max(var(--glyph-alpha, 0.72), calc(var(--glyph-alpha, 0.72) + (1 - var(--glyph-alpha, 0.72)) * var(--glyph-hot)))
   );
+  color: var(--glyph-ink);
   text-decoration: none;
   cursor: pointer;
   pointer-events: auto !important;
   /* Colour is a continuous, reversible function of the live journey
      coordinate; a transition here would chase the ring a second time. */
-  transition: none;
+  transition: --glyph-hot 0.22s ease;
+}
+/* The reduce block at the top of the mobile section already names
+   `.j-rail-item`, but only at (0,1,0); the rule above outranks it, so the
+   convention has to be restated here to hold. Same reasoning as that block's
+   own: the term ends at the element's resting style either way, so switching
+   its clock off leaves both states intact and instant. The dip this whole
+   note is about does not come back with it — max() is monotone in the term,
+   so a hovered peer BECOMING the current item cannot darken whether the
+   change is eased or instant. What a reduced-motion visitor loses is only the
+   ease on letting go mid-move. */
+@media (prefers-reduced-motion: reduce) {
+  .j-rail .j-rail-item,
+  .j-rail:not(.j-rail-column) .j-rail-item { transition: none; }
 }
 .j-rail .j-rail-soon-item { cursor: default; }
 
@@ -4376,15 +4653,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 }
 
 /* ---- colour: current, hover, and the pointer's resolved truth ---------- */
+/* The same composition as the base item, with the arrived tier's fallbacks.
+   It has to be the same one: this pair outranks the base rule, so a colour
+   written here WITHOUT the pointer's term is what used to drop a hovered
+   button 18% of its luminance on the single frame it gained `active` — the
+   move's own destination going dark under the finger that asked for it. */
 .j-rail .j-rail-slot:is(.now, .active) .j-rail-item,
 .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
   .j-rail-slot:is(.now, .active) .j-rail-item {
-  color: rgba(
-    var(--glyph-r, 240),
-    var(--glyph-g, 200),
-    var(--glyph-b, 119),
-    var(--glyph-alpha, 1)
+  --glyph-ink: rgb(
+    max(var(--glyph-r, 240), calc(var(--glyph-r, 240) + (240 - var(--glyph-r, 240)) * var(--glyph-hot)))
+    max(var(--glyph-g, 200), calc(var(--glyph-g, 200) + (200 - var(--glyph-g, 200)) * var(--glyph-hot)))
+    max(var(--glyph-b, 119), calc(var(--glyph-b, 119) + (119 - var(--glyph-b, 119)) * var(--glyph-hot)))
+    / max(var(--glyph-alpha, 1), calc(var(--glyph-alpha, 1) + (1 - var(--glyph-alpha, 1)) * var(--glyph-hot)))
   );
+  color: var(--glyph-ink);
 }
 /* The retired fan gave the nav-less Final slot a quieter "echo" voice at
    high specificity; in the row Epilogue is a peer, and rail.js no longer
@@ -4416,12 +4699,31 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    otherwise DIM an already-active ring from 0.95 to 0.85). `.at` rides
    with :hover and :focus-visible in every rule of this family, so keyboard
    and pointer stay visually equal (PL-2.2), and a transform-moved row
-   still answers a stationary cursor (rail.js, THE POINTER'S OWN TRUTH). */
-.j-rail:not(.j-rail-column) .j-rail-slot:not(.now):not(.active)
-  .j-rail-item:is(:hover, :focus-visible),
-.j-rail:not(.j-rail-column) .j-rail-slot.at:not(.now):not(.active)
-  .j-rail-item {
-  color: var(--gold-bright);
+   still answers a stationary cursor (rail.js, THE POINTER'S OWN TRUTH).
+
+   THE HUE HALF OF THIS IS NOW ARITHMETIC, not a pair of selectors. "Peers lift
+   to gold, the active item does not" was expressed as `:not(.now):not(.active)`
+   on the rule that replaced the colour — which meant the lift ENDED when a
+   peer became active, in the middle of the move that was making it active.
+   --glyph-hot composes with max() instead: a peer resting below gold is lifted
+   to it, an item the journey has already lit past gold is left alone, and
+   nothing has to know which of the two it is. The +4% scale below is
+   unchanged, and is still the active item's whole answer.
+
+   THE SELECTOR LIST IS LONG ON PURPOSE. Three older rules up in the retired
+   half-moon's block still paint this row's items by replacement on `.at` —
+   parchment for a peer, gold for the current one — at specificities up to
+   (0,6,0). Raising --glyph-hot alone left those winning, and the row went
+   near-white on hover: report #34's own symptom, restored by deleting the
+   rule that had been outranking it. Every one of those selectors is matched
+   here, at the same specificity and later in the file, so the composed ink is
+   what reaches the pixel by the ordinary cascade rather than by !important. */
+.j-rail:not(.j-rail-column) .j-rail-slot .j-rail-item:is(:hover, :focus-visible),
+.j-rail:not(.j-rail-column) .j-rail-slot.at .j-rail-item,
+.j-rail:not(.j-rail-column) .j-rail-slot.at:is(.active, .now) .j-rail-item,
+.j-rail:not(.j-rail-column) .j-rail-echo.at:not(.now) .j-rail-item {
+  --glyph-hot: 1;
+  color: var(--glyph-ink);
 }
 .j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active)
   .j-rail-item:is(:hover, :focus-visible) .j-rail-mark,
@@ -4709,8 +5011,30 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    equals the logo's from the left (54.4px desktop, 6vw phone) — measured
    both sides, both frames.
 
-   VERTICAL PARITY IS OF THE TOP EDGES, NOT THE CENTRES, and that is the
-   part worth writing down. Three things decide it:
+   VERTICAL PARITY WAS OF THE TOP EDGES AND IS NOW OF THE CENTRES — on
+   phones. The reasoning that chose tops is kept below because it is still
+   the reasoning that governs DESKTOP, and because the number it produced
+   was wrong in a way worth naming:
+
+   · THE RESIDUAL BELOW IS MEASURED OFF THE WRONG OBJECT. "7.8px on phone"
+     is the gap between the ring's centre and the .logo BOX's centre, and
+     the box is 28.4px while the drawing inside it is 34px — the mark
+     deliberately overflows its box (see hero.css's .logo note, which is
+     what holds navBottom). Measured on the rendered 430x932 and 390x844
+     frames from the actual lit pixels, both marks' INK: tops identical,
+     centres 5.0px apart, bottoms 10.0px apart. The real residual was 5.0.
+   · SO THE OWNER'S 2026-08-30 REPORT AND THIS BLOCK AGREE, and only the
+     direction of the last correction changed: the mark "reads slightly too
+     high" beside the ring. The phone fix is in hero.css's ≤620 `nav` rule
+     — 5px of padding moved from the bottom of the row to the top, which
+     lands the two INK centres on one line and leaves navBottom untouched.
+     Shot at 0 / 5 / 8 / 10px: 0 is the reported fault, 8 and 10 carry the
+     mark visibly BELOW the ring (10 is bottom-edge parity), 5 is the only
+     one where neither object reads as the higher.
+   · The ring is still not shrunk, and "the same size" is still honoured as
+     the touch box rather than the ink. Only the seat moved.
+
+   The three things that decided TOP parity, which still describe desktop:
 
    · The owner's own reference render is the tie-breaker, because it holds
      both marks in one picture. Measured off it (nav-target-with-labels,
@@ -4726,13 +5050,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      the correction it asks for is downward — and top alignment moves the
      ring DOWN from centre parity. Two independent signals agree.
 
-   SO THE OFFSET IS NOT ZERO, on purpose: the menu's centre finishes 5.5px
-   (desktop) / 7.8px (phone) BELOW the logo ink's centre. That residual is
+   SO THE DESKTOP OFFSET IS NOT ZERO, on purpose: the menu's centre finishes
+   5.5px below the logo's, measured against the .logo BOX. That residual is
    just the ring being the taller object with its top on the same line —
    the previous cut drove it to zero against the logo's LINE BOX (whose
    extra 5-7px is invisible descender space) and put the ring's top 2px
-   (desktop) / 5px (phone) above the logo's, the wrong way for every signal
-   above.
+   above the logo's, the wrong way for every signal above. Desktop is
+   UNCHANGED by the 2026-08-30 phone pass and has had no report of its own.
 
    The mobile block lives HERE, after the base rule, because an earlier
    ≤620 override was silently losing this cascade — measured live with the
@@ -4793,6 +5117,26 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   box-shadow: 0 0 22px rgba(230, 175, 70, 0.2);
 }
 
+/* THE TABLET BAND GETS ITS OWN SEAT (2026-08-30, round 2 of the owner's
+   parity report). hero.css's ≤900 portrait pass gave the nav its own
+   padding (1.6rem), which floats the logo ink's centre at 46.0px — but the
+   ring kept falling through to the DESKTOP rule above, whose 2.1rem seat
+   was computed against the desktop nav. Measured ink at 744x1133, 768x1024
+   AND 820x1180: logo centre 46.0, ring centre 56.0 — a 10px stagger on a
+   frame whose centred composition (CTA gone, copy on the axis) is exactly
+   where a stagger reads worst. Portrait is centre-parity territory (the
+   phone block below made that call first, on the owner's own report), so
+   the ring's BOX centre goes to the logo's INK centre: 46 - 44/2 = 24px.
+   Landscape ≤900 keeps the desktop nav padding, so it keeps the desktop
+   seat — hence orientation: portrait here, same band as hero.css's rule. */
+@media (min-width: 621px) and (max-width: 900px) and (orientation: portrait) {
+  .j-rail .j-rail-menu,
+  .j-rail:not(.j-rail-column) .j-rail-menu,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
+    top: 24px;
+  }
+}
+
 @media (max-width: 620px) and (orientation: portrait) {
   .j-rail .j-rail-menu,
   .j-rail:not(.j-rail-column) .j-rail-menu,
@@ -4834,4 +5178,186 @@ body.j-rail-on .j-hotspots { opacity: 1; }
   .j-rail .j-rail-soon-note,
   .j-rail .j-rail-under,
   .j-rail .j-rail-menu { transition: none !important; }
+}
+
+/* ============================================================
+   LANE C (2026-08-30 polish §3B.2) — THE CLOSING TITLE BREATHES
+   LIKE THE OPENING ONE.
+   The panel's two serif theses bookend the outline. The opening
+   statement holds a clear band of its own (nothing follows it
+   inside its section), while the closing thesis had Manifesto and
+   Ownership rows packed straight under its descender line — the
+   same authored paddings, read tighter because content follows
+   instead of a hairline. A little extra air under the final
+   title's own block restores the matched, optically-even band.
+   ============================================================ */
+.j-menu-list > li:last-child .j-menu-item { padding-bottom: 0.82rem; }
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-menu-list > li:last-child .j-menu-item { padding-bottom: 1rem; }
+}
+
+/* ============================================================
+   LANE C (2026-08-30 polish §3B.1; restaged 2026-08-31) —
+   WHO / WHAT / WHY, side by side. One line of three controls
+   directly under the panel's opening statement (rail.js builds
+   them from content.js `site.primer`), never stacked — the
+   owner's direction — with the chosen answer sliding open in a
+   single shared region below the line. Everything here is the
+   panel's existing language — the section heading's letterspaced
+   caps, the row hover's warm tint, the hairline now standing
+   between neighbours instead of under them — sized down one step
+   so the trio reads as one quiet line of controls into the
+   thesis, not a button bar. Each answer animates its grid row
+   (0fr -> 1fr), so a switch is the old answer easing shut while
+   the new one eases open — the control line itself never moves
+   and no heights are measured; reduced motion snaps. Tap targets
+   stay >= 44px tall even at 430px, where three labels split
+   ~126px each — comfortably clear of crowding, no wrap. */
+.j-menu-primer {
+  margin: -0.15rem 0 0.45rem;
+  /* the thesis text column: item pad 0.5rem + 22px mark + 1rem gap */
+  padding: 0 0.6rem 0 calc(0.5rem + 22px + 1rem);
+}
+.j-menu-primer-tabs {
+  display: flex;
+  align-items: stretch;
+}
+.j-menu-primer-t {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0.3rem 0.2rem;
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  color: var(--parchment);
+  font-family: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  /* uppercase + tracking leaves a stray trailing space; nudge the centred
+     pair back onto the true axis */
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.3s, background 0.3s;
+}
+.j-menu-primer-t + .j-menu-primer-t {
+  border-left: 1px solid rgba(217, 164, 65, 0.1);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.j-menu-primer-t:is(:hover, :focus-visible) {
+  color: var(--gold-bright);
+  background: rgba(217, 164, 65, 0.05);
+}
+.j-menu-primer-t[aria-expanded='true'] { color: var(--gold-bright); }
+/* the +: the same quiet instrument voice as the row arrows; it becomes an
+   x by rotation, so open/close is one gesture with no glyph swap */
+.j-menu-primer-c {
+  color: rgba(217, 164, 65, 0.6);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
+}
+.j-menu-primer-t:is(:hover, :focus-visible) .j-menu-primer-c { color: var(--gold-bright); }
+.j-menu-primer-t[aria-expanded='true'] .j-menu-primer-c {
+  transform: rotate(45deg);
+  color: var(--gold-bright);
+}
+.j-menu-primer-d {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.j-menu-primer-d.open { grid-template-rows: 1fr; }
+.j-menu-primer-di { overflow: hidden; min-height: 0; }
+.j-menu-primer-p {
+  margin: 0.35rem 0 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+@media (max-width: 620px) and (orientation: portrait) {
+  /* the phone thesis column: first-child item gap 0.85rem, 28px mark */
+  .j-menu-primer { padding: 0 0 0 calc(28px + 0.85rem); margin-top: -0.3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-menu-primer-d, .j-menu-primer-c { transition: none !important; }
+}
+
+/* ============================================================
+   LANE C (2026-08-30 polish §3B) — THE PANEL BELONGS TO THE
+   SAME WORLD AS THE SCENE IT COVERS.
+   Cohesion, not decoration: the information architecture, the
+   density, the opaque ground and every claim in the .j-menu
+   block above are untouched. What changes is material —
+
+     · the scene's amber light leaks a few rem past the seam, so
+       the panel edge reads as a boundary IN the world rather
+       than a sheet on top of it;
+     · the cards' own mycelial network lies under the panel's
+       ground at sub-liminal contrast (a near-opaque wash over
+       the same SVG the popovers grow behind) — grain, spores
+       and mesh, felt more than seen. The panel stays fully
+       opaque: the wash bottoms out over a solid base colour,
+       so the 2026-08-09 "OPAQUE, deliberately" decision holds;
+     · the hairline dividers keep their weight but stop being
+       laser-straight in brightness — alpha wanders along each
+       line like a filament, two phases so adjacent rules never
+       ripple in step;
+     · the marks take the initiative picts' stroke weight and
+       amber bloom, one drawn-glyph voice for the whole outline
+       (the dark scene-contrast rim stays — it is invisible on
+       the panel ground and still earns its keep during the
+       open/close fade over the scene).
+   ============================================================ */
+.j-menu {
+  background:
+    linear-gradient(to right,
+      rgba(240, 175, 70, 0.05),
+      rgba(240, 175, 70, 0.016) 4rem,
+      rgba(240, 175, 70, 0) 8.5rem),
+    linear-gradient(rgba(11, 7, 2, 0.93), rgba(11, 7, 2, 0.955)),
+    url('../assets/cards/mycelial-underlay.svg') center / cover no-repeat,
+    #0b0702;
+}
+.j-menu-list > li {
+  border-image: linear-gradient(90deg,
+    rgba(217, 164, 65, 0.03), rgba(217, 164, 65, 0.2) 11%,
+    rgba(217, 164, 65, 0.09) 34%, rgba(217, 164, 65, 0.24) 52%,
+    rgba(217, 164, 65, 0.07) 72%, rgba(217, 164, 65, 0.19) 89%,
+    rgba(217, 164, 65, 0.04)) 1;
+}
+.j-menu-list > li:nth-child(even) {
+  border-image: linear-gradient(90deg,
+    rgba(217, 164, 65, 0.05), rgba(217, 164, 65, 0.16) 16%,
+    rgba(217, 164, 65, 0.25) 31%, rgba(217, 164, 65, 0.08) 54%,
+    rgba(217, 164, 65, 0.21) 77%, rgba(217, 164, 65, 0.05) 95%,
+    rgba(217, 164, 65, 0.12)) 1;
+}
+/* The phone panel is 100vw and the cover-fit network scales with it, so the
+   same wash reads a step brighter there; take it further down and let the
+   seam-light go with the seam (there is no scene beside a full-width sheet). */
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-menu {
+    background:
+      linear-gradient(rgba(11, 7, 2, 0.952), rgba(11, 7, 2, 0.968)),
+      url('../assets/cards/mycelial-underlay.svg') center / cover no-repeat,
+      #0b0702;
+  }
+}
+.j-menu-mark {
+  filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.32));
+}
+.j-menu-mark .j-sym path { stroke-width: 1.1; }
+/* the close ring answers like any lit node: a soft bloom, not a new shape */
+.j-menu-x:focus-visible { box-shadow: 0 0 14px rgba(240, 170, 60, 0.22); }
+@media (hover: hover) and (pointer: fine) {
+  .j-menu-x:hover { box-shadow: 0 0 14px rgba(240, 170, 60, 0.22); }
 }

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<!-- Stroke-adjusted small-size variant of favicon.svg — same path geometry
+     (same silhouette/proportions/taper), no glow blur and roughly 2x the
+     core stroke weight, so the mushroom stays legible once downsampled to
+     16x16/32x32 (a browser tab). Rasterized to
+     assets/brand/favicon-source-small.png, which tools/build-meta.py reads
+     for ONLY the .ico's 16 and 32 planes; every larger size (the .ico's 48
+     plane, favicon-96, apple-touch-icon, icon-192/512) still comes from the
+     normal-weight favicon-source.png. NOT shipped on its own — excluded in
+     deploy/public-files.json alongside the other masters, same as
+     favicon-source(-small).png. Stem revised 2026-08-30 per Fable review —
+     see favicon.svg's header comment for the near-uniform/small-flare
+     rationale; both files carry the same stem path. -->
+<rect width="100" height="100" fill="#141008"/>
+<g fill="none" stroke="#f6d896" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round">
+<path d="M6,39.44 C20,20 34,14.8 50,14.8 C66,14.8 80,20 94,39.44 Z"/>
+<path d="M43.84,39.44 C44.10,50.00 44.72,63.20 44.72,74.64 C44.72,79.04 42.96,83.44 42.08,85.20 C43.84,86.96 56.16,86.96 57.92,85.20 C57.04,83.44 55.28,79.04 55.28,74.64 C55.28,63.20 55.90,50.00 56.16,39.44"/>
+</g>
+</svg>

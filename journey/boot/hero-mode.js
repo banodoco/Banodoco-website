@@ -16,8 +16,7 @@
  * `resolve()` (pure — what does this viewport measure as, right now),
  * `mount()` (publish the boot mode to <body>), `adopt(mode)` (the
  * transition: take the new mode, re-anchor the trackers, swap the
- * class). Readers: `current()`, `viewFor(mode)`, `tracks`,
- * `reframesWithinMode(mode)`.
+ * class). Readers: `current()`, `viewFor(mode)`, `tracks`.
  *
  * WHAT THIS IS NOT. It is NOT the viewport authority the replan reserves
  * `aspectProfile` in journey/frame/publication.js for. `getMode()`'s
@@ -55,7 +54,25 @@ const VIEWS = {
   // the specimen left until the ENSEMBLE reads centred — measured
   // at 768x1024: cap left rim 142, INSPIRE tag right 640, midpoint 391 at
   // panX 0.25; ~91.5 px/unit at this framing puts the optical centre at 0.45.
-  tablet:  { panX: 1.00, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
+  // 1.00 -> 0.32 (2026-08-30, owner on iPad Mini portrait: the hero mushroom
+  // is "off to one side" and the band should be recomposed like mobile rather
+  // than squeezed from desktop). NOTE THE COMMENT ABOVE ARGUED FOR 0.45 AND
+  // THE ROW SHIPPED 1.00 — the two had already parted company, and 1.00 is
+  // 55px further left than its own stated target. Re-solved against the
+  // referent the phone row uses, because that is the one the owner has stated
+  // twice: THE STALK SITS ON THE EQUIP CONTROL ("right in the middle of the
+  // Equip button ... the feng shui is important", 2026-08-27, mobile: 63).
+  // Measured at 744x1133 by the same column-luminance band that pins the
+  // phone, Equip's slot centre at x 372: panX 1.00 puts the stalk at 302
+  // (70px left, cap rim running off the left edge with 218px of empty right
+  // margin), 0.38 at 365, 0.32 at 372 exactly, 0.26 at 378. The plume still
+  // weights the right, and it now does the job the old comment wanted of it —
+  // counterweighting a cap whose raw margins are 161/125 — instead of being
+  // paid for twice. THE CORRECTION IS IN panX AND NOT IN MISSION_RIGHT_PX on
+  // purpose: the truck is authored in CSS pixels and converted through
+  // innerHeight, so a 69px truck would have carried four times the tablet
+  // band's height sensitivity for a composition that does not need any.
+  tablet:  { panX: 0.32, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
   // Prior optical centring pass (ending at panX +0.40): the previous
   // comment described a +0.55 centring target, but the value below had only
   // moved to +0.20. Closing part of that gap shifts the unified composition
@@ -179,7 +196,18 @@ function viewFor(mode) {
     // is the trap: a higher target renders the scene lower). The further
     // 0.40 drop (2026-08-27) lifts the phone specimen about 22px so its body
     // reads centrally while the stalk remains aligned with the Equip control.
-    v.targetY = 3.45 + 1.2 * t;
+    // 3.45 -> 3.09 (2026-08-30): the same deadspace had reopened at the TOP.
+    // Judged on rendered 430x932 / 390x844 frames against the two pieces of
+    // furniture the silhouette is balanced between — the sub's last baseline
+    // (y 360) and the navigator's icon row (y 783) — the shipped pose left a
+    // 59px black band under the copy while the root flare was buried in the
+    // lit ground. The ladder was shot at 0 / +12 / +23 / +35px of lift: +35
+    // closes the gap under the copy to 24px and reads top-heavy, +12 still
+    // carries visible dead air, and +23 (this value) puts a deliberate 36px
+    // of air under the copy AND a clean dark band between the flare and the
+    // row. Horizontal composition is untouched — panX and the Equip stalk
+    // alignment are a different axis and were not re-solved here.
+    v.targetY = 3.09 + 1.2 * t;
     v.camZ = 11.5 + 1.3 * t;
   }
   /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
@@ -199,7 +227,23 @@ function viewFor(mode) {
   /* The camera/target truck is the Mission boundary condition captured by the
      journey director. Consequently scroll and the route-faithful direct-click
      compositor depart from (and return to) this exact shifted pose, while the
-     analytic Inspire arrival still lands bit-exactly on its existing rest. */
+     analytic Inspire arrival still lands bit-exactly on its existing rest.
+
+     EVERY MODE'S POSE IS A LIVE FUNCTION OF innerHeight, INCLUDING THE TWO
+     THAT LOOK FIXED. The conversion below is correct and deliberate: a
+     perspective camera at a fixed vertical FOV sees the same world height at
+     every viewport size, so world-per-pixel is that span over innerHeight,
+     and dividing by it is what makes MISSION_RIGHT_PX deliver its authored
+     number of CSS PIXELS at any frame height. What that costs is a stale
+     pose: `panX` is spent in world units, so a viewport whose height changes
+     WITHOUT a breakpoint crossing leaves the camera holding an offset that
+     now projects to a different pixel count. Measured on tablet across the
+     iPad band (744 wide, 1024 -> 1366) the stale pose lands the stalk 9.0px
+     left of where a fresh load at 1366 puts it; compact across 560 -> 320 is
+     15.4px. This is why main.js's resize handler re-eases the camera on EVERY
+     resize and not only on a breakpoint crossing — a set naming a subset of
+     the modes lived here until 2026-08-30 and excluded exactly the two that
+     had no other height term to hide behind. */
   let missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
   if (mode === 'mobile') {
     /* The reviewed 63px shift aligns the stalk with Equip on tall phones
@@ -217,14 +261,6 @@ function viewFor(mode) {
   v.panX -= missionShiftPx * missionWorldPerPixel;
   return v;
 }
-
-/** The three modes whose composition keeps moving WITHIN the mode.
- *  `deskNarrow` and `mobile` interpolate on aspect in viewFor() above,
- *  and `desktop` rides the landscape balance field; the other two hold a
- *  fixed pose for the whole band. This is why a resize that does NOT
- *  cross a breakpoint still re-frames for exactly these three — the
- *  magic triple that used to sit inline in main.js's resize handler. */
-const REFRAMES_WITHIN_MODE = new Set(['desktop', 'deskNarrow', 'mobile']);
 
 const MODE_CLASSES = ['mode-desktop', 'mode-tablet', 'mode-mobile',
   'mode-compact', 'mode-deskNarrow'];
@@ -279,7 +315,6 @@ export function createHeroMode() {
     current: () => current,
     resolve: getMode,
     viewFor,
-    reframesWithinMode: (mode) => REFRAMES_WITHIN_MODE.has(mode),
     mount,
     adopt,
   };

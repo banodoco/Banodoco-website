@@ -149,10 +149,12 @@ const GESTURE = {
 };
 const KINDS = ['touch', 'wheel'];
 
-/* Every boundary on the route, both ways: eight of them, plus the two wrap
-   seams handled separately in L4. Derived from REST_STOPS rather than
-   transcribed, so a route edit that adds a rest is covered by construction
-   instead of by somebody remembering to add a case. */
+/* Every boundary on the route, both ways: TEN of them since Equip
+   (2026-08-30; eight before it), plus the two wrap seams handled separately in
+   L4. Derived from REST_STOPS rather than transcribed, so a route edit that
+   adds a rest is covered by construction instead of by somebody remembering to
+   add a case — the count below is the cardinality pin on that derivation, and
+   it fired exactly as designed when the sixth rest arrived. */
 const BOUNDARIES = [];
 for (let i = 0; i < REST_STOPS.length; i++) {
   for (const dir of [1, -1]) {
@@ -162,8 +164,8 @@ for (let i = 0; i < REST_STOPS.length; i++) {
     }
   }
 }
-assert.equal(BOUNDARIES.length, 8,
-  `rig: expected 8 inter-rest boundaries from REST_STOPS, derived ${BOUNDARIES.length} — the route `
+assert.equal(BOUNDARIES.length, 10,
+  `rig: expected 10 inter-rest boundaries from REST_STOPS, derived ${BOUNDARIES.length} — the route `
   + 'changed shape and this file has not been re-read');
 
 const at = (p, q) => Math.abs(p - q) <= SNAP_DEAD_P;

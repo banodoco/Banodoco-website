@@ -46,7 +46,23 @@ export function setupIntro(ctx) {
     // stroked, so the body fills in under the accumulating lines. The stem
     // shell's clip plane also RISES with wave 1's climbing front (capped at
     // the cap line), so no dark body ever stands above the drawn strands.
-    _stemClip[0].constant = Math.min(3.65, Math.max(0.02, ((p - 0.296) / 0.219) * 3.9));
+    /* THE CLAMP IS NOT A SANITISER, and this is the one place on the page
+       where that distinction is a crash rather than a wrong pixel.
+       Math.max(0.02, NaN) is NaN and Math.min(3.65, NaN) is NaN, so a NaN
+       progress passes through both bounds and lands in a clip plane's
+       constant. three then uploads it into `uniform vec4 clippingPlanes[N]`,
+       whose array setter runs WebGLUniforms' flatten() — and flatten decides
+       "number or object?" with `firstElem <= 0 || firstElem > 0`, a test NaN
+       fails. It concludes the NaN is an object, calls `.toArray()` on it, and
+       throws `firstElem.toArray is not a function` inside RenderPass on EVERY
+       frame from then on: the whole scene goes to the static door, which is
+       exactly the Round 7 regression. This layer is the only site code that
+       reaches an array uniform at all (nothing else declares a vecN[]/mat[]),
+       so hardening it here closes the entire class at its only door. A
+       non-finite progress parks the shell at the base rather than crashing
+       the page — the shells are an occlusion detail, not the picture. */
+    const _clipP = Number.isFinite(p) ? p : 0;
+    _stemClip[0].constant = Math.min(3.65, Math.max(0.02, ((_clipP - 0.296) / 0.219) * 3.9));
     _shellFade(_stemShells, Math.min(1, Math.max(0, (p - 0.30) / 0.24)), _stemClip);
     _shellFade(_capShells, Math.min(1, Math.max(0, (p - 0.574) / 0.14)), null);
   }

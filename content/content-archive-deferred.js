@@ -1,5 +1,15 @@
 // DEFERRED PHASE — not imported by the active build.
 //
+// EQUIP HAS SHIPPED (2026-08-30) AND ITS CHAPTER COPY IS NO LONGER HERE.
+// `chapters.equip` below is retained as the RECORD of what was archived, and
+// its two strings are the two that moved: they are now in content/content.js
+// under the same key, verbatim, which is what the instruction at the foot of
+// this header asked for. The three NODES are a different matter and have NOT
+// moved: Equip shipped with two initiatives of its own (Quark and Brötchen),
+// so PYPE, Arnold and Astrid are still deferred and still only here. Do not
+// read this file as the live Equip; read it as the three tools that are not
+// built yet.
+//
 // Per journey-v6-plan/13-content-ops.md and 06-mission-preservation.md
 // (MP-4 / decision D6), Equip and its three tools (PYPE, Arnold, Astrid)
 // are deferred out of v6's active five-chapter journey (Mission, Inspire,

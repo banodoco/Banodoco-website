@@ -47,7 +47,10 @@ const QUERIES = [
   },
 ];
 const SEARCH = 'searching 1,248,240 messages…';
-const STATS = '1,248,240 messages · 2,759 resources & workflows';
+// Round 2: the corpus inventory renders as two compact chips rather than a
+// written-out sentence (owner direction, 2026-08-30) — same snapshot, same
+// provenance as the header note; 1,248,240 -> 1.2M, 2,759 -> 2.8K.
+const CHIPS = [['1.2M', 'MESSAGES'], ['2.8K', 'RESOURCES']];
 
 // Loop budget ≈ 7s per query (Hannah, 2026-08-18: the first cut "feels
 // painfully slow" — everything roughly halved; the answer keeps the
@@ -131,15 +134,11 @@ export default {
   build(stage) {
     stage.classList.add('hm');
 
-    // the title bar says WHAT IT IS — the chip already says Hivemind
-    // (Hannah, 2026-08-18: short descriptor, no need to repeat the name)
-    const head = document.createElement('div');
-    head.className = 'hm-head';
-    const name = document.createElement('span');
-    name.className = 'hm-name';
-    name.textContent = 'THE COMMUNITY’S COLLECTIVE MEMORY';
-    head.append(name);
-
+    // Round 3: the round-2 title bar is gone — the restored shell head says
+    // HIVEMIND and carries the ONE thesis line (the owner's round-2 flag
+    // about the collective-memory line appearing twice stays honoured: no
+    // interior label repeats it). The console opens straight onto the
+    // replayed query, which is the personality the head introduces.
     const consoleEl = document.createElement('div');
     consoleEl.className = 'hm-console';
     consoleEl.setAttribute('aria-hidden', 'true');
@@ -167,30 +166,41 @@ export default {
 
     consoleEl.append(q, searchEl, hitEl, ansEl);
 
-    const foot = document.createElement('div');
-    foot.className = 'hm-foot';
-    const stats = document.createElement('p');
-    stats.className = 'hm-stats';
-    stats.textContent = STATS;
-    // the door, in the card's own voice (the house block below is gone —
-    // Hannah, 2026-08-18: "explain everything in the main part"); revealed
-    // on hover/pin by the shared card-cta rule in cards.css
-    const cta = document.createElement('a');
-    cta.className = 'hm-link card-cta';
-    cta.href = 'https://github.com/banodoco/hivemind';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'view on GitHub →';
+    // the librarian keeps the console's corner — the one face this project
+    // has, parked where the transcript's air is
     const mascot = document.createElement('img');
     mascot.className = 'hm-mascot';
     mascot.src = `${CARD_ASSETS}/hivemind/mascot.png`;
     mascot.alt = '';
     mascot.loading = 'lazy';
     mascot.decoding = 'async';
-    foot.append(stats, cta, mascot);
+    consoleEl.appendChild(mascot);
 
-    stage.append(head, consoleEl, foot);
+    // the record — the corpus as two compact chips (round 2: tags, not a
+    // sentence); round 3 gives the repo door the shared full-width foot
+    // below them, so Hivemind ends exactly where the other five do
+    const foot = document.createElement('div');
+    foot.className = 'hm-foot';
+    const chips = document.createElement('div');
+    chips.className = 'hm-chips';
+    for (const [num, lab] of CHIPS) {
+      const chip = document.createElement('span');
+      chip.className = 'hm-chip';
+      const n = document.createElement('b');
+      n.textContent = num;
+      chip.append(n, ` ${lab}`);
+      chips.appendChild(chip);
+    }
+    foot.append(chips);
+    const door = document.createElement('a');
+    door.className = 'hm-door card-door card-cta';
+    door.href = 'https://github.com/banodoco/hivemind';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'GITHUB →';
+
+    stage.append(consoleEl, foot, door);
 
     settle();   // parked on the first query's finished transcript
   },

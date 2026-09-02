@@ -17,7 +17,7 @@ import { createTransitionController } from '../journey/transition/controller.js'
 import { createHeroGroundDimClaim } from '../journey/chapters/hero-ground-dim.js';
 import { railWrapNavigationProgress } from '../journey/ui/rail-handoff.js';
 
-const { controlWrapDirection } = navigationModule;
+const { controlWrapDirection, navSense, TURN_FORWARD } = navigationModule;
 const ids = ['mission', 'inspire', 'connect', 'owned', 'final'];
 const wrappedPairs = new Map([
   ['mission>final', -1],
@@ -31,18 +31,85 @@ for (const fromId of ids) {
   }
 }
 
-// Pin the visual meaning of those signs against the authored rest azimuths,
-// not merely the routing table: every seam crossing must exceed a half-turn.
+// Pin the visual meaning of the seam against the authored rest azimuths, not
+// merely the routing table. THE SEAM CONTINUES ITS OWN TRAVEL, ALL THE WAY
+// AROUND (2026-09-01, the owner's final clarification of the unified turn
+// grammar — superseding the same morning's always-forward reading, which
+// collapsed the loop home to a 66.9deg hop and lost the ceremony): each
+// bookend wrap turns in the sense of its own seam crossing — final ->
+// mission travels forward across the seam, mission -> final backward — and
+// sweeps one whole ceremonial turn plus the short step home (+/-426.9deg on
+// the shipped rests).
+// [CONVERTED FROM A COORDINATE PIN 2026-09-01. The old assertion was
+// re-anchored twice in one day (|sweep| > pi via the wrap sign, then
+// long-up/short-home, then this) — CONTRIBUTING §1's conversion order. What
+// every version protected — the seam's sweep is AUTHORED, never the generic
+// shortest way — is now held as one property over BOTH crossings, mirroring
+// the WAY HOME arithmetic itself: the lap's sign is the crossing's own seam
+// sense, its magnitude exceeds a full turn (the ceremony) without reaching
+// a turn and a half, and it differs from the short step by whole turns, so
+// the lap still lands exactly home.]
 const restAzimuth = { mission: -13.8, inspire: 115.0, final: -79.6 };
 const atAzimuth = degrees => {
   const a = degrees * Math.PI / 180;
   return { x: Math.sin(a), y: 0, z: Math.cos(a) };
 };
-for (const [pair, wrap] of wrappedPairs) {
-  const [fromId, targetId] = pair.split('>');
-  const sweep = azTurn(atAzimuth(restAzimuth[fromId]), atAzimuth(restAzimuth[targetId]), -wrap);
-  assert.ok(Math.abs(sweep) > Math.PI,
-    `${pair} must visibly orbit the long way (got ${(sweep * 180 / Math.PI).toFixed(1)}deg)`);
+{
+  const TAU = 2 * Math.PI;
+  // seam-travel sense: final -> mission continues rightward past the end
+  // (forward, +1); mission -> final continues leftward past the beginning
+  // (backward, -1). These are controlWrapDirection's own signs.
+  for (const [fromId, toId] of [['final', 'mission'], ['mission', 'final']]) {
+    const sense = controlWrapDirection(fromId, toId);
+    const step = azTurn(atAzimuth(restAzimuth[fromId]), atAzimuth(restAzimuth[toId]), sense);
+    const lap = step + (Math.abs(step) < Math.PI ? sense * TAU : 0);
+    assert.equal(Math.sign(lap), sense,
+      `${fromId}>${toId}: the ceremonial lap must turn with its own seam travel`);
+    assert.ok(Math.abs(lap) > TAU && Math.abs(lap) < TAU + Math.PI,
+      `${fromId}>${toId} must sweep one whole ceremonial turn plus the short step home `
+      + `(got ${(lap * 180 / Math.PI).toFixed(1)}deg)`);
+    const turnsOff = (lap - step) / TAU;
+    assert.ok(Math.abs(turnsOff - Math.round(turnsOff)) < 1e-9,
+      `${fromId}>${toId}: the lap must differ from the short step by whole turns, landing exactly home`);
+  }
+}
+
+// THE UNIFIED TURN GRAMMAR is one comparator over nav order; nothing else in
+// the chain pins the sense any ordinary jump is forced into, and a silently
+// reversed comparator would turn every camera transition against its
+// direction of travel while every duration and shaping suite stayed green.
+// Bought (2026-09-01): the sense table itself — forward pairs +1, backward
+// pairs -1, for all ordered chapter pairs — at zero new files.
+{
+  const order = ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'];
+  assert.equal(TURN_FORWARD, 1,
+    'TURN_FORWARD is the measured azimuth sign of the owner-approved forward legs');
+  for (const fromId of order) {
+    for (const targetId of order) {
+      if (fromId === targetId) continue;
+      const expected = order.indexOf(targetId) > order.indexOf(fromId)
+        ? TURN_FORWARD : -TURN_FORWARD;
+      assert.equal(navSense(fromId, targetId), expected,
+        `${fromId}>${targetId} must be forced into the sense of its nav travel`);
+    }
+  }
+}
+
+// ...and journey.js must actually spend the law: the wrap through the seam
+// clause, every other rest-departing jump through navSense, with the two
+// deliberate shortest-way exceptions (an overtaken leg and a same-chapter
+// settle) intact.
+{
+  const src = readFileSync(new URL('../journey/journey.js', import.meta.url), 'utf8');
+  assert.match(src, /const seamSense = WRAP_TURN \|\| wrap;/,
+    'the seam sense is the crossing\'s own travel — the wrap dir itself — unless QA forces one');
+  assert.match(src, /const seamStep = wrap \? azTurn\(pos0, cam\.position, seamSense\) : null;/,
+    'the seam step is measured in the seam\'s own sense');
+  assert.match(src, /\? seamStep \+ \(Math\.abs\(seamStep\) < Math\.PI \? seamSense \* 2 \* Math\.PI : 0\)/,
+    'a short step across the seam earns one whole ceremonial turn in its own sense — '
+    + 'delete the lap term and both wraps collapse to brisk hops while every duration suite stays green');
+  assert.match(src, /: routeFaithful \|\| overtaken \|\| fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
+    'every ordinary rest-departing jump takes the grammar sense; overtakes and same-chapter settles keep the shortest way');
 }
 
 // A route owns its shared character, while explicitly reviewed one-way
@@ -189,6 +256,46 @@ const prevented = () => {
   assert.deepEqual(r.calls.attempts, []);
 }
 
+/* A GESTURE ENDS WHEN ITS OWN FINGER LEAVES, NOT WHEN ANY FINGER DOES.
+   touchstart and touchmove already bail on a second finger so a pinch cannot
+   leak a delta into the ride; touchend did not, and closed the contact for
+   whichever finger happened to lift first. What this buys that nothing above
+   buys: every other touchend in this tree's suites is fired with an empty
+   `touches` and no `changedTouches` at all, so all of them are blind to the
+   two-finger case by construction. This is the only row that names the fingers.
+   Reported as a live defect: a normal drag that briefly becomes multi-touch
+   stops responding. */
+{
+  const r = rig({ blocked: false });
+  const A = { identifier: 1, clientY: 700 };
+  const B = { identifier: 2, clientY: 400 };
+  const move = (id, y) => r.fire('touchmove', {
+    target: {}, touches: [{ identifier: id, clientY: y }],
+    cancelable: true, preventDefault() {},
+  });
+
+  r.fire('touchstart', { target: {}, touches: [A] });
+  move(1, 660);
+  assert.equal(r.calls.touchMoves.length, 1, 'the first finger opens a live scrub');
+
+  r.fire('touchstart', { target: {}, touches: [A, B] });   // a pinch join: ignored
+  r.fire('touchend', { target: {}, touches: [A], changedTouches: [B] });
+  assert.equal(r.calls.touchEnds, 0,
+    "a second finger's lift must not close the tracked finger's contact");
+
+  move(1, 600);
+  assert.equal(r.calls.touchMoves.length, 2,
+    'the surviving finger keeps scrubbing after the other one lifts');
+
+  r.fire('touchend', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 1, "the tracked finger's own lift closes the contact");
+
+  // ...and the same for an OS/browser cancellation of the tracked contact.
+  r.fire('touchstart', { target: {}, touches: [A] });
+  r.fire('touchcancel', { target: {}, touches: [], changedTouches: [A] });
+  assert.equal(r.calls.touchEnds, 2, 'a cancellation naming the tracked finger still closes it');
+}
+
 // A navigation cue answers only a blocked gesture at rest. The flight entry
 // retires any cue that began immediately before a click, and the callback
 // itself refuses to start another while camera and chapter state disagree.
@@ -200,7 +307,10 @@ assert.ok(navigationImport, 'journey must retain an explicit navigation.js impor
 const importedNavigationNames = navigationImport[1]
   .split(',').map(name => name.trim()).filter(Boolean);
 for (const name of importedNavigationNames) {
-  assert.equal(typeof navigationModule[name], 'function',
+  // functions and declared constants alike (TURN_FORWARD is a number):
+  // the contract is that every imported name resolves, not that every
+  // export is callable.
+  assert.notEqual(navigationModule[name], undefined,
     `production graph import '${name}' must exist on navigation.js`);
 }
 assert.match(journeySource,
@@ -224,6 +334,16 @@ const railSource = readFileSync(new URL('../journey/rail.js', import.meta.url), 
 assert.match(railSource,
   /railHandoffState\(\{[\s\S]*?selectedChapterId: nowNext,[\s\S]*?cameraStateDisagree,[\s\S]*?\}\)/,
   'Ownership return CTA must be projected from the selected chapter and landed camera');
+/* The menu's scrim is a full-screen SIBLING of the panel, and ownership is
+   ancestor containment, so claiming the panel alone leaves the visible backdrop
+   unowned and a wheel or drag on it scrubs the journey behind the open dialog.
+   These two rows are presence, not behaviour — the behavioural half is the
+   browser ring, which is where a live scrim can be pointed at. They are here so
+   the claim cannot be deleted silently, and they fail loudly on a miss. */
+assert.match(railSource, /claimInput\(scrim[,)]/,
+  'the open menu must claim its scrim, or the backdrop scrubs the journey behind it');
+assert.match(railSource, /releaseInput\(scrim\)/,
+  'closing the menu must hand the scrim back to the journey');
 const handoffSource = readFileSync(new URL('../journey/boot/handoff.js', import.meta.url), 'utf8');
 const heroCssSource = readFileSync(new URL('../hero.css', import.meta.url), 'utf8');
 assert.doesNotMatch(handoffSource + heroCssSource, /intro-depart|intro-restore/,
@@ -360,6 +480,69 @@ const makeCopyArrival = (nodes = Object.fromEntries(copyBlocks.map(id => [id, fa
   assert.deepEqual(copyPlay, [-1, 1],
     'copy playback follows both directions without a replacement envelope');
 }
+
+// THE LAUNCH WINDOW IS ONE TRANSACTION. beginFlight() raises `transitioning`
+// and `cameraStateDisagree` and installs the rail ticket at phase 0;
+// beginBlend() is what gives the flight a clock that can ever lower them
+// again. A throw between the two — the duration policy refuses a non-finite
+// base, which an already-NaN camera reaches — used to leave both flags up for
+// the life of the page, and the director defers every responsive setView()
+// while `transitioning` is true and replays none of them. Executed rather than
+// read, because the property is that dropCamBlend() is a VALID rollback for a
+// flight that never got a blend: it must lower what beginFlight raised without
+// a camBlend to work from.
+{
+  const transitioning = [];
+  const stub = () => ({ clone: stub });
+  const controller = createTransitionController({
+    input: { claimNow: () => null },
+    sceneApi: { camera: { position: stub() }, controls: { target: stub() } },
+    director: {
+      owned: true,
+      setTransitioning(on) { transitioning.push(on); },
+      applyHeroPose() {}, restoreHero() {},
+    },
+    lens: { setLookOverride() {} },
+    ui: { cancelCopyEntry() {}, setCopyEntryPlay() {} },
+    chapters: {},
+    guarded: (_name, fn) => fn(),
+    chapterAt: () => ({ id: 'mission' }),
+    placeAt() {}, paintHero() {},
+    heroShownNow: () => 0, heroPresenceNow: () => 0,
+  });
+  const ticket = { fromP: 0, targetP: 0.26, phase: 0 };
+  controller.beginFlight({
+    railWrap: null, railFlight: ticket, chapterEntry: { id: 'inspire' },
+  });
+  assert.equal(controller.cameraStateDisagree, true,
+    'beginFlight raises the state/camera disagreement before any blend exists');
+  assert.deepEqual(transitioning, [true],
+    'beginFlight brackets the camera authority for the whole flight');
+  assert.equal(controller.blend, null,
+    'the window under test is exactly the one where the flight has no clock');
+  controller.dropCamBlend();
+  assert.equal(controller.cameraStateDisagree, false,
+    'the rollback lowers the disagreement a blend-less flight raised');
+  assert.deepEqual(transitioning, [true, false],
+    'the rollback hands the camera authority back, so resize re-framing lives');
+  assert.equal(controller.railFlight, null,
+    'the rollback drops the ticket the launch left frozen at phase 0');
+  assert.equal(controller.chapterEntry, null,
+    'the rollback drops the navigation-only chapter clock with it');
+}
+
+// ...and the shipped path takes it. The three anchors are the transaction's
+// three moments: opened before the flags are raised, committed only once the
+// blend owns a clock, rolled back on every other way out.
+assert.match(journeySource,
+  /let launched = false;\n\s*try \{\n\s*transition\.beginFlight\(/,
+  'the jump opens its transaction before it raises the flight flags');
+assert.match(journeySource,
+  /transition\.beginBlend\(\{[\s\S]*?\n\s*launched = true;/,
+  'the transaction commits only once the blend owns a clock that can end it');
+assert.match(journeySource,
+  /\n\s*\} finally \{\n\s*if \(!launched\) transition\.dropCamBlend\(\);\n\s*\}/,
+  'an unlaunched jump rolls the flight flags and its ticket back');
 
 function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP, dir) {
   const copy = makeCopyArrival();

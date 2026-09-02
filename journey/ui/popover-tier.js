@@ -93,19 +93,45 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
   const stageCache = new Map();   // nodeId -> { el, builder }
   let activeStage = null;         // the { el, builder } currently in the pop
 
+  /* A THIRD STATE: THE WINDOW WITH NOTHING BEHIND IT YET (2026-08-30).
+     Until Equip shipped there were two: a node with a builder got the rich
+     shell and its own interior, and a node without one got the plain popover.
+     Equip's two initiatives are neither. They are real destinations with real
+     names and real one-line descriptions, and their interiors do not exist —
+     so the honest preview is the SHELL, complete, with the interior visibly
+     unbuilt: an abstract field where the artwork will be, the description
+     present but out of focus, and a door shape that is a shape and not a door.
+
+     THERE IS NO MODULE FOR IT, DELIBERATELY. journey/cards/ is a registry of
+     built things; adding two members that draw nothing would say the opposite
+     of what this state means, and journey/cards/registry.js's own comment
+     ("A module still under construction exports null") is the rule this
+     follows rather than the one it breaks. The interior is entirely
+     journey/cards/cards.css's, keyed off the class this sets, which is what
+     lets a stage with no owner still be a stage.
+
+     THE NODE DECLARES IT — `preview: 'under-construction'` in
+     content/content.js. This file names no node and no chapter, exactly as
+     before; what it reads is a property of the content, so any future node
+     can be in this state and no node is in it by accident. */
+  function unbuiltStage(nodeId) {
+    const node = CONTENT.nodes[nodeId];
+    return !!(node && node.preview === 'under-construction');
+  }
+
   function stageFor(nodeId) {
     if (stageCache.has(nodeId)) return stageCache.get(nodeId);
     const builder = CARD_BUILDERS[nodeId];
-    if (!builder) { stageCache.set(nodeId, null); return null; }
-    const stageEl = el('div', 'j-pop-stage');
-    builder.build(stageEl, CONTENT.nodes[nodeId]);
+    if (!builder && !unbuiltStage(nodeId)) { stageCache.set(nodeId, null); return null; }
+    const stageEl = el('div', builder ? 'j-pop-stage' : 'j-pop-stage j-pop-unbuilt');
+    if (builder) builder.build(stageEl, CONTENT.nodes[nodeId]);
     // One organism, six interiors: every project keeps complete ownership of
     // its stage while this shared, non-interactive frame supplies the site's
     // mycelial edge language around it. The wrapper is cached with the stage,
     // so switching nodes never rebuilds or re-parents a builder's own DOM.
     const frameEl = el('div', 'j-pop-frame');
     frameEl.appendChild(stageEl);
-    const entry = { el: frameEl, stage: stageEl, builder };
+    const entry = { el: frameEl, stage: stageEl, builder: builder || null };
     stageCache.set(nodeId, entry);
     return entry;
   }
@@ -114,16 +140,18 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
     const next = stageFor(nodeId);
     if (activeStage === next) return;
     if (activeStage) {
-      activeStage.builder.deactivate();
+      if (activeStage.builder) activeStage.builder.deactivate();
       activeStage.el.remove();
     }
     activeStage = next;
     if (next) {
       pop.prepend(next.el);
       pop.classList.add('j-pop-rich');
+      pop.classList.toggle('j-pop-unbuilt', !next.builder);
       pop.dataset.node = nodeId;
     } else {
       pop.classList.remove('j-pop-rich');
+      pop.classList.remove('j-pop-unbuilt');
       delete pop.dataset.node;
     }
   }
@@ -292,7 +320,7 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
     placePop();
     if (fresh) runPopEntry();
     // fresh reveal -> let the stage run its motion (no-op when reduced)
-    if (fresh && activeStage) activeStage.builder.activate();
+    if (fresh && activeStage && activeStage.builder) activeStage.builder.activate();
   }
 
   /* The exit is choreographed, not cut (Hannah, 2026-08-18: "a nice exit
@@ -306,7 +334,7 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
   let popExitTimer = null;
 
   function teardownPop() {
-    if (activeStage) activeStage.builder.deactivate();
+    if (activeStage && activeStage.builder) activeStage.builder.deactivate();
     pop.classList.remove('open', 'j-pop-pinned');
     popLink.tabIndex = -1;
     if (popNode) popNode.btn.removeAttribute('aria-describedby');
@@ -431,6 +459,11 @@ export function createPopoverTier({ shell, owner, hotState, reduceMotion,
     /** The shell, for the QA surface `createUI` returns. */
     element: pop,
     previewFor,
+    /** Is this node in the third state — a real destination whose interior
+     *  does not exist yet? Same qualifier the stage uses (unbuiltStage), so
+     *  the chip's own "soon" dress and the unbuilt preview can never disagree
+     *  about which nodes are in it. */
+    unbuiltFor: unbuiltStage,
     /** Is a panel actually on screen, in either tier? Both halves of the
      *  question, because `popNode` outlives the `.open` class through the
      *  choreographed exit. */

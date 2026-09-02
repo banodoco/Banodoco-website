@@ -78,6 +78,21 @@
 // allowlist ROW BY ROW, never by size, and a regeneration that reports no row
 // change at all did not need to happen.
 //
+// A LINE-NUMBER-ONLY MOVE IS THE ONE ARRIVAL THAT IS NOT AN ARRIVAL, and it
+// happened on 2026-08-30. Equip's schema row added a header block to
+// journey/structure.js and shifted every rejection site in it down by 36 lines.
+// The emitter reported 24 ARRIVED and 24 DEPARTED and refused to print a
+// block, exactly as designed — the refusal is unconditional on arrival and
+// should stay that way. What resolved it is that the two sets are the same
+// SITES: the (file, text) pairs of the arrivals and the departures are
+// identical multisets, checked before anything was rewritten, and the rows
+// were then renumbered BY TEXT rather than re-emitted. No row was laundered
+// because no row could be: a site that had genuinely arrived would have had no
+// departing twin with its exact text to match against. If you find yourself
+// here again, do that check first and say so; if the multisets differ by even
+// one row, the emitter's refusal is the correct answer and the row is the
+// finding.
+//
 // THIS PARAGRAPH USED TO NAME AN UNCHANGED SIZE AS THE SIGNATURE, AND THAT
 // WAS WRONG — not incomplete, wrong, and the emitter's guard was built to
 // match it. A laundered row does not need an unchanged size. It needs a net
@@ -263,30 +278,30 @@ const ALLOWLIST = [
   "journey/chapter-contract.js :: 174 :: throw new Error(`[chapter contract] ${id}: schema row has no boolean 'runtime' flag`);",
   "journey/chapter-contract.js :: 184 :: problems.push(`descriptor must be an object, got ${typeOf(descriptor)}`);",
   "journey/chapter-contract.js :: 218 :: problems.push(`capability '${cap}' must be an object or null, got ${describe(value)}`);",
-  "journey/structure.js :: 131 :: if (typeof nodeAliases !== 'object' || Array.isArray(nodeAliases)) fail('aliases.nodes must be an object');",
-  "journey/structure.js :: 133 :: if (typeof alias !== 'string' || !alias) fail(`invalid alias key: ${JSON.stringify(alias)}`);",
-  "journey/structure.js :: 134 :: if (typeof target !== 'string' || !target) fail(`invalid alias target for ${alias}: ${JSON.stringify(target)}`);",
-  "journey/structure.js :: 137 :: if (!Array.isArray(patterns)) fail('aliases.patterns must be an array');",
-  "journey/structure.js :: 139 :: if (!p || !(p.pattern instanceof RegExp)) fail(`invalid alias pattern for ${(p && p.example) || '<pattern>'}`);",
-  "journey/structure.js :: 140 :: if (typeof p.replacement !== 'string') fail(`invalid alias pattern replacement for ${p.example || '<pattern>'}`);",
-  "journey/structure.js :: 141 :: if (typeof p.example !== 'string' || !p.example) fail('invalid alias pattern example');",
-  "journey/structure.js :: 159 :: if (chapter.nav !== null && typeof chapter.nav !== 'string') fail(`invalid nav for ${label}: ${JSON.stringify(chapter.nav)}`);",
-  "journey/structure.js :: 161 :: if (typeof chapter.symbol !== 'string' || !chapter.symbol) fail(`invalid symbol for ${label}: ${JSON.stringify(chapter.symbol)}`);",
-  "journey/structure.js :: 163 :: fail(`invalid copyPosition for ${label}: ${JSON.stringify(chapter.copyPosition)}`);",
-  "journey/structure.js :: 166 :: fail(`invalid scrollVh for ${label}: ${JSON.stringify(chapter.scrollVh)}`);",
-  "journey/structure.js :: 171 :: fail(`invalid copyBand for ${label}`);",
-  "journey/structure.js :: 173 :: if (band.lo !== null && !isFiniteNumber(band.lo)) fail(`invalid copyBand.lo for ${label}: ${JSON.stringify(band.lo)}`);",
-  "journey/structure.js :: 174 :: if (band.hi !== null && !isFiniteNumber(band.hi)) fail(`invalid copyBand.hi for ${label}: ${JSON.stringify(band.hi)}`);",
-  "journey/structure.js :: 195 :: if (!Array.isArray(stops)) fail(`invalid stops for ${label}: ${JSON.stringify(chapter.stops)}`);",
-  "journey/structure.js :: 199 :: if (stop <= prevStop) fail(`non-monotonic stops for ${label}: ${JSON.stringify(stops)}`);",
-  "journey/structure.js :: 212 :: if (!Array.isArray(segVh) || segVh.length === 0) fail(`invalid segVh for ${label}: ${JSON.stringify(segVh)}`);",
-  "journey/structure.js :: 219 :: if (!isFiniteNumber(vh) || vh <= 0) fail(`invalid segVh entry for ${label}: ${JSON.stringify(vh)}`);",
-  "journey/structure.js :: 234 :: fail(`invalid shape.k for ${label}: ${JSON.stringify(shape && shape.k)}`);",
-  "journey/structure.js :: 253 :: if (!['none', 'fixed', 'dynamic'].includes(hot.kind)) fail(`unsupported hotspot kind for ${chapter.id}: ${hot.kind}`);",
-  "journey/structure.js :: 285 :: if (!chapter) fail(`missing chapter reference: ${chapterId}`);",
-  "journey/structure.js :: 290 :: if (hot.kind === 'dynamic' && actual.length !== hot.cardinality) fail(`unsupported fixed cardinality for ${chapterId}: ${actual.length}`);",
-  "journey/structure.js :: 293 :: if (alias === target || !actualNodes.has(target)) fail(`alias points nowhere: ${alias} -> ${target}`);",
-  "journey/structure.js :: 306 :: if (refs.symbols && !refs.symbols[schema.menuSymbol]) fail(`missing symbol reference: menu -> ${schema.menuSymbol}`);",
+  "journey/structure.js :: 167 :: if (typeof nodeAliases !== 'object' || Array.isArray(nodeAliases)) fail('aliases.nodes must be an object');",
+  "journey/structure.js :: 169 :: if (typeof alias !== 'string' || !alias) fail(`invalid alias key: ${JSON.stringify(alias)}`);",
+  "journey/structure.js :: 170 :: if (typeof target !== 'string' || !target) fail(`invalid alias target for ${alias}: ${JSON.stringify(target)}`);",
+  "journey/structure.js :: 173 :: if (!Array.isArray(patterns)) fail('aliases.patterns must be an array');",
+  "journey/structure.js :: 175 :: if (!p || !(p.pattern instanceof RegExp)) fail(`invalid alias pattern for ${(p && p.example) || '<pattern>'}`);",
+  "journey/structure.js :: 176 :: if (typeof p.replacement !== 'string') fail(`invalid alias pattern replacement for ${p.example || '<pattern>'}`);",
+  "journey/structure.js :: 177 :: if (typeof p.example !== 'string' || !p.example) fail('invalid alias pattern example');",
+  "journey/structure.js :: 195 :: if (chapter.nav !== null && typeof chapter.nav !== 'string') fail(`invalid nav for ${label}: ${JSON.stringify(chapter.nav)}`);",
+  "journey/structure.js :: 197 :: if (typeof chapter.symbol !== 'string' || !chapter.symbol) fail(`invalid symbol for ${label}: ${JSON.stringify(chapter.symbol)}`);",
+  "journey/structure.js :: 199 :: fail(`invalid copyPosition for ${label}: ${JSON.stringify(chapter.copyPosition)}`);",
+  "journey/structure.js :: 202 :: fail(`invalid scrollVh for ${label}: ${JSON.stringify(chapter.scrollVh)}`);",
+  "journey/structure.js :: 207 :: fail(`invalid copyBand for ${label}`);",
+  "journey/structure.js :: 209 :: if (band.lo !== null && !isFiniteNumber(band.lo)) fail(`invalid copyBand.lo for ${label}: ${JSON.stringify(band.lo)}`);",
+  "journey/structure.js :: 210 :: if (band.hi !== null && !isFiniteNumber(band.hi)) fail(`invalid copyBand.hi for ${label}: ${JSON.stringify(band.hi)}`);",
+  "journey/structure.js :: 231 :: if (!Array.isArray(stops)) fail(`invalid stops for ${label}: ${JSON.stringify(chapter.stops)}`);",
+  "journey/structure.js :: 235 :: if (stop <= prevStop) fail(`non-monotonic stops for ${label}: ${JSON.stringify(stops)}`);",
+  "journey/structure.js :: 248 :: if (!Array.isArray(segVh) || segVh.length === 0) fail(`invalid segVh for ${label}: ${JSON.stringify(segVh)}`);",
+  "journey/structure.js :: 255 :: if (!isFiniteNumber(vh) || vh <= 0) fail(`invalid segVh entry for ${label}: ${JSON.stringify(vh)}`);",
+  "journey/structure.js :: 270 :: fail(`invalid shape.k for ${label}: ${JSON.stringify(shape && shape.k)}`);",
+  "journey/structure.js :: 289 :: if (!['none', 'fixed', 'dynamic'].includes(hot.kind)) fail(`unsupported hotspot kind for ${chapter.id}: ${hot.kind}`);",
+  "journey/structure.js :: 321 :: if (!chapter) fail(`missing chapter reference: ${chapterId}`);",
+  "journey/structure.js :: 326 :: if (hot.kind === 'dynamic' && actual.length !== hot.cardinality) fail(`unsupported fixed cardinality for ${chapterId}: ${actual.length}`);",
+  "journey/structure.js :: 329 :: if (alias === target || !actualNodes.has(target)) fail(`alias points nowhere: ${alias} -> ${target}`);",
+  "journey/structure.js :: 342 :: if (refs.symbols && !refs.symbols[schema.menuSymbol]) fail(`missing symbol reference: menu -> ${schema.menuSymbol}`);",
 ];
 
 /* ================================================================== *
