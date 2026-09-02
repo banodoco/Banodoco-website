@@ -13,10 +13,17 @@ export function azTurn(a, b, turn) {
   return d;
 }
 
-export function arcLerp(a, b, e, out, az1, bow, rise) {
+/* `eAz` lets the AZIMUTH ALONE run on a different ease from the rest of the
+   pose. Only the interrupt's momentum spends it (journey.js: THE INTERRUPT'S
+   MOMENTUM) — the opening slope it carries is derived from the azimuth's own
+   rate, so radius, height and every channel keyed off `e` would overshoot for
+   a reason that is not theirs. Omitted, it IS `e`, so every other caller and
+   every settled frame is byte-identical. */
+export function arcLerp(a, b, e, out, az1, bow, rise, eAz) {
   const rA = radOf(a), rB = radOf(b);
   const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
-  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + d * e;
+  const eA = eAz === undefined || eAz === null ? e : eAz;
+  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + d * eA;
   const swell = bow || rise ? Math.sin(Math.PI * e) : 0;
   const r = rA + (rB - rA) * e + (bow || 0) * swell;
   const y = a.y + (b.y - a.y) * e + (rise || 0) * swell;

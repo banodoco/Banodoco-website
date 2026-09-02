@@ -35,8 +35,9 @@ import { registerChapterInteractions } from './chapter-interactions.js';
 import { RUNTIME_CHAPTER_IDS } from './structure.js';
 import { createChapterRegistry } from './chapter-registry.js';
 import { createFailureGuard } from './failure-guard.js';
+import { blendEase, blendEaseRate } from './camera-blend.js';
 import { arcLength, arcLerp, azTurn } from './camera-path.js';
-import { controlWrapDirection, navSense, normaliseNode } from './navigation.js';
+import { controlWrapDirection, navSense, normaliseNode, travelSense } from './navigation.js';
 import { navigationDurationSeconds } from './navigation-timing.js';
 import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
@@ -194,6 +195,21 @@ let WRAP_EXTRA_S = 2.8;  // seconds added on top of the ordinary duration law,
                          // family over a much longer path. At the shipped cap
                          // it would have been 1.20 s, i.e. 80 units/s — 6x
                          // every other transition on the site.
+/* THE INTERRUPT'S MOMENTUM, priced in directJumpTo's block of that name.
+   The two decays are one family, f * (1 - f)^k: a CONTINUATION spends the
+   inherited rate long-tailed over the leg's first half, a REVERSAL spends it
+   short-tailed and is done braking inside the first eighth. Both clamps are
+   measured, not taste. At k = 3 the composite ease stops being monotone above
+   slope 7.5 — past that the camera would sail through its own rest and come
+   back — so a continuation is capped below it. A reversal must run a little
+   way against its new sense to reverse at all; its clamp is the one that
+   keeps that backswing near 5 deg on the widest arc this grammar forces
+   (Inspire <-> Owned, 317 deg) and proportionally less on every shorter one. */
+const CONTINUE_EASE_K = 3;
+const REVERSAL_EASE_K = 8;
+const CONTINUE_SLOPE_MAX = 6;
+const REVERSAL_SLOPE_MIN = -0.55;
+
 let WRAP_TURN = 0;       // 0 = the law's sense (each wrap continues its own
                          // seam travel — the WAY HOME block below). +/-1
                          // forces a rotational sense instead — how candidate
@@ -827,6 +843,27 @@ export function boot(opts = {}) {
     }
     return len;
   }
+  /* The azimuth rate the overtaken flight was PAINTING at the instant it was
+     overtaken, in rad/s — read from its own clock and its own ease, never
+     differenced off two rendered frames, which would make the value depend on
+     wherever the frame rate happened to land the interrupt. A route-faithful
+     blend rides the authored route rather than a cylindrical arc and has no
+     arc rate to hand on, so it reports none, which is the shipped behaviour.
+     A blend whose az1 is null (a settle) declares no span either; its span is
+     recovered from how far it has actually swept, which its own ease divides
+     out — sound because a null az1 is the shortest way, never past a half
+     turn, so the swept-so-far delta cannot have wrapped. */
+  function paintedAzRate(blend, camPos) {
+    if (!blend || blend.routeFaithful || !(blend.dur > 0)) return 0;
+    const f = Math.min(blend.t / blend.dur, 1);
+    const k = blend.easeK || CONTINUE_EASE_K;
+    const rate = blendEaseRate(f, blend.easeSlope || 0, k);
+    if (!Number.isFinite(rate) || rate === 0) return 0;
+    const ease = blendEase(f, blend.easeSlope || 0, k);
+    const span = Number.isFinite(blend.az1) ? blend.az1
+      : ease > 1e-3 ? azTurn(blend.pos0, camPos, 0) / ease : 0;
+    return span * rate * (blend.play || 1) / blend.dur;
+  }
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -1063,9 +1100,30 @@ export function boot(opts = {}) {
          all. */
       const seamSense = WRAP_TURN || wrap;
       const seamStep = wrap ? azTurn(pos0, cam.position, seamSense) : null;
+      /* THE INTERRUPT CLAUSE (2026-09-02, the owner: "when travelling between
+         items, if I click to a new item halfway, it doesn't respect the
+         clockwise/anticlockwise principle"). The shortest way an overtaken
+         leg used to keep — recorded as this grammar's own deliberate
+         divergence when it landed — is retired: a mid-flight change of mind
+         is forced into a sense like every other move. It reads that sense
+         from the PAINTED coordinate `railFromP`, which is the very value the
+         interruption law already departs from, so the sense and the geometry
+         cannot disagree about where the camera is. A wrap being overtaken
+         parks journey state at the lap's own destination, so a LAP INTERRUPT
+         reads its sense from there and lawfully continues the lap's travel.
+         The one exception that survives is the settle: a click into the
+         chapter the camera is painted INSIDE is a few degrees of adjustment,
+         not travel, and forcing a sense on it would send it the long way
+         round — the same reason the rest-departing clause exempts its own. */
+      const interruptSense = overtaken && chapterAt(railFromP).id !== chapterId
+        ? travelSense(railFromP, targetP) : null;
       const az1 = wrap
         ? seamStep + (Math.abs(seamStep) < Math.PI ? seamSense * 2 * Math.PI : 0)
-        : routeFaithful || overtaken || fromChapterId === chapterId ? null
+        : routeFaithful ? null
+        : overtaken
+          ? (interruptSense === null ? null
+            : azTurn(pos0, cam.position, interruptSense))
+        : fromChapterId === chapterId ? null
         : azTurn(pos0, cam.position, navSense(fromChapterId, chapterId));
       /* THE EQUIP LEG IS ONE ARC, NOT A ZOOM AND THEN AN ARC (R3, the owner:
          "it should be one zoom and arc at the same time ... if it has to move
@@ -1140,6 +1198,39 @@ export function boot(opts = {}) {
           + (skim ? FLYBY_EXTRA_S : 0)
           + (slowedEquipExit ? EQUIP_CONNECT_EXTRA_S : 0);
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
+      /* THE INTERRUPT'S MOMENTUM (2026-09-02). A replacement leg used to open
+         at zero azimuth velocity: the camera was sweeping, and a fresh
+         smootherstep starts flat, so an overtaking click dropped the rate to
+         nothing in a single frame. Position never jumped — pos0 is the live
+         camera — so nothing read as a teleport; it read as a STOP, and then a
+         second start. The new leg therefore opens on the rate the interrupted
+         flight was actually painting, normalised into this leg's own frame
+         (rad/s over the leg's span and duration gives the ease's own units)
+         and spent on blendEase's slope term, which is zero at both ends: an
+         un-overtaken jump gets slope 0 and is byte-identical to the shipped
+         ease, and every landing is still exact.
+
+         The SIGN of that slope classifies the gesture, and the two are shaped
+         differently on purpose (the constants block at the top of this file).
+         Positive means the camera is already turning the way this leg turns —
+         a CONTINUATION, which simply keeps going, long-tailed. Negative means
+         the law has sent the replacement back against the motion — a
+         REVERSAL, which must run a little way further in the old sense while
+         it sheds that rate, then turn: short-tailed, so the brake is spent
+         inside the first eighth of the flight and the turn reads as a
+         decision rather than a bounce. Neither ever pauses: the rate passes
+         through zero without resting there.
+
+         A settle declares no az1, so its span is the arc it will actually
+         travel; below 1e-3 rad there is no meaningful frame to normalise
+         into and the leg opens flat, as it always did. */
+      const azSpan = az1 === null ? azTurn(pos0, cam.position, 0) : az1;
+      const azRate0 = paintedAzRate(overtaken, pos0);
+      const easeSlope = azRate0 && Math.abs(azSpan) > 1e-3
+        ? Math.max(REVERSAL_SLOPE_MIN,
+          Math.min(CONTINUE_SLOPE_MAX, azRate0 * dur / azSpan))
+        : 0;
+      const easeK = easeSlope < 0 ? REVERSAL_EASE_K : CONTINUE_EASE_K;
       // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
       // p, so a jump threw the whole world's depth to the destination's ramp on
       // the click frame while the camera still stood at the origin: measured on
@@ -1160,6 +1251,9 @@ export function boot(opts = {}) {
       const look1 = lens.lookOf(journey.progress);
       transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
         az1, bow, rise, tgtDip, skim, look0, look1, look: { ...look1 },
+        // THE INTERRUPT'S MOMENTUM (priced above): the azimuth ease's opening
+        // slope and the decay that shapes it. Zero on every un-overtaken jump.
+        easeSlope, easeK,
         // The lap's reverse gear (wrap only): the scroll direction that asked
         // for this move, the rest it departed — where a rewound lap places the
         // journey when it gets back (steerWrapBlend / landWrapHome) — and the
