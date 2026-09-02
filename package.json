@@ -21,6 +21,7 @@
     "test:mobile": "node tools/trace/mobile/gate.mjs",
     "test": "npm run test:unit && npm run test:harness && node tools/run-contracts.mjs && npm run test:static",
     "check": "npm run lint && npm run cycles && npm run test:unit && npm run test:harness && node tools/run-contracts.mjs && npm run test:static",
+    "check:captures": "tools/check.sh",
     "check:browser": "npm run check && npm run test:browser && npm run test:mobile"
   },
   "devDependencies": {

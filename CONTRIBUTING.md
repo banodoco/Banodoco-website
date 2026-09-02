@@ -163,6 +163,61 @@ Run-to-run noise on one machine is **MAE 0.0000**. Anything above ~0.01 is yours
 file's error jumps while the others hold, re-shoot before believing it. `--check` now shoots
 each pose twice and refuses a file whose two frames disagree.
 
+### Acceptance is `npm run check` **plus** `npm run check:captures`
+
+`npm run check` is Node-only by design and stays that way: nothing in it may require
+Chrome, a dev server, or a GPU, because that is what makes it runnable anywhere, in
+parallel, in seconds. **So the drift gate is not in it, and must not be added to it.**
+
+That was true before and nobody had written it down, which is how the following survived
+for weeks (2026-09-02 audit, `tools/check.sh` never appearing in a single accepted log):
+
+> Every `npm run check` log in the tree contained a block headed
+> `--- drift check (REAL GATE: frozen captures, exit 1 on FAIL-band) --- ... worst MAE
+> 0.00/255`, and it was read as the capture gate's verdict. **It was stdout from a mocked
+> unit test** (`tools/test-gate-capture.py`, which patches `capture_one` and asserts the
+> gate returns 1 on an unconfirmed pose). No Chrome ran, no golden was opened, one pose was
+> named because the fixture passes one. The block was byte-identical across a dozen logs
+> from different trees and different changes — which is itself the proof it was a fixture.
+> A real 2.5 MAE change went unreported because the gate that reports it was never invoked.
+
+That block is now prefixed `[MOCKED capture gate — unit test; no capture ran]` on every
+line. **If you see an unprefixed drift block, it came from a real run; if you see a
+prefixed one, it measured nothing.**
+
+**Two commands, and a change is not accepted until both are green:**
+
+```bash
+npm run check                                    # lint, cycles, unit, ~50 contracts, static
+CHECK_ORIGIN=http://localhost:8137 npm run check:captures   # tools/check.sh — the real drift gate
+```
+
+`check:captures` needs the checkout served first (`PORT=8137 python3 serve.py`), and
+`CHECK_ORIGIN` now steers **both** halves — check.sh's preflight and `capture.py`'s
+shutter. Until 2026-09-02 it steered only the preflight, so a non-default origin verified
+one port and shot another.
+
+### When `check:captures` is red for reasons that are not yours
+
+**On a host whose GPU is not the goldens' GPU, it is red before you touch anything.** The
+committed set was shot on an M2 with Chrome 151; an M3 with Chrome 152 measures
+mission 2.17, inspire 2.64, connect 2.64, owned 3.01, final 3.05 MAE on an untouched
+baseline, with clean self-agreement. **Do not re-bless the goldens to make it green** —
+that bakes your host into the pixel targets and destroys comparability with every earlier
+lane's numbers.
+
+Use the differential instead. It is not a workaround; it is the exact measurement, because
+the host floor is a property of the host and cancels in the subtraction:
+
+```bash
+tools/capture-diff.sh --base $(git merge-base main HEAD) --out evidence/differential.md
+```
+
+It serves both trees on this host in one session, shoots each twice, refuses to report a
+pose whose own two passes disagree, and prints a per-pose table with a fail band. **On a
+host that matches the goldens, `check:captures` is the acceptance gate; on one that does
+not, the differential is.** Say which one you ran.
+
 ---
 
 ## 4. Five files need a browser run before they can be committed

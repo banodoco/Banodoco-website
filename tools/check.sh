@@ -108,13 +108,23 @@ decide_captures() {
 
 main() {
   SKIP_CAPTURES=0
+  # HONOURED BY BOTH HALVES SINCE gate-repair, 2026-09-02. This used to steer
+  # the preflight below and NOTHING ELSE: tools/capture.py hard-coded :8137, so
+  # a non-default CHECK_ORIGIN verified one port and shot another. capture.py
+  # now reads this same variable (and takes --origin, which the differential
+  # uses to drive two ports from one shell). The default is unchanged, and
+  # tools/test-gate-capture.py's OriginTests parses the literal below out of
+  # THIS file and asserts it equals capture.py's DEFAULT_ORIGIN — so the two
+  # cannot drift apart again without a red.
   CHECK_ORIGIN="${CHECK_ORIGIN:-http://localhost:8137}"
   for arg in "$@"; do
     case "$arg" in
       --skip-captures) SKIP_CAPTURES=1 ;;
       -h|--help)
         echo "Usage: tools/check.sh [--skip-captures]"
-        echo "Runs read-only rebuild drift checks; requires the site on :8137."
+        echo "Runs read-only rebuild drift checks; requires the site served on"
+        echo "\$CHECK_ORIGIN (default http://localhost:8137). Both the preflight"
+        echo "and tools/capture.py's shutter read that variable."
         exit 0
         ;;
       *) echo "check: unknown flag $arg" >&2; exit 2 ;;
@@ -137,16 +147,16 @@ main() {
 
   step "CHECK PRECONDITIONS"
   if ! curl -fsS "$CHECK_ORIGIN/index.html" -o "$CHECK_TMP/index.html" 2>/dev/null; then
-    die "static server not on :8137 — run 'python3 serve.py' first" 2
+    die "static server not on $CHECK_ORIGIN — run 'python3 serve.py' first (PORT=<n> to move it)" 2
   fi
   for runtime_path in index.html main.js journey/journey.js organism/organism.js; do
     served="$CHECK_TMP/$(printf '%s' "$runtime_path" | tr '/' '_')"
     if ! curl -fsS "$CHECK_ORIGIN/$runtime_path" -o "$served" 2>/dev/null \
         || ! cmp -s "$runtime_path" "$served"; then
-      die "server on :8137 is not serving this checkout ($runtime_path differs) — restart it from $PWD" 2
+      die "server on $CHECK_ORIGIN is not serving this checkout ($runtime_path differs) — restart it from $PWD" 2
     fi
   done
-  pass "this checkout is served on :8137"
+  pass "this checkout is served on $CHECK_ORIGIN"
 
   if [ "$SKIP_CAPTURES" = "0" ]; then
     LOAD_NOW=$(sysctl -n vm.loadavg 2>/dev/null | awk -F'[ {,}]+' '{print $2}' || echo 0)
