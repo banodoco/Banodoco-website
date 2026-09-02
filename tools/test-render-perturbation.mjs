@@ -31,15 +31,28 @@ import { armSentinel } from './instrument-ledger.mjs';
 /* D57/D73 — the abort sentinel. QA-07: this suite shipped with NONE, so a
  * crash in it was byte-identical to a clean pass under `grep '^FAIL'`. One
  * shared implementation (tools/instrument-ledger.mjs), not a fourteenth local
- * one. The two report branches are mutually exclusive here (the sweep exits
- * before the main tally is reached), so the phase set is one name chosen from
- * argv; a phase never REQUESTED stays silent. It does NOT replace reading the
+ * one. Exactly one PHASE is ever reached — the sweep reaches 'prove' and
+ * exits, the plain run reaches 'main' — so the phase set is one name chosen
+ * from argv; a phase never REQUESTED stays silent. (Since gate-repair,
+ * 2026-09-02 the sweep also PRINTS the main tally and folds it into its exit
+ * code before exiting; that is reporting, not a second phase, and the sentinel
+ * is unchanged by it.) It does NOT replace reading the
  * exit code in the producing command — a sentinel is installed by code that
  * must first parse, so it cannot fire on a syntax error (D73). */
 const SENT = armSentinel('test-render-perturbation',
   [process.argv.includes('--prove-failure') ? 'prove' : 'main']);
 
 const failures = [];
+
+/** The MAIN tally, printed by BOTH exit paths. Factored out by gate-repair,
+ *  2026-09-02 so the `--prove-failure` sweep reports the perturbation cases
+ *  before it exits — see the exit-code note at the foot of this file. */
+function reportMain() {
+  console.log(`\n${cases} perturbation cases — ${cases - fail} PASS, ${fail} FAIL`);
+  if (!fail) return;
+  console.log('\nFailures:');
+  for (const f of failures) console.log('  ' + f);
+}
 
 /** One perturbation case: the invariant holds on the clean input and breaks
  *  on the mutated one. Both halves must be true or the case fails. */
@@ -304,35 +317,85 @@ perturb('P18', 'an added material flag site is detected', {
   mutated: countIn(REAL_SUBSTRATE + '\n  const m = { depthWrite: true };\n', '\\bdepthWrite\\s*[:=][^=]'),
 });
 
-/* RE-BASELINED 16 -> 15 by order B01, 2026-08-23, on the protocol
-   tools/test-frame-publication.mjs's C5 documents for its own disk-derived
-   cardinality. WAS (pre-B01): 16, in both P19 and P21.
+/* P19/P21 — CONVERTED FROM A COORDINATE TO A PROPERTY. gate-repair,
+   2026-09-02. Neither pin carries a listener count any more.
 
-   D124 records that a new file under `journey/` moves THREE disk-derived
-   pins — X3, C5, D1. THIS IS A FOURTH, and it is not moved by a new file at
-   all: it is moved by main.js's own site count. B01 moved exactly ONE
-   listener site out of main.js — the intro input capture, which went with
-   journey/boot/handoff.js, the machine whose stopIntroInputCapture() takes
-   it back off. The other fifteen are page-lifetime wiring and stayed.
+   WHY THE CONVERSION IS COMPULSORY AND NOT A PREFERENCE. CONTRIBUTING.md §1:
+   "A pin re-baselined twice for any reason is a conversion order regardless."
+   This was the second re-anchor.
 
-   WHAT THESE TWO PINS ACTUALLY ASSERT is unchanged and is not the number:
-   P19 that the extractor SEES an added site, P21 that it does NOT see a
-   commented-out one. Both still bite — the mutated column is baseline + 1
-   for P19 and equals the raw unfiltered count for P21, exactly as before.
-   The literal is only the current tree's count, and it moves whenever the
-   register does. tools/test-page-lifetime.mjs section B is the pin that
-   carries the register's INVARIANT, and that one is re-baselined to scan
-   both files and require the same union.
+     FIRST   16 -> 15, order B01, 2026-08-23. B01 moved exactly ONE site out
+             of main.js — the intro input capture, which went with
+             journey/boot/handoff.js, the machine whose stopIntroInputCapture()
+             takes it back off. The other fifteen were page-lifetime wiring.
 
-   NOTE FOR THE COORDINATOR: this file is not on B01's allowlist. It is
-   taken here rather than handing the next order a red tree that is not
-   theirs, on D124's disclosed-excursion precedent. Two literals; reversible
-   in one token. */
-const REAL_MAIN = readText('main.js');
-perturb('P19', 'an added addEventListener site is detected', {
-  baseline: countIn(REAL_MAIN, '\\baddEventListener\\s*\\('),
-  expected: 15,
-  mutated: countIn(REAL_MAIN + '\n  window.addEventListener("resize", onResize);\n', '\\baddEventListener\\s*\\('),
+     SECOND  15 -> 13, commit 093d254, 2026-08-30, "The hero's EQUIP tag stops
+             refusing, and its two special cases go with it". DATED, not
+             guessed: `git log -S"addEventListener(" -- main.js` names it, and
+             093d254^ carries 15 sites where 093d254 carries 13 — the EQUIP
+             tag's two special cases took their two listener sites with them.
+             That commit did NOT re-baseline these two literals, so P19 and P21
+             have printed `FAIL ... BASELINE DID NOT HOLD` on every run from
+             2026-08-30 onward. Nobody saw it because `--prove-failure` — the
+             ONLY invocation package.json's test:contracts uses — exited before
+             the tally. That is repaired at the foot of this file in the same
+             change, and repairing it is what made these two visible.
+
+   WHAT IS DEMOTED: the number, and only the number. main.js's site count is
+   not this file's to assert. The register's authority is
+   tools/test-page-lifetime.mjs section B — B1 pins the SITES themselves, keyed
+   by file and trimmed code text, across both register files; B2 pins that the
+   register holds exactly one removal site, in the module that owns the
+   capture. Both were carried to 093d254's thirteen by that commit and are
+   green. A third copy of the number here would be a third thing to re-anchor
+   and would say nothing B1 does not already say better.
+
+   WHAT SURVIVES IS WHAT THESE TWO ALWAYS MEANT. The pre-conversion note said
+   so itself — "WHAT THESE TWO PINS ACTUALLY ASSERT is unchanged and is not the
+   number": P19 that the extractor SEES an added site, P21 that it does NOT see
+   a commented-out one. Those are properties of countIn/isCode, and they are
+   now asserted as DELTAS, which no commit to main.js can move.
+
+   AND THEY ARE RANGED, because §1 is explicit that "a property asserted at a
+   single point is a pin with better prose". Both now run over ALL THREE files
+   the register's scanner reads, which are three different pairing regimes:
+   main.js (page-lifetime by design, no removals), journey/boot/handoff.js (the
+   one BOUNDED registration, 1 attach / 1 detach) and journey/backdrop.js (the
+   tree's one perfectly-paired file, 4/4, P27's fixture).
+
+   NOT SELF-ADJUSTING — the exact trap P27's own comment names. The delta is
+   derived from the file; the literal it is compared against is NOT. The
+   expected column is the written-out constant 1 per file, and each mutation
+   collapses it to 0 per file. An extractor gone blind, or a comment filter
+   that stopped filtering, moves the delta and reds the baseline half; a
+   file-derived expectation could not do that. */
+const REGISTER_FILES = ['main.js', 'journey/boot/handoff.js', 'journey/backdrop.js'];
+const REGISTER_SRC = REGISTER_FILES.map((rel) => [rel, readText(rel)]);
+const ADD_SITE = '\\baddEventListener\\s*\\(';
+const ADDED_LINE = '\n  window.addEventListener("resize", onResize);\n';
+const COMMENTED_LINE = '\n  // window.addEventListener("resize", onResize);\n';
+/** Per-file change in the CODE-filtered site count when `line` is appended. */
+const deltaCode = (line) => REGISTER_SRC.map(([rel, src]) =>
+  [rel, countIn(src + line, ADD_SITE) - countIn(src, ADD_SITE)]);
+/** Per-file gap between what the RAW scanner sees and what the code filter
+ *  keeps once `line` is appended — 1 exactly when the filter dropped it. */
+const deltaFiltered = (line) => REGISTER_SRC.map(([rel, src]) =>
+  [rel, scanText(src + line, ADD_SITE).length - countIn(src + line, ADD_SITE)]);
+
+// A delta measured over a file with no sites at all would be 1 for a reason
+// that has nothing to do with the register, so the range is checked to be a
+// real one before the two properties range over it. This is a FLOOR, not a
+// coordinate: it never needs re-anchoring downward as sites come and go.
+check('P19.fixture', 'every register file really holds at least one code-filtered listener site',
+  canonical(REGISTER_SRC.map(([rel, src]) => [rel, countIn(src, ADD_SITE) >= 1])),
+  canonical(REGISTER_FILES.map((rel) => [rel, true])));
+
+perturb('P19', 'PROPERTY: one added addEventListener site moves the code count by exactly one, in EVERY register file', {
+  baseline: deltaCode(ADDED_LINE),
+  expected: REGISTER_FILES.map((rel) => [rel, 1]),
+  // The same line commented out must move nothing — so the +1 above is the
+  // extractor seeing a SITE, not merely seeing more text.
+  mutated: deltaCode(COMMENTED_LINE),
 });
 
 perturb('P20', 'an added resource-owner construction site is detected', {
@@ -344,10 +407,13 @@ perturb('P20', 'an added resource-owner construction site is detected', {
 // The extractors' declared blind spot, proved rather than asserted: a hit
 // inside a comment is NOT a call site, so a commented-out listener does not
 // move the count. This is why every static section carries a `warning`.
-perturb('P21', 'the comment filter really filters (declared blind spot, proved)', {
-  baseline: countIn(REAL_MAIN + '\n  // window.addEventListener("resize", onResize);\n', '\\baddEventListener\\s*\\('),
-  expected: 15,   // re-baselined 16 -> 15 by B01; see the note above P19
-  mutated: scanText(REAL_MAIN + '\n  // window.addEventListener("resize", onResize);\n', '\\baddEventListener\\s*\\(').length,
+// Ranged and de-numbered by the same conversion as P19 — see the note above.
+perturb('P21', 'PROPERTY: the comment filter really filters — the raw scanner sees a commented-out site that the code filter drops, in EVERY register file (declared blind spot, proved)', {
+  baseline: deltaFiltered(COMMENTED_LINE),
+  expected: REGISTER_FILES.map((rel) => [rel, 1]),
+  // Contrast case: an UNCOMMENTED line is seen by BOTH scanners, so the gap
+  // is 0. This proves the gap is the filter's doing and not a constant.
+  mutated: deltaFiltered(ADDED_LINE),
 });
 
 // The one baseline that is pinned from source text rather than executed
@@ -513,13 +579,31 @@ if (process.argv.includes('--prove-failure')) {
 
   SENT.reach('prove');
   console.log(bad ? `\n${bad} comparison(s) could NOT be made to fail.` : '\nAll comparisons proved failable.');
-  process.exit(bad ? 1 : 0);
+  /* THE SWEEP'S EXIT CODE FOLDS THE MAIN TALLY IN. gate-repair, 2026-09-02.
+     WAS: `process.exit(bad ? 1 : 0)`.
+
+     `bad` counts only the four prove() comparisons above. `fail` counts the
+     ~30 perturbation cases that ran at module top level — and it was NOT
+     consulted, so under `--prove-failure` every one of those assertions was
+     dead weight. That flag is not one invocation among several: it is the
+     ONLY one package.json's `test:contracts` uses (chain position 14), and
+     tools/test-gate-composition.mjs's GC-SHAPE `flagged` set plus its CM9
+     mutant require this suite to KEEP the flag — so the composition gate was
+     enforcing the very flag that suppressed the assertions. Two live reds
+     (P19 and P21, red since commit 093d254 on 2026-08-30) sat invisible
+     behind it, and tools/run-contracts.mjs recorded the suite green.
+
+     This suite was the outlier, not the pattern. tools/test-road.mjs,
+     tools/test-page-lifetime.mjs, tools/test-coverage-floor.mjs and
+     tools/test-chapter-contract.mjs all fold their failure count into the
+     exit code on BOTH paths; this now does the same. The tally and the
+     failure list are printed here too, so the sweep path's output is a
+     SUPERSET of the plain path's and no failure is less visible than it was.
+     Found by the 2026-09-02 gate audit. */
+  reportMain();
+  process.exit(bad || fail ? 1 : 0);
 }
 
 SENT.reach('main');
-console.log(`\n${cases} perturbation cases — ${cases - fail} PASS, ${fail} FAIL`);
-if (fail) {
-  console.log('\nFailures:');
-  for (const f of failures) console.log('  ' + f);
-  process.exit(1);
-}
+reportMain();
+if (fail) process.exit(1);
