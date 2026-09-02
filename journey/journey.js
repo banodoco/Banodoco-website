@@ -1846,14 +1846,25 @@ export function boot(opts = {}) {
     // frames; shader compilation above is sufficient there, and avoids making
     // a performance optimisation an availability gate.
     if (!softwareRenderer) for (const id of Object.keys(chapters)) {
-      /* ONE CHAPTER PER FRAME, NOT ALL OF THEM IN ONE TASK. This loop used to
-         run start to finish inside a single task: measured 617 ms at
-         1440x900, 834 ms under a 4x CPU throttle, during which the prelude's
-         one rAF site cannot run at all (evidence/r12-stutter §3, hitch class
-         D). Yielding to a real animation frame between chapters costs the
-         preparation nothing — it is already async and already bounded by the
-         GPU — and hands the spore stream a frame back between each. */
-      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      /* ONE CHAPTER PER TASK, NOT ALL OF THEM IN ONE. This loop used to run
+         start to finish inside a single task: measured 617 ms at 1440x900,
+         834 ms under a 4x CPU throttle, during which the prelude's one rAF
+         site cannot run at all (evidence/r12-stutter §3, hitch class D).
+         Ending the task between chapters costs the preparation nothing — it
+         is already async and already bounded by the GPU — and lets the
+         browser run its rendering steps, and therefore hero-spores' frame,
+         between each. Measured after: the 617 ms block becomes 218 + 133 ms.
+
+         DELIBERATELY setTimeout AND NOT requestAnimationFrame, though an rAF
+         is the more obvious way to say "give the stream a frame". journey.js
+         holds no rAF site of its own, and the harness pins that: M8 counts
+         rAF sites per file and M19 is a monotonic ceiling on the
+         request-without-cancel imbalance, which exists precisely to catch a
+         frame request that nobody can cancel. An rAF here would have been
+         exactly that — this loop has no teardown path to cancel it from — so
+         the yield is a plain task boundary instead, which is all the split
+         actually needs. Both pins stay where they were. */
+      await new Promise(resolve => setTimeout(resolve, 0));
       const g = chapters[id] && chapters[id].group;
       if (!g) continue;
       let anchor = g;
