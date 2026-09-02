@@ -24,14 +24,18 @@ import { JOURNEY_CHAPTER_IDS, JOURNEY_SCHEMA } from './structure.js';
    on screen, the camera trucking around the specimen to its own right,
    the world streaming leftward through frame.
 
-   Two deliberate boundaries, owned where they act (journey.js az1):
-   a leg that OVERTAKES a live blend keeps the shortest way — a
-   mid-flight change of mind is a step back, not a lap — and the two
+   One deliberate boundary, owned where it acts (journey.js az1): the two
    bookend wraps take the seam's own clause (the WAY HOME block): each
    wrap continues its own travel across the seam, the whole way around —
    one ceremonial lap plus the step home (final -> mission forward,
    mission -> final backward; the owner's 2026-09-01 clarification,
-   superseding the same morning's always-forward reading). */
+   superseding the same morning's always-forward reading).
+
+   A LEG THAT OVERTAKES A LIVE BLEND ONCE KEPT THE SHORTEST WAY — recorded
+   as a deliberate divergence when this grammar landed ("a mid-flight change
+   of mind is a step back, not a lap"). The owner retired it on 2026-09-02:
+   a retarget obeys the law like every other move, reading it through
+   travelSense below from the coordinate the camera is painted at. */
 export const TURN_FORWARD = 1;
 
 /** The grammar as one function: the rotational sense any rest-departing
@@ -39,6 +43,18 @@ export const TURN_FORWARD = 1;
 export function navSense(fromId, toId) {
   return JOURNEY_CHAPTER_IDS.indexOf(toId) > JOURNEY_CHAPTER_IDS.indexOf(fromId)
     ? TURN_FORWARD : -TURN_FORWARD;
+}
+
+/** THE SAME COMPARATOR, CARRIED TO A MID-FLIGHT ORIGIN (2026-09-02, the
+ *  owner: "when travelling between items, if I click to a new item halfway,
+ *  it doesn't respect the clockwise/anticlockwise principle"). A retarget is
+ *  judged by the direction it travels along the ride from where the camera is
+ *  PAINTED — a target later in the ride turns forward, earlier turns backward
+ *  — which on a rest coordinate is navSense itself, because rest progress and
+ *  nav order are the same order. One law with two doors, never two laws that
+ *  could drift apart; the suite asserts they agree on all thirty pairs. */
+export function travelSense(fromP, toP) {
+  return toP > fromP ? TURN_FORWARD : -TURN_FORWARD;
 }
 
 /** The rail is linear, but its two true bookends meet across a hidden seam.

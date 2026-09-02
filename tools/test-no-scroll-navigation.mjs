@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { blendEase, blendEaseRate } from '../journey/camera-blend.js';
 import { azTurn } from '../journey/camera-path.js';
 import * as navigationModule from '../journey/navigation.js';
 import {
@@ -17,7 +18,7 @@ import { createTransitionController } from '../journey/transition/controller.js'
 import { createHeroGroundDimClaim } from '../journey/chapters/hero-ground-dim.js';
 import { railWrapNavigationProgress } from '../journey/ui/rail-handoff.js';
 
-const { controlWrapDirection, navSense, TURN_FORWARD } = navigationModule;
+const { controlWrapDirection, navSense, travelSense, TURN_FORWARD } = navigationModule;
 const ids = ['mission', 'inspire', 'connect', 'owned', 'final'];
 const wrappedPairs = new Map([
   ['mission>final', -1],
@@ -95,10 +96,46 @@ const atAzimuth = degrees => {
   }
 }
 
+// THE INTERRUPT CLAUSE is that same comparator carried to a mid-flight
+// origin, and the two must be ONE law rather than two that could drift: on
+// every rest coordinate travelSense has to return exactly what navSense does.
+// Bought: the whole sense table again, through the door an interrupt uses.
+{
+  const order = ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'];
+  assert.equal(travelSense(0.25, 0.75), TURN_FORWARD,
+    'a target later in the ride turns forward from any painted origin');
+  assert.equal(travelSense(0.75, 0.25), -TURN_FORWARD,
+    'a target earlier in the ride turns backward from any painted origin');
+  // Rest progress and nav order are the same order, so indices stand in for
+  // the rest coordinates themselves.
+  for (const fromId of order) {
+    for (const targetId of order) {
+      if (fromId === targetId) continue;
+      assert.equal(
+        travelSense(order.indexOf(fromId), order.indexOf(targetId)),
+        navSense(fromId, targetId),
+        `${fromId}>${targetId}: travelSense must BE navSense on the rests`);
+    }
+  }
+}
+
 // ...and journey.js must actually spend the law: the wrap through the seam
-// clause, every other rest-departing jump through navSense, with the two
-// deliberate shortest-way exceptions (an overtaken leg and a same-chapter
-// settle) intact.
+// clause, every other rest-departing jump through navSense, an OVERTAKEN leg
+// through the interrupt clause reading travelSense from its painted
+// coordinate, with the one deliberate shortest-way exception (a settle —
+// including a click back into the chapter an interrupted camera is painted
+// inside) intact.
+// [PIN MOVED 2026-09-02, order R9. WAS: `: routeFaithful || overtaken ||
+// fromChapterId === chapterId ? null` under the claim '... overtakes and
+// same-chapter settles keep the shortest way'. CAUSE: the overtaken half of
+// that exception was this grammar's own recorded divergence (r4
+// sense-table.md law 3), and the owner retired it — "when travelling between
+// items, if I click to a new item halfway, it doesn't respect the
+// clockwise/anticlockwise principle." The claim the old pin protected splits
+// in two and BOTH halves are carried forward below unchanged: rest-departing
+// jumps still take navSense, settles still keep the shortest way. Only the
+// overtaken clause changes, and it is now pinned to the law instead of to
+// the divergence. First move for this anchor — not a re-anchoring.]
 {
   const src = readFileSync(new URL('../journey/journey.js', import.meta.url), 'utf8');
   assert.match(src, /const seamSense = WRAP_TURN \|\| wrap;/,
@@ -108,8 +145,82 @@ const atAzimuth = degrees => {
   assert.match(src, /\? seamStep \+ \(Math\.abs\(seamStep\) < Math\.PI \? seamSense \* 2 \* Math\.PI : 0\)/,
     'a short step across the seam earns one whole ceremonial turn in its own sense — '
     + 'delete the lap term and both wraps collapse to brisk hops while every duration suite stays green');
-  assert.match(src, /: routeFaithful \|\| overtaken \|\| fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
-    'every ordinary rest-departing jump takes the grammar sense; overtakes and same-chapter settles keep the shortest way');
+  assert.match(src,
+    /const interruptSense = overtaken && chapterAt\(railFromP\)\.id !== chapterId\n\s*\? travelSense\(railFromP, targetP\) : null;/,
+    'an overtaken leg reads the law from the PAINTED coordinate — the same value the interruption '
+    + 'law departs from — and a click back into the chapter the camera is painted inside stays a settle');
+  assert.match(src,
+    /: routeFaithful \? null\n\s*: overtaken\n\s*\? \(interruptSense === null \? null\n\s*: azTurn\(pos0, cam\.position, interruptSense\)\)\n\s*: fromChapterId === chapterId \? null\n\s*: azTurn\(pos0, cam\.position, navSense\(fromChapterId, chapterId\)\)/,
+    'every ordinary rest-departing jump takes the grammar sense and every overtaking one the '
+    + 'interrupt clause\'s; only a settle keeps the shortest way');
+  // The momentum half: a retarget opens on the rate the interrupted flight
+  // was painting, read off that flight's OWN ease rather than differenced
+  // between two rendered frames.
+  assert.match(src, /const azRate0 = paintedAzRate\(overtaken, pos0\);/,
+    'the replacement leg opens on the overtaken flight\'s painted azimuth rate');
+  assert.match(src,
+    /const easeSlope = azRate0 && Math\.abs\(azSpan\) > 1e-3\n\s*\? Math\.max\(REVERSAL_SLOPE_MIN,\n\s*Math\.min\(CONTINUE_SLOPE_MAX, azRate0 \* dur \/ azSpan\)\)\n\s*: 0;/,
+    'the inherited rate is normalised into this leg\'s own frame and clamped both ways — '
+    + 'an un-overtaken jump gets slope 0 and the shipped ease exactly');
+  assert.match(src, /const easeK = easeSlope < 0 \? REVERSAL_EASE_K : CONTINUE_EASE_K;/,
+    'the SIGN of the inherited slope chooses the gesture: continuation long-tailed, reversal short-tailed');
+
+  /* THE MOMENTUM SHAPE, HELD AS A PROPERTY rather than as four magic
+     numbers. The constants are read out of journey.js and then made to earn
+     their values against the curve they shape, so moving one does not quietly
+     move the behaviour: a continuation must never sail through its own rest
+     and come back (the ease monotone), a reversal must brake through zero
+     inside a bounded backswing, and BOTH must land exactly. */
+  const constOf = (name) => {
+    const m = src.match(new RegExp(`const ${name} = (-?[0-9.]+);`));
+    assert.ok(m, `${name} must be declared in journey.js`);
+    return Number(m[1]);
+  };
+  const CONTINUE_EASE_K = constOf('CONTINUE_EASE_K');
+  const REVERSAL_EASE_K = constOf('REVERSAL_EASE_K');
+  const CONTINUE_SLOPE_MAX = constOf('CONTINUE_SLOPE_MAX');
+  const REVERSAL_SLOPE_MIN = constOf('REVERSAL_SLOPE_MIN');
+  assert.ok(CONTINUE_SLOPE_MAX > 0 && REVERSAL_SLOPE_MIN < 0,
+    'the clamps must bracket zero — a jump with no momentum takes neither');
+
+  // every landing is exact, and no slope perturbs a settled frame
+  for (const [slope, k] of [[0, CONTINUE_EASE_K], [CONTINUE_SLOPE_MAX, CONTINUE_EASE_K],
+    [REVERSAL_SLOPE_MIN, REVERSAL_EASE_K], [2.5, CONTINUE_EASE_K], [-0.2, REVERSAL_EASE_K]]) {
+    assert.equal(blendEase(0, slope, k), 0, `slope ${slope}: the blend must open exactly at its origin`);
+    assert.equal(blendEase(1, slope, k), 1, `slope ${slope}: the blend must land exactly on its rest`);
+    assert.equal(blendEaseRate(1, slope, k), 0, `slope ${slope}: the blend must arrive at rest, not still moving`);
+  }
+  for (let i = 0; i <= 1000; i++) {
+    const f = i / 1000;
+    assert.equal(blendEase(f, 0, CONTINUE_EASE_K), f * f * f * (f * (f * 6 - 15) + 10),
+      'with no momentum the ease is the shipped quintic to the last bit');
+  }
+  // a continuation never overshoots its rest...
+  const minRate = (slope, k) => {
+    let m = Infinity;
+    for (let i = 0; i <= 4000; i++) m = Math.min(m, blendEaseRate(i / 4000, slope, k));
+    return m;
+  };
+  assert.ok(minRate(CONTINUE_SLOPE_MAX, CONTINUE_EASE_K) >= -1e-9,
+    `a continuation at slope ${CONTINUE_SLOPE_MAX} must still be monotone — above the shape's own `
+    + 'bound the camera sails past its rest and comes back');
+  assert.ok(minRate(CONTINUE_SLOPE_MAX + 2, CONTINUE_EASE_K) < 0,
+    'and the clamp must be load-bearing: raising it far enough DOES break monotonicity');
+  // ...while a reversal must run a little way against its new sense, bounded.
+  const backswing = (slope, k) => {
+    let m = 0;
+    for (let i = 0; i <= 4000; i++) m = Math.min(m, blendEase(i / 4000, slope, k));
+    return -m;
+  };
+  const WIDEST_FORCED_ARC_DEG = 317;   // Inspire <-> Owned, the grammar's longest
+  const swingDeg = backswing(REVERSAL_SLOPE_MIN, REVERSAL_EASE_K) * WIDEST_FORCED_ARC_DEG;
+  assert.ok(swingDeg > 0.5 && swingDeg < 8,
+    `a reversal must ease THROUGH zero, not snap to it — some backswing is the proof it braked — `
+    + `but no more than a read of intent allows (got ${swingDeg.toFixed(2)}deg on the widest forced arc)`);
+  assert.ok(backswing(REVERSAL_SLOPE_MIN, CONTINUE_EASE_K)
+    > backswing(REVERSAL_SLOPE_MIN, REVERSAL_EASE_K),
+    'the reversal decay must be SHORTER-tailed than the continuation one — that is the whole '
+    + 'difference between braking and coasting');
 }
 
 // A route owns its shared character, while explicitly reviewed one-way
