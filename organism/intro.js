@@ -165,7 +165,15 @@ export function setupIntro(ctx) {
   let completed = false;
 
   function start() {
-    if (_introAt !== null || intro <= 0 || introClock.started || completed) return false;
+    /* `!(intro > 0)` rather than `intro <= 0`, and the asymmetry is the point:
+       every comparison against NaN is false, so `intro <= 0` WAVES A NaN
+       THROUGH — and a NaN duration makes every `lived / intro` below NaN, for
+       the life of the page. Same family as the two guards repaired alongside
+       this one (the clamp in shellsAt, the `remaining < 200` in
+       intro-clock.js): a bound that reads as protective and is not. `intro` is
+       a literal today, so this is latent rather than live; it is closed here
+       because the class is what bites, not the instance. */
+    if (_introAt !== null || !(intro > 0) || introClock.started || completed) return false;
     // Wall clock, not accumulated rAF dt: the page's CSS choreography runs on
     // the wall clock, and rAF stops entirely in a hidden tab — accumulating dt
     // would let the text finish while the specimen was still being drawn.
