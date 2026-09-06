@@ -1,5 +1,7 @@
-// Content model for the Mushroom Journey v6 — FIVE-chapter build
-// (Mission, Inspire, Connect, Owned, Final/epilogue).
+// Content model for the Mushroom Journey v6 — SIX-chapter build
+// (Mission, Inspire, Equip, Connect, Owned, Final/epilogue). It was a
+// five-chapter build until 2026-08-30, when Equip stopped being a deferred
+// placeholder; journey/structure.js's header carries that decision.
 //
 // Single source of truth for chapter copy, node copy, contributor profiles,
 // and the site's outbound links — per journey-v6-plan/13-content-ops.md, CO-2.2:
@@ -42,9 +44,12 @@
 // soon" status and NO outbound link, which is the honest state — an unbuilt
 // thing gets a sentence, not a door. See COPY-TABLE.md.
 //
-// Equip/PYPE/Arnold/Astrid are deferred out of this active build — their
-// donor content is preserved in ./content-archive-deferred.js, not
-// imported here. Do not rename this export or any node id: chapters and
+// EQUIP CAME BACK (2026-08-30). PYPE/Arnold/Astrid are still deferred and
+// their donor copy is still preserved in ./content-archive-deferred.js, not
+// imported here — but Equip's own chapter copy has moved OUT of that archive
+// and into `chapters.equip` below, verbatim, exactly as the archive's header
+// instructed. Its two initiatives are Quark and Brötchen (`nodes` below), not
+// the archived three. Do not rename this export or any node id: chapters and
 // core read this object directly (per donor journey/core/content.js).
 //
 // NO LIVE MODULES, and this rule SURVIVES D10's discharge (13-content-ops.md
@@ -184,6 +189,19 @@ export const CONTENT = {
       //
       // 171 characters -> 101. Rendered 4 / 4 / 6 lines -> 2 / 2 / 3.
       sub: 'Banodoco launches and stewards initiatives that inspire more people to care about open-source AI art.',
+    },
+    equip: {
+      nav: 'Equip',
+      // UN-DEFERRED 2026-08-30. This slot's copy has been sitting in
+      // ./content-archive-deferred.js since v6 shipped five chapters, with that
+      // file's own instruction on it: "If/when Equip ships, move these entries
+      // back into content.js and update CONTENT.chapters / CONTENT.nodes
+      // accordingly — do not silently diverge this archive from what eventually
+      // ships." Both strings below are the donor's, verbatim, and the archive
+      // now records that they have moved rather than claiming to still hold
+      // them.
+      heading: 'Equip the ecosystem.',
+      sub: 'Banodoco builds tools that help the community push open models further — expanding what is possible and what remains open.',
     },
     connect: {
       nav: 'Connect',
@@ -523,7 +541,14 @@ export const CONTENT = {
     items: [
       { chapter: 'mission', size: 'minor' },
       { chapter: 'inspire', size: 'major' },
-      { placeholder: 'equip', label: 'Equip', note: 'Soon', size: 'major' },
+      // 2026-08-30: was `{ placeholder: 'equip', label: 'Equip', note: 'Soon',
+      // size: 'major' }`. Equip now has a chapter behind it — a route, a rest,
+      // a camera leg and two hotspots — so it is a destination and this row
+      // says so. The `placeholder` FORM above stays documented and stays
+      // supported: journey/rail.js still builds a non-navigating span for one,
+      // and the row is still not the chapter list (`owned` remains a chapter
+      // with no row item).
+      { chapter: 'equip', size: 'major' },
       { chapter: 'connect', size: 'major' },
       { chapter: 'final', size: 'minor' },
     ],
@@ -616,6 +641,49 @@ export const CONTENT = {
         ],
         status: 'Coming soon.',
       },
+    },
+
+    // --- Equip chapter: the two points of interest on the specimen's
+    // underside. They are ANATOMY, not scenery: the chapter puts the camera
+    // beneath the cap and names the two things that are actually there.
+    //
+    // NEITHER NODE CARRIES A `card` OR A `spotlight`, and that is the whole
+    // preview design rather than an omission. `previewFor` (journey/ui/
+    // popover-tier.js) reads `d.link || null`, so a node with no card block
+    // gets NO DOOR — the shell's link is hidden and there is nothing in the
+    // accessible tree pretending to lead somewhere. What a visitor sees
+    // instead is the card shell with its stage under construction: the
+    // `preview` field below puts it there, journey/ui/popover-tier.js reads
+    // that field and nothing else, and the interior is journey/cards/
+    // cards.css's — an abstract field where the artwork will be, with the
+    // short line below it blurred rather than absent. There is NO builder
+    // module for either node, deliberately; the popover tier's own
+    // third-state note says why. The words below are therefore doing
+    // double duty — they
+    // are the chip's accessible description, read in full by AT, and the
+    // blurred shape a sighted visitor reads as "not yet".
+    //
+    // The names and one-liners are the same two the site-map panel already
+    // shows under "Equipping" (journey/rail.js menuSections) and the same two
+    // the no-JS tier prints. Same two initiatives, same two sentences,
+    // WORD FOR WORD across three surfaces — which is why the shorts say what
+    // the initiative IS and not that it is unfinished. "Not yet" is a STATE,
+    // and each surface says it in its own vocabulary: the panel with its Soon
+    // badge, the live preview with a card that is deliberately unreadable and
+    // one legible caption, the static tier with the same badge. Putting it in
+    // the sentence would have said it twice everywhere and made the three
+    // copies diverge the first time one of them shipped.
+    quark: {
+      chapter: 'equip',
+      label: 'Quark',
+      short: 'Creative tools for everyone',
+      preview: 'under-construction',
+    },
+    brotchen: {
+      chapter: 'equip',
+      label: 'Brötchen',
+      short: 'Shared workflows for agents',
+      preview: 'under-construction',
     },
 
     // --- Connect chapter: the three ground-network hubs (16-connect-ground-
@@ -897,5 +965,30 @@ export const CONTENT = {
     // The detailed ownership statement now lives beside the Owned section's
     // dedicated page link; the panel footer is copyright only.
     legal: '© 2026 Banodoco',
+    // WHO / WHAT / WHY (2026-08-30, polish §3B.1) — three closed-by-default
+    // expanders directly under the site-map panel's opening statement, one
+    // short paragraph each. Rendered by rail.js (live tier) and the static
+    // menu; both read these strings, so a wording change lands in both tiers
+    // through one edit here plus `node tools/build-static-content.mjs`.
+    // COPY STATUS: drafted for the polish pass, grounded only in claims the
+    // site already makes — PENDING PETER'S EDITORIAL SIGN-OFF (flagged in
+    // the polish PR body; creative call, not an operational one).
+    primer: [
+      {
+        id: 'who',
+        label: 'Who',
+        body: 'An open community of artists, engineers, and knowledge creators — and an organization being handed to them: Banodoco is 100% shared with the people who contribute, granted 1% per month.',
+      },
+      {
+        id: 'what',
+        label: 'What',
+        body: 'We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.',
+      },
+      {
+        id: 'why',
+        label: 'Why',
+        body: 'The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.',
+      },
+    ],
   },
 };

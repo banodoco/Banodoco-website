@@ -61,13 +61,20 @@ when that boundary is incomplete or leaks an excluded path.
 absolute, plus the homepage's JSON-LD block) and `404.html` (its home link
 and icon — self-contained otherwise, since hosts serve it at arbitrary
 depths) use the placeholder `ORIGIN`; robots.txt's `Sitemap:` line
-uses a relative path. `tools/package-public.py --origin ...` replaces every
-`ORIGIN` occurrence only in the temporary public artifact, covering these
-files and `404.html`, and fails if any placeholder remains. The source checkout
-is never rewritten. Railway supplies `https://www.banodoco.ai`; local artifact
-inspection must pass an explicit origin. `robots.txt`'s `Sitemap:` line is
-deliberately relative (`./sitemap.xml`) precisely so it needs no edit if the
-deployment origin ever changes — nothing in `robots.txt` requires updating.
+uses a relative path. `tools/package-public.py --origin ...` substitutes
+`ORIGIN` in exactly these five files — `PLACEHOLDER_FILES`, the declared
+set — inside the temporary public artifact, and fails if any placeholder
+survives them. It does **not** touch `ORIGIN` bytes anywhere else in the
+~224 selected files: several shipped comments happen to spell "ORIGINAL",
+and a broad, undeclared replace across the whole artifact would mangle
+those into `<origin>AL`. `verify()` enforces both halves — every other
+selected file must be byte-for-byte identical to its source, and a
+placeholder file renamed out of the manifest's selection fails the build
+instead of shipping unsubstituted. The source checkout is never rewritten.
+Railway supplies `https://www.banodoco.ai`; local artifact inspection must
+pass an explicit origin. `robots.txt`'s `Sitemap:` line is deliberately
+relative (`./sitemap.xml`) precisely so it needs no edit if the deployment
+origin ever changes — nothing in `robots.txt` requires updating.
 
 ## Railway operations (practical)
 

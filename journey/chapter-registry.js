@@ -1,4 +1,5 @@
 import { createInspire } from './chapters/inspire/index.js';
+import { createEquip } from './chapters/equip/index.js';
 import { createConnect } from './chapters/connect/index.js';
 import { createOwned } from './chapters/owned/index.js';
 import { createFinal } from './chapters/final/index.js';
@@ -9,6 +10,7 @@ import {
 
 const CHAPTER_FACTORIES = {
   inspire: (sceneApi) => createInspire(sceneApi),
+  equip: (sceneApi) => createEquip(sceneApi),
   connect: (sceneApi) => createConnect(sceneApi),
   owned: (sceneApi) => createOwned(sceneApi, CONTENT),
   final: (sceneApi) => createFinal(sceneApi),

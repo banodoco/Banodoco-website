@@ -1506,9 +1506,14 @@ const DO_EXPECTED = {
   wrapMarks: 1,
   /* 200 ms + 200 ms across an out-of-tolerance sample must NOT read as 400. */
   dwellContiguous: '{"owned":200}',
-  /* `mission` at p 0 is BEHIND a p 0.26 departure and must not appear. */
-  passedDirectional: '["connect","owned"]',
-  passedExcludesTerminal: '["connect","owned"]',
+  /* `mission` at p 0 is BEHIND a p 0.26 departure and must not appear.
+     `equip` (p 0.32) joined the list on 2026-08-30 for the same reason
+     `connect` is in it: the probe's ride runs p 0.26 -> 0.9 and now travels
+     through one more rest on the way. The property under test — a rest BEHIND
+     the departure is not reported — is unchanged, and `mission` is still
+     absent, which is what these two rows are for. */
+  passedDirectional: '["equip","connect","owned"]',
+  passedExcludesTerminal: '["equip","connect","owned"]',
   passedRefusesEmpty: 'refused',
   sweptWindows: '[["b"],["c"]]',
   /* Empty: gesture 1 began parked at `a` and crossed `b` during its OWN

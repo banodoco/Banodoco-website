@@ -60,7 +60,7 @@
  *
  *   IDENTITY + DOM, written by ui.js at registration and never after:
  *     id chapter btn world radius reveal revealDirect revealScrub
- *     revealBand stagger iconTab label labelEl dotEl hitEl chipBare
+ *     revealBand stagger iconTab soon stacked label labelEl dotEl hitEl chipBare
  *     preview policyDone labelOnHover
  *   PER-FRAME, written by THIS MODULE and by nothing else:
  *     a armAt sup pillW pillH placeable layoutPlaceable pendX sx sy
@@ -107,7 +107,13 @@ export function hotspotDepartureOpacity(h, {
   currentChapterId, railFlight, copyGate,
 }) {
   const continuing = !!railFlight && h.departureTicket === railFlight;
-  const starting = !!railFlight && h.iconTab
+  /* `soon` chips carry too (R3): their reveal is the chapter's own ring
+     ladder, and a route click snaps journey state — and with it the band the
+     ladder's gate is read against — to the destination in the placement
+     frame, which would take a standing pill to zero on the click. The same
+     one-authority exit the initiative markers get is the fix: fade on the
+     source copy envelope, from the opacity actually painted. */
+  const starting = !!railFlight && (h.iconTab || h.soon)
     && h.chapter !== currentChapterId && h.a > 0.015;
 
   if (!continuing && !starting) {
@@ -457,12 +463,15 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *  twenty lines here. */
   function resolveX(h, sx) {
     let tx;
-    if (h.iconTab) {
+    if (h.stacked) {
       /* A centred tab changes the truthful local anchor from x=11 to the
          marker's midpoint. Re-derive translate-x from the measured width
          so the icon — not merely the button box — still lands exactly on
          the projected world node. The shape is symmetric, so edge-flip
-         has no visual or geometric job here. */
+         has no visual or geometric job here.
+         `stacked`, not `iconTab`: what makes this branch right is that the
+         marker sits OVER the name, and the soon chips joined that anatomy
+         without becoming initiative markers (ui.js, MARKER ABOVE NAME). */
       if (h.flipped) {
         h.flipped = false;
         h.btn.classList.remove('flip');
@@ -551,6 +560,24 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
     h.btn.style.setProperty('--j-hot-ico-s', markS.toFixed(3));
     h.btn.style.setProperty('--j-hot-label-in', opacity.label.toFixed(3));
     h.btn.style.setProperty('--j-hot-label-y', `${((1 - labelIn) * 2.5).toFixed(2)}px`);
+  }
+
+  /** THE SOON CHIP'S ARRIVAL IS A RISE (R3, the owner's direction: "the items
+   *  should appear going UP"). A plain-pill chip in the third state drifts in
+   *  from 10 px below its resting seat as its reveal clock climbs, riding the
+   *  individual `translate` property for exactly the reason ICON-ARRIVAL's
+   *  gesture rides `scale`: it composes with the placement/dodge `transform`
+   *  without touching it. Derived from `h.a` — the beat-enveloped arrival
+   *  clock — so the two chips rise one beatGapMs apart, a reverse scrub plays
+   *  the drift backwards, and dt = 0 (h.a snapped to the settled gate) lands
+   *  the chip seated with the property removed, byte-identical to a chip
+   *  nobody painted. A direct DEPARTURE keeps the seat: the source copy fade
+   *  owns that exit, and a chip sliding downward under a fade it does not own
+   *  would read as a second, unauthored movement. */
+  function paintSoonRise(h, departing = false) {
+    const rise = departing ? 0 : (1 - smoothA(h.a)) * 10;
+    if (rise < 0.01) h.btn.style.removeProperty('--j-hot-rise');
+    else h.btn.style.setProperty('--j-hot-rise', `${rise.toFixed(2)}px`);
   }
 
   /* PILL COLLISION DODGE (2026-08-10). With every anchor now a static world
@@ -721,6 +748,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       }
       const vis = departureOpacity !== null ? h.a > 0 : h.a > 0.015;
       if (h.iconTab) paintIconTab(h, departureOpacity !== null);
+      else if (h.soon) paintSoonRise(h, departureOpacity !== null);
       h.btn.style.opacity = h.a;
       h.btn.style.pointerEvents = departureOpacity !== null ? 'none' : '';
       h.btn.classList.toggle('vis', vis);

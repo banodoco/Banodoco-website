@@ -70,9 +70,16 @@ export const VISIBLE_MENU_ORDER = Object.freeze(JOURNEY_SCHEMA.chapters
   .filter((c) => c.nav !== null)
   .map((c) => c.id));
 
-assert.deepEqual(BUILD_ORDER, ['mission', 'inspire', 'connect', 'owned', 'final'],
+// Re-recorded 2026-08-30, when Equip stopped being a deferred placeholder and
+// became a chapter with a route, a rest and a camera leg (journey/structure.js
+// carries the full statement). Both lists gain 'equip' between 'inspire' and
+// 'connect' — nothing else about either sequence moved, and the DIVERGENCE
+// these two lists exist to prove is untouched: 'final' still declares
+// `nav: null`, so it is still in the build order and still absent from the
+// visible menu, which is the property below.
+assert.deepEqual(BUILD_ORDER, ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'],
   '[compat fixture] seeded build order drifted off its recorded value');
-assert.deepEqual(VISIBLE_MENU_ORDER, ['mission', 'inspire', 'connect', 'owned'],
+assert.deepEqual(VISIBLE_MENU_ORDER, ['mission', 'inspire', 'equip', 'connect', 'owned'],
   '[compat fixture] visible menu order drifted off its recorded value');
 assert.notDeepEqual(BUILD_ORDER, VISIBLE_MENU_ORDER,
   '[compat fixture] build order and visible menu order collapsed into the same ' +

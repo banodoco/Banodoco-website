@@ -106,12 +106,14 @@ export default {
       return fig;
     });
 
+    // Round 3: the THE/PRIZE eyebrows are gone — the restored shell head
+    // directly above says ARCA GIDAN PRIZE, and the in-art wordmark stays
+    // only as the artwork's own signature (and the hover instrument: the
+    // syllables are the site's interaction), set smaller and quieter by
+    // cards.css so it no longer reads as a second header.
     const word = document.createElement('div');
     word.className = 'ag-word';
     word.setAttribute('aria-hidden', 'true');
-    const the = document.createElement('span');
-    the.className = 'ag-eyebrow';
-    the.textContent = 'THE';
     const title = document.createElement('div');
     title.className = 'ag-title';
     syls = FIGURES.map((f, i) => {
@@ -125,34 +127,45 @@ export default {
       title.appendChild(span);
       return span;
     });
-    const prize = document.createElement('span');
-    prize.className = 'ag-eyebrow';
-    prize.textContent = 'PRIZE';
-    word.append(the, title, prize);
+    word.append(title);
 
-    // what it is, in five words (Hannah, 2026-08-18: every card carries a
-    // short descriptor; the chip already says the name) — then the record
-    const info = document.createElement('div');
-    info.className = 'ag-info';
-    const desc = document.createElement('p');
-    desc.className = 'ag-desc';
-    desc.textContent = 'Open source AI art competition';
-    const stats = document.createElement('p');
-    stats.className = 'ag-stats';
-    stats.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k prizes';
-    info.append(desc, stats);
+    // THE RECORD, below the art rather than crowding it (round 2): three
+    // cells, value over label, hairline-separated — everything written
+    // moves onto the ink plate where it reads over nothing. Round 3 drops
+    // the tracked caption that led the plate: it repeated the shell head's
+    // short line word for word, and the head says it now. Same verified
+    // figures as before (see the STATS provenance note at the top of this
+    // file); "Edition II" rides the door's own destination rather than a
+    // fourth cell.
+    const foot = document.createElement('div');
+    foot.className = 'ag-foot';
+    const band = document.createElement('div');
+    band.className = 'ag-band';
+    for (const [num, lab] of [['198', 'ENTRIES'], ['7,287', 'VOTES'], ['$56.8K', 'PRIZES']]) {
+      const cell = document.createElement('div');
+      cell.className = 'ag-stat';
+      const n = document.createElement('span');
+      n.className = 'ag-num';
+      n.textContent = num;
+      const l = document.createElement('span');
+      l.className = 'ag-lab';
+      l.textContent = lab;
+      cell.append(n, l);
+      band.appendChild(cell);
+    }
 
-    // the door, in the site's own voice — Edition II is OVER (results
+    // the ending, in the site's own voice — Edition II is OVER (results
     // announced 2026-04-06), so the door says what a visitor can actually
     // do: see the winners. The href is the site's own winners route.
-    const cta = document.createElement('a');
-    cta.className = 'ag-cta card-cta';
-    cta.href = 'https://arcagidan.com/winners/edition-2';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'SEE WINNERS →';
-    stage.append(row, word, info, cta);
+    const door = document.createElement('a');
+    door.className = 'ag-door card-door card-cta';
+    door.href = 'https://arcagidan.com/winners/edition-2';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'SEE THE WINNERS →';
+    foot.append(band, door);
+    stage.append(row, word, foot);
   },
 
   activate() {},                      // hover-driven; nothing to start

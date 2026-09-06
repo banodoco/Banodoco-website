@@ -202,8 +202,49 @@ function pulseDriver(dur) {
    quiet->lit lift and the kindle swell widen with it). Measured at a
    deliberate 600 px/s: whole arrival 3.3 s -> ~9.6 s, a patch's own lift
    0.36 s -> ~1.05 s. FRONT_SOFT, EASE_MIX, LIGHT_OVERLAP and the staging
-   are untouched — this is a re-time, not a re-choreography. */
-const LIGHT_LO = 0.0273;   // leg-t — p 0.3860, the first route's light leaves the base
+   are untouched — this is a re-time, not a re-choreography.
+
+   EQUIP RE-DERIVES THE FRONT BOUND, AND PAYS FOR IT IN ROAD (2026-08-30).
+   Every law above holds; ONE of its inputs moved. The leg into this chapter no
+   longer departs the Inspire rest — journey/chapters/equip/ stands between the
+   two, and its rest is an UPWARD-LOOKING pose beneath the cap. The camera-pure
+   resolve is `forward.y` and nothing else, so the whole leg is now that
+   quantity unwinding from +0.363 instead of from +0.050, and the network's
+   first draw slides with it: p 0.3510 -> p 0.4310, measured on a 43-sample
+   scrub of the built gesture at 1440x900.
+   
+   THE LEAD IS PRESERVED IN THE UNIT IT IS FOR, WHICH IS NOT p. What the
+   pre-existence lead buys is a stretch of SCROLLING in which the visitor reads
+   the web as already there before one strand of it is lit; 0.035 of p was the
+   figure because, at the road this segment then owned, 0.035 of p WAS that
+   stretch — 8.00 vh over 0.143 of p is 55.9 vh/p, so the lead was 1.96 vh.
+   Copying 0.035 onto a leg whose road has changed would have been the exact
+   error CONTRIBUTING.md §5 names: a beat priced in a coordinate whose exchange
+   rate to the thing it buys nothing declares. So:
+   
+     · route.js gives this segment 13.00 vh instead of 8.00 (90.9 vh/p), which
+       is what keeps the light TRAVEL long after the front bound moved;
+     · the lead is re-derived at that density: 1.96 vh / 90.9 vh/p = 0.0216 of
+       p, so LIGHT_LO = 0.4310 + 0.0216 = 0.4526 -> leg-t 0.33.
+   
+   LIGHT_HI DOES NOT MOVE, in leg-t or in p: the rest is where it was, the
+   0.0029-p fully-lit margin is where it was, and the frozen reference still is
+   the frozen reference still.
+   
+   WHAT IT COSTS, stated rather than absorbed. The arrival's own window falls
+   0.1341 -> 0.0675 of p. At 13.00 vh that is 6.14 vh of road under the light
+   against the 7.50 vh it had, i.e. 82% — the light travel is 18% shorter in
+   scrolling than the eighth pass left it, and no amount of road inside THIS
+   segment can recover the rest without turning the page into a corridor
+   (a full restoration wants 16.7 vh here and a 55 vh page). The two things
+   that did NOT move are the two the six "slower" requests were actually
+   about: the pre-existence lead in the unit it is spent, and the gradient —
+   FRONT_SOFT, EASE_MIX, LIGHT_OVERLAP, the staging and the order are all
+   untouched, so a given patch of ground still takes the same time to come up
+   from quiet to lit at any fixed scroll speed. What is shorter is the number
+   of patches the schedule crosses per unit of road, and that is the honest
+   price of putting a chapter in this leg. */
+const LIGHT_LO = 0.33;     // leg-t — p 0.4526, the first route's light leaves the base
 const LIGHT_HI = 0.637;    // leg-t — p 0.5201, the last route's farthest tip saturates
 /* 0.30 -> 0.22 (2026-08-14, Hannah's sixth report: "one at a time elegantly").
    She has now asked for "one at a time" twice, three passes apart, so the 0.30

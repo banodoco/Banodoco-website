@@ -940,13 +940,20 @@ export function createSpores(ctx) {
     }
   }
 
+  // SURGE (optional, per exit): a bump the driver may park anywhere on a
+  // lane's arc to brighten the dots that lane already lit. Deliberately
+  // small — the chapter drives amp <= 1 and the peak has to read as a
+  // shimmer riding the knot cadence, never as a flare; the size term is a
+  // fifth of the brightness one so beads breathe instead of popping.
+  const SURGE_GAIN = 0.30, SURGE_SIZE = 0.06;
+
   /** THE EMPHASIS — runs inside drive(), i.e. from the driver's own
    *  animator, AFTER 'spore-drift' integrated the buffer this frame.
    *  Writes ONLY the per-dot lighting feed (cv/pw/sz); positions are
    *  read-only here, by design and by Hannah's own rule.
    *  eff: per-exit effective reveals; mw: the mushroom's matrixWorld;
    *  T: the TRANSFORM taste value (0..1). */
-  function emphasize(eff, tNow, mw, leanScale, transform) {
+  function emphasize(eff, tNow, mw, leanScale, transform, surge) {
     const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
     if (!drive && !wasActive) { feed.any = false; return; }
     if (!inited && !initEmphasis()) { feed.any = false; return; }
@@ -1092,6 +1099,16 @@ export function createSpores(ctx) {
         + GAIN_BODY * twk * boost
         + GAIN_KNOT * kn * emKnot * boost * (0.10 + 0.90 * emCore) * pearlScale);
       sz[i] = 1 + GAIN_SIZE * c * (0.20 + 0.80 * emCore) * (0.45 + 0.55 * kn);
+      // surge: one soft-edged bump in the WINNING exit's own arc coordinate.
+      // Locality is inherited from the lane capsules above — emExit/emArc
+      // name the chain that lit this dot, so no dot outside it is reachable.
+      // Zero amp writes nothing at all, which is what keeps the quiet path
+      // byte-exact through dim() -> restoreBase().
+      const sg = surge && surge[emExit];
+      if (sg && sg.amp > 0 && sg.width > 0) {
+        const sur = sg.amp * (1 - ss(0, sg.width, Math.abs(emArc - sg.front)));
+        if (sur > 0) { pw[i] *= 1 + SURGE_GAIN * sur; sz[i] += SURGE_SIZE * sur * c; }
+      }
     }
     feed.any = anyOn;
     wasActive = true;
@@ -1218,11 +1235,17 @@ export function createSpores(ctx) {
    *  registerDrift). The emphasis runs first, then the color/size pass reads
    *  its per-dot feed — same frame, one call. */
   const seat = {
+    /** surge — optional, `[ {amp, front, width} | null, x3 ]`, one entry per
+     *  exit slot, stated in that exit's chain arc coordinate s in 0..1:
+     *  `front` is the bump centre, `width` its half-width (soft edges),
+     *  `amp` its strength (<= 1). Brightness only, on the dots that exit is
+     *  already lighting. Omitted, null, or amp 0 writes nothing and is a
+     *  byte-exact no-op; the seat stays a pure function of this payload. */
     drive({ eff, time, matrixWorld, leanScale = 1, transform = 1,
-            regions = null, grad = null }) {
+            regions = null, grad = null, surge = null }) {
       if (!system.driver) return;   // released seat: the handle is inert
       lastDriveFrame = frameNo;
-      if (eff) emphasize(eff, time, matrixWorld, leanScale, transform);
+      if (eff) emphasize(eff, time, matrixWorld, leanScale, transform, surge);
       dim(regions, grad);
     },
     /** Warm-up (D25, kept): allocate the per-dot emphasis state at page

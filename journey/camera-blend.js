@@ -26,6 +26,28 @@ function routePaceP(blend, e) {
   return blend.routeFromP + (blend.routeTargetP - blend.routeFromP) * f;
 }
 
+/* THE BLEND'S OWN CLOCK, declared once here so journey.js can read a live
+   flight's rate off the very curve the stepper spends — two spellings of one
+   ease is exactly how an interrupt's momentum would come to disagree with the
+   motion it is supposed to continue.
+
+   The shipped quintic smootherstep, plus an optional opening-slope term that
+   is zero at BOTH ends: f = 0 and f = 1 still evaluate to exactly 0 and 1, so
+   a settled frame stays byte-identical and a blend with no slope is the
+   shipped ease to the last bit. `k` sets how fast that term decays — see THE
+   INTERRUPT'S MOMENTUM in journey.js for why a continuation and a reversal
+   want different decays. */
+export function blendEase(f, slope, k) {
+  const s = f * f * f * (f * (f * 6 - 15) + 10);
+  return slope ? s + slope * f * Math.pow(1 - f, k) : s;
+}
+
+/** d(blendEase)/df — the ease's own rate, in ease units per unit phase. */
+export function blendEaseRate(f, slope, k) {
+  const r = 30 * f * f * (1 - f) * (1 - f);
+  return slope ? r + slope * Math.pow(1 - f, k - 1) * ((1 - f) - k * f) : r;
+}
+
 /** Build the frame-critical direct-jump camera compositor once. */
 export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEnd) {
   const dstPos = sceneApi.camera.position.clone();
@@ -58,8 +80,50 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
     dstPos.copy(cam.position);
     dstTgt.copy(ctl.target);
     const fv = blend.fov0 * (1 - e) + cam.fov * e;
-    arcLerp(blend.pos0, dstPos, e, cam.position, blend.az1, blend.bow, blend.rise);
+    /* THE AZIMUTH ALONE CARRIES THE INTERRUPT'S MOMENTUM (journey.js prices
+       it). Every other channel — radius, height, fov, fog, the target and the
+       grade, and the rail phase published above — keeps the shipped quintic;
+       a blend with no slope makes eAz identical to e. */
+    const eAz = blend.easeSlope ? blendEase(f, blend.easeSlope, blend.easeK) : e;
+    arcLerp(blend.pos0, dstPos, e, cam.position, blend.az1, blend.bow, blend.rise, eAz);
     ctl.target.lerpVectors(blend.tgt0, dstTgt, e);
+    /* The gaze-height swell of the shaped Equip leg (directJumpTo's ONE ARC
+       block prices it; zero on every other jump, and absent from fixture
+       blends). Same sin(pi*e) family as `bow`/`rise` above, driven by the
+       SAME ease as the target it perturbs, so its velocity is zero at both
+       ends and a settled or dt = 0 frame is byte-identical by construction. */
+    if (blend.tgtDip) ctl.target.y += blend.tgtDip * Math.sin(Math.PI * e);
+    /* The banked pass of the shaped Connect -> Final leg (directJumpTo's
+       FLYBY block prices it; absent from every other jump and from fixture
+       blends). ONE sin(pi*e) lobe — the same swell family as `bow`/`rise`
+       above, on the position's own ease — pulls the radius IN toward a
+       single closest pass and lifts the height over the rim. No plateau and
+       no shoulders: the first cut held a flat skim between two quintic
+       shoulders, which concentrated all radial motion in the entry — the
+       velocity aimed AT the specimen, then turned — and the owner read it as
+       "zooming in, almost hitting it, and then turning ... it should feel
+       like a PLANE flying around something". With the lobe, radial change is
+       spread across the whole move and the azimuth sweep is in the velocity
+       from the first frame, so curvature changes continuously and the path
+       never aims at what it is passing — the tangency trace in the R3
+       evidence measures the velocity holding >=60deg off the specimen the
+       entire approach. The gaze eases onto the cap on the lobe's SQUARE
+       (zero slope at both ends, one smooth in-and-out). Every term is zero
+       at e = 0 and e = 1, so endpoints, settled frames and dt = 0 frames are
+       byte-identical to the unshaped arc by construction — the arcLerp rule.
+       The radius term moves INWARD, so unlike a positive `bow` it does not
+       inherit arcLerp's clearance-by-construction guarantee; its clearance
+       is measured instead, on the live scene, in the same evidence. */
+    if (blend.skim) {
+      const k = blend.skim, lobe = Math.sin(Math.PI * e), wG = lobe * lobe;
+      const az = Math.atan2(cam.position.x, cam.position.z);
+      const r = Math.hypot(cam.position.x, cam.position.z) - k.depth * lobe;
+      cam.position.set(Math.sin(az) * r,
+        cam.position.y + k.lift * lobe, Math.cos(az) * r);
+      ctl.target.set(ctl.target.x * (1 - wG) + k.gx * wG,
+        ctl.target.y * (1 - wG) + k.gy * wG,
+        ctl.target.z * (1 - wG) + k.gz * wG);
+    }
     cam.up.set(0, 1, 0);
     cam.lookAt(ctl.target);
     if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }

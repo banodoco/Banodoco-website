@@ -823,27 +823,14 @@
   .co:is(:hover, .force) .ck.br { transition-delay: 0.10s; }
   .co:is(:hover, .force) .ck.bl { transition-delay: 0.15s; }
 
-  .co .tag .soon {
-    display: block;
-    max-height: 0;
-    margin-top: 0;
-    overflow: hidden;
-    opacity: 0;
-    font-family: "Didot", "Playfair Display", Georgia, serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    color: rgba(228, 182, 102, 0.9);
-    transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-                margin-top 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
-  }
-  .co:is(:hover, .force) .tag .soon {
-    max-height: 1.4em;
-    margin-top: 0.28em;
-    opacity: 1;
-    transition-delay: 0.1s;
-  }
+  /* THE "coming soon" DRAWER IS GONE WITH ITS SUBJECT (2026-08-30). Two rules
+     used to open a `.soon` line under the EQUIP tag on hover. The span they
+     styled was the only `class="soon"` this repository ever had, and it left
+     index.html when Equip stopped being deferred and its tag became a real
+     `#/equip` link. Removed here rather than left as an unreachable pair: a
+     hover rule for an element nothing constructs reads to the next editor as a
+     surface that exists, and the callout's remaining hover state is the whole
+     of what the tag does now. */
 
   /* per-callout leader geometry RETIRED (2026-08-16): the tag offsets and
      the std/alt/tall leader variants that used to live here (and in the
@@ -929,7 +916,18 @@
      RESPONSIVE — mobile portrait
      ============================================================ */
   @media (max-width: 620px) and (orientation: portrait) {
-    nav { padding: 1.3rem 6vw; }
+    /* THE LOGO DROPS 5px ON PHONES (2026-08-30, owner: the mark "reads
+       slightly too high" beside the menu control). It is taken back out of
+       the BOTTOM padding on purpose: nav's height is the number that holds
+       navBottom at 70.03125, and the .logo note below records why that edge
+       may not move — it is the top of the band Inspire's portrait camera is
+       balanced against, so growing the row would stale a camera field to fix
+       a header. Measured on rendered 430x932 / 390x844 frames, both marks'
+       ACTUAL INK (not their boxes): the drop is exactly the residual between
+       the two ink centres, so the mark now sits concentric with the ring —
+       34px of ink centred in the ring's 44. See the parity docblock in
+       journey/site.css, which this supersedes and which carries the ladder. */
+    nav { padding: calc(1.3rem + 5px) 6vw calc(1.3rem - 5px); }
     /* HEIGHT is the .pill's computed 28.44px at this query, the number that
        holds navBottom at 70.03125 — same contract .pill-ic keeps below. The
        MARK steps 40 -> 34 (-15%), close to the step the word it replaced took
