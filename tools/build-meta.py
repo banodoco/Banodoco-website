@@ -16,6 +16,18 @@
 # corner so the tile doesn't sit as a hard slab in light-chrome tabs;
 # apple-touch-icon ships full-bleed square because iOS rounds it itself.
 #
+# TWO MASTERS, ONE ICON SET (2026-08-30). The mushroom mark's normal stroke
+# weight plus its glow blur (assets/brand/favicon.svg) reads as a smear once
+# downsampled all the way to 16x16 or 32x32 — measured, not assumed: render
+# both and look. So the .ico's 16 and 32 planes are cut from a second,
+# bolder, unblurred master — assets/brand/favicon-source-small.png, derived
+# from assets/brand/favicon-small.svg — while the .ico's 48 plane and every
+# larger icon (favicon-96, apple-touch-icon, icon-192/512) still come from
+# the normal favicon-source.png. Same silhouette in both; only the stroke
+# weight and the glow differ. If the mark is ever redrawn, both SVGs need a
+# matching pass, or the two masters drift apart at exactly the sizes this
+# split exists to protect.
+#
 # THE CARDS. 1200x630 (the og:image ratio every major unfurler crops to),
 # cut from the 1440x900 desktop captures — mission for the home and static
 # pages (the specimen, the site's one image), owned for the ownership ledger
@@ -37,6 +49,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAND = os.path.join(ROOT, "assets", "brand")
 MARK_MASTER = os.path.join(BRAND, "mark-b-source.png")
 FAVICON_MASTER = os.path.join(BRAND, "favicon-source.png")
+FAVICON_MASTER_SMALL = os.path.join(BRAND, "favicon-source-small.png")
 CAPTURES = os.path.join(ROOT, "static", "captures")
 
 def icon_tile(master, size, radius_frac):
@@ -78,6 +91,7 @@ def build(outdir):
         sys.exit("mark master must be RGBA (it is %s) — the alpha IS the mark"
                  % mark_master.mode)
     favicon_master = Image.open(FAVICON_MASTER)
+    favicon_master_small = Image.open(FAVICON_MASTER_SMALL)
     made = []
 
     def save(img, relpath, **kw):
@@ -86,9 +100,15 @@ def build(outdir):
         img.save(path, **kw)
         made.append((relpath, os.path.getsize(path)))
 
-    # favicon.ico — 16/32/48, rounded; one file, browsers pick the plane
-    frames = [icon_tile(favicon_master, s, radius_frac=0.1875)
-              for s in (48, 32, 16)]
+    # favicon.ico — 16/32/48, rounded; one file, browsers pick the plane.
+    # 48 comes from the normal master; 16 and 32 come from the bolder,
+    # unblurred small master (see the TWO MASTERS note above) — the normal
+    # stroke smears once downsampled that far.
+    frames = [
+        icon_tile(favicon_master, 48, radius_frac=0.1875),
+        icon_tile(favicon_master_small, 32, radius_frac=0.1875),
+        icon_tile(favicon_master_small, 16, radius_frac=0.1875),
+    ]
     save(frames[0], "favicon.ico", format="ICO",
          append_images=frames[1:], sizes=[(48, 48), (32, 32), (16, 16)])
     # high-dpi tab / search-result icon

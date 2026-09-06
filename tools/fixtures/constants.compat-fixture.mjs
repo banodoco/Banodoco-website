@@ -265,14 +265,23 @@ for (const [name, { value, type }] of Object.entries(EXPECTED_SCALARS)) {
   assert.deepEqual(CONSTANTS[name], value, `[constants fixture] ${name} changed VALUE`);
 }
 
+// Re-recorded 2026-08-30 for Equip. COPY_BANDS is a COMPUTED export (rest +
+// authored offsets), so a route re-timing moves it by construction; the
+// authored offsets in journey/structure.js are what a reviewer checks, and the
+// gap this table has to keep is stated at journey/structure.test.mjs's own
+// COPY_BANDS assertion.
 assert.deepEqual(CONSTANTS.COPY_BANDS, {
   "mission": {
     "lo": -1,
     "hi": 0.042
   },
   "inspire": {
-    "lo": 0.248,
-    "hi": 0.338
+    "lo": 0.188,
+    "hi": 0.258
+  },
+  "equip": {
+    "lo": 0.308,
+    "hi": 0.378
   },
   "connect": {
     "lo": 0.509,

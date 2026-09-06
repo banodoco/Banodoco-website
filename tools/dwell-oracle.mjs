@@ -66,12 +66,21 @@ import { fault } from './instrument-ledger.mjs';
  * from the thing it judges (QA-01 Engine 1/2/3).
  * ==================================================================== */
 
-/** The five rest anchors, in route order. Recomputed under node from both
+/** The six rest anchors, in route order. Recomputed under node from both
  *  trees by DEF-OWNED and identical on both; `restAnchors()` below derives
- *  them from the shipped manifest so this literal is checked, not trusted. */
+ *  them from the shipped manifest so this literal is checked, not trusted.
+ *
+ *  RE-RECORDED 2026-08-30: Equip joined the route between Inspire and Connect
+ *  and Inspire's rest moved 0.26 -> 0.20 with it (journey/structure.js's
+ *  header carries the decision). Connect's, Owned's and Final's are the same
+ *  doubles they have always been. The RECORDING this oracle judges was taken
+ *  against the five-anchor route and is deliberately NOT re-taken — it carries
+ *  its own anchors (`trial.anchors`), so the historical dwell readings below
+ *  keep meaning what they meant. */
 export const ANCHORS = Object.freeze([
   Object.freeze({ id: 'mission', p: 0 }),
-  Object.freeze({ id: 'inspire', p: 0.26 }),
+  Object.freeze({ id: 'inspire', p: 0.2 }),
+  Object.freeze({ id: 'equip', p: 0.32 }),
   Object.freeze({ id: 'connect', p: 0.523 }),
   Object.freeze({ id: 'owned', p: 0.725 }),
   Object.freeze({ id: 'final', p: 0.97 }),

@@ -240,7 +240,10 @@ export const SCENARIOS = [
       const page = await browser.newPage(context);
       try {
         await page.goto(`${base}/static/`, { waitUntil: 'domcontentloaded' });
-        assert.equal(await page.locator('main section[data-chapter]').count(), 5);
+        // Six chapter sections since Equip shipped (2026-08-30). The
+        // no-JS tier carries one section per chapter, so this count is the
+        // route's own cardinality seen from the far end of the enhancement.
+        assert.equal(await page.locator('main section[data-chapter]').count(), 6);
         assert.ok(await page.locator('main a[href]').count() > 0);
         assert.equal(await page.locator('canvas').count(), 0);
       } finally {

@@ -104,7 +104,47 @@ JOURNEY_DIR = os.path.dirname(HERE)                      # .../glowshroom (M4: t
 OUT_DIR = os.path.join(JOURNEY_DIR, "static", "captures")
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-BASE_URL = "http://localhost:8137/index.html"  # M1: promoted to the site root
+
+# THE ORIGIN THE SHUTTER DIALS. gate-repair, 2026-09-02.
+#
+# WAS: `BASE_URL = "http://localhost:8137/index.html"`, a hard-coded literal
+# with no flag and no environment override. tools/check.sh already reads a
+# CHECK_ORIGIN environment variable (check.sh:107) — but it steered ONLY that
+# script's preflight `curl`, never this shooter. `CHECK_ORIGIN=...:8599
+# tools/check.sh` therefore VERIFIED one port and SHOT another: the preflight
+# confirmed :8599 was serving the checkout, then capture.py opened :8137, which
+# on a multi-lane host is some other worktree's tree — or nothing at all. A
+# gate that measures a different tree from the one it verified is worse than no
+# gate, because it reports a number. Found by the 2026-09-02 gate audit (§5).
+#
+# The default is UNCHANGED at :8137, so every existing invocation, doc line and
+# golden's recorded `source` field behaves exactly as before. Precedence is
+# --origin, then $CHECK_ORIGIN, then the default — the flag beats the
+# environment so a differential run can drive two ports from one shell.
+#
+# tools/test-gate-capture.py's OriginTests asserts the agreement this comment
+# claims: that check.sh's CHECK_ORIGIN default and this file's default are the
+# same string, and that a CHECK_ORIGIN this file is handed really moves the URL
+# it dials. That assertion is what keeps the two halves from drifting apart
+# again — the defect above was exactly two constants nobody compared.
+DEFAULT_ORIGIN = "http://localhost:8137"
+PAGE_PATH = "/index.html"  # M1: promoted to the site root
+
+
+def base_url_for(origin):
+    """The page URL for a scheme://host:port origin, trailing slash or not."""
+    return origin.rstrip("/") + PAGE_PATH
+
+
+def resolve_origin(cli_origin=None):
+    """--origin, else $CHECK_ORIGIN, else the default. Blank env is unset."""
+    if cli_origin:
+        return cli_origin
+    env = (os.environ.get("CHECK_ORIGIN") or "").strip()
+    return env or DEFAULT_ORIGIN
+
+
+BASE_URL = base_url_for(DEFAULT_ORIGIN)
 
 # The golden list — the five resting poses (12-platforms.md tier table, ADR D5).
 # `chapter` is what window.journey.chapter must report before the shutter fires.
@@ -917,7 +957,7 @@ def resolve_check_out(check_out_arg, repo_root=None):
 
 
 def main():
-    global DPR
+    global DPR, BASE_URL
     ap = argparse.ArgumentParser(description="Tier-3 capture + CI regression gate (PL-3.3 / ADR D5 / M6)")
     ap.add_argument("--pose", action="append", help="pose id; repeatable (default: all five)")
     ap.add_argument("--size", action="append", choices=sorted(SIZES), help="viewport; repeatable (default: both)")
@@ -937,12 +977,26 @@ def main():
     ap.add_argument("--live", action="store_true",
                     help="use the pre-freeze scrub path (?pose=) instead of the ?capture= freeze; "
                          "--check --live stays advisory (unfrozen scene, ~1-3 MAE noise by construction)")
+    ap.add_argument("--origin", default=None,
+                    help="scheme://host:port the shutter dials (default: $CHECK_ORIGIN, "
+                         "else %s). tools/check.sh's preflight reads the same variable, so "
+                         "the tree it verifies and the tree this shoots are the same one."
+                         % DEFAULT_ORIGIN)
     ap.add_argument("--note", default=None, help="reason recorded in manifest.json (goldens run only)")
+    ap.add_argument("--merge-manifest", action="store_true", dest="merge_manifest",
+                    help="shooting a SUBSET of poses/sizes: update only those rows of "
+                         "manifest.json and carry the rest over from the manifest already "
+                         "in --out, instead of replacing the file with this run's rows "
+                         "alone. Records which rows were shot and which were carried over.")
     ap.add_argument("--out", default=OUT_DIR, help="output directory")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
     DPR = args.dpr
+    # Resolved before any print, urlopen or Chrome launch, so every line this
+    # run emits — the `source :` header and manifest.json's `source` field
+    # included — names the origin actually dialled.
+    BASE_URL = base_url_for(resolve_origin(args.origin))
     out_dir = args.out
     settle = args.settle if args.settle is not None else (SETTLE_S_LIVE if args.live else SETTLE_S_FROZEN)
     fail_mae = FAIL_MAE_LIVE if args.live else FAIL_MAE_FROZEN
@@ -954,6 +1008,8 @@ def main():
         sys.exit("no matching pose; known: %s" % ", ".join(p["id"] for p in POSES))
     if args.check_out and not args.check:
         sys.exit("--check-out only applies together with --check")
+    if args.merge_manifest and args.check:
+        sys.exit("--merge-manifest only applies to a goldens run; --check writes no manifest")
 
     # Validate an explicit override before any network/Chrome work. The
     # default scratch directory is created only after server readiness and is
@@ -1235,7 +1291,70 @@ def main():
             "src": "captures/" + r["file"], "w": r["w"], "h": r["h"],
             "bytes": r["bytes"], "mean": r["mean"], "poseConfirmed": r["ready"],
         }
-    with open(os.path.join(out_dir, "manifest.json"), "w") as f:
+    # ------------------------------------------------------------------
+    # SUBSET SHOOTS AND PROVENANCE. gate-repair, 2026-09-02.
+    #
+    # The block above builds `manifest["poses"]` from THIS RUN'S results and
+    # nothing else. Written straight out, that is correct for a full shoot and
+    # DESTRUCTIVE for a subset: `--pose inspire` used to replace a ten-row
+    # manifest with a one-row manifest, silently deleting the other nine
+    # goldens' recorded sizes, byte counts, means and pose-confirmed flags
+    # while leaving their PNGs on disk. The provenance and the pixels then
+    # disagreed, and nothing said so.
+    #
+    # --merge-manifest carries the unshot rows over instead. It does NOT
+    # pretend this run produced them: the top-level fields (generated, commit,
+    # environment, reason, source) still describe THIS run, and a `partial`
+    # block names exactly which rows are this run's and which were carried
+    # over, with the generated/commit of the manifest they came from. A reader
+    # who wants to know when `inspire@mobile` was actually shot has it.
+    #
+    # Without the flag the behaviour is byte-identical to before — including
+    # the destruction — but a subset shoot now SAYS so on stdout first.
+    # ------------------------------------------------------------------
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    shot_keys = sorted("%s@%s" % (r["pose"], r["size"]) for r in results)
+    if args.merge_manifest:
+        try:
+            with open(manifest_path) as f:
+                previous = json.load(f)
+        except (OSError, ValueError) as e:
+            sys.exit("--merge-manifest: cannot read the manifest to merge into "
+                     "(%s: %s)\n"
+                     "there is nothing to preserve — drop the flag for a first shoot."
+                     % (manifest_path, e))
+        carried = []
+        for pose_id, prev_entry in (previous.get("poses") or {}).items():
+            entry = manifest["poses"].setdefault(pose_id, {
+                "chapter": prev_entry.get("chapter"),
+                "label": prev_entry.get("label"),
+                "sizes": {},
+            })
+            for size_key, row in (prev_entry.get("sizes") or {}).items():
+                if size_key in entry["sizes"]:
+                    continue          # this run shot it; this run's row wins
+                entry["sizes"][size_key] = row
+                carried.append("%s@%s" % (pose_id, size_key))
+        manifest["poses"] = {k: manifest["poses"][k] for k in sorted(manifest["poses"])}
+        manifest["partial"] = {
+            "shot": shot_keys,
+            "carriedOver": sorted(carried),
+            "carriedOverFrom": {
+                "generated": previous.get("generated"),
+                "commit": previous.get("commit"),
+            },
+        }
+        print("  manifest : merged — %d row(s) shot, %d carried over from the previous manifest"
+              % (len(shot_keys), len(carried)))
+    else:
+        expected = len(POSES) * len(SIZES)
+        if len(results) < expected:
+            print("  ⚠ manifest : REPLACED with this run's %d row(s) — the other %d golden "
+                  "row(s) are being dropped from manifest.json (their PNGs stay on disk). "
+                  "Use --merge-manifest to keep them."
+                  % (len(results), expected - len(results)))
+
+    with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
         f.write("\n")
 

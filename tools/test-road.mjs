@@ -252,7 +252,7 @@ L.same('X2', 'D94 — the inverse table carries buildSpline\'s own S + 1 samples
   [1025, 1025]);
 L.same('X3', 'D94 — segLens is one allocation per SEGMENT, not per chapter',
   [SURVEY.shipped[900].segLens.length, SEGMENTS.length, CHAPTERS.length],
-  [9, 9, 5]);
+  [11, 11, 6]);
 L.same('X4', 'D94 — the sampled grids are populated, at the size the survey declares',
   [SURVEY.shipped[900].pxGrid.length, SURVEY.shipped[900].pGrid.length, SURVEY.shipped[900].lenGrid.length],
   [2049, 2049, 201]);
@@ -362,21 +362,31 @@ for (const h of HEIGHTS) {
   liveKxLast[h] = SURVEY.shipped[h].kx[SURVEY.shipped[h].kx.length - 1];
 }
 
-pin('B3', 'at h = 812 and h = 932 the SHIPPED pAt(total) is 0.9999999999999996 — the tidied form returns exactly 1',
+/* RE-MEASURED 2026-08-30, AND THE MEASUREMENT IS THE FINDING. B6 says what to
+   do when the two vh-space roots stop disagreeing: re-measure B3/B5, do not
+   delete them. What actually happened is subtler and the same instruction
+   applies. The roots STILL disagree — B6 below is red-capable and green — but
+   Equip's re-allocation changed the vh numbers, and at the new ones the
+   disagreement no longer EXPRESSES at any surveyed height: pAt(total) is
+   exactly 1 at all eight, including the two device heights this row was named
+   for. The trap is latent, not fixed. What still guards it is B1/B2, which
+   assert road.js's source does not perform the forbidden tidy at all; these
+   rows record the shipped numbers, and the shipped numbers moved. */
+pin('B3', 'at h = 812 and h = 932 — the two heights that used to diverge — pAt(total) is now exactly 1',
   (i) => DIVERGENT.map((h) => i[h]), livePAtTotal,
-  [0.9999999999999996, 0.9999999999999996],
-  'a 1 returned here means total was derived from segLens; see road.js\'s header');
+  [1, 1],
+  'a 0.9999999999999996 returned here means the vh-space ULP has started expressing again; see road.js\'s header');
 pin('B4', 'at the six non-divergent heights pAt(total) is exactly 1',
   (i) => HEIGHTS.filter((h) => !DIVERGENT.includes(h)).map((h) => i[h]), livePAtTotal,
   [1, 1, 1, 1, 1, 1]);
-pin('B5', 'total and kx[last] still disagree by exactly one ULP at the two device heights, and agree at the other six',
+pin('B5', 'total and kx[last] agree exactly at all eight heights under the current allocation',
   (i) => HEIGHTS.map((h) => i.kx[h] - i.total[h]), { kx: liveKxLast, total: liveTotal },
-  [7.275957614183426e-12, 7.275957614183426e-12, 0, 0, 0, 0, 0, 0],
-  'F03/DEF-04\'s 1e-9 guard in structure.js BOUNDS this at one ULP; it does not remove it');
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  'F03/DEF-04\'s 1e-9 guard in structure.js BOUNDS this at one ULP; it does not remove it, and B6 shows the root is still there');
 pin('B6', 'the height-independent root of the whole trap: sum(scrollVh) is not acc(segVh)',
   (i) => [i.chapterVh.reduce((a, b) => a + b, 0), i.segVh.reduce((a, b) => a + b, 0)],
   { chapterVh: CHAPTERS.map((c) => (c.scrollVh || 2)), segVh: SEGMENTS.map((x) => (x.vh || 2)) },
-  [40.919999999999995, 40.92],
+  [51.32, 51.32000000000001],
   'if these two ever agree exactly, the trap is gone and B3/B5 must be re-measured, not deleted');
 
 /* ------------------------------------------------------------------ *
@@ -434,8 +444,8 @@ const flatKnots = (() => {
   return n;
 })();
 
-L.same('W1', 'D75 — buildSpline\'s `shape` override branch IS entered: the route declares k on 3 of its 9 segments',
-  [kSegs, SEGMENTS.length], [3, 9]);
+L.same('W1', 'D75 — buildSpline\'s `shape` override branch IS entered: the route declares k on 3 of its 11 segments',
+  [kSegs, SEGMENTS.length], [3, 11]);
 L.same('W2', 'D75 — buildSpline\'s flat-knot branch (d[i-1]*d[i] <= 0 -> km[i] = 0) is NOT entered on the shipped route. Stated, not assumed: this route is strictly monotone increasing, so the branch is unreachable from route.js and no G check covers it',
   flatKnots, 0);
 L.same('W3', 'D75 — scrollFor\'s two saturation branches ARE entered: p <= invY[0] returns invX[0] and p >= invY[hi] returns invX[hi]',
@@ -443,10 +453,9 @@ L.same('W3', 'D75 — scrollFor\'s two saturation branches ARE entered: p <= inv
   [0, SURVEY.shipped[900].invX[1024]]);
 L.same('W4', 'D75 — scrollFor\'s empty-table branch IS entered: a road that has never been resized returns 0',
   createRoad().scrollFor(0.5), 0);
-/* Two of the nine segments are allocated the same vh, so a DISTINCT-VALUE
-   count answers 8 and would understate the coverage. Probe each segment's own
-   span instead and require its own allocation back — nine branch entries,
-   named individually. */
+/* Segments can share a vh, so a DISTINCT-VALUE count would understate the
+   coverage. Probe each segment's own span instead and require its own
+   allocation back — eleven branch entries, named individually. */
 const lengthProbe = (() => {
   const r = createRoad(); r.resize(900);
   const segLens = SURVEY.shipped[900].segLens;
@@ -457,8 +466,8 @@ const lengthProbe = (() => {
   }
   return hit;
 })();
-L.same('W5', 'D75 — lengthAtP\'s per-segment arm is entered for EVERY one of the nine segments (probed inside each span; a distinct-value count would answer 8, because two segments share a vh)',
-  [lengthProbe, SEGMENTS.length], [9, 9]);
+L.same('W5', 'D75 — lengthAtP\'s per-segment arm is entered for EVERY one of the eleven segments (probed inside each span; a distinct-value count would understate it wherever two segments share a vh)',
+  [lengthProbe, SEGMENTS.length], [11, 11]);
 L.same('W6', 'D75 — pAt\'s degenerate-span branch (h <= 0) is NOT entered: no segment on the shipped route is allocated zero px',
   s900.segLens.filter((x) => !(x > 0)).length, 0);
 
@@ -671,12 +680,17 @@ if (PROVE) {
         '    const lens = segLens;') })),
     M('B2', 'total is reduced out of segLens instead of lens', null,
       (i) => ({ ...i, road: mutateText(i.road, 'B2', 'total = lens.reduce((a, b) => a + b, 0);', 'total = segLens.reduce((a, b) => a + b, 0);') })),
-    M('B3', 'pAt(total) returns the tidied 1 at the two device heights', [0, 1],
-      (i) => ({ ...i, 812: 1, 932: 1 })),
+    /* B3/B5's mutants REVERSED DIRECTION with the 2026-08-30 re-measurement:
+       the shipped values are now the tidy-free 1 and 0, so a mutant that
+       produced them would be a no-op. Each one now introduces the divergence
+       the row is watching for, which is the same fault seen from the other
+       side. */
+    M('B3', 'pAt(total) starts diverging again at the two device heights', [0, 1],
+      (i) => ({ ...i, 812: 0.9999999999999996, 932: 0.9999999999999996 })),
     M('B4', 'a non-divergent height stops returning exactly 1', [0],
       (i) => ({ ...i, 900: 0.9999999999999996 })),
-    M('B5', 'the ULP gap closes — which is what the forbidden tidy DOES', [0, 1],
-      (i) => ({ ...i, kx: { ...i.kx, 812: i.total[812], 932: i.total[932] } })),
+    M('B5', 'a ULP gap opens between total and the last knot', [0, 1],
+      (i) => ({ ...i, kx: { ...i.kx, 812: i.total[812] + 7.275957614183426e-12, 932: i.total[932] + 7.275957614183426e-12 } })),
     M('B6', 'the two vh-space roots are made to agree, which is the trap ceasing to exist', [1],
       (i) => ({ ...i, segVh: [...i.chapterVh] })),
 

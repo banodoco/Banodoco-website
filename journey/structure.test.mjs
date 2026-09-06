@@ -19,55 +19,84 @@ import '../tools/fixtures/symbols.compat-fixture.mjs';
 import '../tools/fixtures/constants.compat-fixture.mjs';
 import '../tools/fixtures/aliases.compat-fixture.mjs';
 
+/* RE-RECORDED FOR EQUIP, 2026-08-30. Six chapters where there were five, and
+   every derived p from 0.14 to 0.38 renormalised with it — journey/structure.js
+   carries the decision and route.js's LEGACY table carries the p-by-p
+   statement. Read the four blocks below as one claim: Equip's 12 span units
+   came ENTIRELY out of Inspire's 24, so the boundary at 0.38 and everything
+   above it is bit-identical, and the only shipped rest that moved is Inspire's
+   (0.26 -> 0.20, bought for the copy bands). */
 assert.deepEqual(ROUTE, [
-  { id: 'mission', span: 14, nav: 'Intro', scrollVh: 3.5, stops: [0] },
-  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 6.7, segVh: [3.5, 3.2] },
-  { id: 'connect', span: 22, nav: 'Connect', scrollVh: 10.85, stops: [0.65], segVh: [8, 2.85], shape: { seg: 0, k: [1.1, 1] } },
+  { id: 'mission', span: 14, nav: 'Intro', scrollVh: 4.9, stops: [0] },
+  { id: 'inspire', span: 12, nav: 'Inspire', scrollVh: 4.7, segVh: [2.1, 2.6] },
+  { id: 'equip', span: 12, nav: 'Equip', scrollVh: 6, stops: [0.5], segVh: [2.6, 3.4] },
+  { id: 'connect', span: 22, nav: 'Connect', scrollVh: 15.85, stops: [0.65], segVh: [13, 2.85], shape: { seg: 0, k: [1.1, 1] } },
   { id: 'owned', span: 25, nav: 'Owned', scrollVh: 9.27, segVh: [2.27, 7], shape: { seg: 1, k: [1.6, 0.877] } },
   { id: 'final', span: 15, nav: null, scrollVh: 10.6, stops: [0.8], segVh: [10, 0.6], shape: { seg: 0, k: [1.305, 0.7] } },
 ]);
-assert.deepEqual(CHAPTER_IDS, ['mission', 'inspire', 'connect', 'owned', 'final']);
+assert.deepEqual(CHAPTER_IDS, ['mission', 'inspire', 'equip', 'connect', 'owned', 'final']);
 assert.deepEqual(CHAPTERS.map(({ start, end, stops }) => [start, end, ...stops]), [
-  [0, 0.14, 0], [0.14, 0.38, 0.26], [0.38, 0.6, 0.523],
+  [0, 0.14, 0], [0.14, 0.26, 0.2], [0.26, 0.38, 0.32], [0.38, 0.6, 0.523],
   [0.6, 0.85, 0.725], [0.85, 1, 0.97],
 ]);
-assert.deepEqual(REST_STOPS, [0, 0.26, 0.523, 0.725, 0.97]);
+assert.deepEqual(REST_STOPS, [0, 0.2, 0.32, 0.523, 0.725, 0.97]);
 assert.deepEqual(SEGMENTS.map(({ id, end, vh, k }) => [id, end, vh, k]), [
-  ['mission', 0.14, 3.5, null], ['inspire', 0.26, 3.5, null], ['inspire', 0.38, 3.2, null],
-  ['connect', 0.523, 8, [1.1, 1]], ['connect', 0.6, 2.85, null],
+  ['mission', 0.14, 4.9, null], ['inspire', 0.2, 2.1, null], ['inspire', 0.26, 2.6, null],
+  ['equip', 0.32, 2.6, null], ['equip', 0.38, 3.4, null],
+  ['connect', 0.523, 13, [1.1, 1]], ['connect', 0.6, 2.85, null],
   ['owned', 0.725, 2.27, null], ['owned', 0.85, 7, [1.6, 0.877]],
   ['final', 0.97, 10, [1.305, 0.7]], ['final', 1, 0.6, null],
 ]);
+/* THE GAP BETWEEN INSPIRE AND EQUIP IS THE POINT OF THESE TWO ROWS. Each band
+   carries a 0.020 fade skirt at both edges (COPY_FADE_P), so the footprints are
+   inspire [0.168, 0.278] and equip [0.288, 0.398]: they abut with 0.010 of dark
+   between them and never cross-fade. That is what Inspire's rest moving to 0.20
+   was spent on, and a later re-timing that closes this gap puts two copy blocks
+   on screen at once, at two different corners. */
 assert.deepEqual(COPY_BANDS, {
-  mission: { lo: -1, hi: 0.042 }, inspire: { lo: 0.248, hi: 0.338 },
+  mission: { lo: -1, hi: 0.042 }, inspire: { lo: 0.188, hi: 0.258 },
+  equip: { lo: 0.308, hi: 0.378 },
   connect: { lo: 0.509, hi: 0.5810000000000001 }, owned: { lo: 0.716, hi: 0.792 },
   final: { lo: 0.959, hi: 2 },
 });
-// 'equip' rides after the chapter-derived set: the navigator's one
-// non-chapter mark (a placeholder slot, owner's navigation restage
-// 2026-08-26). It is declared explicitly in symbols/data.js because the
-// schema map cannot reach a mark with no chapter behind it.
-assert.deepEqual(Object.keys(SYMBOLS), [...CHAPTER_IDS, 'menu', 'equip']);
+/* NOTHING RIDES ALONG ANY MORE. This used to read `[...CHAPTER_IDS, 'menu',
+   'equip']`, with a note that the navigator's one non-chapter mark had to be
+   declared explicitly in symbols/data.js because the schema map could never
+   reach a mark with no chapter behind it. Equip has a chapter now; the explicit
+   entry is gone and the mark arrives through the same derivation as every
+   other, which is why `menu` is the only trailing key left. */
+assert.deepEqual(Object.keys(SYMBOLS), [...CHAPTER_IDS, 'menu']);
 assert.deepEqual(JOURNEY_SCHEMA.chapters.filter((c) => c.hotspots.kind === 'fixed')
   .map((c) => [c.id, c.hotspots.ids]), [
   ['inspire', ['artcompute', 'arca', 'tworp']],
+  ['equip', ['quark', 'brotchen']],
   ['connect', ['ados', 'hivemind', 'discord']],
 ]);
 
+/* CHAPTER INDICES ARE LOOKED UP, NOT COUNTED (2026-08-30). Every perturbation
+   below used to address its subject positionally — `s.chapters[2]` for connect,
+   `s.chapters[3]` for owned. Inserting Equip shifted both, and the failure mode
+   is the bad one: `s.chapters[3].hotspots.cardinality = 15` still threw, still
+   matched /unsupported fixed cardinality/, and still went green — while
+   exercising CONNECT's fixed-cardinality arm instead of OWNED's dynamic one.
+   A perturbation suite that silently changes which arm it fires is worse than
+   one that reds. */
+const at = (id) => JOURNEY_SCHEMA.chapters.findIndex((c) => c.id === id);
 const clone = () => structuredClone(JOURNEY_SCHEMA);
 const rejects = (mutate, pattern) => {
   const candidate = clone(); mutate(candidate);
   assert.throws(() => validateJourneyStructure(candidate), pattern);
 };
-rejects((s) => { s.chapters[1].id = 'mission'; }, /duplicate chapter id/);
-rejects((s) => { s.chapters[2].hotspots.ids[1] = 'ados'; }, /duplicate node id/);
+rejects((s) => { s.chapters[at('inspire')].id = 'mission'; }, /duplicate chapter id/);
+rejects((s) => { s.chapters[at('equip')].hotspots.ids[1] = 'ados'; }, /duplicate node id/);
 rejects((s) => { s.aliases.nodes.community = 'missing'; }, /alias points nowhere/);
-rejects((s) => { s.chapters[3].hotspots.cardinality = 15; }, /unsupported fixed cardinality/);
-rejects((s) => { s.chapters[1].hotspots.ids.pop(); }, /unsupported fixed cardinality/);
+rejects((s) => { s.chapters[at('owned')].hotspots.cardinality = 15; }, /unsupported fixed cardinality/);
+rejects((s) => { s.chapters[at('inspire')].hotspots.ids.pop(); }, /unsupported fixed cardinality/);
 assert.throws(() => validateJourneyStructure(JOURNEY_SCHEMA, { builders: {} }), /missing builder reference/);
 assert.throws(() => validateJourneyStructure(JOURNEY_SCHEMA, { symbols: {} }), /missing symbol reference/);
 const runtimeNodes = {
-  inspire: ['artcompute', 'arca', 'tworp'], connect: ['ados', 'hivemind', 'discord'],
+  inspire: ['artcompute', 'arca', 'tworp'], equip: ['quark', 'brotchen'],
+  connect: ['ados', 'hivemind', 'discord'],
   owned: Array.from({ length: 16 }, (_, i) => `contributor-${i}`),
 };
 assert.equal(validateJourneyStructure(JOURNEY_SCHEMA, { nodes: runtimeNodes }), true);
@@ -83,14 +112,14 @@ assert.throws(() => validateJourneyStructure(badPattern, { nodes: runtimeNodes }
 // loudly, naming the offending field. A validator that cannot reject these
 // is not a validator.
 // ---------------------------------------------------------------------
-rejects((s) => { s.chapters[2].segVh.pop(); }, /segVh\/stops count mismatch for connect/); // missing stop's sub-segment
-rejects((s) => { s.chapters[1].copyBand.lo = 0.2; }, /non-monotonic copyBand for inspire/); // non-monotonic band
-rejects((s) => { s.chapters[1].segVh[0] = 99; }, /segVh does not sum to scrollVh for inspire/); // total that doesn't sum
-rejects((s) => { s.chapters[0].span = '14'; }, /invalid span for mission/); // wrong type
-rejects((s) => { s.chapters[1].runtime = 'true'; }, /invalid runtime flag for inspire/); // wrong type
-rejects((s) => { s.chapters[2].stops[0] = 1.2; }, /invalid stop for connect/); // stop out of [0,1)
-rejects((s) => { delete s.chapters[0].copyPosition; }, /missing required field 'copyPosition' for mission/); // gap
-rejects((s) => { s.chapters[2].shape.seg = 5; }, /invalid shape\.seg for connect/); // out-of-range sub-segment index
+rejects((s) => { s.chapters[at('connect')].segVh.pop(); }, /segVh\/stops count mismatch for connect/); // missing stop's sub-segment
+rejects((s) => { s.chapters[at('inspire')].copyBand.lo = 0.2; }, /non-monotonic copyBand for inspire/); // non-monotonic band
+rejects((s) => { s.chapters[at('inspire')].segVh[0] = 99; }, /segVh does not sum to scrollVh for inspire/); // total that doesn't sum
+rejects((s) => { s.chapters[at('mission')].span = '14'; }, /invalid span for mission/); // wrong type
+rejects((s) => { s.chapters[at('inspire')].runtime = 'true'; }, /invalid runtime flag for inspire/); // wrong type
+rejects((s) => { s.chapters[at('connect')].stops[0] = 1.2; }, /invalid stop for connect/); // stop out of [0,1)
+rejects((s) => { delete s.chapters[at('mission')].copyPosition; }, /missing required field 'copyPosition' for mission/); // gap
+rejects((s) => { s.chapters[at('connect')].shape.seg = 5; }, /invalid shape\.seg for connect/); // out-of-range sub-segment index
 /* copySurface (order U04). Driven, not allowlisted: these four rejections
    arrived with the field, and `tools/test-coverage-floor.mjs` would otherwise
    have banked them as four new rows of recorded debt. A validator whose arms
@@ -99,11 +128,11 @@ rejects((s) => { s.chapters[2].shape.seg = 5; }, /invalid shape\.seg for connect
    `flightLead` are checked by MEMBERSHIP rather than by type, so the typo case
    — the one that would silently route a chapter to the wrong painter — is the
    case actually covered. */
-rejects((s) => { delete s.chapters[0].copySurface; }, /missing required field 'copySurface' for mission/); // gap
-rejects((s) => { s.chapters[0].copySurface = 'hero'; }, /invalid copySurface for mission/); // not an object
-rejects((s) => { s.chapters[1].copySurface.host = 'blocks'; }, /invalid copySurface\.host for inspire/); // plausible typo
-rejects((s) => { s.chapters[1].copySurface.deferred = 'no'; }, /invalid copySurface\.deferred for inspire/); // wrong type
-rejects((s) => { s.chapters[2].copySurface.flightLead = 'standard '; }, /invalid copySurface\.flightLead for connect/); // trailing space
+rejects((s) => { delete s.chapters[at('mission')].copySurface; }, /missing required field 'copySurface' for mission/); // gap
+rejects((s) => { s.chapters[at('mission')].copySurface = 'hero'; }, /invalid copySurface for mission/); // not an object
+rejects((s) => { s.chapters[at('inspire')].copySurface.host = 'blocks'; }, /invalid copySurface\.host for inspire/); // plausible typo
+rejects((s) => { s.chapters[at('inspire')].copySurface.deferred = 'no'; }, /invalid copySurface\.deferred for inspire/); // wrong type
+rejects((s) => { s.chapters[at('connect')].copySurface.flightLead = 'standard '; }, /invalid copySurface\.flightLead for connect/); // trailing space
 rejects((s) => { s.chapters = []; }, /schema\.chapters must be a non-empty array/); // empty manifest
 rejects((s) => { s.menuSymbol = ''; }, /invalid menuSymbol/); // empty required string
 

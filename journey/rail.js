@@ -269,9 +269,12 @@ const RAIL_RESTS = CHAPTERS.map(c => restProgress(c.id));
    consumers share one object) rather than being CHAPTERS in manifest order.
    Two divergences exist, both authored:
 
-     · `equip` is an item with NO chapter — a placeholder whose whole
-       behaviour is its answer ("Coming soon"). It is not a link, it never
-       reads active, and it is absent from the site-map panel.
+     · a PLACEHOLDER is an item with NO chapter — its whole behaviour is its
+       answer ("Coming soon"). It is not a link, it never reads active, and it
+       is absent from the site-map panel. `equip` was the one shipped example
+       and stopped being one on 2026-08-30; the branch stays because the row
+       is still not the chapter list and content/content.js can still declare
+       one.
      · `owned` is a chapter with NO item — reached from the Epilogue's
        Ownership action and from the panel. While the visitor rides through
        it, the ring travels the Connect->Epilogue connector and NO item
@@ -725,9 +728,14 @@ export function createRail({ onNav } = {}) {
      absorbed, and Purpose remains full-size as the way back. The duplicate
      parent retained below is permanently hidden for DOM compatibility.
 
-     Manifesto deliberately reuses Equip's exact unavailable-item contract:
-     a non-link span, not in the tab order, whose label swaps to Soon on hover
-     and whose touch answer is the same timed `.j-rail-note` state. */
+     Manifesto is the site's one UNAVAILABLE ITEM, and it is now the only
+     one: a non-link span, not in the tab order, whose label swaps to Soon on
+     hover and whose touch answer is the same timed `.j-rail-note` state. The
+     contract was written for Equip and Manifesto adopted it; Equip became a
+     chapter on 2026-08-30 and Manifesto kept it, unchanged. Nothing here is
+     shared CODE with the row's placeholder branch — the classes and the
+     1600 ms answer are duplicated deliberately, which is why promoting Equip
+     could not reach this. */
   const purposeTree = el('div', 'j-rail-purpose-tree');
   purposeTree.setAttribute('role', 'group');
   purposeTree.setAttribute('aria-label', 'Purpose sections');
@@ -783,7 +791,8 @@ export function createRail({ onNav } = {}) {
   manifestoItem.setAttribute('aria-label', 'Manifesto, Soon');
   const manifestoMark = el('span', 'j-rail-mark');
   // The whole-specimen mark is appropriate here: the manifesto describes
-  // the purpose as a whole, while its unavailable semantics remain Equip's.
+  // the purpose as a whole, and its unavailable semantics are the ones stated
+  // at the block above.
   manifestoMark.appendChild(buildSymbol('mission'));
   manifestoMark.appendChild(reticle());
   manifestoItem.appendChild(manifestoMark);
@@ -945,26 +954,31 @@ export function createRail({ onNav } = {}) {
       thesis: 'We’re working to help the open-source AI art ecosystem thrive',
     },
     {
-      id: 'inspire', route: 'inspire', symbol: 'inspire', number: 1, heading: 'By inspiring:',
+      id: 'inspire', route: 'inspire', symbol: 'inspire', number: 1, heading: 'Inspiring',
       items: itemsFor('inspire'),
     },
     {
-      id: 'equip', symbol: 'equip', number: 2, heading: 'By equipping:',
+      id: 'equip', route: 'equip', symbol: 'equip', number: 2, heading: 'Equipping',
+      /* The two Equipping rows are TEASERS: named, described, and concealed
+         behind the same blur their chips wear. They carried a `badge: 'Soon'`
+         until the owner removed the word from every visible Equip label
+         (2026-09-01); what states the third state here is the concealment and
+         the row's inertness, not a pill. `teaser` is what remains of it. */
       items: [
         {
           id: 'equip-teaser-one', label: 'Quark',
           short: 'Creative tools for everyone',
-          symbol: 'equip', badge: 'Soon', teaser: true,
+          symbol: 'equip', teaser: true,
         },
         {
           id: 'equip-teaser-two', label: 'Brötchen',
           short: 'Shared workflows for agents',
-          symbol: 'connect', badge: 'Soon', teaser: true,
+          symbol: 'connect', teaser: true,
         },
       ],
     },
     {
-      id: 'connect', route: 'connect', symbol: 'connect', number: 3, heading: 'By connecting:',
+      id: 'connect', route: 'connect', symbol: 'connect', number: 3, heading: 'Connecting',
       items: itemsFor('connect'),
     },
     {
@@ -1011,6 +1025,79 @@ export function createRail({ onNav } = {}) {
     }
     li.appendChild(a);
 
+    /* WHO / WHAT / WHY (2026-08-30 polish §3B.1; restaged 2026-08-31 on
+       the owner's direction: the three controls sit SIDE BY SIDE on one
+       line, never stacked, with the chosen answer in a single shared
+       region below that line). The trio is a tablist whose tabs also
+       toggle: all closed at rest, choosing one closes the others, and
+       choosing the open one closes it again — so the line of controls
+       itself never moves; only what follows the answer region reflows,
+       and the CSS eases that. Copy still lives in content/content.js
+       (`site.primer`, flagged there as pending Peter's editorial
+       sign-off) so a wording swap never touches this file. Each control
+       carries aria-selected for the tablist grammar plus aria-expanded
+       for the toggle truth; all three stay in the page tab order AND
+       answer Left/Right/Home/End (focus only — opening stays a
+       deliberate Enter/Space/click); a closed answer is aria-hidden so
+       what a screen reader walks matches what the eye can reach. */
+    if (section.id === 'mission' && Array.isArray(CONTENT.site.primer)) {
+      const primer = el('div', 'j-menu-primer');
+      const tabrow = el('div', 'j-menu-primer-tabs');
+      tabrow.setAttribute('role', 'tablist');
+      tabrow.setAttribute('aria-label', 'About Banodoco');
+      const panes = el('div', 'j-menu-primer-panes');
+      const tabs = [];
+      for (const item of CONTENT.site.primer) {
+        const btn = el('button', 'j-menu-primer-t');
+        btn.type = 'button';
+        btn.id = `j-primer-t-${item.id}`;
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', 'false');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-controls', `j-primer-d-${item.id}`);
+        btn.appendChild(el('span', 'j-menu-primer-l', item.label));
+        const mark = el('span', 'j-menu-primer-c', '+');
+        mark.setAttribute('aria-hidden', 'true');
+        btn.appendChild(mark);
+        tabrow.appendChild(btn);
+        const drawer = el('div', 'j-menu-primer-d');
+        drawer.id = `j-primer-d-${item.id}`;
+        drawer.setAttribute('role', 'tabpanel');
+        drawer.setAttribute('aria-labelledby', btn.id);
+        drawer.setAttribute('aria-hidden', 'true');
+        const clip = el('div', 'j-menu-primer-di');
+        clip.appendChild(el('p', 'j-menu-primer-p', item.body));
+        drawer.appendChild(clip);
+        panes.appendChild(drawer);
+        tabs.push({ btn, drawer });
+        itemsOwner.listen(btn, 'click', () => {
+          const wasOpen = btn.getAttribute('aria-expanded') === 'true';
+          for (const t of tabs) {
+            const on = !wasOpen && t.btn === btn;
+            t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+            t.drawer.setAttribute('aria-hidden', on ? 'false' : 'true');
+            t.drawer.classList.toggle('open', on);
+          }
+        });
+      }
+      itemsOwner.listen(tabrow, 'keydown', (e) => {
+        const at = tabs.findIndex((t) => t.btn === document.activeElement);
+        if (at < 0) return;
+        let to = -1;
+        if (e.key === 'ArrowRight') to = (at + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') to = (at + tabs.length - 1) % tabs.length;
+        else if (e.key === 'Home') to = 0;
+        else if (e.key === 'End') to = tabs.length - 1;
+        if (to < 0) return;
+        e.preventDefault();
+        tabs[to].btn.focus();
+      });
+      primer.appendChild(tabrow);
+      primer.appendChild(panes);
+      li.appendChild(primer);
+    }
+
     const items = section.items || [];
     if (items.length) {
       const sub = el('ul', 'j-menu-sub');
@@ -1053,17 +1140,20 @@ export function createRail({ onNav } = {}) {
           row.appendChild(link);
         } else {
           const surface = el('span', 'j-menu-row-link');
-          if (it.teaser) {
-            surface.classList.add('j-menu-teaser');
-            surface.setAttribute('aria-label', 'Coming soon');
-          }
+          /* A TEASER ROW IS CONCEALED, NOT RENAMED (2026-09-01, the owner:
+             "remove 'Soon' from the visible Equip labels"). It used to take
+             `aria-label="Coming soon"` with its own name and line hidden from
+             AT — the blur is a statement to a sighted visitor and would be a
+             garbled one read aloud, so the row said the state instead of the
+             name. With the word gone there is nothing left for that override
+             to say, and keeping it would have kept the word for exactly the
+             visitors who cannot see the blur. So the row now reads its own
+             name and line, as the chip does, and the blur is the whole of the
+             concealment. */
+          if (it.teaser) surface.classList.add('j-menu-teaser');
           if (label) surface.appendChild(label);
           const short = it.short ? el('span', 'j-menu-is', it.short) : null;
           if (short) surface.appendChild(short);
-          if (it.teaser) {
-            if (label) label.setAttribute('aria-hidden', 'true');
-            if (short) short.setAttribute('aria-hidden', 'true');
-          }
           if (it.badge) {
             const badge = el('span', 'j-menu-badge', it.badge);
             surface.appendChild(badge);
@@ -1438,6 +1528,16 @@ export function createRail({ onNav } = {}) {
     // table, so the journey cannot be scrubbed out from under the reader.
     // (journey/scroll.js, INPUT OWNERSHIP.)
     claimInput(menu, { modal: true });
+    // AND THE SCRIM, which is the other half of the same modal surface. It is
+    // a sibling div, not a descendant (see its construction above), and
+    // ownership is ancestor containment (journey/ownership.js ownerOf) — so a
+    // wheel or a drag on the visible backdrop resolved to NO owner and scrubbed
+    // the journey behind the open panel. The keys were already safe, because
+    // onKey asks modalLive() rather than ownerOf(); this is the pointer half of
+    // the same guarantee, and it is a claim rather than a modal-wide bail in
+    // transport so that the detail card's "first scroll intent closes it" rule
+    // (GB-3.6), which is also a modal owner, keeps working.
+    claimInput(scrim, { modal: true });
     // The rail is behind the panel and belongs to nobody while it is open.
     root.inert = true;
     collapse();
@@ -1453,6 +1553,7 @@ export function createRail({ onNav } = {}) {
     menu.classList.remove('open');
     scrim.classList.remove('open');
     releaseInput(menu);
+    releaseInput(scrim);
     menuBtn.setAttribute('aria-expanded', 'false');
     // inert BEFORE the focus return: a fading panel is out of the tab order
     // and out of the a11y tree from the first frame of the fade.
@@ -1608,9 +1709,22 @@ export function createRail({ onNav } = {}) {
   let dockingFlight = null;
   let dockingFlightFrom = 0;
   let dockingFlightTarget = 0;
+  // The row coordinate a flight departs from — captured off the painted value
+  // when the ticket changes, exactly as dockingFlightFrom is. See update().
+  let flightFromPosition = 0;
+  // ...and the compass's painted presence, captured at the same moment for
+  // the same reason. `ringPresence` is what paintHorizontalProgress last put
+  // on screen; `flightFromRing` is what the current flight departed from.
+  let ringPresence = 1;
+  let flightFromRing = 1;
   let handoffFlight = null;
   let handoffFrom = railHandoffRest('mission');
   let handoffVisual = railHandoffRest('mission');
+  // The navigation's own hero->persistent pose. Painted every frame, captured
+  // when a ticket changes — see paintPurposeHandoff for why it is not the
+  // tree's coordinate and why it still has to depart from the tree's pixel.
+  let navPoseVisual = railHandoffRest('mission').tree;
+  let navPoseFrom = navPoseVisual;
 
   /* THE CROSSING, GIVEN AN OWNER — and only this one crossing (DEFECT-01 #2).
      The centred row no longer writes ANY inline geometry (the DOCK_INLINE
@@ -1912,6 +2026,22 @@ export function createRail({ onNav } = {}) {
     return RAIL_RESTS.length - 1;
   }
 
+  /** ...and back again, off the same table. The row's own coordinate is the
+   *  continuous chapter index — it is what the ring rides, what the glyph
+   *  proximity reads and what the connectors fill against — but four readers
+   *  in update() below are authored in `p` (`chapterAt`, the layout flag, the
+   *  handoff state). Exact at every rest by construction, so a landing and a
+   *  placement are bit-identical to reading `p` directly; only the pacing
+   *  BETWEEN two rests differs, and between two rests the row's index is the
+   *  coordinate the visitor is actually watching. */
+  function restAtIndex(pos) {
+    const last = RAIL_RESTS.length - 1;
+    if (!(pos > 0)) return RAIL_RESTS[0];
+    if (pos >= last) return RAIL_RESTS[last];
+    const i = Math.floor(pos);
+    return RAIL_RESTS[i] + (RAIL_RESTS[i + 1] - RAIL_RESTS[i]) * (pos - i);
+  }
+
   /* ---- THE ROW'S PIXEL FRAME --------------------------------------------
      The retired strip was uniform — five 48px slots, one gap — so "chapter
      coordinate x step" was its whole geometry. The centred row is not: two
@@ -1926,8 +2056,10 @@ export function createRail({ onNav } = {}) {
          its index fraction, so the ring rides the Connect->Epilogue
          connector while the visitor rides the Owned leg;
        · the continuous chapter coordinate maps to px piecewise-linearly
-         between those anchors, so the ring crosses Equip's circle on the
-         Inspire->Connect leg without ever resting on it.
+         between those anchors. Until 2026-08-30 Equip's circle was one the
+         ring crossed on the Inspire->Connect leg without ever resting on it;
+         Equip is a chapter now and has its own anchor, and the interpolation
+         above exists for `owned`, which still has no row item at all.
 
      The same numbers are republished as custom properties on the root, so
      the stylesheet lays the circles out in exactly the frame JS paints in
@@ -2014,7 +2146,7 @@ export function createRail({ onNav } = {}) {
   /** Paint the row directly from real journey progress.
    *  No transition or timer sits between input and output: reverse scrolling
    *  reverses immediately, and a stopped scrub leaves every pixel frozen. */
-  function paintHorizontalProgress(pos, wrap = null) {
+  function paintHorizontalProgress(pos, wrap = null, ringFrom = 1, ringPhase = 1) {
     const frame = rowFrame();
     const { L } = frame;
     const phase = wrap
@@ -2025,7 +2157,14 @@ export function createRail({ onNav } = {}) {
       : Math.max(0, Math.min(N - 1, Number(pos) || 0));
     const at = rowPoint(frame, horizontalPosition);
     let ringX = at.x;
-    let ringOpacity = 1;
+    /* The compass's own presence departs from what is painted too, on the same
+       flight phase as its position. A lap hides the ring outright while it
+       crosses the row's toroidal seam (below), so an interruption taken inside
+       that window used to hand the ordinary branch a flat 1 and the compass
+       arrived out of nowhere at 0.65 alpha — measured on the same
+       Mission -> Purpose lap the position note in update() describes. With no
+       lap in the history ringFrom is 1 and this is the constant it was. */
+    let ringOpacity = ringFrom + (1 - ringFrom) * Math.max(0, Math.min(1, ringPhase));
     if (wrap) {
       /* The row has a toroidal seam just beyond its two ends. A forward
          Final -> Mission wrap exits to the RIGHT, resets while one
@@ -2072,6 +2211,7 @@ export function createRail({ onNav } = {}) {
        coordinate the scale, the drop and the scrim ride. dockingU is last
        frame's value when the paint runs first in a frame; both are
        continuous in p, so the seam is invisible. */
+    ringPresence = ringOpacity;
     activeRing.style.opacity = (ringOpacity * dockingU).toFixed(6);
     root.style.setProperty('--nav-position', horizontalPosition.toFixed(4));
     root.classList.toggle('j-rail-wrap-progress', !!wrap);
@@ -2096,9 +2236,12 @@ export function createRail({ onNav } = {}) {
           past = entry.ci < horizontalPosition - 0.001;
         }
       }
-      // The placeholder keeps proximity 0 by construction: it can be
-      // CROSSED (the ring rides over its circle mid-leg) but never lit —
-      // gold is the journey's own colour and Equip has no journey yet.
+      // A PLACEHOLDER keeps proximity 0 by construction: it can be CROSSED
+      // (the ring rides over its circle mid-leg) but never lit — gold is the
+      // journey's own colour and a placeholder has no journey. Equip was the
+      // shipped example until 2026-08-30; it carries a `ci` now and takes the
+      // ordinary path above, which is the whole of what promoting it cost
+      // this function.
       const base = past ? GLYPH_COLOURS.past : GLYPH_COLOURS.future;
       const target = GLYPH_COLOURS.active;
       const rgb = base.rgb.map((channel, channelIndex) =>
@@ -2119,7 +2262,8 @@ export function createRail({ onNav } = {}) {
       if (i < ROW_N - 1) {
         // The connector runs between THIS circle's edge and the next one's.
         // Its bright fill follows the ring's own pixel, so completion is
-        // continuous across Equip and across the itemless Owned leg alike.
+        // continuous across a placeholder and across the itemless Owned leg
+        // alike.
         // The same responsive optical air used by every visible connector.
         const a = L.centres[i] + L.ringDia[i] / 2 + L.connectorAir;
         const b = L.centres[i + 1] - L.ringDia[i + 1] / 2 - L.connectorAir;
@@ -2187,6 +2331,7 @@ export function createRail({ onNav } = {}) {
       if (handoffFlight !== ticket) {
         handoffFlight = ticket;
         handoffFrom = { ...handoffVisual };
+        navPoseFrom = navPoseVisual;
       }
       handoffVisual = wrap
         ? railHandoffWrapVisual({
@@ -2205,9 +2350,31 @@ export function createRail({ onNav } = {}) {
     }
 
     const treeU = Math.max(0, Math.min(1, handoffVisual.tree));
-    const navPoseU = wrap
+    /* THE NAVIGATION'S POSE IS CARRIED ACROSS A TICKET CHANGE, LIKE EVERY
+       OTHER PAINTED VALUE HERE (2026-08-30). It is deliberately not the tree's
+       coordinate: a lap breathes the row from its hero pose to its persistent
+       one over the WHOLE orbit, while Purpose's subtree is a late endpoint
+       reveal (railWrapNavigationProgress says so). But those are two different
+       curves, and until this the row simply changed which one it was reading
+       the instant the ticket changed type. A press on Connect 2.2s into a
+       Mission -> Purpose lap read 0.53 from the lap's curve on one frame and
+       0.00 from the tree's on the next: --purpose-rail-lift is that number
+       times L.purposeLift, so the whole row dropped in a single frame,
+       measured 38.7px at 1440x900, in the middle of answering a click.
+       Departing from the value already painted is the same rule handoffFrom,
+       dockingFlightFrom and flightFromPosition all keep, and it costs nothing
+       anywhere else: with no lap in the history navPoseFrom IS handoffFrom's
+       tree, so the expression below is the one that was here. */
+    navPoseVisual = wrap
       ? railWrapNavigationProgress({ targetChapterId: selectedChapterId, phase: wrap.phase })
-      : treeU;
+      : flight
+        ? railHandoffVisual({
+          from: { tree: navPoseFrom, ownership: 0 },
+          targetChapterId: chapterAt(flight.targetP).id,
+          phase: flight.phase,
+        }).tree
+        : treeU;
+    const navPoseU = navPoseVisual;
     const ownershipU = Math.max(0, Math.min(1, handoffVisual.ownership));
     const { L, purposeX } = rowFrame();
     /* The children are a viewport-centred pair, not a cluster hanging from
@@ -2450,23 +2617,53 @@ export function createRail({ onNav } = {}) {
       paintHorizontalProgress(0, horizontalWrap);
     } else {
       horizontalWrap = null;
+      let position;
+      let ringEase = null;
       if (railFlight) {
         horizontalFlight = railFlight;
         if (dockingFlight !== railFlight) {
           dockingFlight = railFlight;
           dockingFlightFrom = dockingU;
           dockingFlightTarget = railFlight.targetP < FIRST_OUTSIDE_P ? 0 : 1;
+          /* ...AND THE ROW'S OWN COORDINATE DEPARTS FROM THE PIXEL ON SCREEN
+             TOO (2026-08-30). The dock captured the value already painted
+             three lines up and the row did not, so the row took its origin
+             from the ticket — and a ticket's `fromP` is journey STATE, which
+             an interrupted move has already parked at the move it interrupted.
+             Ordinary click over ordinary click survived that, because
+             journey.js hands the replacement its predecessor's interpolated
+             coordinate. A click over a WRAP does not: the lap carries no
+             railFlight for that code to read, so `fromP` arrives as the wrap's
+             own destination. Measured on a Mission -> Purpose lap interrupted
+             at 2.2s by a press on Connect: the row was painting index 1.53
+             with the ring parked off the left edge at the seam, and the click
+             frame put it at index 4.00, x = 336px, opacity 0.38 — the compass
+             appeared at the far RIGHT end of the row and then walked back to
+             Connect, having been asked to go left. Capturing what is painted
+             answers every ticket source with one rule and needs no second
+             conversion: at a rest it is the same number `fromP` would have
+             given, and mid-move it is the one the visitor is looking at. */
+          flightFromPosition = horizontalPosition;
+          flightFromRing = ringPresence;
         }
         const phase = Math.max(0, Math.min(1, Number(railFlight.phase) || 0));
-        railP = railFlight.fromP
-          + (railFlight.targetP - railFlight.fromP) * phase;
+        position = flightFromPosition
+          + (progressIndex(railFlight.targetP) - flightFromPosition) * phase;
+        ringEase = { from: flightFromRing, phase };
+        /* One coordinate, and the p-authored readers below take it back
+           through the same table (restAtIndex). Keeping a separately
+           interpolated `railP` beside the painted index is how the ring and
+           the `now`/`active` marks come to disagree about which chapter the
+           picture is in. */
+        railP = restAtIndex(position);
       } else {
         horizontalFlight = null;
         dockingFlight = null;
+        position = progressIndex(railP);
       }
-      const position = progressIndex(railP);
       dockingProgress = Math.min(1, position);
-      paintHorizontalProgress(position);
+      paintHorizontalProgress(position, null,
+        ringEase ? ringEase.from : 1, ringEase ? ringEase.phase : 1);
     }
     /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
 

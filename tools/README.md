@@ -197,4 +197,6 @@ do not retain avoidable slack.
 ## Shipping
 
 `DEPLOY.md` — the tree deploys as-is. It lists what MUST ship, what MUST NOT,
-and the one deploy-time substitution (`sitemap.xml` ORIGIN).
+and the deploy-time `ORIGIN` substitution, restricted to five declared files
+(`sitemap.xml`, `index.html`, `static/index.html`, `ownership/index.html`,
+`404.html`) — everything else selected ships byte-identical to source.

@@ -24,6 +24,23 @@ globalThis.window = {
 };
 
 const { createScrollModel, claimInput, releaseInput } = await import('../journey/scroll.js');
+const { restProgress, transitSeconds } = await import('../journey/route.js');
+
+/* THE REST ANCHORS ARE LOOKED UP, NOT WRITTEN DOWN (2026-08-30).
+   Every case below is about a PROPERTY of the input model — one gesture buys
+   one section, a repeat mid-flight is spent at the landing, a momentum tail
+   buys nothing — and it expresses that property by naming the p the ride ends
+   at. Those p-values were literals (0.26, 0.523) until Equip was inserted
+   between Inspire and Connect, at which point every one of them named a
+   different place than the sentence beside it claimed: 0.26 stopped being
+   Inspire's rest, and 0.523 stopped being "the section after Inspire". Reading
+   them off route.js keeps the assertions pointed at the sections the case names
+   through any later re-timing, which is the only thing these cases were ever
+   about. */
+const REST_1 = restProgress('inspire');       // the first rest after the hero
+const REST_2 = restProgress('equip');         // the section after it
+const REST_CONNECT = restProgress('connect');
+const REST_OWNED = restProgress('owned');
 const scroll = createScrollModel();
 scroll.attach();
 scroll.enabled = true;
@@ -140,7 +157,7 @@ results.push({ name: 'Connect road has no stall-then-roll trough',
 // hitch into a synthetic fling. The 120 px aggregate arrived over 300 ms, so
 // its physical input rate is 400 px/s; on this road that is < 0.01 p/s. The
 // old discounted 34 ms denominator reported ~3,500 px/s instead.
-reset(0.26);
+reset(REST_1);
 wheel(40);
 coalescedAfterStall(120);
 const stalledWheelPeak = scroll.gesturePeak;
@@ -174,7 +191,7 @@ results.push({ name: 'coalesced wheel after a frame stall keeps physical rate',
 // mid-flight, which is the condition the ruling turns on. The visitor's ask is
 // not lost, only deferred: the same repeat delivered AFTER the landing still
 // buys the next section in 176 ms, which the case below this one pins.
-reset(0.30);
+reset(REST_2 + 0.04);
 for (let i = 0; i < 8; i++) wheel(120);
 for (const delta of [96, 72, 48, 32, 20, 12]) wheel(delta);
 for (let i = 0; i < 80; i++) frame(16);
@@ -194,8 +211,8 @@ const repeatMidTarget = scroll.resolveTarget;
 settle();
 results.push({ name: 'second gesture cannot collapse an in-flight Connect floor',
   value: repeatTroughRatio,
-  pass: repeatMidTarget === 0.523 && repeatTroughRatio >= 0.70
-    && near(scroll.progress, 0.523),
+  pass: repeatMidTarget === REST_CONNECT && repeatTroughRatio >= 0.70
+    && near(scroll.progress, REST_CONNECT),
   trace: {
     preRate: +repeatPreRate.toFixed(5),
     minRate: +repeatMinRate.toFixed(5),
@@ -207,7 +224,7 @@ results.push({ name: 'second gesture cannot collapse an in-flight Connect floor'
 // green over a wall that refuses everything: the SAME repeat, delivered once
 // the ride has landed at Connect, must still buy Ownership. If a future edit answers the
 // owner's report by refusing second gestures generally, this reds.
-reset(0.30);
+reset(REST_2 + 0.04);
 for (let i = 0; i < 8; i++) wheel(120);
 for (const delta of [96, 72, 48, 32, 20, 12]) wheel(delta);
 settle(4000);
@@ -217,14 +234,14 @@ for (let i = 0; i < 8; i++) wheel(24);
 settle(6000);
 results.push({ name: 'the same repeat AFTER the landing still buys Ownership',
   value: scroll.progress,
-  pass: near(afterLandingFrom, 0.523) && near(scroll.progress, 0.725),
+  pass: near(afterLandingFrom, REST_CONNECT) && near(scroll.progress, REST_OWNED),
   trace: { landedAt: +afterLandingFrom.toFixed(5) } });
 
 reset();
 swipe();
 settle();
 results.push({ name: 'single swipe buys Inspire only', value: scroll.progress,
-  pass: near(scroll.progress, 0.26) });
+  pass: near(scroll.progress, REST_1) });
 
 reset();
 swipe({ moves: 1 });
@@ -232,7 +249,7 @@ const coalescedTrace = { streaming: scroll.streaming, peak: scroll.gesturePeak,
   target: scroll.resolveTarget, p: scroll.progress, surface: scroll.surface };
 settle();
 results.push({ name: 'single coalesced swipe buys Inspire only', value: scroll.progress,
-  pass: near(scroll.progress, 0.26), trace: coalescedTrace });
+  pass: near(scroll.progress, REST_1), trace: coalescedTrace });
 
 reset();
 swipe({ distance: 6, moves: 1 });
@@ -246,7 +263,7 @@ const activeBootConsumed = primeBootTouch({ latest: 650, duration: 16,
 continueTouch([500, 350, 220]);
 settle();
 results.push({ name: 'cold-boot touch continues without scroll-side touchstart',
-  value: scroll.progress, pass: activeBootConsumed && near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: activeBootConsumed && near(scroll.progress, REST_1) });
 
 reset();
 const endedBootConsumed = primeBootTouch({ duration: 120,
@@ -255,7 +272,7 @@ const endedBootTrace = { streaming: scroll.streaming, peak: scroll.gesturePeak,
   target: scroll.resolveTarget, p: scroll.progress, surface: scroll.surface };
 settle();
 results.push({ name: 'cold-boot coalesced touch ended before boot buys Inspire',
-  value: scroll.progress, pass: endedBootConsumed && near(scroll.progress, 0.26),
+  value: scroll.progress, pass: endedBootConsumed && near(scroll.progress, REST_1),
   trace: endedBootTrace });
 
 reset();
@@ -270,7 +287,7 @@ const longBootConsumed = primeBootTouch({ start: 900, latest: -700,
   duration: 120, bootDelay: 500, active: false });
 settle(10000);
 results.push({ name: 'one cold-boot touch contact cannot buy two sections',
-  value: scroll.progress, pass: longBootConsumed && near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: longBootConsumed && near(scroll.progress, REST_1) });
 
 /* THE RAPID-REPEAT FAMILY, RE-ANCHORED 2026-08-26 (owner report #26).
    0.523 -> 0.26 on all five: a second flick delivered 128 ms into a 2.9 s
@@ -303,7 +320,7 @@ for (let i = 0; i < 8; i++) frame();
 swipe();
 settle(10000);
 results.push({ name: 'rapid repeat mid-flight buys Inspire only', value: scroll.progress,
-  pass: near(scroll.progress, 0.26) });
+  pass: near(scroll.progress, REST_1) });
 
 for (const moves of [2, 3, 4]) {
   reset();
@@ -312,7 +329,7 @@ for (const moves of [2, 3, 4]) {
   swipe({ moves });
   settle(10000);
   results.push({ name: `rapid repeat mid-flight (${moves} delivered moves) buys Inspire only`,
-    value: scroll.progress, pass: near(scroll.progress, 0.26) });
+    value: scroll.progress, pass: near(scroll.progress, REST_1) });
 }
 
 reset();
@@ -321,7 +338,7 @@ for (let i = 0; i < 8; i++) frame();
 swipe({ moves: 1 });
 settle(10000);
 results.push({ name: 'rapid repeat mid-flight (one coalesced move each) buys Inspire only',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
 // THE DUAL'S GUARD ON THE TOUCH PATH. The same two flicks, the second one
 // delivered after the ride has landed, must still buy Connect — and must do so
@@ -336,9 +353,9 @@ const twoFlickLanded = scroll.progress;
 for (let i = 0; i < 19; i++) frame(16);
 swipe();
 settle(10000);
-results.push({ name: 'two flicks either side of the landing buy Connect',
+results.push({ name: 'two flicks either side of the landing buy the next section',
   value: scroll.progress,
-  pass: near(twoFlickLanded, 0.26) && near(scroll.progress, 0.523),
+  pass: near(twoFlickLanded, REST_1) && near(scroll.progress, REST_2),
   trace: { landedAt: +twoFlickLanded.toFixed(5) } });
 
 reset();
@@ -349,7 +366,7 @@ settle();
 results.push({ name: 'rapid reversal returns to Mission', value: scroll.progress,
   pass: near(scroll.progress, 0) });
 
-reset(0.26);
+reset(REST_1);
 const owner = { nodeType: 1, isConnected: true, contains: node => node === owner };
 claimInput(owner, { modal: true });
 fire('touchstart', [{ clientY: 780 }], owner);
@@ -359,7 +376,7 @@ frame(16);
 fire('touchend', [], owner);
 releaseInput(owner);
 results.push({ name: 'owned sheet drag never reaches journey', value: scroll.progress,
-  pass: near(scroll.progress, 0.26) });
+  pass: near(scroll.progress, REST_1) });
 
 reset();
 scroll.primeBootWheel(100);
@@ -368,7 +385,7 @@ for (const [delta, gap] of [[100, 16], [70, 16], [35, 300], [12, 16], [8, 16], [
 }
 settle(10000);
 results.push({ name: 'cold-boot delayed tail buys one section only',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
 /* THE GENUINE POST-BOOT REPEAT, RESTAGED 2026-08-26 (owner report #26).
    This case exists to prove the BOOT GUARD does not swallow a real second
@@ -395,9 +412,9 @@ const bootLanded = scroll.progress;
 for (let i = 0; i < 5; i++) frame(16);
 for (const delta of [20, 50, 110, 110, 110]) wheel(delta);
 settle(12000);
-results.push({ name: 'genuine post-boot repeat after the landing still buys Connect',
+results.push({ name: 'genuine post-boot repeat after the landing still buys the next section',
   value: scroll.progress,
-  pass: near(bootLanded, 0.26) && near(scroll.progress, 0.523),
+  pass: near(bootLanded, REST_1) && near(scroll.progress, REST_2),
   trace: { landedAt: +bootLanded.toFixed(5) } });
 
 reset();
@@ -407,7 +424,7 @@ for (let i = 0; i < 11; i++) frame(16);
 for (const delta of [20, 50, 110, 110, 110]) wheel(delta);
 settle(12000);
 results.push({ name: 'post-boot repeat delivered mid-flight buys Inspire only',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
 // A delivered momentum tail can straddle the shorter arrival-wall timeout
 // without crossing the longer gesture timeout. Once the first landing has
@@ -422,7 +439,7 @@ wheel(18);
 wheel(10);
 settle(10000);
 results.push({ name: 'delayed momentum tail holds at Inspire',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
 reset();
 for (let i = 0; i < 10; i++) wheel(120);
@@ -432,7 +449,7 @@ wheel(103, 12);
 for (const delta of [40, 30, 20, 10]) wheel(delta);
 settle(10000);
 results.push({ name: 'coalesced delayed tail holds at Inspire',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
 reset();
 for (let i = 0; i < 10; i++) wheel(120);
@@ -442,9 +459,9 @@ wheel(103, 12);
 for (const delta of [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]) wheel(delta);
 settle(10000);
 results.push({ name: 'long coalesced momentum tail holds at Inspire',
-  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+  value: scroll.progress, pass: near(scroll.progress, REST_1) });
 
-reset(0.26);
+reset(REST_1);
 for (let i = 0; i < 10; i++) wheel(120);
 for (let i = 0; i < 500 && scroll.answeredAt === null; i++) wheel(18);
 for (let i = 0; i < 5; i++) frame(16);
@@ -453,21 +470,32 @@ wheel(18);
 wheel(10);
 settle(10000);
 results.push({ name: 'delayed momentum tail cannot buy a second section',
-  value: scroll.progress, pass: near(scroll.progress, 0.523) });
+  value: scroll.progress, pass: near(scroll.progress, REST_2) });
 
 // Connect's road, camera and ground-light curves all decelerate over the same
 // final slice. A released gesture must not add the global exponential crawl on
-// top: the route declares a bounded brake tail while retaining its 2.5 s
+// top: the route declares a bounded brake tail while retaining its
 // position-authored transit and fully reversible manual scrub.
-reset(0.26);
+//
+// THE BOUND IS THE DECLARED TRANSIT PLUS A TAIL BUDGET, not a literal
+// (2026-08-30). It was written 2700 ms, which was the leg's declared 2.5 s
+// plus 200 ms of landing — and that arithmetic was nowhere on the page, so
+// when the transit legitimately moved (Equip split this leg and the half that
+// arrives at Connect is 2.8 s) the case failed for a reason that had nothing
+// to do with a crawl. What it is actually asserting is that the LANDING costs
+// a bounded amount ON TOP of the cruise the route declares, and that is what
+// it now says. The 200 ms budget is the shipped one, unchanged; at the old
+// 2.5 s transit this expression evaluates to exactly the 2700 it replaces.
+reset(REST_2);
 for (let i = 0; i < 10; i++) wheel(110);
 const connectReleasedAt = now;
 for (let i = 0; i < 500 && scroll.answeredAt === null; i++) frame(16);
 const connectReleaseMs = now - connectReleasedAt;
+const connectLandingBudgetMs = transitSeconds(REST_2, REST_CONNECT, 1) * 1000 + 200;
 results.push({ name: 'Connect released glide has no near-static landing crawl',
   value: scroll.progress,
-  pass: near(scroll.progress, 0.523) && connectReleaseMs <= 2700,
-  trace: { releaseToLandingMs: connectReleaseMs } });
+  pass: near(scroll.progress, REST_CONNECT) && connectReleaseMs <= connectLandingBudgetMs,
+  trace: { releaseToLandingMs: connectReleaseMs, budgetMs: connectLandingBudgetMs } });
 
 for (const result of results) {
   console.log(`${result.pass ? 'PASS' : 'FAIL'} ${result.name}: ${result.value.toFixed(6)}`

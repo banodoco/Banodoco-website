@@ -444,6 +444,43 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);
+    // THE THIRD-STATE CHIP (R3): a node whose interior is unbuilt wears the
+    // state on the chip itself — the NAME blurred to a shape (site.css,
+    // .j-hot--soon) and a strong housing so it reads clearly against the lit
+    // gill fan. The qualifier is the popover tier's own (content.js `preview:
+    // 'under-construction'`), so chip, preview and panel can never disagree.
+    //
+    // THE WORD IS GONE (owner, 2026-09-01: "remove 'Soon' from the visible
+    // Equip labels"). The chip used to carry a "Soon" pill beside the name,
+    // and — because a blurred name is a design statement to a sighted visitor
+    // and a garbled one to AT — an `aria-label` of "<name>, soon" that stated
+    // the same thing to a screen reader. Both are removed: the pill was the
+    // word, and the aria-label existed only to voice it, so leaving it would
+    // have kept the word for exactly the visitors who cannot see the blur.
+    // With neither, the accessible name falls back to the label element's own
+    // text, which is the name the sighted visitor sees the shape of. What the
+    // third state still says is WITHHELD, not "not yet": the blur, the housing
+    // and the unbuilt preview card ("IN DEVELOPMENT", cards.css j-pop-unbuilt).
+    // The class, the `soon` record flag and the ring-rise arrival stay — they
+    // dress and land the whole chip, name included, and are not the word.
+    const soon = popover.unbuiltFor(id);
+    if (soon) btn.classList.add('j-hot--soon');
+    /* MARKER ABOVE NAME (2026-08-31, the owner on the two soon chips: "those
+       labels seem different to the rest too — e.g. the icon isn't above the
+       text like on the others"). Every other NAMED chip on the site is an
+       initiative marker, and those stack: pictograph in a raised tab, name in
+       the joined body below (cards.css, .j-hot--icon-tab). The soon pair were
+       the only named chips left in the older dot-beside-name row, because the
+       stacking arrived attached to the pictograph and Quark and Brötchen have
+       no CARD_ICONS entry. So the geometry is stated on its own here rather
+       than inferred from the icon: `stacked` means THE MARKER SITS OVER THE
+       NAME, which is the one thing hotspot-frame's placement needs to know —
+       such a chip anchors on its own midpoint instead of 11 px in, and the
+       edge-flip that mirrors a side-set label has no job on a symmetric one.
+       It is deliberately NOT `iconTab`: the soon chips keep their own housing,
+       their blurred name and their rise-on-ring entrance, and only the
+       skeleton is shared. */
+    const stacked = iconTab || soon;
     // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
     // thing the node draws, pinned to the node itself rather than to the pill
     // — the pill flips and nudges to keep a label on frame, and the target you
@@ -458,6 +495,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false, iconTab,
+      soon, stacked,
       // The tempo floor's per-chip state (DEFECT-01 #3). Written only by
       // journey/ui/hotspot-frame.js; initialised here for the same reason
       // `a`, `armAt` and `sup` are — the record states its whole shape at

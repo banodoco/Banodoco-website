@@ -371,21 +371,35 @@ const A1 = {
 // guarantee and the frame is a preference, so the frame yielded.
 const PIN2 = V(1.0, 1.40, -1.8);
 
-/** The Inspire -> Connect gesture. `u` is gesture-local (0 = the Inspire
- *  rest, 1 = the Connect rest); the composer maps global p over
- *  [restProgress('inspire') .. restProgress('connect')] onto u. */
-function approach(u, out) {
+/** The approach into Connect. `u` is gesture-local (0 = the rest this leg
+ *  departs from, 1 = the Connect rest); the composer maps global p over
+ *  [that rest .. restProgress('connect')] onto u.
+ *
+ *  `from` IS A PARAMETER BECAUSE THE ROUTE OWNS IT, NOT THIS FILE (2026-08-30).
+ *  Everything the block above derives — the one shared trapezoid, the windowed
+ *  azimuth breath, the bezier gaze bowed through PIN2, the monotone composed
+ *  frame angle — is a property of the SHAPE and holds from any departure pose.
+ *  What is not this file's to decide is WHICH rest the shape departs from: for
+ *  its whole life that was Inspire, and since Equip landed between the two it
+ *  is Equip's underside rest. The default keeps the leg self-describing (and
+ *  keeps every caller that only wants "the approach from the chapter before"
+ *  working), and journey/director.js passes the live one.
+ *
+ *  Both ends are still frozen approved poses, imported/derived rather than
+ *  copied — the D19 seam lesson is unchanged, it now just has one more seam
+ *  to hold: u = 0 must equal whatever rest the composer hands it, exactly. */
+function approach(u, out, from = INSPIRE) {
   const e = azEase(u, CONNECT_APPROACH_RAMP);
   const m = trapEase(u, CONNECT_APPROACH_RAMP);
-  const az = INSPIRE.az + (A1.az - INSPIRE.az) * e;
-  const r = INSPIRE.r + (A1.r - INSPIRE.r) * m;
-  const y = INSPIRE.y + (A1.y - INSPIRE.y) * m;
+  const az = from.az + (A1.az - from.az) * e;
+  const r = from.r + (A1.r - from.r) * m;
+  const y = from.y + (A1.y - from.y) * m;
   out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
-  // Gaze: quadratic bezier INSPIRE.target -> REST_KEY.tgt bowed through PIN2
+  // Gaze: quadratic bezier from.target -> REST_KEY.tgt bowed through PIN2
   // — C1-continuous, endpoints exact, the organism framed mid-swing while
   // the aim walks down the stem to the ground.
-  quadBezier(m, INSPIRE.target, PIN2, REST_KEY.tgt, out.target);
-  out.fov = INSPIRE.fov + (A1.fov - INSPIRE.fov) * m;
+  quadBezier(m, from.target, PIN2, REST_KEY.tgt, out.target);
+  out.fov = from.fov + (A1.fov - from.fov) * m;
   return out;
 }
 

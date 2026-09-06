@@ -124,6 +124,7 @@ const CLAIM = await import(join(REPO, 'journey/claim.js'));
 const CTRL = await import(join(REPO, CONTROLLER));
 const BLEND = await import(join(REPO, 'journey/camera-blend.js'));
 const ENTRY = await import(join(REPO, 'journey/chapter-entry.js'));
+const FIELD = await import(join(REPO, 'journey/hero-field.js'));
 const K = await import(join(REPO, 'journey/constants.js'));
 
 /* ------------------------------------------------------------------ *
@@ -411,10 +412,21 @@ function compileController(src) {
   if (!src.includes(marker)) fault('compile: ANCHOR MISS on the factory export');
   const body = noImports.replace(marker, 'return function createTransitionController');
   try {
+    /* The controller's own imports, handed in as parameters because the
+       strip above removed the statements that would have bound them. This
+       list IS the subject's import list and has to track it: 2026-09-01
+       added `createHeroFieldGate` (journey/hero-field.js — the adopted
+       spore field's presence, driven from the hero furniture's painted
+       scalar), so it is named here too. The rig's sceneApi carries no
+       `groups.heroField`, and the gate answers a missing field with a
+       no-op by contract, so every scenario below traces exactly as it did
+       before that import existed — which is what E0 then re-proves against
+       the imported module. */
     return new Function(
-      'createCameraBlendStepper', 'snapChapterLandings',
+      'createCameraBlendStepper', 'snapChapterLandings', 'createHeroFieldGate',
       'COPY_JUMP_LEAD', 'COPY_JUMP_TAIL_S', 'COPY_IN_K', body,
     )(BLEND.createCameraBlendStepper, ENTRY.snapChapterLandings,
+      FIELD.createHeroFieldGate,
       K.COPY_JUMP_LEAD, K.COPY_JUMP_TAIL_S, K.COPY_IN_K);
   } catch (e) { fault(`the controller did not compile out of its own text — ${e.message}`); }
   return null;
@@ -540,10 +552,18 @@ const SCENARIOS = {
     r.log.push(`hero:${n3(r.t.stepHeroEntry(0.5))}`);
     return [r.log, `play=${r.t.blend.play}/rewound=${r.t.rewoundHome}`];
   },
-  /* REWIND + LANDING HOME — the steered lap reaches its own first frame. */
+  /* REWIND + LANDING HOME — the steered lap reaches its own first frame.
+     Two laps, because the property ranges over both: one REVERSED BEFORE IT
+     EVER STEPPED (two bookend controls pressed between two animation frames
+     — t is exactly 0 and play is already -1), which is not home because it
+     never left; and the same lap once it has a clock behind it, which is.
+     The second beginBlend replaces the first exactly as a jump overtaking a
+     jump does; nothing of the first was ever stepped. */
   rewind(factory) {
     const r = makeRig(factory, { owned: false });
     r.t.beginFlight({ railWrap: { dir: 1, homeP: 0.75, phase: 0 }, railFlight: null, chapterEntry: null });
+    r.t.beginBlend(blendOf({ wrapDir: 1, dur: 4, homeP: 0.75, play: -1 }));
+    r.log.push(`rewound:${r.t.rewoundHome}`);
     r.t.beginBlend(blendOf({ wrapDir: 1, dur: 4, homeP: 0.75, t: 0.5, play: -1 }));
     r.log.push(`rewound:${r.t.rewoundHome}`);
     r.t.stepCamBlend(1);                          // t clamps to 0
@@ -626,10 +646,11 @@ pin('E3', 'REVERSAL — the lap retraces its own path: play flips ONCE, the copy
     '>> play=-1/rewound=false'],
   '2026-08-16: a down-wrap that rewinds is an arrival back INTO the field, not a departure from it. The second steer is a no-op — a same-way gesture must not re-announce');
 
-pin('E4', 'REWIND AND LANDING HOME — a fully rewound lap is recognised only once its clock reaches zero, and landing places the journey back on the rest it departed, hero first so the capture cannot bake a lap frame',
+pin('E4', 'REWIND AND LANDING HOME — a lap that never advanced off its own first frame is not home at all, a fully rewound one is recognised only once its clock reaches zero, and landing places the journey back on the rest it departed, hero first so the capture cannot bake a lap frame',
   (i) => runScenario(i.f, 'rewind'),
   { f: compileController(SRC.controller) },
-  ['rewound:false', 'director.applyHeroPose', 'cam.fov', 'lens.setLookOverride(look)',
+  ['rewound:false',
+    'rewound:false', 'director.applyHeroPose', 'cam.fov', 'lens.setLookOverride(look)',
     'rewound:true',
     'lens.setLookOverride(null)',
     'mission.setBlending(false,undefined,undefined)', 'final.setBlending(false,undefined,undefined)',

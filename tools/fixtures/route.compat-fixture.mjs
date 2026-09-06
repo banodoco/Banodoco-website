@@ -15,6 +15,23 @@
 // limitations.md §10 (this fixture follows the same convention) and this
 // generator's own header. Do NOT hand-edit the assertions below to make them
 // pass — regenerate, or transcription error creeps back in.
+//
+// THE GENERATOR IS NOT IN THIS REPOSITORY (found 2026-08-30). The path above
+// is under docs/code-health/evidence/, which this checkout does not carry — so
+// the instruction directly above cannot be followed as written, and the next
+// person to legitimately move a route value will discover that the same way.
+// Re-baselined for Equip by re-serialising the live exports with the same
+// `JSON.stringify(value, null, 2)` shape the generator emitted, block by
+// block, rather than by transcribing values from a diff. The values below are
+// therefore still machine-read, which is the property the header is protecting;
+// what is missing is a checked-in script that does it. Recorded, not silently
+// worked around.
+//
+// WHAT MOVED, so the diff is reviewable rather than merely large: Equip became
+// a chapter between Inspire and Connect (journey/structure.js's header carries
+// the decision), which renormalises every derived p from 0.14 to 0.38, splits
+// the retired 'inspire>connect' transit into two, and re-splits four chapters'
+// scrollVh. Nothing at or above p 0.38 moved except connect's own scrollVh.
 
 import assert from 'node:assert/strict';
 import {
@@ -33,16 +50,29 @@ assert.deepEqual(ROUTE, [
     "stops": [
       0
     ],
-    "scrollVh": 3.5
+    "scrollVh": 4.9
   },
   {
     "id": "inspire",
-    "span": 24,
+    "span": 12,
     "nav": "Inspire",
-    "scrollVh": 6.7,
+    "scrollVh": 4.7,
     "segVh": [
-      3.5,
-      3.2
+      2.1,
+      2.6
+    ]
+  },
+  {
+    "id": "equip",
+    "span": 12,
+    "nav": "Equip",
+    "stops": [
+      0.5
+    ],
+    "scrollVh": 6,
+    "segVh": [
+      2.6,
+      3.4
     ]
   },
   {
@@ -52,9 +82,9 @@ assert.deepEqual(ROUTE, [
     "stops": [
       0.65
     ],
-    "scrollVh": 10.85,
+    "scrollVh": 15.85,
     "segVh": [
-      8,
+      13,
       2.85
     ],
     "shape": {
@@ -105,23 +135,31 @@ assert.deepEqual(ROUTE, [
 ], '[route fixture] ROUTE drifted');
 assert.equal(TERMINAL_P, 1, '[route fixture] TERMINAL_P drifted');
 assert.deepEqual(TRANSIT_S, {
-  "inspire>connect": {
-    "fwd": 2.5,
+  "inspire>equip": {
+    "fwd": 2.4,
     "back": 1.6
+  },
+  "equip>connect": {
+    "fwd": 2.8,
+    "back": 1.8
   },
   "owned>final": 1.5
 }, '[route fixture] TRANSIT_S drifted');
 assert.deepEqual(FORWARD_BRAKE_TAIL_S, {
   "mission>inspire": 0.35,
-  "inspire>connect": 0.35,
+  "inspire>equip": 0.35,
+  "equip>connect": 0.35,
   "connect>owned": 0.35
 }, '[route fixture] FORWARD_BRAKE_TAIL_S drifted');
 assert.deepEqual(DESKTOP_TRANSIT_CAP_S, {
   "mission>inspire": {
     "fwd": 1.8
   },
-  "inspire>connect": {
-    "fwd": 0.75
+  "inspire>equip": {
+    "fwd": 1
+  },
+  "equip>connect": {
+    "fwd": 1.25
   },
   "connect>owned": {
     "fwd": 1.35
@@ -138,7 +176,7 @@ assert.deepEqual(chaptersSnapshot, [
     "start": 0,
     "end": 0.14,
     "nav": "Intro",
-    "scrollVh": 3.5,
+    "scrollVh": 4.9,
     "segVh": null,
     "shape": null,
     "stopsLocal": [
@@ -152,19 +190,38 @@ assert.deepEqual(chaptersSnapshot, [
   {
     "id": "inspire",
     "start": 0.14,
-    "end": 0.38,
+    "end": 0.26,
     "nav": "Inspire",
-    "scrollVh": 6.7,
+    "scrollVh": 4.7,
     "segVh": [
-      3.5,
-      3.2
+      2.1,
+      2.6
     ],
     "shape": null,
     "stopsLocal": [
       0.5
     ],
     "stops": [
-      0.26
+      0.2
+    ],
+    "rest": 0.5
+  },
+  {
+    "id": "equip",
+    "start": 0.26,
+    "end": 0.38,
+    "nav": "Equip",
+    "scrollVh": 6,
+    "segVh": [
+      2.6,
+      3.4
+    ],
+    "shape": null,
+    "stopsLocal": [
+      0.5
+    ],
+    "stops": [
+      0.32
     ],
     "rest": 0.5
   },
@@ -173,9 +230,9 @@ assert.deepEqual(chaptersSnapshot, [
     "start": 0.38,
     "end": 0.6,
     "nav": "Connect",
-    "scrollVh": 10.85,
+    "scrollVh": 15.85,
     "segVh": [
-      8,
+      13,
       2.85
     ],
     "shape": {
@@ -250,25 +307,37 @@ assert.deepEqual(segmentsSnapshot, [
   {
     "id": "mission",
     "end": 0.14,
-    "vh": 3.5,
+    "vh": 4.9,
+    "k": null
+  },
+  {
+    "id": "inspire",
+    "end": 0.2,
+    "vh": 2.1,
     "k": null
   },
   {
     "id": "inspire",
     "end": 0.26,
-    "vh": 3.5,
+    "vh": 2.6,
     "k": null
   },
   {
-    "id": "inspire",
+    "id": "equip",
+    "end": 0.32,
+    "vh": 2.6,
+    "k": null
+  },
+  {
+    "id": "equip",
     "end": 0.38,
-    "vh": 3.2,
+    "vh": 3.4,
     "k": null
   },
   {
     "id": "connect",
     "end": 0.523,
-    "vh": 8,
+    "vh": 13,
     "k": [
       1.1,
       1
@@ -315,13 +384,15 @@ assert.deepEqual(segmentsSnapshot, [
 assert.deepEqual(CHAPTER_IDS, [
   "mission",
   "inspire",
+  "equip",
   "connect",
   "owned",
   "final"
 ], '[route fixture] CHAPTER_IDS drifted');
 assert.deepEqual(REST_STOPS, [
   0,
-  0.26,
+  0.2,
+  0.32,
   0.523,
   0.725,
   0.97
@@ -329,6 +400,7 @@ assert.deepEqual(REST_STOPS, [
 assert.deepEqual(REST_OWNER, [
   "mission",
   "inspire",
+  "equip",
   "connect",
   "owned",
   "final"
@@ -404,40 +476,76 @@ assert.deepEqual(
 // ---- every REST_STOPS pair (both directions) rather than hand-picked  ----
 for (const { lo, hi, dir, out } of [
   {
-    "lo": 0.26,
-    "hi": 0.523,
+    "lo": 0.2,
+    "hi": 0.32,
     "dir": 0,
-    "out": 2.5
+    "out": 2.4
   },
   {
-    "lo": 0.26,
-    "hi": 0.523,
+    "lo": 0.2,
+    "hi": 0.32,
     "dir": 1,
-    "out": 2.5
+    "out": 2.4
   },
   {
-    "lo": 0.26,
-    "hi": 0.523,
+    "lo": 0.2,
+    "hi": 0.32,
     "dir": -1,
     "out": 1.6
   },
   {
-    "lo": 0.523,
-    "hi": 0.26,
+    "lo": 0.32,
+    "hi": 0.2,
     "dir": 0,
-    "out": 2.5
+    "out": 2.4
   },
   {
-    "lo": 0.523,
-    "hi": 0.26,
+    "lo": 0.32,
+    "hi": 0.2,
     "dir": 1,
-    "out": 2.5
+    "out": 2.4
   },
   {
-    "lo": 0.523,
-    "hi": 0.26,
+    "lo": 0.32,
+    "hi": 0.2,
     "dir": -1,
     "out": 1.6
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.523,
+    "dir": 0,
+    "out": 2.8
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.523,
+    "dir": 1,
+    "out": 2.8
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.523,
+    "dir": -1,
+    "out": 1.8
+  },
+  {
+    "lo": 0.523,
+    "hi": 0.32,
+    "dir": 0,
+    "out": 2.8
+  },
+  {
+    "lo": 0.523,
+    "hi": 0.32,
+    "dir": 1,
+    "out": 2.8
+  },
+  {
+    "lo": 0.523,
+    "hi": 0.32,
+    "dir": -1,
+    "out": 1.8
   },
   {
     "lo": 0.725,
@@ -482,49 +590,73 @@ for (const { lo, hi, dir, out } of [
 for (const { lo, hi, dir, out } of [
   {
     "lo": 0,
-    "hi": 0.26,
+    "hi": 0.2,
     "dir": 0,
     "out": 0.35
   },
   {
     "lo": 0,
-    "hi": 0.26,
+    "hi": 0.2,
     "dir": 1,
     "out": 0.35
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
     "hi": 0,
     "dir": 0,
     "out": 0.35
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
     "hi": 0,
     "dir": 1,
     "out": 0.35
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
+    "hi": 0.32,
+    "dir": 0,
+    "out": 0.35
+  },
+  {
+    "lo": 0.2,
+    "hi": 0.32,
+    "dir": 1,
+    "out": 0.35
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.2,
+    "dir": 0,
+    "out": 0.35
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.2,
+    "dir": 1,
+    "out": 0.35
+  },
+  {
+    "lo": 0.32,
     "hi": 0.523,
     "dir": 0,
     "out": 0.35
   },
   {
-    "lo": 0.26,
+    "lo": 0.32,
     "hi": 0.523,
     "dir": 1,
     "out": 0.35
   },
   {
     "lo": 0.523,
-    "hi": 0.26,
+    "hi": 0.32,
     "dir": 0,
     "out": 0.35
   },
   {
     "lo": 0.523,
-    "hi": 0.26,
+    "hi": 0.32,
     "dir": 1,
     "out": 0.35
   },
@@ -559,51 +691,75 @@ for (const { lo, hi, dir, out } of [
 for (const { lo, hi, dir, out } of [
   {
     "lo": 0,
-    "hi": 0.26,
+    "hi": 0.2,
     "dir": 0,
     "out": 1.8
   },
   {
     "lo": 0,
-    "hi": 0.26,
+    "hi": 0.2,
     "dir": 1,
     "out": 1.8
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
     "hi": 0,
     "dir": 0,
     "out": 1.8
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
     "hi": 0,
     "dir": 1,
     "out": 1.8
   },
   {
-    "lo": 0.26,
-    "hi": 0.523,
+    "lo": 0.2,
+    "hi": 0.32,
     "dir": 0,
-    "out": 0.75
+    "out": 1
   },
   {
-    "lo": 0.26,
+    "lo": 0.2,
+    "hi": 0.32,
+    "dir": 1,
+    "out": 1
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.2,
+    "dir": 0,
+    "out": 1
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.2,
+    "dir": 1,
+    "out": 1
+  },
+  {
+    "lo": 0.32,
+    "hi": 0.523,
+    "dir": 0,
+    "out": 1.25
+  },
+  {
+    "lo": 0.32,
     "hi": 0.523,
     "dir": 1,
-    "out": 0.75
+    "out": 1.25
   },
   {
     "lo": 0.523,
-    "hi": 0.26,
+    "hi": 0.32,
     "dir": 0,
-    "out": 0.75
+    "out": 1.25
   },
   {
     "lo": 0.523,
-    "hi": 0.26,
+    "hi": 0.32,
     "dir": 1,
-    "out": 0.75
+    "out": 1.25
   },
   {
     "lo": 0.523,
@@ -634,9 +790,9 @@ for (const { lo, hi, dir, out } of [
     `[route fixture] desktopTransitCapSeconds(${lo}, ${hi}, ${dir}) drifted`);
 }
 // null-result branches (span not in the table; lo/hi off the rest-stop list)
-assert.equal(transitSeconds(0, 0.26, 0), null,
+assert.equal(transitSeconds(0, 0.2, 0), null,
   '[route fixture] transitSeconds null-branch drifted');
-assert.equal(forwardBrakeTailSeconds(0.26, 0.523, -1), null,
+assert.equal(forwardBrakeTailSeconds(0.2, 0.32, -1), null,
   '[route fixture] forwardBrakeTailSeconds null-branch drifted');
 assert.equal(desktopTransitCapSeconds(0.725, 0.97, 0), null,
   '[route fixture] desktopTransitCapSeconds null-branch drifted');
@@ -662,7 +818,7 @@ for (const { p, out } of [
   },
   {
     "p": 0.38,
-    "out": "inspire"
+    "out": "equip"
   },
   {
     "p": 0.5,
@@ -715,12 +871,12 @@ for (const { p, out } of [
   {
     "p": 0.2,
     "chapterId": "inspire",
-    "out": 0.25
+    "out": 0.5
   },
   {
     "p": 0.3,
     "chapterId": "inspire",
-    "out": 0.6666666666666666
+    "out": 1
   },
   {
     "p": 1,
@@ -745,8 +901,14 @@ for (const { id, start, end, rest } of [
   {
     "id": "inspire",
     "start": 0.14,
+    "end": 0.26,
+    "rest": 0.2
+  },
+  {
+    "id": "equip",
+    "start": 0.26,
     "end": 0.38,
-    "rest": 0.26
+    "rest": 0.32
   },
   {
     "id": "connect",

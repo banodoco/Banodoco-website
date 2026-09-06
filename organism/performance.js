@@ -40,13 +40,34 @@
 // is the authored one-way trade above and is deliberately left alone.
 const CAL_BUDGET_MS = 20;
 const CAL_PROJECTION = 1.35;
+// THE THIRD TERM OF THE RULE, and the reason it is a string rather than a
+// number: WHICH FRAMES the average was taken from. Until 2026-09-01 the answer
+// was "whatever the shared clock saw from t = 0", and that stopped being the
+// intro the day organism/hero-spores.js's prelude arrived: the clock now starts
+// when createScene runs, which is SECONDS before the intro is released, so the
+// samples were the mushroom's own boot — module evaluation, the scene build,
+// the journey's chapter slices and its shader warm draws — measured as if they
+// were this machine's steady frame cost. Measured on a cold 1440x900 load, that
+// window's median frame is 17-83 ms and its 90th percentile 83 ms against a
+// 20 ms budget (evidence/r12-stutter §2), so a machine that holds 60 fps at
+// rest could be sentenced on the strength of the page's own start-up and, via
+// remember() below, sentenced PERMANENTLY for that display. The clamped-frame
+// guard did not save it: boot frames land at 20-49 ms, under the 0.05 ceiling,
+// so they read as clean load rather than as stalls.
+// Sampling now begins when the intro does (see `bootSettled`), which is what
+// `calibrateAt = intro + 1.4` — "the callout power-up" — always meant.
+// Folding that into the key is the same mechanism the note above describes for
+// the budget and the projection: every display carrying a verdict from the old
+// sampling window re-calibrates exactly once, masked, on its next visit,
+// instead of keeping an answer the current rule would never have issued.
+const CAL_SAMPLE_WINDOW = 'intro';
 
 /** Resolve and persist the display-specific pixel-ratio calibration. */
 export function createPixelRatioPolicy(pinPr) {
   const storeKey = (() => {
     try {
       return 'gs-pr-cal:' + screen.width + 'x' + screen.height + '@' + devicePixelRatio
-        + ':' + CAL_BUDGET_MS + 'x' + CAL_PROJECTION; // the rule that gives the verdict its meaning
+        + ':' + CAL_BUDGET_MS + 'x' + CAL_PROJECTION + '/' + CAL_SAMPLE_WINDOW; // the rule that gives the verdict its meaning
     }
     catch { return null; } // screen/devicePixelRatio unavailable: no cal key, falls through to live pinPr/default below
   })();
@@ -144,12 +165,26 @@ export function createPixelRatioPolicy(pinPr) {
  *        whether this visit calibrates at all, `remember` records the verdict.
  * @param {function} deps.syncSizes    Re-sync every size-dependent consumer after a
  *        pixel-ratio change (organism/renderer.js createViewportSync's `sync`).
- * @param {number}   deps.calibrateAt  Seconds on the shared clock at which the
- *        one masked calibration decision is taken.
+ * @param {number}   deps.calibrateAt  Seconds AFTER SAMPLING BEGINS at which the
+ *        one masked calibration decision is taken. Sampling begins when
+ *        `bootSettled()` first returns true, not at shared-clock zero — the
+ *        two were the same thing before the prelude existed, and
+ *        CAL_SAMPLE_WINDOW above is the whole story of why they are not now.
+ * @param {function} [deps.bootSettled] Returns true once the page's own
+ *        start-up has stopped polluting the frame times — in practice, once
+ *        the intro has been released. Omitted, every frame counts, which is
+ *        the pre-2026-09-01 behaviour and is kept only so this parameter is a
+ *        pure addition for any other caller.
  * @returns {function(number, number): void} `frame(t, dt)`
  */
-export function createAdaptiveResolution({ renderer, policy, syncSizes, calibrateAt }) {
+export function createAdaptiveResolution({ renderer, policy, syncSizes, calibrateAt,
+                                           bootSettled = null }) {
   let perfTime = 0, perfFrames = 0, perfClamped = 0, perfStrikes = 0;
+  /* The shared-clock reading at which sampling actually began — the first
+     frame after bootSettled() went true, NOT t = 0. `calibrateAt` is measured
+     from here, which is what restores its authored meaning (see
+     CAL_SAMPLE_WINDOW). Null until that frame arrives. */
+  let calZero = null;
   // A remembered calibration (applied at renderer construction) IS the
   // calibration: skip the per-visit measurement entirely so no step can occur —
   // only the catastrophic backstop below stays armed, and its steps update the
@@ -158,13 +193,22 @@ export function createAdaptiveResolution({ renderer, policy, syncSizes, calibrat
 
   return function frame(t, dt) {
     if (!calDone) {
+      /* NOT ONE SAMPLE FROM THE BOOT WINDOW. While the prelude is still
+         carrying the page and the mushroom is still arriving, this loop's
+         frame times are the cost of BUILDING the page, not of drawing it, and
+         a verdict taken from them is both wrong and permanent. The caller
+         says when that window has closed; a caller that does not say is
+         trusted exactly as before, so this stays a pure addition. */
+      if (bootSettled && !bootSettled()) return;
+      if (calZero === null) calZero = t;
+      const tc = t - calZero;
       if (dt > 0 && dt < 0.0499) { calSum += dt; calN++; }
       // A machine where nearly every frame hits the dt clamp (sustained <=20fps)
       // never fills the clean-sample quota — and is exactly the machine that
       // needs the drop most. Past a grace deadline, calibrate from the clamp
       // itself: 50 ms IS the measured floor of what we know.
-      const starved = t >= calibrateAt + 2.5 && calN < 30;
-      if ((t < calibrateAt || calN < 30) && !starved) return;
+      const starved = tc >= calibrateAt + 2.5 && calN < 30;
+      if ((tc < calibrateAt || calN < 30) && !starved) return;
       calDone = true;
       /* THE INTRO UNDERESTIMATES THE SETTLED PAGE (2026-08-17 — Hannah, on the
          stubborn residual: "it flashes a TINY bit lighter and stalls just

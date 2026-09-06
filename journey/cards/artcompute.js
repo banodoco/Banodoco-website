@@ -18,15 +18,13 @@ const CYCLE_MS = 3200;   // one ledger entry per hover; fade is 160ms
 // STATS (cards/index.js policy (a)) — live-computed sums of grant_applications
 // rows (status awaiting_wallet/approved/paid), artcompute.org/grants, verified
 // 2026-08-17; goes stale only if new grants land -> acceptable, dated fact.
+// Round 2: three cells, no subs — the third states the programme's one
+// surprising fact (grants are approved by an AI) as a value rather than a
+// badge, in their violet, so the old three-badge row could go entirely.
 const STATS = [
-  { label: 'GRANTS',  value: '11',    sub: 'approved' },
-  { label: 'COMPUTE', value: '473h',  sub: 'GPU hours allocated' },
-];
-
-const BADGES = [
-  { text: '10–50 GPU HRS', cls: 'ac-badge--green' },
-  { text: 'AUTO APPROVAL', cls: 'ac-badge--violet' },
-  { text: 'OPEN SOURCE',   cls: 'ac-badge--sky' },
+  { label: 'GRANTS',   value: '11',   cls: '' },
+  { label: 'GPU HOURS', value: '473', cls: 'ac-value--green' },
+  { label: 'APPROVAL', value: 'AUTO', cls: 'ac-value--violet' },
 ];
 
 // The three newest grants on their /grants ledger, verified 2026-08-17.
@@ -47,30 +45,11 @@ export default {
   build(stage) {
     stage.classList.add('ac');
 
-    // band 1 — header: wordmark left, steady status dot right (no pulse:
-    // a blinking dot would fake liveness their grant page never promises)
-    const header = document.createElement('div');
-    header.className = 'ac-header';
-    // the header carries WHAT IT IS, not the name — the chip already says
-    // ArtCompute (Hannah, 2026-08-18, wording hers 2026-08-18 too).
-    const title = document.createElement('span');
-    title.className = 'ac-title';
-    title.textContent = 'GPU HOURS FOR OPEN RESEARCH';
-    const dot = document.createElement('span');
-    dot.className = 'ac-dot';
-    // the door rides the header between wordmark and dot (flex, so it can
-    // never overlap the title at any width); their green CTA treatment,
-    // revealed on hover/pin by the shared card-cta rule
-    const cta = document.createElement('a');
-    cta.className = 'ac-cta card-cta';
-    cta.href = 'https://artcompute.org/';
-    cta.target = '_blank';
-    cta.rel = 'noopener noreferrer';
-    cta.tabIndex = -1;
-    cta.textContent = 'REQUEST COMPUTE →';
-    header.append(title, cta, dot);
-
-    // band 2 — stat grid: two cells over a 1px hairline gap
+    // band 1 — stat grid: three cells over a 1px hairline gap. Round 3:
+    // the round-2 identity band (wordmark, tagline, status dot) is gone —
+    // the restored shell head says ARTCOMPUTE and carries the programme
+    // line, and the terminal opens straight onto its data, which is the
+    // personality the head introduces.
     const grid = document.createElement('div');
     grid.className = 'ac-grid';
     for (const s of STATS) {
@@ -80,26 +59,17 @@ export default {
       label.className = 'ac-label';
       label.textContent = s.label;
       const value = document.createElement('span');
-      value.className = 'ac-value';
+      value.className = `ac-value ${s.cls}`.trim();
       value.textContent = s.value;
-      const sub = document.createElement('span');
-      sub.className = 'ac-sub';
-      sub.textContent = s.sub;
-      cell.append(label, value, sub);
+      cell.append(label, value);
       grid.appendChild(cell);
     }
 
-    // band 3a — the three grant badges in their own palette
-    const badges = document.createElement('div');
-    badges.className = 'ac-badges';
-    for (const b of BADGES) {
-      const pill = document.createElement('span');
-      pill.className = `ac-badge ${b.cls}`;
-      pill.textContent = b.text;
-      badges.appendChild(pill);
-    }
-
-    // band 3b — the cycling ledger (their /grants list, newest first)
+    // band 2 — the cycling ledger (their /grants list, newest first),
+    // under one micro-label so the row reads at a glance
+    const ledgerLabel = document.createElement('span');
+    ledgerLabel.className = 'ac-ledger-label';
+    ledgerLabel.textContent = 'LATEST GRANTS';
     const ledger = document.createElement('div');
     ledger.className = 'ac-ledger';
     rows = LEDGER.map((g) => {
@@ -122,7 +92,16 @@ export default {
       return row;
     });
 
-    stage.append(header, grid, badges, ledger);
+    // the ending — their green CTA voice, a full-width terminal band
+    const door = document.createElement('a');
+    door.className = 'ac-door card-door card-cta';
+    door.href = 'https://artcompute.org/';
+    door.target = '_blank';
+    door.rel = 'noopener noreferrer';
+    door.tabIndex = -1;
+    door.textContent = 'REQUEST COMPUTE →';
+
+    stage.append(grid, ledgerLabel, ledger, door);
     show(0);   // parked still: the newest grant, shown whether or not motion
                // is reduced
   },

@@ -750,7 +750,12 @@ pin('AP4', 'D94 — the INVENTORY: literally-closed assertions with no census cl
        that fixture's closed symmetric complement. It is intentionally
        literal test data, not a census or coverage claim, so DB3 is the honest
        classification and the row belongs in the recorded inventory. */
-  'tools/test-rail-handoff.mjs :: assert.deepEqual@418 :: DB3',
+  /* 418 -> 465 (2026-08-30): the row did not change class and nothing was
+     repaired — the Purpose nav-pocket's two coordinate pins above it became a
+     coverage property over eleven viewports, which is longer than what it
+     replaced, so this site moved down the file. The manifest is keyed by site
+     precisely so that shows up here rather than in a count. */
+  'tools/test-rail-handoff.mjs :: assert.deepEqual@465 :: DB3',
     'tools/test-render-baseline.mjs :: M9.demo :: DB3',
     /* connect-skip second pass, 2026-08-25 — the SIXTH row. tools/test-rest-composition.mjs's
        C4, the vacuity pin: `assert.ok(DECLARED_DEFICIT_MS > 0, ...)`. It compares
@@ -774,9 +779,15 @@ pin('AP4', 'D94 — the INVENTORY: literally-closed assertions with no census cl
        legitimately literal — a self-consistency pin between two measurements,
        with its killer beside it — but it is literal where it was not before,
        and this manifest exists so that line moves visibly. */
-    'tools/test-rest-composition.mjs :: assert.ok@351 :: DB3',
-    'tools/test-rest-composition.mjs :: assert.ok@357 :: DB3',
-    'tools/test-rest-composition.mjs :: assert.ok@382 :: DB3',
+    /* @351/@357/@382 -> @432/@438/@463 by the ceremonial-seam re-derivation,
+       2026-09-01: that file gained a header amendment, the crossfade model
+       note and two C1a source pins ABOVE these sites; the three assertions
+       themselves are untouched — the same two C3 conjuncts and the same C4b
+       vacuity tripwire. Line-anchored renumbering only, the @313 -> @373
+       species. */
+    'tools/test-rest-composition.mjs :: assert.ok@432 :: DB3',
+    'tools/test-rest-composition.mjs :: assert.ok@438 :: DB3',
+    'tools/test-rest-composition.mjs :: assert.ok@463 :: DB3',
   ],
   'FIVE rows as of 2026-08-22 (WAS: nine). FOUR LEFT WITH THEIR FILES, and they are named here '
   + 'rather than deducted from a number, because a manifest that shrinks silently buys nothing: two '
