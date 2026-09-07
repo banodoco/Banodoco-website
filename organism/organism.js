@@ -120,14 +120,49 @@ import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
  * @param {number} [opts.intro=0]        Seconds for the entry reveal: the organism grows out of the
  *        soil, bottom to top (web -> stalk -> cap -> plume). 0 skips it — the scene starts complete.
  * @param {boolean} [opts.deferIntro=false] Hold the reveal on its real empty frame until intro.start().
- * @returns {object} See the public API JSDoc near the bottom of this file.
+ * @returns {Promise<object>} See the public API JSDoc near the bottom of this file.
  */
-export function createScene({ panX = 0, container = null,
+const nextBuildFrame = () => new Promise((resolve) => {
+  let finished = false;
+  let frameId = null;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    resolve();
+  };
+  // Continue in a fresh task after the browser has had the rendering step
+  // following rAF. Hidden documents do not receive rAF reliably, so bound the
+  // wait and let their throttled preload continue after at most 100 ms.
+  const fallback = setTimeout(() => {
+    if (frameId !== null) cancelAnimationFrame(frameId);
+    finish();
+  }, 100);
+  frameId = requestAnimationFrame(() => {
+    frameId = null;
+    setTimeout(() => {
+      clearTimeout(fallback);
+      finish();
+    }, 0);
+  });
+});
+
+export async function createScene({ panX = 0, container = null,
                               camY = 2.05, camZ = 8.8, targetY = 2.5,
                               tiltX = -0.05, camAzimuth = 0, leanZ = -0.03,
                               quiet = null, bg = 0x000000,
                               fov = 38, trackers = [], intro = 0,
                               deferIntro = false } = {}) {
+
+let buildSliceStartedAt = performance.now();
+const yieldBuildFrame = async () => {
+  // Fast sections stay in the current task. Once construction has consumed
+  // most of a 60 Hz frame, let the preload paint before starting the next
+  // geometry family; this keeps responsiveness without charging every load
+  // one whole frame at every checkpoint.
+  if (performance.now() - buildSliceStartedAt < 10) return;
+  await nextBuildFrame();
+  buildSliceStartedAt = performance.now();
+};
 
 // =====================================================================
 // 1. RNG / PALETTE UTILS
@@ -413,6 +448,11 @@ function makeGlowTexture() {
   return new THREE.CanvasTexture(c);
 }
 const glowTex = makeGlowTexture();
+
+// The preload canvas already owns the visible loading scene. Give it a paint
+// after WebGL/composer allocation, then between the dense geometry families,
+// so first load never turns the remainder of this build into one long task.
+await yieldBuildFrame();
 
 // ---------- entry draw: the scene inks itself in, stroke by stroke ---------
 // Geometry buffers are filled in construction order — thread by thread, fibre
@@ -971,6 +1011,7 @@ function beadM(x, y, z, h, s) {
 // =====================================================================
 // 6. GILLS — dense radial filaments under the cap
 // =====================================================================
+await yieldBuildFrame();
 // ---- gills: dense radial filaments under the cap ----
 {
   const lp = [], lc = [], lt = [];
@@ -1135,6 +1176,7 @@ mushroom.position.z = -tiltX * 3.2; // compensate the tilt pivot being at the or
 // =====================================================================
 // 7. STEM — fibrous tapering mesh
 // =====================================================================
+await yieldBuildFrame();
 // ---- stem: fibrous tapering mesh ----
 // The cap's throat (the hole the gills radiate from) in WORLD space, after the
 // cap's tilt and lean — the stem's axis converges onto this point so the two
@@ -1274,6 +1316,7 @@ ctx.stemGroup = stemGroup;
 // =====================================================================
 // 8. GROUND NETWORK — mycelium web, moss, roots, ribbons
 // =====================================================================
+await yieldBuildFrame();
 function groundY(x, z) {
   return 0.02 * Math.sin(x * 1.3 + 2) + 0.03 * Math.sin(z * 0.9 + 5) + 0.02 * Math.sin((x + z) * 0.7)
        + 0.05 * Math.sin(x * 0.4 + z * 0.5 + 1);
@@ -1545,6 +1588,8 @@ ctx.groundGroup = groundGroup;
   }
   groundGroup.add(makeLines(rlp, rlc, 0.42, true));
 
+  await yieldBuildFrame();
+
   // ---- thick tapered strands: WebGL lines can't vary width, so weight
   // comes from real geometry — flat ribbons on the ground that taper from
   // artery to capillary, giving the web a coarse structural layer.
@@ -1637,6 +1682,8 @@ ctx.groundGroup = groundGroup;
 
   // all floor beads in one cloud — they twinkle, pulse outward, and defocus
   groundGroup.add(makePoints(gbP, gbC, gbS, 0.95, gbD));
+
+  await yieldBuildFrame();
 
   /* Connect / ADOS ground-junction attachment ---------------------------
      The large polygonal star at this deterministic hub is part of the HERO
@@ -1740,6 +1787,7 @@ ctx.groundGroup = groundGroup;
 // =====================================================================
 // 9. AMBIENT MOTES — faint dust hanging in the whole air volume
 // =====================================================================
+await yieldBuildFrame();
 {
   const pp = [], pc = [], ps = [];
   for (let k = 0; k < 850; k++) {
@@ -2000,10 +2048,10 @@ registerTrackers(ctx);
 const introApi = setupIntro(ctx);
 
 /* ---- THE MYCELIUM WAS ALREADY THERE; THE MUSHROOM LIGHTS IT (2C) -----
-   The ground's own ink CONVERGES — every floor vertex is re-keyed by
-   distance from the base, outermost first, so the web streams inward and
-   arrives at the foot of the stem exactly as the stalk fires upward
-   (organism/intro.js convergeDraw). That is the network being DRAWN. What
+   The ground's own ink RADIATES — every floor vertex is re-keyed by
+   distance from the base, origin first, so the web streams outward from
+   the landing exactly as the stalk fires upward
+   (organism/intro.js radiateDraw). That is the network being DRAWN. What
    it never carried is the network being ENERGISED, and biologically the
    energy runs the other way: the fruiting body draws on a mycelium that
    was already in the soil, and the surge spreads laterally OUT from the

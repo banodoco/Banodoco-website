@@ -84,7 +84,13 @@ import { createJourneyHandoff } from './journey/boot/handoff.js';
 const journeyModuleP = import('./journey/journey.js');
 
 const note = createSceneNote();
-const entryQueue = createEntryQueue();
+const logoLink = document.querySelector('.logo');
+const setLogoAway = (away) => {
+  if (logoLink) logoLink.classList.toggle('logo-away', away);
+};
+const entryQueue = createEntryQueue({
+  onRequest: (chapter) => setLogoAway(chapter !== 'mission'),
+});
 
 /* ================================================================
    J05 — THE PAGE-LIFETIME REGISTER. Read this before adding a listener,
@@ -330,10 +336,10 @@ if (exploreCta) {
    the right answer for a home control you are already home in, and it costs no
    special case. If the ride ever gains free scrolling, this is the note to
    come back to. */
-const logoLink = document.querySelector('.logo');
 if (logoLink) {
   logoLink.addEventListener('click', (e) => {
     e.preventDefault();
+    setLogoAway(false);
     if (window.journey) window.journey.flyTo('mission');
     else entryQueue.request('mission', { fast: false });
   });
@@ -349,7 +355,7 @@ if (logoLink) {
 let sceneApi = null;
 try {
   const { createScene } = await organismModuleP;
-  sceneApi = createScene({
+  sceneApi = await createScene({
     ...heroMode.viewFor(heroMode.current()),
     container: document.getElementById('stage'),
     tiltX: -0.14,
@@ -853,6 +859,7 @@ if (sceneApi) {
     const chapter = id.slice(3);
     el.querySelector('.tag').addEventListener('click', (e) => {
       e.preventDefault();
+      setLogoAway(chapter !== 'mission');
       if (window.journey) window.journey.flyTo(chapter);
       else entryQueue.request(chapter);
     });
@@ -968,5 +975,6 @@ if (sceneApi) {
     // ?introat — the choreography is pinned at a progress and must not run
     frozen: introAt !== null,
     introSeconds: INTRO_S,
+    onNavigate: (chapter) => setLogoAway(chapter !== 'mission'),
   });
 }

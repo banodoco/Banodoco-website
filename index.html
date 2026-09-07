@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Banodoco — helping the open-source AI art ecosystem thrive</title>
-<meta name="description" content="Banodoco builds spaces, initiatives and tools for the open source AI art community.">
+<title>True Union — helping the open-source AI art ecosystem thrive</title>
+<meta name="description" content="True Union builds spaces, initiatives and tools for the open source AI art community.">
 <!-- Identity & unfurl meta. The icons and the og card are DERIVED, not
      authored — tools/build-meta.py cuts them from the mark's master and the
      Tier-3 mission capture (regenerate, never repaint). Icon links stay
@@ -19,9 +19,9 @@
 <link rel="canonical" href="ORIGIN/">
 <meta name="theme-color" content="#141008">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Banodoco">
-<meta property="og:title" content="Banodoco — helping the open-source AI art ecosystem thrive">
-<meta property="og:description" content="Banodoco builds spaces, initiatives and tools for the open source AI art community.">
+<meta property="og:site_name" content="True Union">
+<meta property="og:title" content="True Union — helping the open-source AI art ecosystem thrive">
+<meta property="og:description" content="True Union builds spaces, initiatives and tools for the open source AI art community.">
 <meta property="og:url" content="ORIGIN/">
 <meta property="og:image" content="ORIGIN/assets/brand/og-home.jpg">
 <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "Banodoco",
+  "name": "True Union",
   "url": "ORIGIN/",
   "logo": "ORIGIN/assets/brand/icon-512.png",
   "sameAs": [
@@ -128,12 +128,10 @@
 
   <div class="ui">
     <nav id="site-nav" tabindex="-1" aria-label="Primary">
-      <!-- THE WORDMARK BECAME THE MARK 2026-08-11 (Hannah: "use it as the logo
-           instead of the BANODOCO text"). The isometric wireframe B is a
-           RASTER (assets/brand/), so it arrives as a MASK on this <i> and the
-           colour is painted in CSS — hero.css .logo/.logo .mark has the why.
-           Empty element, aria-hidden: the link carries the name the visible
-           word used to, exactly as the Discord control beside it does.
+      <!-- The wordmark is the quiet home state. Once the visitor enters the
+           journey, main.js adds logo-away and the same control resolves into
+           the site's mushroom mark. Both states remain in the DOM so the
+           transition is a visual handoff rather than a layout jump.
            THE HREF IS A REAL DESTINATION as of 2026-08-12 (Hannah: "Make
            clicking the logo in the top left also travel to the hero view") —
            the mark is a home control now, and `#/mission` is where home is.
@@ -144,7 +142,13 @@
            inbound deep link that boot places and then cleans). It also puts
            this tier back in step with the static one, whose logo has pointed
            at #/mission and acted as a home control since it shipped. -->
-      <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
+      <a class="logo" href="#/mission" aria-label="True Union home">
+        <span class="wordmark">TRUE UNION</span>
+        <span class="mushroom-mark" aria-hidden="true">
+          <img class="mushroom-flat" src="./assets/brand/mushroom-flat.svg" alt="">
+          <img class="mushroom-glow" src="./assets/brand/mushroom-glow.svg" alt="">
+        </span>
+      </a>
     </nav>
 
     <!-- First-paint twin of the journey rail. The live component replaces it
@@ -195,7 +199,7 @@
            for why this line lost "shared infrastructure" and its trailing
            "the … ecosystem" (Hannah: two lines, not three — and it is two at
            1440x900, 1280x800 and 375x812). -->
-      <p class="sub">Banodoco builds spaces, initiatives and tools for the open source AI art community.</p>
+      <p class="sub">True Union builds spaces, initiatives and tools for the open source AI art community.</p>
       <!-- The journey navigator is a fixed bottom-centre row (2026-08-26
            restage): five chapter destinations, all of them real since Equip
            shipped (2026-08-30) — the third slot was a placeholder until then.

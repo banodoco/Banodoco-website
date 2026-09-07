@@ -40,7 +40,7 @@ import { REASONS } from '../ownership/reasons.js';
  *  reason yet. PERSON.blurb prefers the researched line, then this. */
 export const ROLE_BLURB = Object.freeze({
   'Artist': 'Makes work with open models and shows it to the community.',
-  'Core': 'Core contributor to Banodoco itself.',
+  'Core': 'Core contributor to True Union itself.',
   'Knowledge Sharer': 'Shares the knowledge and tools the rest of the ecosystem builds on.',
   'Infrastructure': 'Builds the open-source infrastructure the ecosystem runs on.',
 });

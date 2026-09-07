@@ -185,7 +185,7 @@ async function getFallback() {
     // the never-empty floor if even it fails.
     fallbackData = {
       capturedAt: '',
-      topics: [{ title: 'The Discord daily summary is unavailable right now.', text: '', channel: '', date: '' }],
+      topics: [{ title: 'The Banodoco daily summary is unavailable right now.', text: '', channel: '', date: '' }],
     };
   }
   return fallbackData;

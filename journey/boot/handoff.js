@@ -106,7 +106,15 @@ import { heroSpores } from '../../organism/hero-spores.js';
  * @param introSeconds    the hero entry choreography length
  */
 export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
-  bakedGeomReady, skipIntro, frozen, introSeconds }) {
+  bakedGeomReady, skipIntro, frozen, introSeconds, onNavigate = null }) {
+  // Once an accepted navigation leaves the hero, retire the preload ground's
+  // earned lights before the camera flight. Keep this beside the handoff's
+  // existing navigation callback so every activated route shares the same
+  // fade without importing the preload singleton into main.js's static graph.
+  const handleNavigate = (chapter) => {
+    heroSpores.preludeFadeGround();
+    if (typeof onNavigate === 'function') onNavigate(chapter);
+  };
   // Input policy: the journey owns scroll and pointer gestures, so user
   // orbit/zoom/pan are disabled at the source (organism/organism.js
   // setInputPolicy — the DOM event shield this replaces is gone). Taps still
@@ -367,7 +375,9 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         const state = m.boot({ heroIntroSkipped: !!skipIntro,
           heroFrozen: frozen, deferActivation: true,
           rail: earlyRail,
+          onNavigate: handleNavigate,
           onEntry: (chapter) => {
+            heroSpores.preludeFadeGround();
             entryQueue.request(chapter);
           } });
         if (!state) throw new Error('Journey boot returned no state');

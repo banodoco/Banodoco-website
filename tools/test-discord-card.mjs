@@ -580,7 +580,13 @@ async function main() {
     const getFallbackCatchHead = headDiscordJs.match(/} catch \{\n {4}\/\/ The local snapshot[\s\S]*?\n {2}\}/)?.[0];
     const getFallbackCatchLive = liveDiscordJs.match(/} catch \{\n {4}\/\/ The local snapshot[\s\S]*?\n {2}\}/)?.[0];
     check(!!getFallbackCatchHead, 'sanity: getFallback\'s catch block found in HEAD');
-    check(getFallbackCatchHead === getFallbackCatchLive, 'getFallback\'s catch block (:~187) is byte-identical between HEAD and the live file -- no warn added, still intentional-safe silent');
+    // The fallback's visitor-facing community name changed from Discord to
+    // Banodoco; keep the byte fence for the catch logic and every other byte.
+    const expectedGetFallbackCatchLive = getFallbackCatchHead.replace(
+      'The Discord daily summary is unavailable right now.',
+      'The Banodoco daily summary is unavailable right now.',
+    );
+    check(expectedGetFallbackCatchLive === getFallbackCatchLive, 'getFallback\'s catch block (:~187) is byte-identical apart from the approved Banodoco title -- no warn added, still intentional-safe silent');
 
     const prepareLiveCatchHead = headDiscordJs.match(/} catch \{\n {6}\/\/ The parsed baked snapshot[\s\S]*?\n {4}\}/)?.[0];
     const prepareLiveCatchLive = liveDiscordJs.match(/} catch \{\n {6}\/\/ The parsed baked snapshot[\s\S]*?\n {4}\}/)?.[0];

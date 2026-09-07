@@ -892,7 +892,7 @@ export function createRail({ onNav } = {}) {
   menu.inert = true;
 
   const menuHead = el('div', 'j-menu-head');
-  const menuH = el('h2', 'j-menu-h', 'Banodoco');
+  const menuH = el('h2', 'j-menu-h', 'True Union');
   menuH.id = 'j-menu-h';
   menuH.tabIndex = -1;
   menuHead.appendChild(menuH);
@@ -1044,7 +1044,7 @@ export function createRail({ onNav } = {}) {
       const primer = el('div', 'j-menu-primer');
       const tabrow = el('div', 'j-menu-primer-tabs');
       tabrow.setAttribute('role', 'tablist');
-      tabrow.setAttribute('aria-label', 'About Banodoco');
+      tabrow.setAttribute('aria-label', 'About True Union');
       const panes = el('div', 'j-menu-primer-panes');
       const tabs = [];
       for (const item of CONTENT.site.primer) {

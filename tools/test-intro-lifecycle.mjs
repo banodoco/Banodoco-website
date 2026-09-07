@@ -24,11 +24,20 @@ process.on('exit', () => {
 
 const CURRENT_SOURCE = readFileSync(join(REPO_ROOT, 'organism/intro.js'), 'utf8');
 const CLOCK_SOURCE = readFileSync(join(REPO_ROOT, 'organism/intro-clock.js'), 'utf8');
-const BASELINE_SOURCE = execFileSync(
+const BASELINE_SOURCE_LEGACY = execFileSync(
   'git',
   ['show', RUN_START_SHA + ':organism/intro.js'],
   { cwd: REPO_ROOT, encoding: 'utf8' },
 );
+// The shipped baseline predates the ground-direction correction. Preserve its
+// clock and lifecycle behavior while comparing the scene against the approved
+// outward wake property.
+const BASELINE_SOURCE = BASELINE_SOURCE_LEGACY.replace(
+  'a.setX(i, (rMax - r) / span);',
+  'a.setX(i, (r - rMin) / span);',
+);
+assert.notEqual(BASELINE_SOURCE, BASELINE_SOURCE_LEGACY,
+  'the legacy oracle contains the inward ground key that this order corrects');
 
 assert.notEqual(CURRENT_SOURCE, BASELINE_SOURCE, 'the behavior oracle differs from current');
 assert.match(CURRENT_SOURCE, /from '.\/intro-clock\.js'/,
@@ -535,8 +544,8 @@ assert.ok(globalWriteRun.writes.length > 0,
 for (const [label, from, to, field] of [
   ['window mutant', '[capBeads, 0.776, 0.885]', '[capBeads, 0.777, 0.885]', 'windows'],
   ['clamp mutant', 'uClampY.value = 3.65;', 'uClampY.value = 3.6500001;', 'clampY'],
-  ['draw-key mutant', 'a.setX(i, (rMax - r) / span);',
-    'a.setX(i, (rMax - r) / span + 1e-9);', 'aDraw'],
+  ['draw-key mutant', 'a.setX(i, (r - rMin) / span);',
+    'a.setX(i, (r - rMin) / span + 1e-9);', 'aDraw'],
 ]) {
   const mutantSource = mutate(CURRENT_SOURCE, from, to, label);
   const mutant = await loadIntro(mutantSource, label.replace(/ /g, '-'));

@@ -701,6 +701,7 @@ export function boot(opts = {}) {
    * timing is endpoint-authored, so near-end pairs must remain direct. Read
    * the logical chapter before directJumpTo() snaps state to its destination. */
   function navigateFromControl(chapterId) {
+    if (typeof opts.onNavigate === 'function') opts.onNavigate(chapterId);
     /* A second bookend click belongs to the lap already on screen. Ask the
        transition that owns that lap to steer its own ticket; reconstructing
        its endpoints here from global journey.progress let an interrupted

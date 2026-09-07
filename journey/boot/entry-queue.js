@@ -40,7 +40,7 @@
  * only because those two could not run before the hook existed.
  * ==================================================================== */
 
-export function createEntryQueue() {
+export function createEntryQueue({ onRequest = null } = {}) {
   let pending = null;
   let hook = null;
 
@@ -55,6 +55,7 @@ export function createEntryQueue() {
      *  visitor who changes their mind mid-intro means. */
     request(chapter, { fast = true } = {}) {
       pending = chapter;
+      if (typeof onRequest === 'function') onRequest(chapter);
       if (fast && hook) hook();
     },
 
