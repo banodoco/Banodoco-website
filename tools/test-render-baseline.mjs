@@ -651,7 +651,10 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
    directly above. Measured per flag: `opacity` 55 -> 56; M2/M3/M4 and
    `premultipliedAlpha` unmoved — the cross-check that no real material
    site was touched. */
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 255);
+/* M1 255 -> 256 (ground-light retirement). One CSS opacity write was added
+   in `fadeLights()` so the sibling DOM glow still fades after preload ticking
+   stops; it is not a material flag and M2/M3/M4 remain unchanged. */
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 256);
 wave('M2', 'transparent: sites', flag('transparent'), 33);
 wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
 wave('M4', 'blending: sites', flag('blending'), 33);
@@ -848,6 +851,7 @@ const RAF_SITES_BY_FILE = [
     "organism/hero-spores.js x1",
     "organism/intro-clock.js x1",
     "organism/intro.js x1",
+    "organism/organism.js x1",
   ];
 waveManifest('M8', 'requestAnimationFrame sites by file',
   report.lifecycle.perCall.find((c) => c.call === 'requestAnimationFrame')
@@ -933,6 +937,7 @@ const CANCEL_RAF_SITES = [
        requestFrame function. setupIntro still owns and cancels the exact
        platform id; only the binding name changed with that ownership seam. */
     "organism/intro.js :: cancelAnimationFrame(accelerationRaf);",
+    "organism/organism.js :: if (frameId !== null) cancelAnimationFrame(frameId);",
   ];
 manifestFloor('M9', 'every recorded cancelAnimationFrame site still exists',
   lcSites('cancelAnimationFrame'), CANCEL_RAF_SITES);

@@ -78,12 +78,11 @@ export function setupIntro(ctx) {
     const [capMesh, overlay, overlayPts, gills, gillCore, rim, rimPts, capBeads] =
       filt(mushroom.children);
     const [motes, spores] = filt(scene.children);
-    // The ground does not scatter in at random — it CONVERGES. Every ground
+    // The ground does not scatter in at random — it RADIATES. Every ground
     // vertex is re-keyed to draw by distance from the mushroom's base,
-    // outermost first, so all the threads stream inward together and arrive
-    // at the foot of the stem just as the stalk fires upward. The mushroom
-    // is what everything is moving toward.
-    function convergeDraw(obj) {
+    // origin first, so every thread grows outward from the spore's landing
+    // as the stalk fires upward. The mushroom is where the wake begins.
+    function radiateDraw(obj) {
       const pos = obj.geometry.attributes.position;
       const a = obj.geometry.attributes.aDraw;
       let rMin = Infinity, rMax = -Infinity;
@@ -95,11 +94,11 @@ export function setupIntro(ctx) {
       const span = (rMax - rMin) || 1;
       for (let i = 0; i < pos.count; i++) {
         const r = Math.hypot(pos.getX(i), pos.getZ(i));
-        a.setX(i, (rMax - r) / span);
+        a.setX(i, (r - rMin) / span);
       }
       a.needsUpdate = true;
     }
-    for (const o of [web, myc, mossPts, pools, roots, ribbon, beads]) convergeDraw(o);
+    for (const o of [web, myc, mossPts, pools, roots, ribbon, beads]) radiateDraw(o);
     // The stalk rises the same way: draw order re-keyed by HEIGHT, so every
     // strand climbs together as one wave (a ring of ember light riding up the
     // stem) instead of strand-by-strand around the circumference — which made

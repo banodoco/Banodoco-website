@@ -153,9 +153,11 @@ nav {
 }
 .logo .mark {
   display: block;
-  width: calc(var(--mark-h) * 0.732);
+  width: var(--mark-h);
   height: var(--mark-h);
-  background: currentColor;
+  background: url("../assets/brand/mushroom-flat.svg") center / contain no-repeat;
+  -webkit-mask: none;
+  mask: none;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center;  mask-position: center;
   -webkit-mask-size: contain;     mask-size: contain;

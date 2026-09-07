@@ -1,19 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-<!-- Stroke-adjusted small-size variant of favicon.svg — same path geometry
-     (same silhouette/proportions/taper), no glow blur and roughly 2x the
-     core stroke weight, so the mushroom stays legible once downsampled to
-     16x16/32x32 (a browser tab). Rasterized to
-     assets/brand/favicon-source-small.png, which tools/build-meta.py reads
-     for ONLY the .ico's 16 and 32 planes; every larger size (the .ico's 48
-     plane, favicon-96, apple-touch-icon, icon-192/512) still comes from the
-     normal-weight favicon-source.png. NOT shipped on its own — excluded in
-     deploy/public-files.json alongside the other masters, same as
-     favicon-source(-small).png. Stem revised 2026-08-30 per Fable review —
-     see favicon.svg's header comment for the near-uniform/small-flare
-     rationale; both files carry the same stem path. -->
-<rect width="100" height="100" fill="#141008"/>
-<g fill="none" stroke="#f6d896" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round">
-<path d="M6,39.44 C20,20 34,14.8 50,14.8 C66,14.8 80,20 94,39.44 Z"/>
-<path d="M43.84,39.44 C44.10,50.00 44.72,63.20 44.72,74.64 C44.72,79.04 42.96,83.44 42.08,85.20 C43.84,86.96 56.16,86.96 57.92,85.20 C57.04,83.44 55.28,79.04 55.28,74.64 C55.28,63.20 55.90,50.00 56.16,39.44"/>
-</g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">True Union mushroom</title>
+  <desc id="desc">A bright gold mushroom silhouette on a dark brown ground, optimized for small sizes.</desc>
+  <rect width="512" height="512" fill="#141008"/>
+  <path fill="#FFE09A" fill-rule="evenodd" d="M198.04 431.07C196.39 428 196.75 426.61 201.01 419.61 211.35 402.59 219 372.02 223.58 329.5 226.62 301.27 225.7 247.68 222.07 241.16 221.25 239.69 218.72 239.48 190.5 238.52 158.99 237.45 123 234.35 90.52 229.91 33.55 222.13 19.86 214.11 29.16 194 40 170.56 106.05 124.72 166.22 98.88 226.6 72.96 265.96 70.01 318.5 87.49 365.97 103.28 421.29 134.27 460.03 166.77 485.53 188.17 491.79 206.87 476.41 215.76 459.87 225.31 385.82 235.79 316 238.45 307.48 238.78 297.29 239.29 293.37 239.6L286.24 240.15 284.87 249.82C283.11 262.28 283.08 311.29 284.83 326.5 290.33 374.44 298.28 404.52 309.62 420.29 313.4 425.56 314.12 428.94 312 431.5 310.92 432.8 303.38 433 254.91 433 200.73 433 199.04 432.94 198.04 431.07ZM297.16 424.06L300.82 424 295.93 414.25C277.11 376.68 268.31 285.48 278.64 235 280.78 224.56 286.12 211.21 291.48 202.93 293.96 199.08 296 195.73 296 195.47 296 195.21 277.55 195 255 195 225.95 195 214 195.32 214 196.1 214 196.7 214.87 198.41 215.93 199.9 222.32 208.87 228.68 226.21 231.43 242.16 239.86 291.02 229.93 383.01 212.62 416.5 210.91 419.8 209.37 422.8 209.2 423.17 209.03 423.54 209.92 424.06 211.19 424.32 212.96 424.67 270.92 424.5 297.16 424.06ZM219.36 230.23C220.83 227.84 213.12 211.01 206.51 202.22L201.83 196 190.17 196C141.46 196.02 38 204.22 38 208.06 38 211.87 72.76 219.29 112.5 223.95 149.9 228.34 218.05 232.35 219.36 230.23ZM315.5 229.54C379.63 227.73 463.63 216.17 472.39 207.95 475.9 204.66 360.11 195.85 316 196.06L307.5 196.1 303.74 200.8C297.64 208.44 289.6 230.16 289.6 230.16 289.84 230.55 291.49 230.69 293.27 230.47 295.05 230.26 305.05 229.84 315.5 229.54ZM63.5 194.61C110.37 189.45 221.22 185.21 278 186.41 352.65 187.99 444.67 193.18 465.93 197.02 475.39 198.73 475.5 198.68 472.81 193.79 460.28 170.97 392.8 126.06 337.5 103.73 269.17 76.14 226.59 79 148.45 116.42 106.82 136.36 52.29 174.64 39.93 192.6 35.83 198.56 36.09 198.95 43.25 197.45 46.69 196.74 55.8 195.46 63.5 194.61Z"/>
+  <!-- Small-size reinforcement: the original silhouette stays intact, while
+       these broad contour strokes survive the 16px downsample. -->
+  <path d="M31 204 C58 143 169 82 255 82 C341 82 454 143 481 204 C446 224 362 236 304 238" fill="none" stroke="#FFE09A" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M235 239 C244 286 245 365 222 423 Q255 434 288 423 C265 365 266 286 275 239" fill="#FFE09A"/>
 </svg>

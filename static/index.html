@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Banodoco — helping the open-source AI art ecosystem thrive</title>
-<meta name="description" content="Banodoco builds spaces, initiatives and tools for the open source AI art community. Static journey.">
+<title>True Union — helping the open-source AI art ecosystem thrive</title>
+<meta name="description" content="True Union builds spaces, initiatives and tools for the open source AI art community. Static journey.">
 <!-- Identity & unfurl meta — same set as the live page's head (see the
      comment there): derived icons/card from tools/build-meta.py, relative
      icon links, ORIGIN placeholder swapped by the DEPLOY.md sed. -->
@@ -16,9 +16,9 @@
 <link rel="canonical" href="ORIGIN/static/">
 <meta name="theme-color" content="#141008">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Banodoco">
-<meta property="og:title" content="Banodoco — helping the open-source AI art ecosystem thrive">
-<meta property="og:description" content="Banodoco builds spaces, initiatives and tools for the open source AI art community. Static journey.">
+<meta property="og:site_name" content="True Union">
+<meta property="og:title" content="True Union — helping the open-source AI art ecosystem thrive">
+<meta property="og:description" content="True Union builds spaces, initiatives and tools for the open source AI art community. Static journey.">
 <meta property="og:url" content="ORIGIN/static/">
 <meta property="og:image" content="ORIGIN/assets/brand/og-home.jpg">
 <meta property="og:image:width" content="1200">
@@ -226,9 +226,11 @@
   }
   .logo .mark {
     display: block;
-    width: calc(var(--mark-h) * 0.732);
+    width: var(--mark-h);
     height: var(--mark-h);
-    background: currentColor;
+    background: url("../assets/brand/mushroom-flat.svg") center / contain no-repeat;
+    -webkit-mask: none;
+    mask: none;
     -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
     -webkit-mask-position: center;  mask-position: center;
     -webkit-mask-size: contain;     mask-size: contain;
@@ -1340,7 +1342,7 @@
        CSS mask (see .logo in the stylesheet above), so there is no text and no
        <img>, and the link carries the name the visible word used to — exactly
        as the Discord control at the other end of this row does. -->
-  <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
+  <a class="logo" href="#/mission" aria-label="True Union"><i class="mark" aria-hidden="true"></i></a>
   <div class="nav-cta">
     <!-- 2RP left this row 2026-08-10, matching the live tier's header —
          the Inspire section entry and the site menu's 2RP link remain.
@@ -1437,7 +1439,7 @@
       </summary>
       <div class="menu-scrim" aria-hidden="true"></div>
       <div class="menu-head">
-        <h2 class="menu-h" tabindex="-1">Banodoco</h2>
+        <h2 class="menu-h" tabindex="-1">True Union</h2>
         <ul class="menu-links" aria-label="Social links">
           <li><a href="https://twitter.com/banodoco" target="_blank" rel="noopener noreferrer" aria-label="X" title="X"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.48 22H3.36l7.25-8.29L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.73L8.43 4.05H6.58L17.8 19.84Z"/></svg><span class="menu-vh" data-src="site.social.2.label">X</span></a></li>
           <li><a href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" aria-label="Discord" title="Discord"><svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg><span class="menu-vh" data-src="site.social.0.label">Discord</span></a></li>
@@ -1462,7 +1464,7 @@
               <button class="menu-primer-t" type="button" id="pt-what" aria-expanded="true" aria-controls="pd-what"><span data-src="site.primer.1.label">What</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
               <button class="menu-primer-t" type="button" id="pt-why" aria-expanded="true" aria-controls="pd-why"><span data-src="site.primer.2.label">Why</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
             </div>
-            <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: Banodoco is 100% shared with the people who contribute, granted 1% per month.</p></div>
+            <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: True Union is 100% shared with the people who contribute, granted 1% per month.</p></div>
             <div class="menu-primer-d" id="pd-what" role="region" aria-labelledby="pt-what"><p class="menu-primer-p" data-src="site.primer.1.body">We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.</p></div>
             <div class="menu-primer-d" id="pd-why" role="region" aria-labelledby="pt-why"><p class="menu-primer-p" data-src="site.primer.2.body">The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.</p></div>
           </div>
@@ -1492,7 +1494,7 @@
             <span class="menu-txt"><span class="menu-no">3.</span><span class="menu-name">Connecting</span></span>
           </a>
           <ul class="menu-sub">
-            <li class="menu-row"><a class="menu-row-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">Where we build &amp; create together</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Banodoco</span></span><span class="menu-is" data-src="nodes.discord.short">Where we build &amp; create together</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
             <li class="menu-row"><a class="menu-row-link" href="https://ados.events/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
             <li class="menu-row"><a class="menu-row-link" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">Community’s collective intelligence</span><span class="menu-ia" aria-hidden="true">↗</span></a></li>
           </ul></li>
@@ -1524,7 +1526,7 @@
     <div class="inner">
       <p class="eyebrow">Chapter 01 — Mission</p>
       <h1 id="h-mission" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</h1>
-      <p class="sub" data-src="chapters.mission.sub">Banodoco builds spaces, initiatives and tools for the open source AI art community.</p>
+      <p class="sub" data-src="chapters.mission.sub">True Union builds spaces, initiatives and tools for the open source AI art community.</p>
     </div>
   </section>
 
@@ -1533,7 +1535,7 @@
     <div class="inner">
       <p class="eyebrow">Chapter 02 — Inspire</p>
       <h2 id="h-inspire" data-src="chapters.inspire.heading">Inspire the movement.</h2>
-      <p class="sub" data-src="chapters.inspire.sub">Banodoco launches and stewards initiatives that inspire more people to care about open-source AI art.</p>
+      <p class="sub" data-src="chapters.inspire.sub">True Union launches and stewards initiatives that inspire more people to care about open-source AI art.</p>
 
       <ul class="nodes">
         <li class="node" id="node-arca">
@@ -1593,7 +1595,7 @@
     <div class="inner">
       <p class="eyebrow">Chapter 03 — Equip</p>
       <h2 id="h-equip" data-src="chapters.equip.heading">Equip the ecosystem.</h2>
-      <p class="sub" data-src="chapters.equip.sub">Banodoco builds tools that help the community push open models further — expanding what is possible and what remains open.</p>
+      <p class="sub" data-src="chapters.equip.sub">True Union builds tools that help the community push open models further — expanding what is possible and what remains open.</p>
 
       <ul class="nodes">
         <li class="node" id="node-quark">
@@ -1616,7 +1618,7 @@
     <div class="inner">
       <p class="eyebrow">Chapter 04 — Connect</p>
       <h2 id="h-connect" data-src="chapters.connect.heading">Connect the community.</h2>
-      <p class="sub" data-src="chapters.connect.sub">Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.</p>
+      <p class="sub" data-src="chapters.connect.sub">True Union brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.</p>
 
       <ul class="nodes">
         <li class="node" id="node-ados">
@@ -1650,14 +1652,14 @@
         <li class="node" id="node-discord">
           <h3 class="node-h">
             <button class="node-t" type="button" id="t-discord" aria-expanded="true" aria-controls="d-discord">
-              <span data-src="nodes.discord.label">Discord</span><span class="chev" aria-hidden="true">▾</span>
+              <span data-src="nodes.discord.label">Banodoco</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
           <p class="node-short" data-src="nodes.discord.short">Where we build &amp; create together</p>
           <div class="node-d" id="d-discord" role="region" aria-labelledby="t-discord" tabindex="-1">
-            <p data-src="nodes.discord.card.body.0">The Discord is where the community actually lives, day to day.</p>
+            <p data-src="nodes.discord.card.body.0">Banodoco is where the community actually lives, day to day.</p>
             <p data-src="nodes.discord.card.body.1">Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.</p>
-            <a class="go" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" data-src="nodes.discord.card.link.label">Join the Discord</a>
+            <a class="go" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" data-src="nodes.discord.card.link.label">Join Banodoco</a>
           </div>
         </li>
       </ul>
@@ -1685,7 +1687,7 @@
            cannot mirror `chapters.owned.sub` while it is rendering the list
            that sub replaced. Same element and same class as every other
            chapter's sub, which is what the live tier draws too. -->
-      <p class="sub" data-src="chapters.owned.sub">Banodoco is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.</p>
+      <p class="sub" data-src="chapters.owned.sub">True Union is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.</p>
 
       <h3 class="eyebrow" style="margin-top:0.4rem">How ownership works</h3>
       <ul class="nodes">
@@ -1698,7 +1700,7 @@
           <p class="node-short" data-src="nodes.pod-shared.short">The dominant principle.</p>
           <div class="node-d" id="d-pod-shared" role="region" aria-labelledby="t-pod-shared" tabindex="-1">
             <p class="claim" data-src="nodes.pod-shared.card.claim">100% shared</p>
-            <p data-src="nodes.pod-shared.card.body.0">Ownership of Banodoco is 100% shared with the people who build it.</p>
+            <p data-src="nodes.pod-shared.card.body.0">Ownership of True Union is 100% shared with the people who build it.</p>
             <p data-src="nodes.pod-shared.card.body.1">Aside from investor dilution, open source contributors will own all of our company. We believe that a company that’s built with the community should belong to the community.</p>
           </div>
         </li>
@@ -1743,16 +1745,16 @@
            ownership ledger (banodoco.ai/ownership). Do not hand-edit rows —
            they are generated from that file's data-src paths. -->
       <h3 class="eyebrow" id="h-contributors" style="margin-top:2rem">Contributor index</h3>
-      <p class="index-note">16 contributors, grouped by the four ownership groups Banodoco grants to each month. Names are from its public ownership ledger at banodoco.ai/ownership.</p>
+      <p class="index-note">16 contributors, grouped by the four ownership groups True Union grants to each month. Names are from its public ownership ledger at banodoco.ai/ownership.</p>
       <ul class="contributors" aria-labelledby="h-contributors">
         <li id="node-contributor-0" tabindex="-1"><span class="c-name" data-src="contributors.0.name">enigmatic_e</span><span class="c-role" data-src="contributors.0.role">Artist</span><span class="c-blurb" data-src="contributors.0.blurb">Makes work with open models and shows it to the community.</span></li>
         <li id="node-contributor-1" tabindex="-1"><span class="c-name" data-src="contributors.1.name">thedorbrothers</span><span class="c-role" data-src="contributors.1.role">Artist</span><span class="c-blurb" data-src="contributors.1.blurb">Makes work with open models and shows it to the community.</span></li>
         <li id="node-contributor-2" tabindex="-1"><span class="c-name" data-src="contributors.2.name">NebSH</span><span class="c-role" data-src="contributors.2.role">Artist</span><span class="c-blurb" data-src="contributors.2.blurb">Makes work with open models and shows it to the community.</span></li>
         <li id="node-contributor-3" tabindex="-1"><span class="c-name" data-src="contributors.3.name">Hannah Submarine</span><span class="c-role" data-src="contributors.3.role">Artist</span><span class="c-blurb" data-src="contributors.3.blurb">Makes work with open models and shows it to the community.</span></li>
         <li id="node-contributor-4" tabindex="-1"><span class="c-name" data-src="contributors.4.name">POM</span><span class="c-role" data-src="contributors.4.role">Core</span><span class="c-blurb" data-src="contributors.4.blurb">Core contributor, on the ledger every month since it opened.</span></li>
-        <li id="node-contributor-5" tabindex="-1"><span class="c-name" data-src="contributors.5.name">lone_samurai</span><span class="c-role" data-src="contributors.5.role">Core</span><span class="c-blurb" data-src="contributors.5.blurb">Core contributor to Banodoco itself.</span></li>
-        <li id="node-contributor-6" tabindex="-1"><span class="c-name" data-src="contributors.6.name">matt3o</span><span class="c-role" data-src="contributors.6.role">Core</span><span class="c-blurb" data-src="contributors.6.blurb">Core contributor to Banodoco itself.</span></li>
-        <li id="node-contributor-7" tabindex="-1"><span class="c-name" data-src="contributors.7.name">Ian_G</span><span class="c-role" data-src="contributors.7.role">Core</span><span class="c-blurb" data-src="contributors.7.blurb">Core contributor to Banodoco itself.</span></li>
+        <li id="node-contributor-5" tabindex="-1"><span class="c-name" data-src="contributors.5.name">lone_samurai</span><span class="c-role" data-src="contributors.5.role">Core</span><span class="c-blurb" data-src="contributors.5.blurb">Core contributor to True Union itself.</span></li>
+        <li id="node-contributor-6" tabindex="-1"><span class="c-name" data-src="contributors.6.name">matt3o</span><span class="c-role" data-src="contributors.6.role">Core</span><span class="c-blurb" data-src="contributors.6.blurb">Core contributor to True Union itself.</span></li>
+        <li id="node-contributor-7" tabindex="-1"><span class="c-name" data-src="contributors.7.name">Ian_G</span><span class="c-role" data-src="contributors.7.role">Core</span><span class="c-blurb" data-src="contributors.7.blurb">Core contributor to True Union itself.</span></li>
         <li id="node-contributor-8" tabindex="-1"><span class="c-name" data-src="contributors.8.name">citizenplain</span><span class="c-role" data-src="contributors.8.role">Knowledge Sharer</span><span class="c-blurb" data-src="contributors.8.blurb">Shares the knowledge and tools the rest of the ecosystem builds on.</span></li>
         <li id="node-contributor-9" tabindex="-1"><span class="c-name" data-src="contributors.9.name">cyncratic</span><span class="c-role" data-src="contributors.9.role">Knowledge Sharer</span><span class="c-blurb" data-src="contributors.9.blurb">Shares the knowledge and tools the rest of the ecosystem builds on.</span></li>
         <li id="node-contributor-10" tabindex="-1"><span class="c-name" data-src="contributors.10.name">Klinter</span><span class="c-role" data-src="contributors.10.role">Knowledge Sharer</span><span class="c-blurb" data-src="contributors.10.blurb">Shares the knowledge and tools the rest of the ecosystem builds on.</span></li>
@@ -1938,7 +1940,7 @@
   var primerRow = document.querySelector('.menu-primer-tabs');
   var primerBtns = Array.prototype.slice.call(document.querySelectorAll('.menu-primer-t'));
   if (primerRow) primerRow.setAttribute('role', 'tablist');
-  if (primerRow) primerRow.setAttribute('aria-label', 'About Banodoco');
+  if (primerRow) primerRow.setAttribute('aria-label', 'About True Union');
   primerBtns.forEach(function (btn) {
     var panel = document.getElementById(btn.getAttribute('aria-controls'));
     if (!panel) return;

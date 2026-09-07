@@ -46,8 +46,8 @@
  *             faint pulses run the spine paths between them.
  *   HANDOFF   when the journey is prepared, a brightness pulse runs the
  *             spine paths inward and the intro is released as it reaches
- *             the origin — the real ground web converges in under the
- *             fading skeleton (organism/intro.js draws it inward over the
+ *             the origin — the real ground web radiates out from under the
+ *             fading skeleton (organism/intro.js draws it outward over the
  *             same beat) and the mushroom grows from the same spot. One
  *             continuous event, not a crossfade between two worlds.
  *
@@ -61,7 +61,7 @@
  * WHAT THIS SUPERSEDES (R4's overture), stated per piece:
  *   - the converging land-at-the-spot stream: the biggest correction —
  *     the current no longer terminates at the mushroom site. Most of it
- *     exits off-screen right; only the hero spores land.
+ *     exits off-screen right; one ordinary stream spore can land.
  *   - the traveling amber light: replaced by the hero-spore landings.
  *     A repeating light aimed at the spot both pre-marked the target
  *     ("no ghost") and read as a finished loop waiting on a slow load.
@@ -169,8 +169,9 @@ import { LANDING_SITES, SKELETON } from './network-skeleton.js';
  *          and the spec's own words are "the exact count is secondary to
  *          the perception of a continuous moving volume". Two draw
  *          calls, no textures — the budget holds.
- *   nH     hero spores: larger, brighter, riding inside the flow. The
- *          landing choreography draws its 2-3 landing spores from these.
+ *   nH     reserved midground stream slots, drawn from the same size and
+ *          light family as ambient spores; landing selection reads the whole
+ *          stream so no separate visible landing cast is introduced.
  *   land   how many of the hero spores peel away and land.
  *   xIn    NDC x a particle enters at (off-frame upper-left)
  *   xOut   NDC x the recycle fires at (off-frame right)
@@ -208,18 +209,18 @@ const COMPOSITION = {
   // — the reference river is dense and fine-grained, and so is the shed
   // this current must read as one species with.
   desktop: {
-    nA: 2900, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    nA: 2900, nH: 8, land: 1, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
     fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 2600, nH: 8, land: 3, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    nA: 2600, nH: 8, land: 1, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
     fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    nA: 850, nH: 5, land: 2, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    nA: 850, nH: 5, land: 1, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
     fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5, lum: 0.9,
   },
   // iPad portrait, 744x1133. Steeper: from the upper-left edge across
@@ -227,14 +228,14 @@ const COMPOSITION = {
   // Portrait has less sky, so the weather is scaled back (`lum`): full
   // desktop light over a narrower band would swamp the column of copy.
   tablet: {
-    nA: 950, nH: 6, land: 2, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
+    nA: 950, nH: 6, land: 1, xIn: -1.36, xOut: 1.38, e: [0.58, 1.16],
     fall: [0.35, 0.80], depth: [6.5, 15.5], gain: 4.8, dpr: 1.5, lum: 0.85,
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 620, nH: 5, land: 2, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 620, nH: 5, land: 1, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
@@ -267,8 +268,7 @@ const BANDS = [
   { share: 0.38, d0: 0.18, d1: 0.52, lum: 2.30, vel: 1.00, size: 1.0 },  // the body
   { share: 0.12, d0: 0.00, d1: 0.18, lum: 1.25, vel: 1.20, size: 1.0 },  // near, blurred
 ];
-// Hero spores: bigger and warmer, but from the same families — the size
-// and tone draws below are the shed's own with the exponents relaxed.
+// Reserved midground stream slots use the same particle family as the shed.
 const HERO_DEPTH = [0.20, 0.40];    // fractions of the depth range: midground
 // The current dims as it travels: brightness eases off across the run so
 // the upstream body reads denser than the feathered downstream fan — the
@@ -312,15 +312,15 @@ const QUIET_DIM = 0.55;
  * CHANCE, and a spore that departs on a timer is a stunt. When
  * sceneReady arrives early the remaining settles COMPRESS (RATE_FAST)
  * rather than skip — "accelerate the next landing rather than hard-cut". */
-const PEEL_AT = [0.85, 2.05, 3.35];
-const FLUT_S = [2.10, 2.25, 2.35];  // base flutter durations, priced by drop
+const PEEL_AT = [0.65, 1.85, 3.15];
+const FLUT_S = [1.55, 1.75, 1.90];  // base flutter durations, priced by drop
 const LULL_THR = 0.60;          // the wind is a lull below this gust value
 const LULL_WAIT = 0.9;          // longest a ripe settle waits for its lull
 const SWAY_CYC = 2.4;           // falling-leaf sway cycles per descent
 const SWAY_AMP = 0.17;          // world units of lateral sway at the widest
 const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
 const LAND_COLLAPSE_S = 0.55;   // the landed spore's light sinks into the ground
-const RESPAWN_S = 2.6;          // then the hero slot re-enters with the current
+const RESPAWN_S = 2.6;          // then the spent hero slot retires permanently
 const RATE_FAST = 1.9;          // compression when the scene is already ready
 const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
 // The settle glow: a landing swells a soft bloom at the site and the
@@ -329,7 +329,7 @@ const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
 // flash + spark ring; same parked banks, same draw call, re-timed.)
 const RING_N = 9;               // 1 bloom + 8 ground glimmers per settle
 const RING_BANKS = 2;           // two settles may overlap in the elastic hold
-const RING_S = 1.60;            // seconds of settle-glow life
+const RING_S = 0.90;            // seconds of settle-glow life
 const RING_R = 0.62;            // world radius the glimmers reach
 // The descent carries NO comet trail. The v3 intensity pass strung
 // embers along the peel bezier because a 1-second dive needed a tail to
@@ -343,8 +343,9 @@ const TRAIL_BANKS = 3;          // concurrent descents (compression overlaps)
 // The ground's own tempo: how fast a woken island's filaments creep
 // outward, and the handoff pulse's run to the origin.
 const NET_GROW_V = 1.15;        // world units / second of filament creep
-const NET_MIN_S = 0.35;         // ground response legible before convergence
-const CONV_S = 0.85;            // the convergence pulse's travel time
+const NET_MIN_S = 0.15;         // brief ground response before growth starts
+const CONV_S = 0.35;             // short handoff pulse; the web keeps growing
+const POOL_FADE_S = 0.80;       // one landing pulse fades when growth starts
 const NET_EXIT_S = 1.35;        // skeleton fade under the real web's draw-on
 
 /* ---------------------------------------------------------------- *
@@ -503,27 +504,20 @@ function seedOne(F, i, c, rand, atEntry) {
   F.fallJ[i] = fallJ;
   F.band[i] = ring ? 4 : band;
   F.fade[i] = ring ? 0 : 1;
-  // The shed's own draws (see the header); hero spores relax the size
-  // exponent and lift the tone floor — the top of the SAME size family
-  // (the shed's own draw crests at 0.091; a hero sits at 0.130-0.210,
-  // the family's tail, not another species), and they are followable
-  // because they carry 3.1x light, not because they are big. The v3
-  // intensity pass had them at 0.235-0.365 and the owner read them as
-  // a different, larger breed than the mushroom's own spores — which
-  // they must never be, since the scene ADOPTS these exact particles.
-  F.size[i] = hero
-    ? 0.130 + Math.pow(rand(), 1.3) * 0.080
-    : ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
-  F.tone[i] = hero ? 0.88 + rand() * 0.12 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
-  F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel * (hero ? 1.05 : 1);
+  // Every stream slot uses the shed's own size, tone, and speed family. A
+  // landing becomes followable through its descent light, never by growing
+  // a bespoke cast member or changing its motion.
+  F.size[i] = ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
+  F.tone[i] = ring ? 0.78 + rand() * 0.14 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
+  F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel;
   F.seed[i] = rand() * Math.PI * 2;
   F.wobF[i] = WOB_FREQ[0] + (WOB_FREQ[1] - WOB_FREQ[0]) * rand();
   heatLinear(F.tone[i], F.color, i3);
   // The river carries more light than its haze: core bodies get a lift
   // over their band's own luminance, so the spine of the current is what
-  // the eye reads first. Hero spores outrank everything — they are the
-  // ones that will peel, and the reference's descending bodies GLOW.
-  const lg = hero ? 3.1 : lum * (c.lum || 1) * (core ? 1.25 : 1);
+  // the eye reads first. Landing light is applied during descent, so the
+  // ordinary stream particle remains continuous until it peels away.
+  const lg = ring ? 1 : lum * (c.lum || 1) * (core ? 1.25 : 1);
   F.color[i3] *= lg; F.color[i3 + 1] *= lg; F.color[i3 + 2] *= lg;
   F.attrsDirty = true;
 }
@@ -619,6 +613,7 @@ function createField(view, seed) {
     t: 0,
     sceneReady: false,
     released: false,
+    retired: new Uint8Array(n),
     landings: [],          // {hi, site, tPeel, dur, state, p0, p3, swayA, phase, impactAt}
     rings: [],             // {site, bank, t0}
     ringBank: 0,
@@ -627,6 +622,7 @@ function createField(view, seed) {
     nextExtraAt: -1,
     attrsDirty: true,
   };
+  frameAnchors(F, view);
   for (let i = 0; i < c.nA + c.nH; i++) seedOne(F, i, c, rand, false);
   seedRings(F, rand);
   seedTrails(F, rand);
@@ -635,8 +631,8 @@ function createField(view, seed) {
   return F;
 }
 
-/** The initial landing plan: `land` of the hero spores, staggered per
- *  PEEL_AT, one per site in order (site 0 — the mushroom origin — first). */
+/** The initial landing plan: one ordinary stream spore peels at PEEL_AT
+ *  (site 0 — the mushroom origin). */
 function planLandings(F) {
   F.landings.length = 0;
   for (let k = 0; k < F.comp.land; k++) {
@@ -655,6 +651,7 @@ function planLandings(F) {
 function reframe(F, view) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const oldAspect = F.aspect;
+  const oldTanHalfFov = F.tanHalfFov;
   // Crossing a breakpoint re-aims the whole field: each particle's own
   // descent survives, rescaled onto the new mode's fan, and its streamline
   // identity is re-derived so it still pours through the new entry window.
@@ -665,7 +662,7 @@ function reframe(F, view) {
   for (let i = 0; i < F.nA + F.nH; i++) {
     const i3 = i * 3;
     const d = F.frame[i3 + 2];
-    const halfH = d * F.tanHalfFov;
+    const halfH = d * oldTanHalfFov;
     const xPrev = F.frame[i3] / (halfH * oldAspect);
     // hold each particle on its own streamline, re-derived in the new frame
     const e0 = Math.min(c.e[1], Math.max(c.e[0], F.q[i]));
@@ -687,33 +684,26 @@ function reframe(F, view) {
   }
 }
 
-/** The hero spore a settle claims: whichever free hero is riding the
- *  current in the LOWER band of the flow, a shade upwind of the site —
- *  the spot a spore would actually be in when it loses lift and flutters
- *  down. The ideal is slightly upwind and above (a flutter is mostly
- *  descent; the wind's remaining carry closes only a small gap), so no
- *  chosen spore ever crosses the field to land. Falls back to the plain
- *  nearest if nothing is upwind (they recycle within seconds anyway). */
+/** Claim only a visible spore already just above this patch of ground.
+ *  A missing candidate delays the settle; it never recruits a distant one. */
 function pickPeeler(F, site) {
   const s3 = site * 3;
   const sxN = F.sites[s3] / (F.sites[s3 + 2] * F.tanHalfFov * F.aspect);
   const syN = F.sites[s3 + 1] / (F.sites[s3 + 2] * F.tanHalfFov);
-  let best = -1, bestScore = Infinity, fall = -1, fallD = Infinity;
-  for (let i = F.nA; i < F.nA + F.nH; i++) {
-    if (heldByLanding(F, i)) continue;
+  let best = -1, bestScore = Infinity;
+  for (let i = 0; i < F.nA + F.nH; i++) {
+    if (F.retired[i] || heldByLanding(F, i)) continue;
     const i3 = i * 3;
     const halfH = F.frame[i3 + 2] * F.tanHalfFov;
     const xN = F.frame[i3] / (halfH * F.aspect);
     const yN = F.frame[i3 + 1] / halfH;
-    const d = Math.hypot(xN - sxN, yN - syN);
-    if (d < fallD) { fallD = d; fall = i; }
-    if (xN > sxN - 0.05 || xN < -1.0) continue;   // upwind of the site, on screen
-    // distance to the natural release point: ~0.16 NDC upwind of the
-    // site, ~0.5 NDC above it — low in the current, nearly overhead
-    const score = Math.hypot(xN - (sxN - 0.16), yN - (syN + 0.50));
+    const drop = yN - syN;
+    if (Math.abs(xN) > 1 || Math.abs(yN) > 1
+        || Math.abs(xN - sxN) > 0.45 || drop < 0.03 || drop > 0.80) continue;
+    const score = Math.hypot(xN - sxN, drop);
     if (score < bestScore) { bestScore = score; best = i; }
   }
-  return best >= 0 ? best : fall >= 0 ? fall : F.nA;
+  return best;
 }
 
 /** The flutter: aim a settle from the spore's current position down to
@@ -778,7 +768,7 @@ function advance(F, dt, gust) {
   // ---- the stream: ambient + hero spores not currently settling ----
   for (let i = 0; i < F.nA + F.nH; i++) {
     const i3 = i * 3;
-    if (F.band[i] === 3 && heldByLanding(F, i)) continue;
+    if (F.retired[i] || (F.band[i] === 3 && heldByLanding(F, i))) continue;
     const d = F.frame[i3 + 2];
     const halfH0 = d * F.tanHalfFov;
     const xN0 = F.frame[i3] / (halfH0 * F.aspect);
@@ -806,15 +796,18 @@ function advance(F, dt, gust) {
       const u = Math.min(1, Math.max(0, (xNdc - c.xIn) / (c.xOut - c.xIn)));
       F.fade[i] = 1 - TRAVEL_DIM * u * u * (3 - 2 * u);
     }
-    // THE RECYCLE — off-screen right, back to off-screen left, with fresh
-    // draws. The current continues past the frame on both edges, so most
-    // spores visibly pass through and leave (the spec's hard world-building
-    // requirement), and the stationary distribution never thins or loops.
-    if (xNdc > c.xOut) seedOne(F, i, c, F.rand, true);
+    // Once growth begins this is a finite cloud: departing spores stay gone.
+    if (xNdc > c.xOut) {
+      if (F.released) {
+        F.retired[i] = 1;
+        F.fade[i] = 0;
+      } else seedOne(F, i, c, F.rand, true);
+    }
   }
 
   // ---- the settles ----
   for (const L of F.landings) {
+    if (L.state === 3) continue;
     if (L.state === 0) {
       // compression: a ready scene pulls the remaining settles forward
       if (rate > 1 && L.tPeel > F.t + 0.15) L.tPeel = F.t + 0.15;
@@ -826,13 +819,15 @@ function advance(F, dt, gust) {
       // scene gets its causality at pace, not a meteorology lesson.
       if (F.t >= L.tPeel
           && (rate > 1 || gust < LULL_THR || F.t >= L.tPeel + LULL_WAIT)) {
-        L.state = 1;
         // THE SETTLE CHOOSES ITS SPORE AT THE LAST MOMENT: whichever free
-        // hero spore is riding low, a shade upwind of the site — the one
+        // stream spore is riding low, close to the site — the one
         // for whom losing lift RIGHT NOW would deliver it here. A fixed
         // cast member could be anywhere, and a spore hauled in from the
         // far corner is a meteor, exactly the grammar the spec rules out.
-        L.hi = pickPeeler(F, L.site);
+        const peeler = pickPeeler(F, L.site);
+        if (peeler < 0 || F.released) continue;
+        L.hi = peeler;
+        L.state = 1;
         const drop = aimFlutter(F, L, F.frame, L.hi * 3);
         const halfH = F.frame[L.hi * 3 + 2] * F.tanHalfFov;
         // priced by the DROP, not the arc: a flutter is mostly descent
@@ -855,8 +850,10 @@ function advance(F, dt, gust) {
       // turns), which is what keeps a small, honest-sized spore
       // followable without any comet grammar.
       const sb = u > BLOOM_IN_U ? (u - BLOOM_IN_U) / (1 - BLOOM_IN_U) : 0;
-      F.fade[L.hi] = 1.12 + 0.10 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase))
-        + 0.5 * sb * sb;
+      // Brighten the one ordinary stream spore as it descends so it remains
+      // followable. Size, position speed, and the ambient stream are unchanged.
+      F.fade[L.hi] = 1.45 + 0.14 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase))
+        + 0.95 * sb * sb;
       if (u >= 1) {
         L.state = 2;
         L.impactAt = F.t;
@@ -869,12 +866,13 @@ function advance(F, dt, gust) {
     }
     // state 2: the light sinks slowly into the ground it just woke —
     // from the swollen brightness the settle arrived at — and then the
-    // hero slot re-enters the current upstream with fresh draws.
+    // The selected stream slot retires with its light spent in the soil.
     const since = F.t - L.impactAt;
     F.fade[L.hi] = Math.max(0, 1.62 * (1 - since / LAND_COLLAPSE_S));
     if (since > RESPAWN_S) {
       L.state = 3;
-      seedOne(F, L.hi, c, F.rand, true);
+      F.retired[L.hi] = 1;
+      F.fade[L.hi] = 0;
     }
   }
 
@@ -1216,6 +1214,7 @@ const LAYER_CSS = 'position:fixed;inset:0;z-index:0;pointer-events:none;'
  * skeleton ink. The ground is earned by impact.
  */
 const NET_ALPHA = 1.55;
+const GROUND_FADE_S = 0.35;
 
 let ground = null;
 
@@ -1291,6 +1290,9 @@ function createGround(view, reduced) {
     convStartAt: -1,     // choreography-clock time the pulse leaves the islands
     struckAt: -1,        // wall-clock ms of the strike (releaseIntro's frame)
     exitAt: -1,          // choreography-clock time the skeleton fade began
+    lightFadeAt: -1,     // choreography-clock time navigation began its fade
+    lightFadeRequested: false,
+    poolFadeAt: -1,       // one landing pulse fades when the mushroom starts
     gone: false,
   };
 
@@ -1347,6 +1349,9 @@ function createGround(view, reduced) {
    *  the caller skips the draw call entirely on a dark network. */
   function relight(t) {
     if (state.gone) return false;
+    if (state.lightFadeRequested && state.lightFadeAt < 0) state.lightFadeAt = t;
+    const lightFade = state.lightFadeAt < 0
+      ? 1 : Math.max(0, 1 - (t - state.lightFadeAt) / GROUND_FADE_S);
     let any = false;
     // convergence front: distance-from-origin sweeping DMAX -> 0
     let convFront = -1;
@@ -1354,7 +1359,7 @@ function createGround(view, reduced) {
       convFront = 3.4 * (1 - Math.min(1, (t - state.convStartAt) / CONV_S));
     }
     // the exit: after the strike the real web is drawing itself in
-    // underneath (organism/intro.js's converging ground windows), and the
+    // underneath (organism/intro.js's radiating ground windows), and the
     // skeleton hands its light down over the same beat
     let exitK = 1;
     if (state.exitAt >= 0) {
@@ -1381,6 +1386,8 @@ function createGround(view, reduced) {
         const d = dOrig[v] - convFront;
         k *= 1 + 1.5 * Math.exp(-(d * d) / 0.11);
       }
+      // Navigation retires the landing glow, while the earned network keeps
+      // its outward geometry and natural light handoff.
       k *= NET_ALPHA * exitK;
       lit[v * 3] = base[v * 3] * k;
       lit[v * 3 + 1] = base[v * 3 + 1] * k;
@@ -1398,6 +1405,9 @@ function createGround(view, reduced) {
         // THE STRIKE: one larger swell breathing under the growth's start
         o += 0.9 * Math.exp(-(nowMs - state.struckAt) / 800);
       }
+      const poolFade = state.poolFadeAt < 0 ? 1
+        : Math.max(0, 1 - (t - state.poolFadeAt) / POOL_FADE_S);
+      o *= lightFade * poolFade;
       pools[s].style.opacity = Math.min(1, o).toFixed(3);
       state.poolLit[s] *= Math.pow(0.5, ((t - w) > 0.3 ? 0.016 : 0) / 3.5); // slow settle of re-pulses
     }
@@ -1405,7 +1415,9 @@ function createGround(view, reduced) {
       state.wakeAt[0] < 0 ? 0 : Math.min(1, (t - state.wakeAt[0]) / 1.2),
       state.wakeAt[1] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[1]) / 1.5),
       state.wakeAt[2] < 0 ? 0 : Math.min(0.8, (t - state.wakeAt[2]) / 1.5));
-    groundWash.style.opacity = (0.72 * act * exitK).toFixed(3);
+    const washFade = state.poolFadeAt < 0 ? 1
+      : Math.max(0, 1 - (t - state.poolFadeAt) / POOL_FADE_S);
+    groundWash.style.opacity = (0.72 * act * exitK * lightFade * washFade).toFixed(3);
     return any;
   }
 
@@ -1418,6 +1430,17 @@ function createGround(view, reduced) {
     el, pos, lit, nV, projectAll, reframeGlow, relight, wake, state,
     get gone() { return state.gone; },
     awakeCount,
+    /** Navigation retires the earned ground light without touching the
+     * stream or the one-shot landing clock. The request is latched, so a
+     * loop back to the hero cannot bring the pool or wake back. */
+    fadeLights() {
+      state.lightFadeRequested = true;
+      // The preload loop may already have handed ownership to the scene and
+      // stopped ticking. CSS retires the sibling DOM glow in that window;
+      // relight() applies the same fade to the live skeleton while it runs.
+      el.style.transition = `opacity ${GROUND_FADE_S * 1000}ms linear`;
+      el.style.opacity = '0';
+    },
     /** Arm the convergence pulse so it ARRIVES at the origin in
      *  `needSeconds` of field time. */
     armConvergence(t, needSeconds) {
@@ -1432,6 +1455,7 @@ function createGround(view, reduced) {
     strike(t) {
       if (state.gone || state.struckAt >= 0) return;
       state.struckAt = performance.now();
+      state.poolFadeAt = t;
       if (state.convStartAt < 0 || state.convStartAt > t) {
         state.convStartAt = t - CONV_S * 0.6; // un-armed strike: pulse mostly arrived
       }
@@ -1918,6 +1942,11 @@ function createPreload() {
       if (ground) ground.dismiss();
       if (state.field) state.field.released = true;
       if (state.live && state.handedOff) setTimeout(stop, 400);
+    },
+    /** Fade earned landing light when an accepted navigation intent leaves
+     * the hero, while preserving the ordinary intro and stream handoff. */
+    preludeFadeGround() {
+      if (ground && !ground.gone) ground.fadeLights();
     },
     get failed() { return state.failed; },
     get field() { return state.field; },
