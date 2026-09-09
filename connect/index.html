@@ -30,6 +30,9 @@
       background: #191715eF;
       box-shadow: 0 1.5rem 5rem #0008;
     }
+    main.success { text-align: center; }
+    main.success .eyebrow { color: #9ed7a2; }
+    main.success .status { margin: 1rem 0 0; color: #d6f0d8; font-size: 1.1rem; font-weight: 700; }
     h1 { margin: 0 0 .5rem; font-size: clamp(1.75rem, 5vw, 2.5rem); }
     p { color: #cdbfae; line-height: 1.55; }
     .eyebrow { margin: 0 0 .75rem; color: #e0a85e; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
@@ -51,7 +54,7 @@
 <body>
   <main>
     <p class="eyebrow">Banodoco · Hivemind</p>
-    <h1>Connect a machine</h1>
+    <h1 id="heading">Connect a machine</h1>
     <p id="intro">Sign in to connect this machine to your Banodoco account.</p>
     <p id="status" class="status" role="status" aria-live="polite">Preparing secure connection…</p>
     <section class="details" aria-label="Connection request">
@@ -59,7 +62,7 @@
       <div class="detail"><span class="detail-label">Approval code</span><span id="code" class="detail-value">—</span></div>
     </section>
     <button id="action" type="button" hidden disabled>Sign in with Discord</button>
-    <p class="fine-print">After Discord sign-in, this request is approved automatically and the page will tell you to return to your terminal.</p>
+    <p id="fine-print" class="fine-print">After Discord sign-in, this request is approved automatically and the page will tell you to return to your terminal.</p>
   </main>
 
   <script type="module">
@@ -99,10 +102,13 @@
       const CONTEXT_KEY = 'banodoco.connect.request.v2';
       const elements = {
         intro: document.querySelector('#intro'),
+        heading: document.querySelector('#heading'),
         status: document.querySelector('#status'),
         machine: document.querySelector('#machine'),
         code: document.querySelector('#code'),
         action: document.querySelector('#action'),
+        details: document.querySelector('.details'),
+        finePrint: document.querySelector('#fine-print'),
       };
       let context = null;
       let session = null;
@@ -199,8 +205,12 @@
         });
         await readPayload(await fetch(url, options));
         elements.action.hidden = true;
-        elements.intro.textContent = 'This machine is connected to your Banodoco account.';
-        setStatus('Success — return to your terminal. Astrid is finishing the login.');
+        elements.details.hidden = true;
+        elements.finePrint.hidden = true;
+        document.querySelector('main').classList.add('success');
+        elements.heading.textContent = 'Thank you!';
+        elements.intro.textContent = 'Your machine is connected to your Banodoco account.';
+        setStatus('You’re all set — return to your terminal to finish signing in to Astrid.');
       }
 
       async function start() {
