@@ -28,6 +28,10 @@
       "include": ["connect-nodes.js", "content.js", "contributors.js"]
     },
     {
+      "path": "connect",
+      "include": ["*.html", "*.css", "*.js"]
+    },
+    {
       "path": "journey",
       "include": ["*.css", "*.html", "*.js"]
     },
