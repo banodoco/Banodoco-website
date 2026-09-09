@@ -9,7 +9,10 @@
 export const DEFAULT_CONNECT_CONFIG = Object.freeze({
   browserOrigin: 'https://www.banodoco.ai',
   callbackPath: '/connect/',
-  supabaseUrl: 'https://ujlwuvkrxlvoswwkerdf.supabase.co',
+  // Use the project's custom domain for both the authorize request and the
+  // callback. Supabase sets its OAuth state cookie on the authorize host;
+  // mixing the project host with the custom callback host causes bad_oauth_state.
+  supabaseUrl: 'https://bundles.banodoco.ai',
   anonKey: 'sb_publishable_O38oPBafrBoFrpi_rlWJvA_UJrulFsx',
   authAuthorizePath: '/auth/v1/authorize',
   authTokenPath: '/auth/v1/token?grant_type=pkce',
