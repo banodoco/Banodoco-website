@@ -52,15 +52,14 @@
   <main>
     <p class="eyebrow">Banodoco · Hivemind</p>
     <h1>Connect a machine</h1>
-    <p id="intro">Sign in to review this connection request. Nothing is approved until you choose the approval button below.</p>
+    <p id="intro">Sign in to connect this machine to your Banodoco account.</p>
     <p id="status" class="status" role="status" aria-live="polite">Preparing secure connection…</p>
     <section class="details" aria-label="Connection request">
       <div class="detail"><span class="detail-label">Machine label</span><span id="machine" class="detail-value">—</span></div>
       <div class="detail"><span class="detail-label">Approval code</span><span id="code" class="detail-value">—</span></div>
     </section>
-    <a id="login" class="login-link" href="#" hidden>Continue with Banodoco account</a>
-    <button id="approve" type="button" hidden disabled>Approve this connection</button>
-    <p class="fine-print">This page uses the fixed <code>/connect/</code> callback and the Hivemind Supabase broker. OAuth completion never approves a machine; approval requires the button above.</p>
+    <button id="action" type="button" hidden disabled>Sign in with Discord</button>
+    <p class="fine-print">After Discord sign-in, this request is approved automatically and the page will tell you to return to your terminal.</p>
   </main>
 
   <script type="module">
@@ -99,11 +98,11 @@
       const config = resolveConnectConfig(runtime, location.origin);
       const CONTEXT_KEY = 'banodoco.connect.request.v2';
       const elements = {
+        intro: document.querySelector('#intro'),
         status: document.querySelector('#status'),
         machine: document.querySelector('#machine'),
         code: document.querySelector('#code'),
-        login: document.querySelector('#login'),
-        approve: document.querySelector('#approve'),
+        action: document.querySelector('#action'),
       };
       let context = null;
       let session = null;
@@ -159,15 +158,15 @@
         request = { machineLabel: source.machine_label, approvalCode: context.approvalCode };
         elements.machine.textContent = request.machineLabel;
         elements.code.textContent = request.approvalCode;
-        elements.login.hidden = Boolean(session?.accessToken);
-        elements.approve.hidden = !session?.accessToken;
-        elements.approve.disabled = !session?.accessToken;
+        elements.action.hidden = false;
+        elements.action.disabled = false;
+        elements.action.textContent = session?.accessToken ? 'Approve this connection' : 'Sign in with Discord';
       }
 
       async function beginSignIn() {
-        elements.login.hidden = false;
-        elements.approve.hidden = true;
-        elements.approve.disabled = true;
+        elements.action.hidden = false;
+        elements.action.disabled = true;
+        elements.action.textContent = 'Opening Discord…';
         const verifierContext = await createPkceContext();
         const state = crypto.randomUUID ? crypto.randomUUID() : verifierContext.verifier;
         const callback = callbackUrl(config, location.origin);
@@ -177,9 +176,7 @@
           state,
           challenge: verifierContext.challenge,
         });
-        elements.login.href = authorizationUrl.href;
-        elements.login.hidden = false;
-        setStatus('Review the machine label and approval code, then sign in with Discord.');
+        location.assign(authorizationUrl.href);
       }
 
       async function consumeCallback() {
@@ -192,7 +189,8 @@
       }
 
       async function approve() {
-        elements.approve.disabled = true;
+        elements.action.disabled = true;
+        elements.action.textContent = 'Connecting…';
         setStatus('Submitting your approval…');
         const { url, options } = brokerFetch(config, context.requestToken, session.accessToken, {
           method: 'POST',
@@ -200,7 +198,9 @@
           body: approvalBody(context.requestToken, context.approvalCode),
         });
         await readPayload(await fetch(url, options));
-        setStatus('Connection approved. You can close this page.');
+        elements.action.hidden = true;
+        elements.intro.textContent = 'This machine is connected to your Banodoco account.';
+        setStatus('Success — return to your terminal. Astrid is finishing the login.');
       }
 
       async function start() {
@@ -214,24 +214,23 @@
           const returnedFromOAuth = await consumeCallback();
           await loadRequest();
           if (returnedFromOAuth) {
-            setStatus('Review the machine label and approval code before approving.');
-          } else if (session?.accessToken) {
-            setStatus('Review the machine label and approval code before approving.');
+            await approve();
           } else {
             await beginSignIn();
           }
       } catch (error) {
-        elements.login.hidden = true;
-        elements.approve.hidden = true;
-        elements.approve.disabled = true;
+        elements.action.hidden = true;
+        elements.action.disabled = true;
           setStatus(error instanceof Error ? error.message : 'The connection could not be prepared.', true);
         }
       }
 
-      elements.approve.addEventListener('click', () => {
-        approve().catch((error) => {
-          elements.approve.disabled = false;
-          setStatus(error instanceof Error ? error.message : 'The approval could not be submitted.', true);
+      elements.action.addEventListener('click', () => {
+        const next = session?.accessToken ? approve() : beginSignIn();
+        next.catch((error) => {
+          elements.action.disabled = false;
+          elements.action.textContent = session?.accessToken ? 'Try again' : 'Sign in with Discord';
+          setStatus(error instanceof Error ? error.message : 'The connection could not be completed.', true);
         });
       });
       start();
