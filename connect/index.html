@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Connect a machine · Banodoco</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: #11100f;
+      color: #f2eadc;
+    }
+    body {
+      box-sizing: border-box;
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem;
+      place-items: center;
+      background: radial-gradient(circle at 50% 0, #30241c, #11100f 55%);
+    }
+    main {
+      box-sizing: border-box;
+      width: min(100%, 34rem);
+      padding: clamp(1.5rem, 5vw, 3rem);
+      border: 1px solid #806b52;
+      border-radius: 1rem;
+      background: #191715eF;
+      box-shadow: 0 1.5rem 5rem #0008;
+    }
+    h1 { margin: 0 0 .5rem; font-size: clamp(1.75rem, 5vw, 2.5rem); }
+    p { color: #cdbfae; line-height: 1.55; }
+    .eyebrow { margin: 0 0 .75rem; color: #e0a85e; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
+    .status { min-height: 1.6em; margin: 1.5rem 0; color: #f2eadc; }
+    .details { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin: 1.5rem 0; }
+    .detail { padding: 1rem; border: 1px solid #564939; border-radius: .6rem; background: #0e0d0c; }
+    .detail-label { display: block; margin-bottom: .35rem; color: #a99780; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+    .detail-value { display: block; min-height: 1.5em; color: #fff3d9; font: 700 1.35rem ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    button, .login-link { display: inline-block; box-sizing: border-box; width: 100%; padding: .85rem 1rem; border: 1px solid #d49a4d; border-radius: .45rem; background: #d49a4d; color: #17110b; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
+    button:hover:not(:disabled), .login-link:hover { background: #efbd72; }
+    button:disabled { border-color: #5d5244; background: #38332d; color: #978a79; cursor: not-allowed; }
+    .login-link[hidden], button[hidden] { display: none; }
+    .fine-print { margin-top: 1.5rem; font-size: .78rem; color: #958a7d; }
+    .fine-print code { color: #cdbfae; }
+    .error { color: #f2a59a; }
+    @media (max-width: 28rem) { body { padding: 1rem; } .details { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Banodoco · Hivemind</p>
+    <h1>Connect a machine</h1>
+    <p id="intro">Sign in to review this connection request. Nothing is approved until you choose the approval button below.</p>
+    <p id="status" class="status" role="status" aria-live="polite">Preparing secure connection…</p>
+    <section class="details" aria-label="Connection request">
+      <div class="detail"><span class="detail-label">Machine label</span><span id="machine" class="detail-value">—</span></div>
+      <div class="detail"><span class="detail-label">Approval code</span><span id="code" class="detail-value">—</span></div>
+    </section>
+    <a id="login" class="login-link" href="#" hidden>Continue with Banodoco account</a>
+    <button id="approve" type="button" disabled>Approve this connection</button>
+    <p class="fine-print">This page uses the fixed <code>/connect/</code> callback and the Hivemind Supabase broker. OAuth completion never approves a machine; approval requires the button above.</p>
+  </main>
+
+  <script type="module">
+    import {
+      approvalBody,
+      buildAuthorizeUrl,
+      callbackUrl,
+      captureRequest,
+      createPkceContext,
+      exchangeCodeFetch,
+      parseCallback,
+      resolveConnectConfig,
+      validateCallback,
+      brokerFetch,
+    } from './auth-flow.js';
+
+    (() => {
+      'use strict';
+
+      /*
+       * Runtime overrides are for an explicitly configured host/staging
+       * environment. The checked-in defaults are the current Hivemind
+       * Supabase project and contributor-auth edge function.
+       *
+       *   window.__BANODOCO_CONNECT_CONFIG__ = {
+       *     brokerOrigin: 'https://example.supabase.co',
+       *     endpoints: { broker: '/functions/v1/contributor-auth' },
+       *     supabase: { url: 'https://example.supabase.co', anonKey: 'sb_publishable_…' }
+       *   };
+       *
+       * The browser only uses the public publishable key. The request token,
+       * PKCE verifier, and OAuth state stay in sessionStorage; no polling
+       * secret, contributor key, or server credential is accepted here.
+       */
+      const runtime = globalThis.__BANODOCO_CONNECT_CONFIG__ || {};
+      const config = resolveConnectConfig(runtime, location.origin);
+      const CONTEXT_KEY = 'banodoco.connect.request.v2';
+      const elements = {
+        status: document.querySelector('#status'),
+        machine: document.querySelector('#machine'),
+        code: document.querySelector('#code'),
+        login: document.querySelector('#login'),
+        approve: document.querySelector('#approve'),
+      };
+      let context = null;
+      let session = null;
+      let request = null;
+
+      function setStatus(message, isError = false) {
+        elements.status.textContent = message;
+        elements.status.classList.toggle('error', isError);
+      }
+
+      function readContext() {
+        try {
+          const stored = sessionStorage.getItem(CONTEXT_KEY);
+          return stored ? JSON.parse(stored) : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function writeContext(next) {
+        context = { ...(context || {}), ...next };
+        sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
+      }
+
+      async function readPayload(response) {
+        let payload = null;
+        try { payload = await response.json(); } catch (_) { /* handled below */ }
+        if (!response.ok) {
+          const detail = payload?.detail || payload?.error;
+          throw new Error(detail ? `Hivemind broker: ${detail}.` : `Hivemind broker returned ${response.status}.`);
+        }
+        return payload;
+      }
+
+      async function exchangeCallbackCode(code, verifier) {
+        const { url, options } = exchangeCodeFetch(config, code, verifier);
+        const response = await fetch(url, options);
+        const payload = await readPayload(response);
+        if (!payload?.access_token) throw new Error('The Discord session response was incomplete.');
+        return { accessToken: payload.access_token };
+      }
+
+      async function loadRequest() {
+        const { url, options } = brokerFetch(config, context.requestToken, session?.accessToken);
+        const payload = await readPayload(await fetch(url, options));
+        const source = payload?.request && typeof payload.request === 'object' ? payload.request : payload;
+        if (!source || typeof source.machine_label !== 'string' || !source.machine_label) {
+          throw new Error('The Hivemind request did not include a machine label.');
+        }
+        if (source.status && source.status !== 'pending') {
+          throw new Error(`This Hivemind request is ${source.status} and cannot be approved.`);
+        }
+        request = { machineLabel: source.machine_label, approvalCode: context.approvalCode };
+        elements.machine.textContent = request.machineLabel;
+        elements.code.textContent = request.approvalCode;
+        elements.approve.disabled = !session?.accessToken;
+      }
+
+      async function beginSignIn() {
+        const verifierContext = await createPkceContext();
+        const state = crypto.randomUUID ? crypto.randomUUID() : verifierContext.verifier;
+        const callback = callbackUrl(config, location.origin);
+        writeContext({ verifier: verifierContext.verifier, state, callback });
+        const authorizationUrl = buildAuthorizeUrl(config, {
+          callback,
+          state,
+          challenge: verifierContext.challenge,
+        });
+        elements.login.href = authorizationUrl.href;
+        elements.login.hidden = false;
+        setStatus('Review the machine label and approval code, then sign in with Discord.');
+      }
+
+      async function consumeCallback() {
+        const callback = parseCallback(location.href);
+        const exchange = validateCallback(callback, context);
+        if (!exchange) return false;
+        session = await exchangeCallbackCode(exchange.code, exchange.verifier);
+        history.replaceState(null, '', config.callbackPath);
+        return true;
+      }
+
+      async function approve() {
+        elements.approve.disabled = true;
+        setStatus('Submitting your approval…');
+        const { url, options } = brokerFetch(config, context.requestToken, session.accessToken, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: approvalBody(context.requestToken, context.approvalCode),
+        });
+        await readPayload(await fetch(url, options));
+        setStatus('Connection approved. You can close this page.');
+      }
+
+      async function start() {
+        try {
+          context = captureRequest(location.href, readContext());
+          if (!context?.requestToken) throw new Error('Open this page from a Hivemind connection request.');
+          if (location.search.includes('request=')) {
+            writeContext(context);
+            history.replaceState(null, '', config.callbackPath);
+          }
+          const returnedFromOAuth = await consumeCallback();
+          await loadRequest();
+          if (returnedFromOAuth) {
+            setStatus('Review the machine label and approval code before approving.');
+          } else if (session?.accessToken) {
+            setStatus('Review the machine label and approval code before approving.');
+          } else {
+            await beginSignIn();
+          }
+        } catch (error) {
+          elements.login.hidden = true;
+          elements.approve.disabled = true;
+          setStatus(error instanceof Error ? error.message : 'The connection could not be prepared.', true);
+        }
+      }
+
+      elements.approve.addEventListener('click', () => {
+        approve().catch((error) => {
+          elements.approve.disabled = false;
+          setStatus(error instanceof Error ? error.message : 'The approval could not be submitted.', true);
+        });
+      });
+      start();
+    })();
+  </script>
+</body>
+</html>
