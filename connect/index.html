@@ -59,7 +59,7 @@
       <div class="detail"><span class="detail-label">Approval code</span><span id="code" class="detail-value">—</span></div>
     </section>
     <a id="login" class="login-link" href="#" hidden>Continue with Banodoco account</a>
-    <button id="approve" type="button" disabled>Approve this connection</button>
+    <button id="approve" type="button" hidden disabled>Approve this connection</button>
     <p class="fine-print">This page uses the fixed <code>/connect/</code> callback and the Hivemind Supabase broker. OAuth completion never approves a machine; approval requires the button above.</p>
   </main>
 
@@ -159,10 +159,15 @@
         request = { machineLabel: source.machine_label, approvalCode: context.approvalCode };
         elements.machine.textContent = request.machineLabel;
         elements.code.textContent = request.approvalCode;
+        elements.login.hidden = Boolean(session?.accessToken);
+        elements.approve.hidden = !session?.accessToken;
         elements.approve.disabled = !session?.accessToken;
       }
 
       async function beginSignIn() {
+        elements.login.hidden = false;
+        elements.approve.hidden = true;
+        elements.approve.disabled = true;
         const verifierContext = await createPkceContext();
         const state = crypto.randomUUID ? crypto.randomUUID() : verifierContext.verifier;
         const callback = callbackUrl(config, location.origin);
@@ -215,9 +220,10 @@
           } else {
             await beginSignIn();
           }
-        } catch (error) {
-          elements.login.hidden = true;
-          elements.approve.disabled = true;
+      } catch (error) {
+        elements.login.hidden = true;
+        elements.approve.hidden = true;
+        elements.approve.disabled = true;
           setStatus(error instanceof Error ? error.message : 'The connection could not be prepared.', true);
         }
       }
