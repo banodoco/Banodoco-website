@@ -31,6 +31,7 @@ assert.match(source, /\/auth\/v1\/token\?grant_type=pkce/);
 assert.match(source, /mode: 'cors'/);
 assert.match(source, /credentials: 'omit'/);
 assert.match(source, /code_challenge_method/);
+assert.match(flow, /Supabase Auth owns the provider-facing OAuth state/);
 assert.match(source, /code_verifier/);
 assert.match(page, /method: 'POST'/);
 assert.match(page, /approvalBody\(context\.requestToken, context\.approvalCode\)/);

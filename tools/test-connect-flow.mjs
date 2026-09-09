@@ -51,6 +51,7 @@ assert.equal(authorize.pathname, '/auth/v1/authorize');
 assert.equal(authorize.searchParams.get('provider'), 'discord');
 assert.equal(authorize.searchParams.get('redirect_to'), 'https://www.banodoco.ai/connect/');
 assert.equal(authorize.searchParams.get('code_challenge_method'), 'S256');
+assert.equal(authorize.searchParams.get('state'), null);
 
 const tokenExchange = exchangeCodeFetch(config, 'oauth-code', pkce.verifier);
 assert.equal(tokenExchange.url.href, `${config.supabaseOrigin}/auth/v1/token?grant_type=pkce`);
