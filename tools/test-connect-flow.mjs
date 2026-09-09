@@ -16,8 +16,8 @@ import {
 } from '../connect/auth-flow.js';
 
 const config = resolveConnectConfig({}, 'https://www.banodoco.ai');
-assert.equal(config.supabaseOrigin, 'https://ujlwuvkrxlvoswwkerdf.supabase.co');
-assert.equal(config.brokerUrl.href, 'https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/contributor-auth');
+assert.equal(config.supabaseOrigin, 'https://bundles.banodoco.ai');
+assert.equal(config.brokerUrl.href, 'https://bundles.banodoco.ai/functions/v1/contributor-auth');
 assert.equal(config.authAuthorizeUrl.pathname, '/auth/v1/authorize');
 assert.equal(config.authTokenUrl.pathname, '/auth/v1/token');
 assert.equal(config.authTokenUrl.search, '?grant_type=pkce');
