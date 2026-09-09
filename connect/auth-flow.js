@@ -160,7 +160,9 @@ export function buildAuthorizeUrl(config, { callback, state, challenge }) {
   url.searchParams.set('redirect_to', callback);
   url.searchParams.set('code_challenge', challenge);
   url.searchParams.set('code_challenge_method', 'S256');
-  url.searchParams.set('state', state);
+  // Supabase Auth owns the provider-facing OAuth state. Passing our own
+  // opaque value here makes GoTrue reject the callback as bad_oauth_state;
+  // the request-bound PKCE verifier still protects this browser flow.
   return url;
 }
 
