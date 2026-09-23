@@ -1,0 +1,24 @@
+{% extends "web_templates/base.html" %}
+{% block content %}
+  {% if message %}<p class="notice" role="alert">{{ message }}</p>{% endif %}
+  {% if user %}
+    <h1>You’re signed in.</h1>
+    <p>Welcome, {{ user.display_name }}.</p>
+    <h2>Connect your local tools</h2>
+    <p>When Hivemind or Astrid opens a connection request, you can approve it here using this Discord account.</p>
+    <p class="quiet">Hivemind searches remain public. Connecting a machine lets you contribute under your own identity.</p>
+    <a class="action" href="/connect/">Connect local tools</a>
+    <form method="post" action="/auth/logout">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="action" type="submit">Sign out</button>
+    </form>
+  {% else %}
+    <h1>A place for your ideas.</h1>
+    <p>Sign in with Discord to use the Banodoco app and connect your local tools.</p>
+    {% if ready %}
+      <a class="action" href="/auth/login">Continue with Discord</a>
+    {% else %}
+      <p class="notice" role="status">Discord sign-in is being set up. Please check back soon.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}

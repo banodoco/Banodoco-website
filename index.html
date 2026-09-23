@@ -141,6 +141,23 @@
         text-transform: uppercase;
       }
 
+      .account-link {
+        position: fixed;
+        z-index: 2;
+        top: 1.5rem;
+        right: 2rem;
+        color: var(--muted);
+        font-size: 0.65rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        text-decoration: none;
+      }
+
+      .account-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 0.45rem;
+      }
+
       @media (max-width: 40rem) {
         body {
           padding: 1.5rem;
@@ -167,6 +184,7 @@
   </head>
   <body>
     <pre id="graph" aria-hidden="true"></pre>
+    <a class="account-link" href="/app/">Sign in</a>
 
     <main>
       <div class="brand-mark" role="img" aria-label="Banodoco icon"></div>
@@ -182,11 +200,10 @@
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const flock = [];
         const count = 148;
-        const maxSpeed = 0.0032;
-        const neighborRadius = 0.15;
+        const maxSpeed = 0.0042;
+        const neighborRadius = 0.105;
         const pointer = {x: 0.5, y: 0.5, active: false};
         const pointerRadius = 0.18;
-        let formationStart = performance.now();
         let columns = 0;
         let rows = 0;
         let lastTime = 0;
@@ -206,13 +223,15 @@
 
         const resetFlock = () => {
           flock.length = 0;
-          formationStart = performance.now();
           for (let index = 0; index < count; index += 1) {
             flock.push({
               x: 0.04 + seeded(index * 2) * 0.92,
               y: 0.07 + seeded(index * 2 + 1) * 0.86,
               vx: (seeded(index + 400) - 0.5) * maxSpeed,
               vy: (seeded(index + 800) - 0.5) * maxSpeed,
+              anchorX: 0.08 + seeded(index * 3 + 17) * 0.84,
+              anchorY: 0.1 + seeded(index * 3 + 29) * 0.8,
+              phase: seeded(index * 5 + 41) * Math.PI * 2,
               panic: 0,
               history: [],
             });
@@ -242,12 +261,6 @@
           };
 
           if (!reducedMotion) {
-            const formation = Math.max(0, 1 - (performance.now() - formationStart) / 9000);
-            const flockCenter = flock.reduce((center, bird) => ({
-              x: center.x + bird.x / flock.length,
-              y: center.y + bird.y / flock.length,
-            }), {x: 0, y: 0});
-
             flock.forEach((bird, index) => {
               let close = 0;
               let alignX = 0;
@@ -275,24 +288,22 @@
               });
 
               if (close) {
-                const alignmentStrength = 0.045 * (1 - bird.panic * 0.25);
-                const cohesionStrength = 0.004 * (1 - bird.panic * 0.88);
+                const alignmentStrength = 0.019 * (1 - bird.panic * 0.25);
+                const cohesionStrength = 0.00125 * (1 - bird.panic * 0.88);
                 bird.vx += ((alignX / close - bird.vx) * alignmentStrength)
                   + ((centerX / close - bird.x) * cohesionStrength)
-                  + (separateX * 0.0009);
+                  + (separateX * 0.0015);
                 bird.vy += ((alignY / close - bird.vy) * alignmentStrength)
                   + ((centerY / close - bird.y) * cohesionStrength)
-                  + (separateY * 0.0009);
+                  + (separateY * 0.0015);
               }
 
               bird.panic = Math.max(0, bird.panic - 0.0045 * delta);
-              const targetX = 0.5 + Math.sin(time * 0.00023) * 0.3;
-              const targetY = 0.5 + Math.sin(time * 0.00041) * 0.2;
-              const targetPull = 0.00012 + formation * 0.0012;
-              bird.vx += (targetX - bird.x) * targetPull;
-              bird.vy += (targetY - bird.y) * targetPull;
-              bird.vx += (flockCenter.x - bird.x) * (0.00007 + formation * 0.00025);
-              bird.vy += (flockCenter.y - bird.y) * (0.00007 + formation * 0.00025);
+              const turbulence = time * 0.0007;
+              bird.vx += Math.sin(turbulence + bird.phase) * 0.00042;
+              bird.vy += Math.cos(turbulence * 0.83 + bird.phase * 1.37) * 0.00042;
+              bird.vx += (bird.anchorX - bird.x) * 0.00024;
+              bird.vy += (bird.anchorY - bird.y) * 0.00024;
 
               if (pointer.active) {
                 const pointerX = pointer.x - bird.x;

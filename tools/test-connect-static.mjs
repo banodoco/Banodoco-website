@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
@@ -8,64 +7,34 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const pagePath = resolve(root, 'connect/index.html');
-const flowPath = resolve(root, 'connect/auth-flow.js');
-const manifestPath = resolve(root, 'deploy/public-files.json');
-const page = await readFile(pagePath, 'utf8');
-const flow = await readFile(flowPath, 'utf8');
-const source = `${page}\n${flow}`;
-const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+const page = await readFile(resolve(root, 'connect/index.html'), 'utf8');
+assert.match(page, /method="post" action="\/connect\/approve"/);
+assert.match(page, /name="csrf"/);
+assert.doesNotMatch(page, /<script|sessionStorage|localStorage|access_token|provider_token|service_role|sb_secret/);
+assert.match(page, /Only approve a request you started/);
 
-const connectTree = manifest.trees.find((tree) => tree.path === 'connect');
-assert.deepEqual(connectTree?.include, ['*.html', '*.css', '*.js'], 'connect is an explicit static tree');
-assert.ok(connectTree && !connectTree.exclude, 'connect has no package escape hatch');
-assert.match(page, /<title>Connect a machine/);
-assert.match(page, /type="module"/);
-assert.match(page, /sessionStorage\.getItem\(CONTEXT_KEY\)/);
-assert.match(page, /sessionStorage\.setItem\(CONTEXT_KEY/);
-assert.match(source, /machine_label/);
-assert.match(source, /approval_code/);
-assert.match(source, /\/functions\/v1\/contributor-auth/);
-assert.match(source, /\/auth\/v1\/authorize/);
-assert.match(source, /\/auth\/v1\/token\?grant_type=pkce/);
-assert.match(source, /mode: 'cors'/);
-assert.match(source, /credentials: 'omit'/);
-assert.match(source, /code_challenge_method/);
-assert.match(flow, /Supabase Auth owns the provider-facing OAuth state/);
-assert.match(source, /code_verifier/);
-assert.match(page, /method: 'POST'/);
-assert.match(page, /approvalBody\(context\.requestToken, context\.approvalCode\)/);
-assert.match(page, /elements\.action\.addEventListener\('click'/);
-assert.match(page, /await approve\(\)/);
-assert.match(page, /Thank you!/);
-assert.match(page, /return to your terminal to finish signing in to Astrid/);
-assert.match(page, /elements\.details\.hidden = true/);
-assert.match(page, /elements\.finePrint\.hidden = true/);
-assert.match(page, /__BANODOCO_CONNECT_CONFIG__/);
-assert.match(page, /sb_publishable_/);
-assert.doesNotMatch(page, /broker contract is not present|unavailable broker|unimplemented broker/i);
-assert.doesNotMatch(page, /https:\/\/cdn\.|unpkg\.com|jsdelivr\.net/);
-assert.doesNotMatch(page, /service_role|sb_secret|contributor[_-]?key|private[_-]?key/i);
-assert.doesNotMatch(page, /console\.(log|info|debug|dir)\s*\(/);
-assert.match(source, /callbackPath: '\/connect\/'/);
-assert.match(source, /state did not match this request/);
-assert.match(flow, /request_token: requestToken/);
-assert.match(flow, /approval_code: approvalCode/);
-assert.match(flow, /credentials: 'omit'/);
-assert.doesNotMatch(flow, /service_role|sb_secret|contributor[_-]?key|private[_-]?key/i);
-
-const output = await mkdtemp(resolve(tmpdir(), 'banodoco-connect-package-'));
+const output = await mkdtemp(resolve(tmpdir(), 'banodoco-auth-package-'));
 try {
   const packaged = spawnSync('python3', [
-    'tools/package-public.py', output,
-    '--origin', 'https://www.banodoco.ai',
-    '--revision', 'connect-static-test',
+    'tools/package-public.py', output, '--origin', 'https://www.banodoco.ai', '--revision', 'auth-test',
   ], { cwd: root, encoding: 'utf8' });
   assert.equal(packaged.status, 0, `${packaged.stdout}\n${packaged.stderr}`);
-  const packagedPage = await readFile(resolve(output, 'connect/index.html'), 'utf8');
-  assert.equal(packagedPage, page, 'connect page is byte-identical in the public artifact');
+  for (const file of ['serve.py', 'webapp.py', 'web_templates/base.html', 'web_templates/account.html', 'connect/index.html']) {
+    assert.equal(await readFile(resolve(output, file), 'utf8'), await readFile(resolve(root, file), 'utf8'));
+  }
+  // Boot the real packaged app to catch omitted imports/templates, and prove
+  // that including server code in the artifact does not expose it over HTTP.
+  const smoke = spawnSync('python3', ['-c', `
+from webapp import create_app
+app = create_app(config={"APP_ORIGIN": "http://localhost:8137", "SUPABASE_URL": "", "SUPABASE_PUBLISHABLE_KEY": ""})
+client = app.test_client()
+for path, status in [("/", 200), ("/app/", 200), ("/connect/", 200), ("/api/me", 401), ("/serve.py", 404), ("/webapp.py", 404), ("/web_templates/base.html", 404), ("/.env", 404)]:
+    response = client.get(path, base_url="http://localhost:8137")
+    assert response.status_code == status, (path, response.status_code)
+    assert b"{%" not in response.data, path
+`], { cwd: output, encoding: 'utf8' });
+  assert.equal(smoke.status, 0, `${smoke.stdout}\n${smoke.stderr}`);
 } finally {
   await rm(output, { recursive: true, force: true });
 }
-
-console.log('connect static seam and public packaging OK');
+console.log('server auth templates and packaged runtime: ok');

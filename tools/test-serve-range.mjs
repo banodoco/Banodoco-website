@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const fixtureDir = await mkdtemp(path.join(root, '.serve-range-test-'));
+// Fixtures must live in a public asset tree; repository dotfiles are private.
+const fixtureDir = await mkdtemp(path.join(root, 'assets/serve-range-test-'));
 const fixture = Buffer.from('0123456789');
 await writeFile(path.join(fixtureDir, 'fixture.txt'), fixture);
 
@@ -30,7 +31,7 @@ function request(port, method = 'GET', range) {
       host: '127.0.0.1',
       port,
       method,
-      path: `/${path.basename(fixtureDir)}/fixture.txt`,
+      path: `/assets/${path.basename(fixtureDir)}/fixture.txt`,
       headers: range ? { Range: range } : {},
     }, (res) => {
       const chunks = [];

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>{% block title %}Your account · Banodoco{% endblock %}</title>
+    <link rel="icon" href="/favicon.ico">
+    <style>
+      :root { color-scheme: light; font-family: ui-sans-serif, system-ui, sans-serif; color: #292622; background: #f4f1eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 5rem 1.5rem; }
+      main { width: min(100%, 32rem); }
+      .brand { display: block; width: 2rem; height: 2.73rem; background: #d76b3f; margin-bottom: 2.5rem; mask: url('/assets/brand/mark-b-mask-96.png') center / contain no-repeat; -webkit-mask: url('/assets/brand/mark-b-mask-96.png') center / contain no-repeat; }
+      h1 { margin: 0 0 1.5rem; font: 400 clamp(2.5rem, 8vw, 3.7rem)/1.02 Georgia, serif; letter-spacing: -.05em; }
+      h2 { font-size: 1rem; margin-top: 2.5rem; }
+      p { line-height: 1.65; color: #686158; }
+      a { color: inherit; text-underline-offset: .2em; }
+      .action { display: inline-block; margin: 1rem 0; padding: .85rem 1.15rem; border: 1px solid #d76b3f; border-radius: .2rem; color: #292622; background: transparent; font: inherit; cursor: pointer; text-decoration: none; }
+      .action:hover { background: #e8e0d6; }
+      a:focus-visible, button:focus-visible { outline: 2px solid #d76b3f; outline-offset: .3rem; }
+      .quiet { color: #686158; font-size: .85rem; }
+      .notice { padding: 1rem; border-left: 2px solid #d76b3f; }
+      dl { display: grid; grid-template-columns: auto 1fr; gap: .75rem 1rem; margin: 2rem 0; }
+      dt { color: #686158; } dd { margin: 0; overflow-wrap: anywhere; }
+      code { font-size: .9em; overflow-wrap: anywhere; }
+      nav { margin-top: 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="brand" href="/" aria-label="Banodoco home"></a>
+      {% block content %}{% endblock %}
+      <nav class="quiet" aria-label="More from Banodoco">
+        <a href="/">Home</a>
+        <a href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noreferrer">Join the Discord ↗</a>
+        {% if user %}<a href="/app/">Your account</a>{% endif %}
+      </nav>
+    </main>
+  </body>
+</html>

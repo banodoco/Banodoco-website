@@ -8,3 +8,9 @@ node_modules/
 # Local macOS and agent diagnostic byproducts.
 .DS_Store
 .tmp-connect-third-scout/
+
+# Local auth configuration and Python runtime.
+.env
+.env.*
+!.env.example
+.venv/

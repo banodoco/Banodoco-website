@@ -1,5 +1,11 @@
 # Deploying glowshroom
 
+The current minimal homepage and Discord-authenticated account routes run via
+Flask/Waitress using the existing `python3 serve.py` start command. Install
+`requirements.txt` and follow [Discord authentication setup](docs/discord-auth.md)
+before enabling login. Keep Railway at one replica while sessions use process
+memory. Auth changes require explicit user approval before push or deployment.
+
 There is no compilation step. Deployment packages the explicit public
 allowlist in **[deploy/public-files.json](deploy/public-files.json)**; the
 authoritative boundary and local inspection workflow are documented in

@@ -9,10 +9,15 @@
     "main.js",
     "robots.txt",
     "serve.py",
+    "webapp.py",
     "site.webmanifest",
     "sitemap.xml"
   ],
   "trees": [
+    {
+      "path": "web_templates",
+      "include": ["*.html"]
+    },
     {
       "path": "assets",
       "include": ["*.js", "*.json", "*.jpg", "*.mp4", "*.png", "*.svg", "*.woff2"],
@@ -64,6 +69,10 @@
     "main.js",
     "release-revision.txt",
     "serve.py",
+    "webapp.py",
+    "web_templates/base.html",
+    "web_templates/account.html",
+    "connect/index.html",
     "static/index.html",
     "ownership/index.html",
     "content/connect-nodes.js",

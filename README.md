@@ -1,5 +1,10 @@
 # glowshroom
 
+The current homepage is the approved minimal Banodoco page with an ASCII
+murmuration. A small Flask/Waitress backend now provides Discord login and local
+Hivemind connection approval. See [auth setup and verification](docs/discord-auth.md).
+Legacy journey code and its tooling remain below and in the repository.
+
 The Banodoco site: a WebGL hero organism (`organism/`) with a scroll-journey
 built over it (`journey/`, chapters in `journey/chapters/`). `main.js` is the
 one page entry; `index.html` is markup + links only. The same journey exists

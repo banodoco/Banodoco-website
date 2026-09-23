@@ -1,6 +1,6 @@
 # Public deployment boundary
 
-Railway serves a generated directory, not the repository checkout. The public
+Railway runs from a generated directory, not the repository checkout. The runtime
 classification is recorded in `deploy/public-files.json`; `tools/package-public.py`
 is the only build step that populates that directory.
 
@@ -43,8 +43,16 @@ python3 tools/package-public.py "$artifact" \
 (cd "$artifact" && PORT=8137 python3 serve.py)
 ```
 
-Remove that temporary directory after inspection. Local source development is
-unchanged: `python3 serve.py` still serves the repository checkout on port 8137.
+Remove that temporary directory after inspection. Local development uses
+`python3 serve.py` on port 8137 after installing `requirements.txt` in an active
+virtual environment. The HTTP boundary blocks server source, templates, dotfiles
+and repository-only files even when running from the source checkout.
 Railway creates the same artifact with `RAILWAY_GIT_COMMIT_SHA`, normalizes tar
 metadata, and serves `release-revision.txt`; the release poll requires that
 marker to equal the exact pushed commit before reporting success.
+
+`serve.py`, `webapp.py`, `web_templates/`, and `connect/index.html` are packaged
+server runtime files. They are not raw public assets; `/connect/` is rendered by
+the server. The account/API routes enforce server-side authentication.
+See [Discord auth setup](docs/discord-auth.md) for Railway variables, callback
+registration, single-process session behavior and the Hivemind identity bridge.
