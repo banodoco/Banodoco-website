@@ -70,7 +70,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: clamp(2rem, 5.25vh, 3.75rem);
+        gap: clamp(2rem, 6.5dvh, 4.5rem);
         text-align: center;
       }
 
@@ -93,6 +93,9 @@
         font-weight: 400;
         letter-spacing: -0.065em;
         line-height: 0.95;
+        /* Balance the outer gaps against the first-line capitals and last-line
+           descenders, rather than the multiline heading's extra font leading. */
+        text-box: trim-both cap text;
       }
 
       .discord-link {
@@ -127,37 +130,6 @@
         outline-offset: 0.45rem;
       }
 
-      .footer {
-        position: fixed;
-        z-index: 1;
-        right: 2rem;
-        bottom: 1.5rem;
-        left: 2rem;
-        color: var(--muted);
-        font-size: 0.65rem;
-        letter-spacing: 0.16em;
-        line-height: 1;
-        text-align: center;
-        text-transform: uppercase;
-      }
-
-      .account-link {
-        position: fixed;
-        z-index: 2;
-        top: 1.5rem;
-        right: 2rem;
-        color: var(--muted);
-        font-size: 0.65rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        text-decoration: none;
-      }
-
-      .account-link:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 0.45rem;
-      }
-
       @media (max-width: 40rem) {
         body {
           padding: 1.5rem;
@@ -168,11 +140,6 @@
           font-size: clamp(3.1rem, 15.5vw, 5rem);
         }
 
-        .footer {
-          right: 1.5rem;
-          bottom: 1.25rem;
-          left: 1.5rem;
-        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -184,15 +151,12 @@
   </head>
   <body>
     <pre id="graph" aria-hidden="true"></pre>
-    <a class="account-link" href="/app/">Sign in</a>
 
     <main>
       <div class="brand-mark" role="img" aria-label="Banodoco icon"></div>
       <h1 class="statement">Banodoco is a community focused on the open source AI art space.</h1>
       <a class="discord-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noreferrer">Join the Discord</a>
     </main>
-
-    <div class="footer" aria-hidden="true">Banodoco</div>
 
     <script>
       (() => {
@@ -212,6 +176,35 @@
         const seeded = (index) => {
           const value = Math.sin(index * 91.731 + randomSeed + 12.42) * 43758.5453;
           return value - Math.floor(value);
+        };
+
+        // Active animation time: hidden/stalled tabs cannot skip into a full-strength pull.
+        // Each 10–20s event includes its fades, followed by a fresh 1–3 minute cooldown.
+        const magnetTiming = {cooldownMin: 60000, cooldownMax: 180000,
+          durationMin: 10000, durationMax: 20000, fade: 4000};
+        let magnetSeed = 10000;
+        const magnetRandom = (min, max) => min + seeded(magnetSeed++) * (max - min);
+        const magnet = {phase: 'idle', elapsed: 0,
+          duration: magnetRandom(magnetTiming.cooldownMin, magnetTiming.cooldownMax)};
+        const smoothstep = (value) => {
+          const t = Math.max(0, Math.min(1, value));
+          return t * t * (3 - 2 * t);
+        };
+        const updateMagnet = (elapsed) => {
+          magnet.elapsed += elapsed;
+          if (magnet.elapsed >= magnet.duration) {
+            const starting = magnet.phase === 'idle';
+            magnet.phase = starting ? 'attracting' : 'idle';
+            magnet.elapsed = 0;
+            magnet.duration = starting
+              ? magnetRandom(magnetTiming.durationMin, magnetTiming.durationMax)
+              : magnetRandom(magnetTiming.cooldownMin, magnetTiming.cooldownMax);
+          }
+          if (magnet.phase === 'idle') return 0;
+          const remaining = magnet.duration - magnet.elapsed;
+          magnet.phase = remaining <= magnetTiming.fade ? 'releasing' : 'attracting';
+          return smoothstep(magnet.elapsed / magnetTiming.fade)
+            * smoothstep(remaining / magnetTiming.fade);
         };
 
         const resize = () => {
@@ -261,6 +254,18 @@
           };
 
           if (!reducedMotion) {
+            const magnetStrength = updateMagnet(delta * 16.67);
+            // Snapshot the flock's live center and motion before updating any bird.
+            // This group influence has no screen-space target and is zero between events.
+            const group = {x: 0, y: 0, vx: 0, vy: 0};
+            if (magnetStrength > 0) {
+              flock.forEach((bird) => {
+                group.x += bird.x / count;
+                group.y += bird.y / count;
+                group.vx += bird.vx / count;
+                group.vy += bird.vy / count;
+              });
+            }
             flock.forEach((bird, index) => {
               let close = 0;
               let alignX = 0;
@@ -317,6 +322,14 @@
                   bird.vy -= (pointerY / pointerDistance) * force;
                 }
               }
+
+              // Temporarily gather and share motion; panic suppresses both influences
+              // so pointer-scattered birds recover gradually instead of snapping back.
+              const togetherness = magnetStrength * (1 - bird.panic);
+              bird.vx += ((group.x - bird.x) * 0.0012
+                + (group.vx - bird.vx) * 0.025) * togetherness;
+              bird.vy += ((group.y - bird.y) * 0.0012
+                + (group.vy - bird.vy) * 0.025) * togetherness;
 
               if (bird.x < 0.03) bird.vx += 0.0008;
               if (bird.x > 0.97) bird.vx -= 0.0008;
