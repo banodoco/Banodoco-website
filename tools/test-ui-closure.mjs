@@ -613,14 +613,13 @@ pin('A2', 'the UI surface reaches a chapter\'s private portraits field NOWHERE i
     proseOcc: 2,
   });
 
-pin('A2b', 'THE THIRD PRIVATE-PORTRAIT READ IS STILL LIVE, in journey.js, and is C06\'s — pinned so this gate\'s zeros cannot be read as covering it',
+pin('A2b', 'THE INTRO READINESS PATH HAS NO PRIVATE-PORTRAIT REACH, and this gate proves a future one would be caught',
   (i) => closure('journey/journey.js', i.src, PRIVATE_RE, i.code),
   { src: SRC.journey, code: CODE },
   {
-    code: ['journey/journey.js :: const portraits = chapters.owned && chapters.owned.portraits;'],
-    codeOcc: 1, prose: [], proseOcc: 0,
+    code: [], codeOcc: 0, prose: [], proseOcc: 0,
   },
-  'C05 slice E recorded migration-table.md section 5(a) and Q7: C06 owns it, and the fallback is a dated exception, NOT a fifth capability');
+  'portrait loading and remix preparation now belong to the chapter owner, so journey.js must keep this seam empty');
 
 pin('A3', 'journey/chapter-interactions.js names neither token, in code or in prose — and the scan reached a file that really is the registrar',
   (i) => ({
@@ -1039,9 +1038,9 @@ if (PROVE) {
     M('A2', 'the selection owner reaches a chapter\'s private portraits field again', ['code', 'codeOcc'],
       (i) => ({ ...i, files: mutateIn(i.files, 'journey/ui/selection.js', 'A2', '    const sel = h && chapters[h.chapter] && chapters[h.chapter].selection;',
         '    const sel = h && chapters[h.chapter] && chapters[h.chapter].portraits;') })),
-    M('A2b', 'C06 closes journey.js\'s private read, and this gate\'s record of it goes stale in the direction that matters', ['code', 'codeOcc'],
-      (i) => ({ ...i, src: mutateText(i.src, 'A2b', 'const portraits = chapters.owned && chapters.owned.portraits;',
-        'const portraits = chapters.owned && chapters.owned.portraitModel();') })),
+    M('A2b', 'a private-portrait read re-enters journey.js\'s readiness path', ['code', 'codeOcc'],
+      (i) => ({ ...i, src: mutateText(i.src, 'A2b', "performance.mark('journey-gpu-ready');",
+        "const portraits = chapters.owned && chapters.owned.portraits;\n    performance.mark('journey-gpu-ready');") })),
     M('A3', 'the registrar grows a reach back to the published global', ['global'],
       (i) => ({ ...i, src: mutateText(i.src, 'A3', '  const nodeChapter = {};',
         '  const nodeChapter = {};\n  const all = window.journey.chapters;\n  void all;') })),

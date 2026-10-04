@@ -70,7 +70,9 @@
  * ==================================================================== */
 
 import { JOURNEY_SCHEMA } from '../structure.js';
-import { bandOpacity, clamp01, smoothA } from './bands.js';
+import {
+  bandOpacity, clamp01, smoothA, navCopyArrival, navCopyDeparture, ticketClock,
+} from './bands.js';
 import { createArrivalMotion } from './arrival-motion.js';
 import {
   COPY_BANDS,
@@ -124,6 +126,22 @@ if (DEFERRED_IDS.length !== 1 || DEFERRED_IDS[0] !== HERO_CHAPTER_ID) {
    the same presented camera phase, a slower route automatically gives both
    sides the same slower breath instead of keeping a short wall-clock pop. */
 const NAV_COPY_FADE_PHASE = 0.32;
+/* Ordinary tickets that declare their duration are priced in SECONDS
+   instead (journey/ui/bands.js, NAVIGATION COPY TIMING — both ends of the crossfade, one
+   schedule, shared with the hero furniture). The phase shares above remain
+   for tickets that declare none. */
+// Departure owns the opening half of the presented flight. Keeping this
+// separate from the arrival window lets outgoing Intro copy breathe without
+// delaying the destination chapter's entrance.
+const NAV_COPY_DEPARTURE_START = 0.025;
+const NAV_COPY_DEPARTURE_PHASE = 0.55;
+
+function copyDepartureOpacity(phase) {
+  const u = Math.max(0, Math.min(1,
+    (phase - NAV_COPY_DEPARTURE_START)
+      / (NAV_COPY_DEPARTURE_PHASE - NAV_COPY_DEPARTURE_START)));
+  return 1 - smoothA(u);
+}
 
 /* Visual copy may complete with the camera without forcing chapter-owned
    landing cascades to complete in flight. This is the chapter gate's ceiling;
@@ -440,12 +458,15 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
          travel: the floor cleared, copy fell with the still-hot speed tail,
          then rose again. The ticket's target is the semantic landing
          coordinate and therefore the only stable handoff point. */
+      const clock = ticketClock(inAir.ticket);
       nav = inAir.id ? {
         kind: 'carrying',
         id: inAir.id,
         floor: eased[inAir.id] || 0,
         gate: Number.isFinite(inAir.gate) ? inAir.gate : eased[inAir.id] || 0,
         atP: Number.isFinite(inAir.ticket.targetP) ? inAir.ticket.targetP : travelP,
+        // the seconds-priced arrival keeps its own clock across touchdown
+        clock: clock ? { t: clock.t, dur: clock.dur, from: inAir.from } : null,
       } : null;
     }
     if (!nav || nav.kind !== 'carrying') return null;
@@ -455,9 +476,17 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     // into another chapter.
     const bandTarget = bandOpacity(travelP, COPY_BANDS[nav.id]);
     if (Math.abs(travelP - nav.atP) > 1e-4 || bandTarget < 0.995) { nav = null; return null; }
+    let clocked = false;
+    if (nav.clock) {
+      if (dt > 0) nav.clock.t += dt;
+      const a = navCopyArrival(nav.clock.t, nav.clock.dur);
+      nav.floor = Math.max(nav.floor, nav.clock.from + (1 - nav.clock.from) * a);
+      clocked = a < 1;
+      if (!clocked) nav.clock = null;
+    }
     nav.gate += (nav.floor - nav.gate) * Math.min(1, dt * COPY_IN_K * settled);
-    const carried = { id: nav.id, floor: nav.floor };
-    if (bandTarget * travelHold >= nav.floor - 0.001
+    const carried = { id: nav.id, floor: nav.floor, clocked };
+    if (!clocked && bandTarget * travelHold >= nav.floor - 0.001
         && nav.gate >= nav.floor - 0.001) nav = null;
     return carried;
   }
@@ -594,13 +623,14 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
    *  order and that order is the priority: a live flight outranks the jump
    *  envelope, which outranks the snap, which outranks the scroll rule. */
   function chooseEase(id, prev, target,
-      { dt, railWrap, railFlight, arriveE, leaveE, settled }) {
+      { dt, railWrap, railFlight, departureOpacity, arriveE, leaveE, settled }) {
     const inAir = flying();
     if (railFlight && inAir) {
       const phase = Math.max(0, Math.min(1, Number(inAir.ticket.phase) || 0));
       if (inAir.id === id) {
-        const arrival = smoothA((phase - (1 - NAV_COPY_FADE_PHASE))
-          / NAV_COPY_FADE_PHASE);
+        const clock = ticketClock(inAir.ticket);
+        const arrival = clock ? navCopyArrival(clock.t, clock.dur)
+          : smoothA((phase - (1 - NAV_COPY_FADE_PHASE)) / NAV_COPY_FADE_PHASE);
         const env = FLIGHT_ENVELOPES[COPY_SURFACES[id].flightLead];
         const gateLead = smoothA((phase - env.onset) / (1 - env.onset));
         const gateLanding = Math.max(inAir.gateFrom, env.land);
@@ -608,7 +638,9 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
         return inAir.from + (1 - inAir.from) * arrival;
       }
       const departure = Number(inAir.departure[id]) || 0;
-      return departure * (1 - smoothA(phase / NAV_COPY_FADE_PHASE));
+      const clock = ticketClock(inAir.ticket);
+      return departure * (Number.isFinite(departureOpacity) ? departureOpacity
+        : clock ? navCopyDeparture(clock.t, clock.dur) : copyDepartureOpacity(phase));
     }
     /* A cyclic wrap has no meaningful intermediate section coordinate. Keep
        every narrative surface on one camera-phase answer while its ticket is
@@ -622,6 +654,8 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
         return smoothA((phase - (1 - NAV_COPY_FADE_PHASE)) / NAV_COPY_FADE_PHASE);
       }
       const departure = id === arrive.id ? 0 : Number(arrive.from[id]) || 0;
+      // A ceremonial wrap keeps its established opening-third envelope; it
+      // has no ordinary route ticket to share with the hero field.
       return departure * (1 - smoothA(phase / NAV_COPY_FADE_PHASE));
     }
     if (arrive && arrive.own && id === arrive.id) return target * arriveE;
@@ -653,7 +687,8 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
   /* ---------------- the frame ---------------- */
 
   /** One frame of copy choreography. Everything it needs is an argument. */
-  function step({ chapterId, dt, travelP, railWrap = null, railFlight = null }) {
+  function step({ chapterId, dt, travelP, railWrap = null, railFlight = null,
+    departureOpacity = null }) {
     if (dt > 0 && lastP !== null) {
       const inst = Math.abs(travelP - lastP) / dt;
       /* THE LANDING ENDS THE TRAVEL CLOCK (copy stutter, 2026-08-25 —
@@ -773,8 +808,11 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
       const scrollTarget = bandTarget * travelHold;
       const target = carried && carried.id === id
         ? Math.max(scrollTarget, carried.floor) : scrollTarget;
-      const s = nextEase(id, eased[id], target,
-        { dt, railWrap, railFlight, arriveE, leaveE, settled });
+      let s = nextEase(id, eased[id], target,
+      { dt, railWrap, railFlight, departureOpacity, arriveE, leaveE, settled });
+      // a seconds-priced arrival still running past touchdown is its own
+      // authority until it completes: neither faster nor slower than its clock
+      if (carried && carried.clocked && carried.id === id) s = Math.max(eased[id], carried.floor);
       eased[id] = s;
       copyBandsDebug[id] = { bandTarget, scrollTarget, target, eased: s };
       // The snapshot the next arm() restores from is the last frame that

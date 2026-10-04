@@ -752,6 +752,10 @@ try {
       /* Wired into the gate by U02, 2026-08-22, in the same change as its
          package.json entry. PC-3f is name-keyed exactly so that this is a
          visible row rather than a bumped count. */
+      /* INTRO-PERF, 2026-09-22 — the three intro lifecycle contracts are
+         named here so the exact gate surface moves with their wiring. */
+      'tools/test-hero-handoff.mjs',
+      'tools/test-hero-spore-cutoff.mjs',
       'tools/test-hot-state.mjs',
       /* Gated by the accepted hotspot-departure integration. It belongs to
          test:unit and therefore to PC-3e's exact scanned surface, while still
@@ -763,6 +767,9 @@ try {
       'tools/test-input-claim.mjs',
       'tools/test-instrument-layer.mjs',
       'tools/test-intro-lifecycle.mjs',
+      'tools/test-intro-readiness.mjs',
+      // The Manifesto pose/branch suite is wired through test:unit.
+      'tools/test-manifesto-motion.mjs',
       'tools/test-no-scroll-navigation.mjs',
       /* `tools/test-journey-lifecycle.mjs` stood here and was removed by the
          DISPOSAL REMOVAL, 2026-08-25, with five others below. PC-3f is

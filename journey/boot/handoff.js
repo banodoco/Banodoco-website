@@ -1,11 +1,13 @@
 /* ==================================================================== *
  * journey/boot/handoff.js — THE JOURNEY PREPARATION AND HANDOFF OWNER.
  *
- * JOURNEY PREPARATION — the canvas stays on the organism's own empty
- * frame. The left copy and CTA are already live; chapter construction,
- * portrait atlases, shader compilation and real first GPU draws finish
- * before the mushroom's visible clock starts. There is no fixed loading
- * duration.
+ * Hero growth and journey preparation have separate readiness gates.
+ * The growth waits for the HERO's own GPU preparation (./hero-gpu.js) and
+ * the prelude's landing, and gives the rest of the journey a short grace
+ * to finish first; whatever journey work is still left then waits for the
+ * growth to finish, so the two never share the main thread. Chapter
+ * construction and shader preparation gate navigation only. A slow
+ * optional asset must never keep an already-ready mushroom blank.
  *
  * WHY THIS IS THE ONE REGION OF main.js THAT HAD TO MOVE. Everything
  * else in that file is wiring: a listener, a table, a query param, a
@@ -71,6 +73,7 @@
 
 import { FREE_CAM } from '../../flags.js';
 import { NOTE } from './scene-note.js';
+import { prepareHeroGpu } from './hero-gpu.js';
 // The preload atmosphere's singleton (ESM cache: same instance the page
 // booted). Consulted for ONE thing — the prelude's ignition contract:
 // the normal release below waits for the prelude's convergence pulse to
@@ -135,14 +138,19 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   const RAIL_REVEAL_LEAD_MS = 1200;
 
   let journeyInputRequested = false;
+  // when the hero's own programs were linked (./hero-gpu.js), or null
+  let heroReadyAt = null;
   let journeyLoadP = null;
   let readyState = null;
   let earlyRail = null;
   let journeyActive = false;
   let introReleased = false;
+  let introReleasedAt = -1;
   let fastHandoffStarted = false;
   let activationTimer = null;
   let railRevealTimer = null;
+  let preludeReleaseTimer = null;
+  let preludeLandingPoll = null;
   let bootInput = null;
   let pendingTouch = null;
   let introCaptureLive = false;
@@ -257,6 +265,13 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   function releaseIntro() {
     if (introReleased) return;
     introReleased = true;
+    introReleasedAt = performance.now();
+    // The scene takes the stream over from the prelude's worker here, as
+    // the growth begins (organism/hero-spores.js adopt(); a no-op when the
+    // prelude draws on this thread). Not earlier: until this frame the scene
+    // has nothing to show, and while it holds its frame the GPU belongs to
+    // the prelude. Every route into the growth passes through this call.
+    heroSpores.adopt();
     document.body.classList.remove('scene-preparing');
     document.body.classList.add('scene-intro-live');
     // THE STRIKE: the prelude's convergence pulse arrives on this same
@@ -286,6 +301,94 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     }
   }
 
+  function cancelPreludeWait() {
+    if (preludeReleaseTimer !== null) {
+      clearTimeout(preludeReleaseTimer);
+      preludeReleaseTimer = null;
+    }
+    if (preludeLandingPoll !== null) {
+      clearTimeout(preludeLandingPoll);
+      preludeLandingPoll = null;
+    }
+  }
+
+  function armNormalActivation() {
+    if (!readyState || !introReleased || journeyActive) return;
+    const elapsed = Math.max(0, performance.now() - introReleasedAt);
+    const remaining = Math.max(0, HERO_SCENE_COMPLETE_MS - elapsed);
+    const activationRemaining = Math.max(0, HERO_INTRO_MS - elapsed);
+    clearTimeout(activationTimer);
+    clearTimeout(railRevealTimer);
+    railRevealTimer = setTimeout(() => {
+      if (readyState && readyState.revealRail) readyState.revealRail();
+    }, Math.max(0, remaining - RAIL_REVEAL_LEAD_MS));
+    requestAnimationFrame(activateWhenIntroComplete);
+    activationTimer = setTimeout(activateJourney, activationRemaining);
+  }
+
+  function beginNormalIntro() {
+    const waitStarted = performance.now();
+    const PREPARE_CAP_MS = 10000;
+    const JOURNEY_GRACE_MS = 1500;
+    const LANDING_CAP_MS = 7000;
+    const releaseOnStrike = () => {
+      cancelPreludeWait();
+      if (fastHandoffStarted || journeyActive) return;
+      releaseIntro();
+      armNormalActivation();
+    };
+    const waitForLanding = () => {
+      if (fastHandoffStarted || journeyActive || introReleased) return;
+      /* THE GROWTH OWNS THE MAIN THREAD (2026-10-04, Hannah: "we need to
+         have ZERO lag on the initial load"). Nothing heavy may run beside
+         the stalk's climb, so the growth waits for two things:
+
+           1. The hero's own programs (./hero-gpu.js) — always. Without them
+              the growth links shaders on its first frames.
+           2. The rest of the journey (readyState) — but only for a grace of
+              JOURNEY_GRACE_MS once the hero is ready. On a fast machine the
+              journey is built well inside it and nothing is left over. On a
+              slow one (measured at a quarter of this machine's CPU on
+              10 Mbps: hero ready ~1 s after the scene, journey ~9 s), waiting
+              for all of it kept the prelude on screen for ~15 s, so the
+              growth goes ahead and loadJourney() parks its remaining steps
+              until the growth has finished (growthSettled).
+
+         The prelude is built to hold meanwhile: the current keeps flowing
+         and the woken network breathes. PREPARE_CAP_MS is only a backstop
+         for a hero preparation that neither resolves nor times out. */
+      const now = performance.now();
+      const prepared = readyState !== null
+        || (heroReadyAt !== null && now - heroReadyAt >= JOURNEY_GRACE_MS)
+        || now - waitStarted >= PREPARE_CAP_MS;
+      if (!prepared) {
+        preludeLandingPoll = setTimeout(waitForLanding, 50);
+        return;
+      }
+      const status = heroSpores.preludeLandingStatus();
+      if (status.firstImpact) {
+        const strikeMs = heroSpores.preludeMsUntilStrike();
+        if (strikeMs > 0) preludeReleaseTimer = setTimeout(releaseOnStrike, strikeMs);
+        else releaseOnStrike();
+        return;
+      }
+      /* The fallback is for a prelude that will never land (hidden tab,
+         failed worker, no field) — not for a slow, unhurried settle. The
+         settle now floats down over ~2 s after its kindle and lull, so a
+         live prelude with a landing still to come can take longer than
+         the old 2.8 s, and the growth would start under a spore still in
+         the air. While the prelude reports a landing pending, wait up to
+         LANDING_CAP_MS; otherwise fall back at the short bound. */
+      const cap = status.pending ? LANDING_CAP_MS : 2800;
+      if (performance.now() - waitStarted >= cap) {
+        releaseOnStrike();
+        return;
+      }
+      preludeLandingPoll = setTimeout(waitForLanding, 50);
+    };
+    waitForLanding();
+  }
+
   /** The specimen, rather than a second page timer, owns the normal handoff.
    *  This removes the old ~1.5s pause that belonged to hero callouts which
    *  are no longer part of this navigation iteration. */
@@ -302,6 +405,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     journeyInputRequested = true;
     if (!readyState || fastHandoffStarted) return;
     fastHandoffStarted = true;
+    cancelPreludeWait();
     clearTimeout(activationTimer);
     const departMs = window.innerWidth <= 620 ? 220 : 480;
     document.body.classList.add('intro-fast');
@@ -318,16 +422,38 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   }
   entryQueue.whenRequested(beginFastHandoff);
 
+  /** Resolves when no growth is running for journey work to interrupt:
+   *  before the intro is released, once the specimen reports it complete, or
+   *  as soon as the visitor asks to leave (a gesture or a queued entry wants
+   *  the journey, and the accelerated intro is short). Polled on a timer —
+   *  this is a parking spot for a few seconds, not a frame-accurate cue. */
+  function growthSettled() {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (!introReleased || !scene.intro || scene.intro.complete || journeyInputRequested
+            || fastHandoffStarted || entryQueue.peek()) resolve();
+        else setTimeout(check, 100);
+      };
+      check();
+    });
+  }
+
   function loadJourney() {
     if (journeyLoadP) return journeyLoadP;
     journeyLoadP = (async () => {
       try {
         performance.mark('journey-prepare-start');
         // Give the DOM copy one paint, then construct one chapter per task.
-        // The scene is blank, but the button remains responsive between slices.
+        // Hero growth remains live while chapter work yields between slices.
         const nextTask = () => new Promise(resolve =>
           requestAnimationFrame(() => setTimeout(resolve, 0)));
         await nextTask();
+        // The hero's programs first, in parallel with everything below:
+        // they need only the scene, which already exists. The growth's gate
+        // (beginNormalIntro) reads heroReadyAt.
+        if (!skipIntro && !frozen) {
+          prepareHeroGpu(scene).then(() => { heroReadyAt = performance.now(); });
+        }
         // Build the lightweight navigation as soon as its module graph is
         // ready, before chapter geometry/GPU preparation. Its own fade now
         // shares the hero copy's opening beat instead of arriving after the
@@ -366,12 +492,15 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
           }
         }
         await bakedGeomReady;
+        await growthSettled();
         let remaining = m.prepareChapter ? m.prepareChapter(scene) : 0;
         while (remaining > 0) {
           await nextTask();
+          await growthSettled();
           remaining = m.prepareChapter ? m.prepareChapter(scene) : 0;
         }
         await nextTask();
+        await growthSettled();
         const state = m.boot({ heroIntroSkipped: !!skipIntro,
           heroFrozen: frozen, deferActivation: true,
           rail: earlyRail,
@@ -394,40 +523,13 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         } else if (journeyInputRequested || entryQueue.peek()) {
           beginFastHandoff();
         } else {
-          /* THE IGNITION WAIT. The prelude's hero spores have been
-             landing on the growth point and waking the ground skeleton
-             the whole load; asking for the strike here arms the
-             convergence pulse to arrive at the mushroom origin exactly
-             when the release fires, which is what makes the growth read
-             as CAUSED by the landings instead of coincident with a
-             download. Bounded by construction — a landed ground answers
-             within the pulse's own travel (<= ~1.2 s), and even a load
-             so fast that nothing has settled yet compresses the
-             remaining flutter to a ~2.8 s worst case — and the whole release beat
-             (rail reveal, activation poll, defensive timer) shifts by
-             the same wait, so their offsets from the intro's start are
-             exactly what they were. A gesture during the wait takes
-             beginFastHandoff() as ever; the guard below then yields. */
-          const strikeMs = heroSpores.preludeMsUntilStrike();
-          const releaseOnStrike = () => {
-            if (fastHandoffStarted || journeyActive) return;
-            releaseIntro();
-            railRevealTimer = setTimeout(() => {
-              if (readyState && readyState.revealRail) readyState.revealRail();
-            }, Math.max(0, HERO_SCENE_COMPLETE_MS - RAIL_REVEAL_LEAD_MS));
-            requestAnimationFrame(activateWhenIntroComplete);
-            activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
-          };
-          if (strikeMs > 0) setTimeout(releaseOnStrike, strikeMs);
-          else releaseOnStrike();
+          armNormalActivation();
         }
         return state;
       } catch (err) {
+        cancelPreludeWait();
         stopIntroInputCapture();
-        document.body.classList.remove('scene-preparing');
-        document.body.classList.add('scene-intro-live');
-        heroSpores.preludeStrike();
-        scene.intro.start();
+        releaseIntro();
         performance.mark('journey-fallback');
         console.error('[journey-v6] failed to load', err);
         // the hero scene is still live but was left holding the journey's
@@ -462,5 +564,6 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
 
   // Preparation begins now, not after the old 7.6s timer. Its first heavy
   // slice is still held until the left-hand DOM has painted once.
+  if (!skipIntro && !frozen) beginNormalIntro();
   loadJourney();
 }

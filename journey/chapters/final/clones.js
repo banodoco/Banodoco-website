@@ -74,6 +74,7 @@
 // back into the hero's graph.
 
 import * as THREE from 'three';
+import { GROWTH } from '../../../organism/intro.js';
 import { heroPulse, PULL_MAX } from './world.js';
 import { varyUniforms, IDENTITY } from './variation.js';
 import { analyseHeroFigure, buildCapFigure } from './capfigure.js';
@@ -162,7 +163,11 @@ export { TAP_W, TAP_ZETA, stepTap, kickTap, isRinging, clearTap };
    (intro.js WINDOWS: stemVerts opens at 0.296, overlayPts closes at 0.893) —
    the clone carries no ground layers, so driving uProg across the full 0..1
    would spend a third of the move on layers this body does not have. */
-const DRAW_LO = 0.296, DRAW_HI = 0.893;
+// Read from the hero's own timeline since its re-choreography (2026-10-04):
+// the stalk now opens at GROWTH.stem[0] and the last cap layer (overlayPts)
+// closes at 0.86, and a stale 0.296 would start every dormant clone with
+// most of its stalk already drawn.
+const DRAW_LO = GROWTH.stem[0], DRAW_HI = 0.860;
 // THE DRAW RUNS ON THE KINDLE'S OWN FRONT — not ahead of it (Hannah,
 // 2026-08-06: "they have a different entry animation when they come in — they
 // kind of turn black... why can't we just make them one by one have the same

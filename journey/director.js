@@ -282,6 +282,13 @@ export function createDirector(sceneApi, { steady = false } = {}) {
    *  the substrate's thickness longer and releases late. */
   function applyFog(p) {
     if (!scene.fog) return;
+    const { near, far } = fogAt(p);
+    scene.fog.near = near;
+    scene.fog.far = far;
+  }
+  /** The same ramp, answered without writing it — a flight that owns the
+   *  camera (the Manifesto's descent) blends toward its destination's depth. */
+  function fogAt(p) {
     const tf = smooth01((p - FOG_RAMP.farFromP) / (FOG_RAMP.farToP - FOG_RAMP.farFromP));
     const tn = smooth01((p - FOG_RAMP.nearFromP) / (FOG_RAMP.nearToP - FOG_RAMP.nearFromP));
     let near = baseFogNear + (FOG_RAMP.near - baseFogNear) * tn;
@@ -292,8 +299,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
       const b = smooth01(1 - Math.abs(p - d.c) / d.w);
       if (b > 0) { near *= 1 - d.near * b; far *= 1 - d.far * b; }
     }
-    scene.fog.near = near;
-    scene.fog.far = far;
+    return { near, far };
   }
 
   /* ---- handheld state (per-director, not per-pose: poseAt stays pure) ---- */
@@ -470,7 +476,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   captureHero(null);
 
   return {
-    apply, setOwned, setTransitioning, applyHeroPose, restoreHero,
+    apply, setOwned, setTransitioning, applyHeroPose, restoreHero, fogAt,
     get owned() { return owned; },
     get transitioning() { return transitioning; },
     get heroPose() { return hero; },

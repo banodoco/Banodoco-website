@@ -61,7 +61,12 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
     // The rail consumes the camera's exact eased clock for both ordinary
     // clicks and cyclic wraps. Journey progress itself is already parked at
     // the destination during a direct flight, so it cannot supply this phase.
-    if (railMotion) railMotion.phase = e;
+    if (railMotion) {
+      railMotion.phase = e;
+      // ...and its seconds, for the readers that price fades in time
+      // (NAVIGATION COPY TIMING, journey/ui/bands.js)
+      railMotion.elapsed = blend.t;
+    }
     /* Mission <-> Inspire is already an authored, reversible camera gesture.
        An adjacent nav click must present that same route coordinate rather
        than replacing it with the generic jump arc: the mushroom's apparent

@@ -621,7 +621,9 @@ pin('UIL-T1', 'the UI surface: zero raw addEventListener sites, 30 owner.listen;
    (2026-08-27). The single Return control became Purpose + Ownership links,
    the menu gained its matching Ownership route, and Manifesto gained an
    Equip-matched touch answer: net three listeners and one timed note removal,
-   all still funnelled through the rail owner. */
+   all still funnelled through the rail owner. The enabled Manifesto branch
+   later removed that obsolete touch-only answer timer, returning the rail to
+   eight owner timers. */
 /* 25 -> 26 owner.listen, Who/What/Why primer (2026-08-30, polish §3B.1).
    The site-map panel's three thesis disclosures share one funnelled click
    listener per button, registered in the menuSections build; no timer —
@@ -631,8 +633,10 @@ pin('UIL-T1', 'the UI surface: zero raw addEventListener sites, 30 owner.listen;
    gained a single funnelled keydown site on the row for Left/Right/Home/
    End focus movement; the per-button click site is unchanged and the
    answers still animate in CSS, so no timer. Both zeros hold. */
-pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 27 owner.listen; zero raw setTimeout, 9 owner.timer (including both Purpose subtree routes, menu Ownership, Manifesto touch Soon, and the Who/What/Why primer tablist)',
-  readSiteCensus, { src: SRC.rail }, [0, 27, 0, 9]);
+/* 27 -> 25 owner.listen, primer removed (2026-10-04, Hannah: "remove the
+   who what why in the sidebar"): its click and keydown sites went with it. */
+pin('UIL-T2', 'journey/rail.js: zero raw addEventListener sites, 25 owner.listen; zero raw setTimeout, 8 owner.timer (including both Purpose subtree routes and menu Ownership)',
+  readSiteCensus, { src: SRC.rail }, [0, 25, 0, 8]);
 
 pin('UIL-T3', 'journey/rail.js: both requestAnimationFrame sites went through owner.raf',
   readRailRaf, { src: SRC.rail }, [0, 2]);

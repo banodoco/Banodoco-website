@@ -36,6 +36,7 @@ import {
   makeUniforms, pullOf, pullRawOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS,
   groundY, REVEAL_W, PULL_MAX,
 } from './world.js';
+import { createAerialColony } from '../../manifesto/colony.js';
 import { createFinalRing } from './ring.js';
 import { drawWOf } from './clones.js';
 import { createFinalTerrain } from './terrain.js';
@@ -83,6 +84,8 @@ export function createFinal(sceneApi) {
   const bedUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
   const ring = createFinalRing(sceneApi, uniforms);
   const terrain = createFinalTerrain(sceneApi, bedUniforms);
+  const aerial = createAerialColony(sceneApi, ring.seats, uniforms.uTime);
+  group.add(aerial.group);
   /** THE HORIZON IS FAR, AND FAR LEAVES LAST (§39). The sky — this chapter's
    *  own spore cloud, the horizon trees and the mist sprites — has the same
    *  fault as the bed and takes the same cure, but not the same curve: sharing
@@ -94,6 +97,8 @@ export function createFinal(sceneApi) {
    *  same driver and meet exactly at 0 and 1, so the seams stay no-ops. */
   const skyUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
   const sky = createFinalSky(sceneApi, skyUniforms);
+  // the horizon breathes from the same colony the Manifesto flies over
+  sky.addHorizonPlumes(aerial.bodies);
   // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
   // FROM it: ring.seats is where every fruiting body in the chapter stands,
   // and canopy.js lays one connected network over the lot, rooted at the
@@ -1228,6 +1233,10 @@ export function createFinal(sceneApi) {
   // Set every frame from scroll.gliding — true only while the commit
   // resolution is actually carrying the picture, never during a live gesture.
   let gliding = false;
+  // Manifesto borrows the existing field, never its camera. Capture the
+  // rendered reveal on entry; a reversible scalar owns it until hand-back.
+  // Normal Final remains camera-X-pure whenever this explicit lease is null.
+  let manifesto = null;
 
   sceneApi.addAnimator('journey-final', (t, dt) => {
     // THE EASE HOLDS WHILE THE STATE AND THE CAMERA DISAGREE (2026-08-13 —
@@ -1293,7 +1302,7 @@ export function createFinal(sceneApi) {
       const s = u * u * (3 - 2 * u);
       if (s > arriveEff) arriveEff = s;
     }
-    const eff = blending
+    const eff = manifesto ? manifesto.amount * manifesto.stay + (1 - manifesto.amount * manifesto.stay) * manifesto.progress : blending
       ? (retiring && retireScale < 1 ? retireEff : lapArrive ? arriveEff : rise)
       : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // THE BED'S OWN FADE (§31). Read off `shownPull` — last frame's value, the
@@ -1315,7 +1324,10 @@ export function createFinal(sceneApi) {
     // landing is for, and costs nothing because the lag at a wrap's landing is
     // 0.0000 in both directions (G6).
     let bed = eff, skyv = eff;
-    if (((bedSpread && blending) || spreadTail) && shownPull !== null) {
+    if (manifesto) {
+      bed = manifesto.bed * manifesto.stay + (1 - manifesto.bed * manifesto.stay) * manifesto.progress;
+      skyv = manifesto.sky * manifesto.stay + (1 - manifesto.sky * manifesto.stay) * manifesto.progress;
+    } else if (((bedSpread && blending) || spreadTail) && shownPull !== null) {
       // Normalised to the span THIS blend spends (spreadSpan — latched at the
       // arming edge, PULL_MAX on every full-band path so these two lines are
       // the shipped arithmetic bit-for-bit there; see the spreadSpan note).
@@ -1333,7 +1345,8 @@ export function createFinal(sceneApi) {
     // `eff` at every frame in both directions, so the draw-call edge does not
     // move — but a gate that reads only `eff` is a gate that can cut a lit bed,
     // and the bed is now the one thing in the chapter `eff` does not govern.
-    group.visible = blending
+    if (manifesto) manifesto.shown = eff;
+    group.visible = manifesto ? Math.max(eff, bed, skyv) > 0.003 : blending
       ? (amountTarget > 0 || amount > 0.003) && Math.max(eff, bed, skyv) > 0.003
       : amount > 0.003;
     if (!group.visible) {
@@ -1390,7 +1403,9 @@ export function createFinal(sceneApi) {
     // With the flag, a ride that never blends never touches this branch and
     // `pull` is `pullOf(camera.x)` by assignment.
     if (shownPull === null) { shownPull = pure; lagging = false; }
-    if (blending && dt > 0) {
+    if (manifesto) {
+      shownPull = manifesto.pull + (PULL_MAX - manifesto.pull) * manifesto.progress;
+    } else if (blending && dt > 0) {
       shownPull = slewPull(shownPull, blendPull, pure, dt);
       lagging = shownPull !== pure;
     } else if (gliding && dt > 0) {
@@ -1481,7 +1496,7 @@ export function createFinal(sceneApi) {
     // wherever it is reachable today: with `pure` in range the offset cancels
     // to `pull` identically, and at `pull` 0 every clone threshold is above the
     // front either way. Only the window this pass opened differs.
-    uniforms.uPullRaw.value = (blending && retiring && retireScale < 1)
+    uniforms.uPullRaw.value = manifesto ? manifesto.raw + (PULL_MAX - manifesto.raw) * manifesto.progress : (blending && retiring && retireScale < 1)
       ? pull
       : pullRawOf(sceneApi.camera.position.x) + (pull - pure);
     uniforms.uTime.value = t;
@@ -1622,6 +1637,71 @@ export function createFinal(sceneApi) {
 
   return {
     id: 'final',
+    /* `stay` (1 -> 0) retires the epilogue UNDER a descent that lands
+       somewhere else (2026-10-04 — Hannah: "a tonne of weird mushrooms left
+       when I land"). The branch holds this chapter at the light it was opened
+       with — its baseline — and the only exit from that hold used to be the
+       landing frame, so a descent onto the hero sank through a fully lit
+       fairy ring that then vanished on touchdown. The baseline now fades with
+       the descent instead; a Return to Purpose keeps it at 1. */
+    setManifesto(progress, seconds = 0, from = null, aspect = 1.6, seats = 1, stay = 1) {
+      if (from) aerial.prepare(from, aspect);
+      aerial.set(progress ?? 0, sceneApi.scene.fog.near, sceneApi.scene.fog.far, seconds);
+      /* THE RING COMES HOME DURING THE DESCENT, NOT ON LANDING (2026-10-03 —
+         Hannah: the background mushrooms "disappear when the camera hits the
+         ground... they should disappear as it's travelling down"). Aloft,
+         the colony draws the ring's seats itself and the original ring is
+         hidden. The swap back used to happen on the landing frame, where the
+         two renderings' differences read as mushrooms vanishing. Now the
+         original ring returns as soon as a Return begins (`seats` < 1) and
+         the colony's copies fade out over the descent on top of it. */
+      aerial.setSeatLight(seats);
+      ring.setAerial(progress !== null && seats >= 1);
+      if (progress === null) {
+        if (manifesto) {
+          shownPull = manifesto.shownPull;
+          revealIn = manifesto.revealIn;
+          lagging = manifesto.lagging;
+          // ...and hands the field back at the presence it was last shown
+          // with, from which the ordinary ease carries it the rest of the
+          // way (see THE DESCENT HOLDS WHAT THE CLIMB LIT, below)
+          if (amountTarget > 0 && Number.isFinite(manifesto.shown)) amount = manifesto.shown;
+          manifesto = null;
+        }
+        return;
+      }
+      if (!manifesto) manifesto = {
+        amount: group.visible ? uniforms.uAmount.value : 0,
+        bed: group.visible ? bedUniforms.uAmount.value : 0,
+        sky: group.visible ? skyUniforms.uAmount.value : 0,
+        pull: uniforms.uPull.value, raw: uniforms.uPullRaw.value,
+        shownPull, revealIn, lagging, progress: 0, stay: 1,
+      };
+      /* THE DESCENT HOLDS WHAT THE CLIMB LIT (2026-10-04 — Hannah: from
+         the Manifesto to Purpose "sometimes the root and the main mushroom
+         reappears ... below the ground"). The lease's baselines are what
+         Purpose showed when the Manifesto opened — 1 from Purpose, but 0
+         from anywhere else (Ownership, measured), where only `progress`
+         lit the field. A descent back to Purpose then faded the field out
+         with the falling progress, its last ~0.5 s showed no field at all —
+         just the hero and Ownership's roots under the soil — and the hand-
+         back switched it on at full. While a descent heads for Purpose (the
+         chapter is armed), each baseline is raised to what the frame
+         already shows, so the field never dims on the way down; the climb
+         is untouched (the ratchet runs only while progress falls). */
+      const next = Math.max(0, Math.min(1, progress));
+      if (next < manifesto.progress && amountTarget > 0) {
+        const p = manifesto.progress, k = manifesto.stay;
+        const held = (b) => b * k + (1 - b * k) * p;
+        manifesto.amount = Math.max(manifesto.amount, held(manifesto.amount));
+        manifesto.bed = Math.max(manifesto.bed, held(manifesto.bed));
+        manifesto.sky = Math.max(manifesto.sky, held(manifesto.sky));
+        manifesto.pull = Math.max(manifesto.pull, manifesto.pull + (PULL_MAX - manifesto.pull) * p);
+        manifesto.raw = Math.max(manifesto.raw, manifesto.raw + (PULL_MAX - manifesto.raw) * p);
+      }
+      manifesto.progress = next;
+      manifesto.stay = Math.max(0, Math.min(1, stay));
+    },
     group,
     nodeIds: [],   // the epilogue has no detail state by design (adr-d6)
     /** T4 streaming seam. */

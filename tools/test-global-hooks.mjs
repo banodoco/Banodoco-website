@@ -584,7 +584,8 @@ function literalMembers(src, tag, openAnchor) {
 pin('A5', 'D54 — Final\'s descriptor members, in source order: `dispose` is gone and every core key and the one capability are still where they were',
   (i) => literalMembers(code(i.final), 'A5', '\n  return {\n'),
   { final: SRC.final },
-  ['id', 'group', 'nodeIds', 'setArmed', 'armed', 'setGliding', 'setBlending',
+  // Explicit reversible Manifesto field lease; no new listener or frame writer.
+  ['id', 'setManifesto', 'group', 'nodeIds', 'setArmed', 'armed', 'setGliding', 'setBlending',
     'pacing', 'snap', 'snapLanding', 'frontWorld', 'focusWorld',
     'focus', 'trigger', 'counts', 'seats', 'pickStats'],
   'the BASE commit\'s list is deliberately NOT the comparison here: C05 slice B added `id` and `focus` and hoisted `focusWorld` out of the literal, so a base-vs-shipped diff would attribute three of C05\'s edits to J04c. tools/test-chapter-contract.mjs T4 filters this same literal through CORE_KEYS and CAPABILITY_KEYS and is blind to a root member by design; this row is what watches that half');

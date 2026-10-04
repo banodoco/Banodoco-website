@@ -32,13 +32,20 @@ const BASELINE_SOURCE_LEGACY = execFileSync(
 // The shipped baseline predates the ground-direction correction. Preserve its
 // clock and lifecycle behavior while comparing the scene against the approved
 // outward wake property.
-const BASELINE_SOURCE = BASELINE_SOURCE_LEGACY.replace(
+const OUTWARD_BASELINE_SOURCE = BASELINE_SOURCE_LEGACY.replace(
   'a.setX(i, (rMax - r) / span);',
   'a.setX(i, (r - rMin) / span);',
 );
-assert.notEqual(BASELINE_SOURCE, BASELINE_SOURCE_LEGACY,
+assert.notEqual(OUTWARD_BASELINE_SOURCE, BASELINE_SOURCE_LEGACY,
   'the legacy oracle contains the inward ground key that this order corrects');
 
+// Requested earlier emergence: preserve the legacy lifecycle oracle while
+// explicitly advancing the verticals and their occluder together. The ends
+// stay fixed so this does not move the cap or completion/activation timing.
+const BASELINE_SOURCE = OUTWARD_BASELINE_SOURCE
+  .replace('[stemVerts, 0.296, 0.515]', '[stemVerts, 0.096, 0.515]')
+  .replace('((p - 0.296) / 0.219)', '((p - 0.096) / 0.419)')
+  .replace('(p - 0.30) / 0.24', '(p - 0.10) / 0.44');
 assert.notEqual(CURRENT_SOURCE, BASELINE_SOURCE, 'the behavior oracle differs from current');
 assert.match(CURRENT_SOURCE, /from '.\/intro-clock\.js'/,
   'setupIntro consumes the isolated clock owner');
@@ -199,7 +206,7 @@ function makeShell() {
   };
 }
 
-function makeScene({ intro = 5.4, deferIntro = false } = {}) {
+function makeScene({ intro = 5.4, deferIntro = false, stemJoinY } = {}) {
   const ground = [0, 1, 2, 3, 4, 5, 6].map(makeDrawable);
   const stemDraw = [10, 11, 12].map(makeDrawable);
   const stemShells = [makeShell()];
@@ -226,6 +233,7 @@ function makeScene({ intro = 5.4, deferIntro = false } = {}) {
     },
     intro,
     deferIntro,
+    stemJoinY,
   };
   return {
     ctx,
@@ -543,7 +551,7 @@ assert.ok(globalWriteRun.writes.length > 0,
 
 for (const [label, from, to, field] of [
   ['window mutant', '[capBeads, 0.776, 0.885]', '[capBeads, 0.777, 0.885]', 'windows'],
-  ['clamp mutant', 'uClampY.value = 3.65;', 'uClampY.value = 3.6500001;', 'clampY'],
+  ['clamp mutant', 'uClampY.value = stemJoinY;', 'uClampY.value = stemJoinY + 0.0000001;', 'clampY'],
   ['draw-key mutant', 'a.setX(i, (r - rMin) / span);',
     'a.setX(i, (r - rMin) / span + 1e-9);', 'aDraw'],
 ]) {
@@ -554,4 +562,15 @@ for (const [label, from, to, field] of [
     label + ' is rejected by the scene-state oracle');
 }
 
+// Refined anatomy can lower the throat without leaving a bare, depth-writing
+// stalk above it during growth. Both ink and tissue must follow that join.
+const loweredJoin = runScenario(current.setupIntro, {
+  stemJoinY: 3.32, accelAtFrame: 10000, frames: 220,
+});
+assert.ok(loweredJoin.scene.stemDraw.every(o => o.material.uniforms.uClampY.value === 3.32),
+  'the visible stalk stops at the supplied anatomical join');
+assert.ok(loweredJoin.trace.every(frame => frame[6] === null || frame[6] <= 3.32),
+  'the opaque stalk never grows beyond the supplied anatomical join');
+assert.ok(loweredJoin.trace.some(frame => frame[6] === 3.32),
+  'the rising shell reaches the join');
 console.log('intro lifecycle/local-clock contract: PASS');

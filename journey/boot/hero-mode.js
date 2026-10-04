@@ -38,11 +38,11 @@
 const VIEWS = {
   // Composition restage (2026-08-19): pan the organism + its projected
   // annotations left by roughly 5-8vw, while the DOM hero copy stays put.
-  // Lowering camera and target together preserves the viewing angle/scale
-  // and lifts the specimen slightly in frame. Anchors remain anatomy-owned.
-  desktop: { panX: -1.65, camY: 2.07, camZ: 10.4, targetY: 2.42, fov: 38 },
-  compact: { panX: -1.82, camY: 2.12, camZ: 11.2, targetY: 2.52, fov: 38 },  // short landscape (phones)
-  deskNarrow: { panX: -1.27, camY: 2.12, camZ: 11.6, targetY: 2.47, fov: 38 }, // landscape aspect < 1.55 (iPads)
+  // A slightly elevated, more distant Intro camera makes the canopy shallower
+  // and quieter beside the copy. Chapter cameras retain their own framing.
+  desktop: { panX: -1.65, camY: 2.78, camZ: 11.2, targetY: 2.42, fov: 38 },
+  compact: { panX: -1.82, camY: 2.72, camZ: 11.9, targetY: 2.52, fov: 38 },  // short landscape (phones)
+  deskNarrow: { panX: -1.27, camY: 2.72, camZ: 12.3, targetY: 2.47, fov: 38 }, // landscape aspect < 1.55 (iPads)
   // Prior optical centring pass (ending at panX +0.45): the earlier
   // +0.33 landed the ensemble's geometric bounds on centre, but the bright
   // spore plume and the label column both weight the right side. Another
@@ -186,7 +186,7 @@ function viewFor(mode) {
   if (mode === 'deskNarrow') {
     const t = Math.min(1, Math.max(0, (1.55 - innerWidth / innerHeight) / 0.3));
     v.panX = -1.27 + 0.3 * t;
-    v.camZ = 11.6 + 0.9 * t;
+    v.camZ = 12.3 + 0.9 * t;
   }
   if (mode === 'mobile') {
     const t = Math.min(1, Math.max(0, (innerWidth / innerHeight - 0.44) / 0.16));

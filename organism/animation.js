@@ -12,6 +12,20 @@ export function createAnimationLifecycle({ beforeRender, render }) {
      about the other — one shared flag would let a tab that came back into
      view resume rendering into a context that is still lost. */
   let pageVisible = true;
+  /* THE THIRD GATE: A HELD FRAME (2026-10-04 — load lag). While the load
+     prelude is drawn by its own worker (organism/hero-spores.js) the scene
+     has nothing to show: the stream is still the worker's and the growth has
+     not begun, so every composer pass draws the same graded empty frame —
+     bloom, grade and all, full resolution, every frame — on a GPU the
+     worker's frames also need. Measured on a loaded machine, that contention
+     was the last thing that could still cost the prelude a frame while the
+     journey was being built. `holdRender(true)` lets `settle` more frames
+     through (so what is left on the canvas is a finished frame, TAA and all)
+     and then holds it; `holdRender(false)` resumes on the next frame. The
+     loop, the clock and the animators keep running, for the reasons above. */
+  let held = false;
+  let heldFramesLeft = 0;
+  let heldW = 0, heldH = 0;
 
   /** Register a per-frame callback `fn(t, dt)` under `name`. Returns a
    *  handle: call it to remove exactly this registration. The handle is
@@ -84,7 +98,16 @@ export function createAnimationLifecycle({ beforeRender, render }) {
          hiccup lasting two seconds must not leave the site permanently
          softer. Animators keep running for the same reason: they are what
          keeps dt honest. */
-      if (renderEnabled && pageVisible) {
+      // a resize reallocates (and clears) the canvas: let a finished frame
+      // through at the new size before holding again
+      if (held && typeof innerWidth === 'number'
+          && (innerWidth !== heldW || innerHeight !== heldH)) {
+        heldW = innerWidth; heldH = innerHeight;
+        heldFramesLeft = Math.max(heldFramesLeft, 3);
+      }
+      const holdPasses = !held || heldFramesLeft > 0;
+      if (held && heldFramesLeft > 0) heldFramesLeft--;
+      if (renderEnabled && pageVisible && holdPasses) {
         beforeRender();
         render();
       }
@@ -135,5 +158,12 @@ export function createAnimationLifecycle({ beforeRender, render }) {
      *  NOT freezeTime(): that one parks the clock for the capture tooling and
      *  leaves the composer rendering every frame. */
     setRenderEnabled(on) { renderEnabled = !!on; },
+    /** Hold the last rendered frame on the canvas (after `settle` more
+     *  renders), or release the hold. See the third gate above. */
+    holdRender(on, settle = 3) {
+      held = !!on;
+      heldFramesLeft = held ? Math.max(0, settle | 0) : 0;
+      if (typeof innerWidth === 'number') { heldW = innerWidth; heldH = innerHeight; }
+    },
   };
 }

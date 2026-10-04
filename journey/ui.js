@@ -1029,6 +1029,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
       railWrap = null,
       railFlight = null,
       travelP = p,
+      departureOpacity = null,
     } = {}) {
     policies.resolve();
     /* TWO LINES, NOT ONE, AND THE SPELLING IS PINNED. U06 collapsed these
@@ -1055,7 +1056,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     // The sheet's visual withholding of the rail — one writer, shared with the
     // close path so the two can never disagree (syncRailVisibility, above).
     cardTier.syncRailVisibility();
-    copy.step({ chapterId, dt, travelP, railWrap, railFlight });
+    copy.step({ chapterId, dt, travelP, railWrap, railFlight, departureOpacity });
 
     chips.measure();
     const geom = projection.publish(camera);

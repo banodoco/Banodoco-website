@@ -6,14 +6,14 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
 import { heroSpores, createHeroSporeField } from './hero-spores.js';
-import { setupIntro } from './intro.js';
+import { setupIntro, GROWTH } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
 import { createRandomGeometryHelpers } from './random.js';
 import { createAnimationLifecycle } from './animation.js';
 import { createAdaptiveResolution } from './performance.js';
 import { DRAW_GLSL, PULSE_GLSL } from './shaders.js';
 import { createRendererSetup, createViewportSync } from './renderer.js';
-import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
+import { NOTAA, TAA_CLASSIC, NOFADE, DBG, PIN_PR } from '../flags.js';
 
 // =====================================================================
 // TABLE OF CONTENTS (order as they appear below; M2 split the marked
@@ -159,7 +159,11 @@ const yieldBuildFrame = async () => {
   // most of a 60 Hz frame, let the preload paint before starting the next
   // geometry family; this keeps responsiveness without charging every load
   // one whole frame at every checkpoint.
-  if (performance.now() - buildSliceStartedAt < 10) return;
+  // Keep construction slices below a half-frame on the reference 60 Hz
+  // display.  The call sites below are deliberately placed at stable outer
+  // loop boundaries so the seeded geometry order is unchanged while the
+  // preload gets a chance to paint between expensive batches.
+  if (performance.now() - buildSliceStartedAt < 6) return;
   await nextBuildFrame();
   buildSliceStartedAt = performance.now();
 };
@@ -208,7 +212,7 @@ const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
 // multiplies the TAA history by DPR a second time until the first resize.
 composer.setSize(_cssSize.width, _cssSize.height);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.62, 0.45, 0.1);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.56, 0.45, 0.1);
 composer.addPass(bloom);
 // Keep first construction identical to syncRenderSizes(): the bloom spread is
 // intentionally authored in CSS pixels rather than drawing-buffer pixels.
@@ -229,13 +233,57 @@ class TemporalAccumulatePass extends Pass {
     this.validHistory = false;
     this.weight = 0; // share of history in the blend; driven per-frame below
     const vsh = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+    /* WHAT MOVES IS NOT AVERAGED WITH WHERE IT WAS (2026-10-04 — Hannah: "it
+       feels like a filter is put on the starting spores after like 3
+       seconds"). The plain blend below kept 60% of last frame everywhere.
+       For the sway's couple of pixels that reads as gentle motion blur, as
+       intended — but a spore is a point a few pixels wide travelling a few
+       pixels a frame, and averaging it with its own past did two things to
+       every one of them: it left a short dim streak behind it, and it held
+       its light at ~40% where it actually is. The load prelude
+       (organism/hero-spores.js) draws the same spores with no accumulation
+       at all, so the moment the scene adopted them they visibly smeared and
+       dimmed — measured on the seam frames: the brightest 0.1% of the
+       stream fell from 182 to 122, pixels over 140 from 548 to 78, and the
+       round sprites became streaks along their own direction of travel.
+       Two standard guards, which leave the job this pass exists for alone:
+         · the history is CLAMPED to the current frame's 3x3 neighbourhood,
+           so a light that has left a pixel cannot linger in it as a trail;
+         · where the light at a pixel jumps (a spore arriving, or leaving),
+           the history's share falls away with the size of the jump, so a
+           moving point is drawn at its own brightness, where it is.
+       The jittered moiré on the fine gill lines is a small, local wobble in
+       brightness, well inside both guards, so it still integrates away.
+       ?taaclassic restores the plain blend for an A/B. */
     this.blendMat = new THREE.ShaderMaterial({
-      uniforms: { tDiffuse: { value: null }, tHistory: { value: null }, uW: { value: 0 } },
+      uniforms: {
+        tDiffuse: { value: null }, tHistory: { value: null }, uW: { value: 0 },
+        uTexel: { value: new THREE.Vector2(1 / width, 1 / height) },
+        uGuard: { value: TAA_CLASSIC ? 0 : 1 },
+      },
       vertexShader: vsh,
       fragmentShader: `
         uniform sampler2D tDiffuse; uniform sampler2D tHistory; uniform float uW;
+        uniform vec2 uTexel; uniform float uGuard;
         varying vec2 vUv;
-        void main() { gl_FragColor = mix(texture2D(tDiffuse, vUv), texture2D(tHistory, vUv), uW); }`,
+        float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+        void main() {
+          vec4 cur = texture2D(tDiffuse, vUv);
+          vec4 hist = texture2D(tHistory, vUv);
+          if (uGuard < 0.5) { gl_FragColor = mix(cur, hist, uW); return; }
+          vec3 lo = cur.rgb, hi = cur.rgb;
+          for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+              vec3 s = texture2D(tDiffuse, vUv + uTexel * vec2(float(x), float(y))).rgb;
+              lo = min(lo, s); hi = max(hi, s);
+            }
+          }
+          vec3 h = clamp(hist.rgb, lo, hi);
+          float lc = luma(cur.rgb), lh = luma(h);
+          float jump = abs(lc - lh) / max(max(lc, lh), 0.02);
+          float w = uW * (1.0 - smoothstep(0.45, 0.9, jump));
+          gl_FragColor = vec4(mix(cur.rgb, h, w), mix(cur.a, hist.a, w));
+        }`,
       depthTest: false, depthWrite: false,
     });
     this.copyMat = new THREE.ShaderMaterial({
@@ -264,6 +312,7 @@ class TemporalAccumulatePass extends Pass {
   }
   setSize(width, height) {
     this.history.setSize(width, height);
+    this.blendMat.uniforms.uTexel.value.set(1 / width, 1 / height);
     this.validHistory = false; // stale-size history would smear a resize
   }
   dispose() { this.history.dispose(); this.quad.dispose(); }
@@ -826,7 +875,8 @@ function capUnderPt(u, a) { // gill skirt underside — shallow, so the cap keep
   const edge = Math.pow(Math.max(0, (u - 0.8) / 0.2), 2);
   const y = CAP_Y + 0.5 * Math.pow(Math.max(0, 1 - u), 1.8) + 0.03
           + rimYoff(a) * Math.pow(u, 1.6) + marginDroop(u, a)
-          - 0.11 * edge; // gill edge sits below the cap lip: the margin has thickness
+          - 0.11 * edge // the margin has thickness
+          - 0.36 * Math.exp(-Math.pow(u / 0.22, 2)); // rounded throat into the stem
   const x = Math.cos(a) * r - 0.075 * (1 - u * u);
   return new THREE.Vector3(x, y, Math.sin(a) * r);
 }
@@ -852,14 +902,52 @@ function beadM(x, y, z, h, s) {
 // =====================================================================
 // 5. OCCLUSION SHELLS — opaque shells that occlude far-side wires
 // =====================================================================
-// ---- opaque black shells: occlude far-side wires like the reference ----
+// Low, directional body color gives the emissive fibers something solid to
+// sit on. Vertex colors keep this quiet shading independent of scene lights.
+function bodyColor(a, u, stem = false) {
+  const key = 0.5 + 0.5 * Math.cos(a - 2.3);
+  const fill = stem ? 0.012 + 0.060 * key * key * key
+    : (0.005 + 0.040 * key * key) * (0.55 + 0.45 * Math.sin(Math.PI * u));
+  return [fill, fill * 0.46, fill * 0.16];
+}
+// The same radial key drives both the ink and the opaque tissue beneath it.
+// A transparent depth-writing shell still hides the rising stalk, so unbuilt
+// fragments must be discarded, rather than just faded to black.
+function capGrowthKey(x, z) {
+  const a = Math.atan2(z, x + 0.075);
+  return Math.min(0.985, Math.hypot(x + 0.075, z) / rimRad(a));
+}
+function growCapBody(mesh, start, end, fromRim = false) {
+  const pos = mesh.geometry.attributes.position;
+  const keys = new Float32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const radius = capGrowthKey(pos.getX(i), pos.getZ(i));
+    keys[i] = fromRim ? 1 - radius : radius;
+  }
+  mesh.geometry.setAttribute('aBodyGrowth', new THREE.BufferAttribute(keys, 1));
+  mesh.material.onBeforeCompile = shader => {
+    shader.uniforms.uBodyProgress = drawU;
+    shader.uniforms.uBodyWindow = { value: new THREE.Vector2(start, end) };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aBodyGrowth; varying float vBodyGrowth;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBodyGrowth = aBodyGrowth;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uBodyProgress; uniform vec2 uBodyWindow; varying float vBodyGrowth;')
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        float grown = clamp((uBodyProgress - uBodyWindow.x) / (uBodyWindow.y - uBodyWindow.x), 0.0, 1.0);
+        if (vBodyGrowth > grown - 0.012) discard;`);
+  };
+  mesh.material.customProgramCacheKey = () => 'cap-body-growth-v1';
+  return mesh;
+}
+// ---- opaque shells: a shaded body beneath the luminous surface ----
 {
   const mat = new THREE.MeshBasicMaterial({
     color: 0x040100, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 8,
   });
   function shellGrid(ptFn, uMin, uMax, yOff, uSteps, aSteps) {
-    const pos = [];
+    const pos = [], colors = [];
     const idx = [];
     for (let i = 0; i <= uSteps; i++) {
       const u = uMin + (uMax - uMin) * (i / uSteps);
@@ -867,6 +955,7 @@ function beadM(x, y, z, h, s) {
         const a = (j / aSteps) * Math.PI * 2;
         const p = ptFn(u, a);
         pos.push(p.x, p.y + yOff, p.z);
+        colors.push(...bodyColor(a, u));
       }
     }
     for (let i = 0; i < uSteps; i++) {
@@ -880,10 +969,15 @@ function beadM(x, y, z, h, s) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx);
-    return new THREE.Mesh(geo, mat);
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const shaded = mat.clone();
+    shaded.color.setHex(0xffffff);
+    shaded.vertexColors = true;
+    return new THREE.Mesh(geo, shaded);
   }
-  mushroom.add(shellGrid(capTopPt, 0.0, 1.0, -0.045, 30, 96));
-  mushroom.add(shellGrid(capUnderPt, 0.09, 0.995, 0.03, 24, 96));
+  // the bodies grow with the strokes they sit under (intro.js GROWTH)
+  mushroom.add(growCapBody(shellGrid(capTopPt, 0.0, 1.0, -0.045, 30, 96), ...GROWTH.dome, true));
+  mushroom.add(growCapBody(shellGrid(capUnderPt, 0.09, 0.995, 0.03, 24, 96), ...GROWTH.gills));
 
   // margin wall — the visible thickness of the cap's edge
   {
@@ -902,7 +996,7 @@ function beadM(x, y, z, h, s) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx);
-    mushroom.add(new THREE.Mesh(geo, mat));
+    mushroom.add(growCapBody(new THREE.Mesh(geo, mat), 0.698, 0.793));
   }
 }
 
@@ -1014,43 +1108,74 @@ function beadM(x, y, z, h, s) {
 await yieldBuildFrame();
 // ---- gills: dense radial filaments under the cap ----
 {
-  const lp = [], lc = [], lt = [];
+  const lp = [], lc = [], lt = [], walls = [], wallColors = [];
   const N_GILLS = 230, SUB = 12;
-  const dG = Math.PI * 2 / N_GILLS; // azimuth to the neighbouring gill
+  const dG = Math.PI * 2 / N_GILLS;
   for (let g = 0; g < N_GILLS; g++) {
     const a0 = (g / N_GILLS) * Math.PI * 2 + gauss() * 0.004;
     const wig = gauss() * 0.02;
     const boost = rand() < 0.08 ? 0.18 : 0;
-    const u0 = 0.06 + rand() * 0.09; // feathered inner attach — no hard ring
-    let prev = null, prevT = null;
-    for (let s = 0; s <= SUB; s++) {
-      const t = s / SUB;
+    const attach = 0.06 + rand() * 0.09;
+    const tier = g % 3;
+    // Full gills alternate with shorter lamellae: the throat has breathing
+    // room, while the outer fan retains its fine, closely spaced structure.
+    const u0 = tier === 0 ? 0.045 + attach * 0.24
+      : (tier === 1 ? 0.21 + attach * 1.55 : 0.39 + attach * 1.65);
+    const pointAt = t => {
       const u = u0 + t * (1 - u0);
       const a = a0 + wig * Math.sin(t * Math.PI);
       const p = capUnderPt(u, a);
-      const tg = capUnderPt(u, a + dG).sub(capUnderPt(u, a));
-      p.y += gauss() * 0.008;
-      if (prev) {
-        lp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-        lt.push(prevT.x, prevT.y, prevT.z, tg.x, tg.y, tg.z);
-        // cavity shading: warm core, shadowed mid interior, bright rim fringe
-        const tp = (s - 1) / SUB;
-        const b0 = 0.38 - 0.55 * tp + 0.85 * tp * tp + boost;
-        const b1 = 0.38 - 0.55 * t + 0.85 * t * t + boost;
-        pushC(lc, b0); pushC(lc, b1);
-        if (boost > 0) { // hero gills: doubled stroke reads as a thicker vein
-          lp.push(prev.x, prev.y - 0.007, prev.z, p.x, p.y - 0.007, p.z);
-          lt.push(prevT.x, prevT.y, prevT.z, tg.x, tg.y, tg.z);
-          pushC(lc, b0 * 0.85); pushC(lc, b1 * 0.85);
-        }
-        if (rand() < 0.05) beadM(p.x, p.y, p.z, b1 * 1.2, 0.011 + rand() * 0.018);
+      p.y -= 0.012 + 0.044 * Math.sin(Math.PI * t);
+      return p;
+    };
+    const brightness = t => {
+      const key = 0.78 + 0.22 * Math.cos(a0 - 2.3);
+      const shoulder = THREE.MathUtils.smoothstep(t, 0, 0.14);
+      const collar = 0.14 * Math.exp(-Math.pow((t - 0.16) / 0.22, 2));
+      return (0.20 + 0.28 * t * t + collar + boost * 0.5)
+        * key * (tier === 0 ? 1 : 0.76) * (0.52 + 0.48 * shoulder);
+    };
+    for (let s = 0; s <= SUB; s++) {
+      // Keep the established RNG stream for all geometry built after gills.
+      gauss();
+      if (s === 0) continue;
+      for (let sub = 0; sub < 3; sub++) {
+        const t0 = (s - 1 + sub / 3) / SUB, t1 = (s - 1 + (sub + 1) / 3) / SUB;
+        const p = pointAt(t0), q = pointAt(t1);
+        const tangent = t => {
+          const u = u0 + t * (1 - u0);
+          return capUnderPt(u, a0 + wig * Math.sin(t * Math.PI) + dG)
+            .sub(capUnderPt(u, a0 + wig * Math.sin(t * Math.PI)));
+        };
+        const tp = tangent(t0), tq = tangent(t1);
+        lp.push(...p.toArray(), ...q.toArray());
+        lt.push(...tp.toArray(), ...tq.toArray());
+        pushC(lc, brightness(t0)); pushC(lc, brightness(t1));
+        // Thin opaque lamella walls give each bright edge a real recess.
+        const h0 = 0.025 + 0.044 * Math.sin(Math.PI * t0);
+        const h1 = 0.025 + 0.044 * Math.sin(Math.PI * t1);
+        walls.push(p.x,p.y,p.z, q.x,q.y,q.z, p.x,p.y+h0,p.z,
+          p.x,p.y+h0,p.z, q.x,q.y,q.z, q.x,q.y+h1,q.z);
+        const c = bodyColor(a0, (t0 + t1) * 0.5);
+        for (const shade of [1.35,1.35,0.18,0.18,1.35,0.18])
+          wallColors.push(c[0]*shade,c[1]*shade,c[2]*shade);
       }
-      prev = p; prevT = tg;
+      if (rand() < 0.05) {
+        const p = pointAt(s / SUB);
+        beadM(p.x, p.y, p.z, brightness(s / SUB), 0.011 + rand() * 0.018);
+      }
     }
   }
-  mushroom.add(makeDenseLines(lp, lc, lt, 0.33));
+  const wallGeo = new THREE.BufferGeometry();
+  wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(walls, 3));
+  wallGeo.setAttribute('color', new THREE.Float32BufferAttribute(wallColors, 3));
+  mushroom.add(growCapBody(new THREE.Mesh(wallGeo, new THREE.MeshBasicMaterial({
+    vertexColors: true, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  })), ...GROWTH.gills));
+  mushroom.add(makeDenseLines(lp, lc, lt, 0.30));
 
-  // hot core where the gills meet the stem apex
+  // Sparse, subdued points in the recessed attachment.
   const cp = [], cc = [], cs = [];
   for (let k = 0; k < 80; k++) {
     const a = rand() * Math.PI * 2;
@@ -1060,7 +1185,7 @@ await yieldBuildFrame();
     pushC(cc, 0.48 + rand() * 0.15);
     cs.push(randRange(0.035, 0.075));
   }
-  mushroom.add(makePoints(cp, cc, cs, 0.85));
+  mushroom.add(makePoints(cp, cc, cs, 0.16));
 }
 
 // ---- rim: the hottest ring, following the wavy edge ----
@@ -1181,16 +1306,18 @@ await yieldBuildFrame();
 // The cap's throat (the hole the gills radiate from) in WORLD space, after the
 // cap's tilt and lean — the stem's axis converges onto this point so the two
 // always meet, whatever the framing parameters are.
-const capThroat = new THREE.Vector3(-0.075, 3.66, 0)
+const capThroat = new THREE.Vector3(-0.075, capUnderPt(0, 0).y, 0)
   .applyEuler(new THREE.Euler(tiltX, 0, leanZ))
   .add(new THREE.Vector3(0, 0, -tiltX * 3.2));
 
+// Entry clamps to the same attachment as the refined underside, including tilt.
+ctx.stemJoinY = capThroat.y;
 const stemGroup = new THREE.Group();
 scene.add(stemGroup);
 ctx.stemGroup = stemGroup;
 {
   function stemAxis(y) { // organic curve low down, converging on the cap throat
-    const w = Math.pow(Math.min(y / 3.6, 1), 2);
+    const w = Math.pow(Math.min(y / capThroat.y, 1), 2);
     return new THREE.Vector2(
       (0.1 * Math.sin(y * 0.85 + 0.6) - 0.01 * y) * (1 - w) + capThroat.x * w,
       (0.045 * Math.sin(y * 0.7 + 1.7)) * (1 - w) + capThroat.z * w
@@ -1199,19 +1326,23 @@ ctx.stemGroup = stemGroup;
   function stemR(y) {
     const t = y / STEM_TOP;
     return 0.27 - 0.07 * t + 0.42 * Math.exp(-y / 0.26)
-         + 0.05 * Math.exp((y - STEM_TOP) / 0.35); // slight flare into the cap
+         + 0.12 * Math.pow(THREE.MathUtils.smoothstep(y, capThroat.y - 0.45, capThroat.y + 0.22), 2); // soft shoulder into the cap
   }
   // opaque core: a tube tracking the curved axis, so the silhouette bends with it
   {
-    const pos = [], idx = [];
-    const R = 30, S = 24;
+    const pos = [], idx = [], colors = [];
+    const R = 60, S = 64;
     for (let i = 0; i <= R; i++) {
       const y = (i / R) * (STEM_TOP - 0.02);
       const ax = stemAxis(y);
-      const r = Math.max(stemR(y) * 0.82, 0.02);
+      const r = Math.max(stemR(y) * 0.985, 0.02);
       for (let j = 0; j < S; j++) {
         const a = (j / S) * Math.PI * 2;
         pos.push(ax.x + Math.cos(a) * r, y, ax.y + Math.sin(a) * r);
+        const c = bodyColor(a, y / STEM_TOP, true);
+        const grain = 0.86 + 0.14 * Math.sin(a * 34 + y * 0.8);
+        const neck = 1 - 0.22 * THREE.MathUtils.smoothstep(y, 3.30, 3.85);
+        colors.push(c[0]*grain*neck, c[1]*grain*neck, c[2]*grain*neck);
       }
     }
     for (let i = 0; i < R; i++) {
@@ -1224,8 +1355,9 @@ ctx.stemGroup = stemGroup;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx);
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     stemGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      color: 0x040100,
+      vertexColors: true, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 8,
     })));
   }
@@ -1239,9 +1371,9 @@ ctx.stemGroup = stemGroup;
     const row = [], tRow = [];
     const dS = Math.PI * 2 / SEGS; // azimuth to the neighbouring mesh line
     for (let j = 0; j < SEGS; j++) {
-      const a = (j / SEGS) * Math.PI * 2 + (i % 2) * (Math.PI / SEGS) + gauss() * 0.05;
-      const jr = r * (1 + gauss() * 0.09);
-      row.push(new THREE.Vector3(ax.x + Math.cos(a) * jr, y + gauss() * 0.015, ax.y + Math.sin(a) * jr));
+      const a = (j / SEGS) * Math.PI * 2 + 0.025 * Math.sin(y * 1.5 + j) + gauss() * 0.006;
+      const jr = r * (1.012 + gauss() * 0.016);
+      row.push(new THREE.Vector3(ax.x + Math.cos(a) * jr, y + gauss() * 0.003, ax.y + Math.sin(a) * jr));
       tRow.push(new THREE.Vector3((Math.cos(a + dS) - Math.cos(a)) * jr, 0,
                                   (Math.sin(a + dS) - Math.sin(a)) * jr));
     }
@@ -1258,7 +1390,7 @@ ctx.stemGroup = stemGroup;
         const q = grid[i][(j + 1) % SEGS], tq = tGrid[i][(j + 1) % SEGS];
         lp.push(p.x, p.y, p.z, q.x, q.y, q.z);
         lt.push(tp.x, tp.y, tp.z, tq.x, tq.y, tq.z);
-        pushC(lc, b * 0.75); pushC(lc, b * 0.75);
+        pushC(lc, b * 0.08); pushC(lc, b * 0.08);
       }
       if (i < RINGS && rand() < 0.9) {
         const q = grid[i + 1][j], tq = tGrid[i + 1][j];
@@ -1286,14 +1418,15 @@ ctx.stemGroup = stemGroup;
       const y = (i / 40) * STEM_TOP;
       const ax = stemAxis(y);
       const a = a0 + 0.11 * Math.sin(y * 1.7 + f);
-      const r = stemR(y) * (1 + gauss() * 0.04) * 1.01;
+      const r = stemR(y) * (1 + gauss() * 0.009) * 1.018;
       const p = new THREE.Vector3(ax.x + Math.cos(a) * r, y, ax.y + Math.sin(a) * r);
       const tf = new THREE.Vector3(Math.cos(a + dF) * r - Math.cos(a) * r, 0,
                                    Math.sin(a + dF) * r - Math.sin(a) * r);
       if (prev) {
         flp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
         flt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
-        pushC(flc, b + gauss() * 0.04); pushC(flc, b + gauss() * 0.04);
+        const shade = 0.74 + 0.26 * Math.cos(a - 2.3);
+        pushC(flc, (b + gauss() * 0.012) * shade); pushC(flc, (b + gauss() * 0.012) * shade);
         if (f % 5 === 0) { // every fifth fiber is a heavier structural strand
           flp.push(prev.x + 0.009, prev.y, prev.z, p.x + 0.009, p.y, p.z);
           flt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
@@ -1308,9 +1441,9 @@ ctx.stemGroup = stemGroup;
       prev = p; prevT = tf;
     }
   }
-  stemGroup.add(makeDenseLines(flp, flc, flt, 0.32)); // wave 1: vertical strands
-  stemGroup.add(makeDenseLines(lp, lc, lt, 0.32));    // wave 2: lattice mesh
-  stemGroup.add(makePoints(pp, pc, ps, 0.7));
+  stemGroup.add(makeDenseLines(flp, flc, flt, 0.27)); // wave 1: vertical strands
+  stemGroup.add(makeDenseLines(lp, lc, lt, 0.075));    // wave 2: lattice mesh
+  stemGroup.add(makePoints(pp, pc, ps, 0.24));
 }
 
 // =====================================================================
@@ -1406,6 +1539,7 @@ ctx.groundGroup = groundGroup;
       p: new THREE.Vector3(x, groundY(x, z), z),
       h: (0.22 + h * 0.78) * (0.45 + 0.55 * den) * nearFade(z) * quietMul(x, z) * radFall(x, z) * 0.85,
     });
+    if ((k & 63) === 63) await yieldBuildFrame();
   }
   // stars live near the organism, where the network is most alive
   const central = [];
@@ -1456,7 +1590,8 @@ ctx.groundGroup = groundGroup;
     }
   }
 
-  for (const hub of hubs) {
+  for (let hubIndex = 0; hubIndex < hubs.length; hubIndex++) {
+    const hub = hubs[hubIndex];
     const near = hubs
       .filter(m => m !== hub)
       .map(m => ({ m, d: m.p.distanceTo(hub.p) }))
@@ -1466,6 +1601,7 @@ ctx.groundGroup = groundGroup;
       if (d > 2.3) continue;
       wigglyLine(hub.p, m.p, hub.h, m.h);
     }
+    if ((hubIndex & 15) === 15) await yieldBuildFrame();
   }
   for (const i of starIdx) {
     const hub = hubs[i];
@@ -1477,7 +1613,8 @@ ctx.groundGroup = groundGroup;
     }
   }
   // fine rootlets wandering off hubs
-  for (const hub of hubs) {
+  for (let hubIndex = 0; hubIndex < hubs.length; hubIndex++) {
+    const hub = hubs[hubIndex];
     if (rand() > 0.8) continue;
     let p = hub.p.clone();
     let dir = new THREE.Vector2(gauss(), gauss()).normalize();
@@ -1492,6 +1629,7 @@ ctx.groundGroup = groundGroup;
       if (rand() < 0.45) beadG(q.x, q.y + 0.01, q.z, h * 1.8, 0.014 + Math.pow(rand(), 2) * 0.05);
       p = q; h *= 0.82;
     }
+    if ((hubIndex & 31) === 31) await yieldBuildFrame();
   }
   groundGroup.add(makeLines(lp, lc, 0.36, true));
 
@@ -1510,6 +1648,7 @@ ctx.groundGroup = groundGroup;
       mlp.push(x, y, z, x + Math.cos(a) * len, y + Math.abs(gauss()) * 0.02, z + Math.sin(a) * len);
       pushC(mlc, b); pushC(mlc, b * 0.7);
     }
+    await yieldBuildFrame();
   }
   groundGroup.add(makeLines(mlp, mlc, 0.35, true));
 
@@ -1530,6 +1669,7 @@ ctx.groundGroup = groundGroup;
     pp.push(x, groundY(x, z) + 0.01, z);
     pushC(pc, (0.25 + Math.pow(rand(), 2) * 0.5) * (0.4 + 0.6 * density(x, z)) * nearFade(z) * quietMul(x, z) * radFall(x, z));
     ps.push(randRange(0.02, 0.055));
+    if ((k & 63) === 63) await yieldBuildFrame();
   }
   for (const patch of patches) {
     for (let k = 0; k < 120; k++) {
@@ -1540,6 +1680,7 @@ ctx.groundGroup = groundGroup;
       pushC(pc, (0.3 + rand() * 0.4) * nearFade(z) * quietMul(x, z));
       ps.push(randRange(0.012, 0.035));
     }
+    await yieldBuildFrame();
   }
   groundGroup.add(makePoints(pp, pc, ps, 0.95));
 
@@ -1938,6 +2079,7 @@ const { animators, addAnimator } = animationLifecycle;
  *  call that to unregister (e.g. when a scroll-driven effect ends). A
  *  second addAnimator with the same name replaces the callback in place. */
 ctx.animators = animators;
+ctx.holdRender = animationLifecycle.holdRender;
 ctx.addAnimator = addAnimator;
 
 /* ---- THE THROUGH-CURRENT WAS ALREADY HERE (Lane B; hero-loading v3) --
@@ -1965,7 +2107,17 @@ ctx.addAnimator = addAnimator;
        is added third and is therefore invisible to that pair.
    It takes no draw window on purpose. The intro inks the MUSHROOM into
    this air; the air is not something the mushroom draws. */
-const HERO_SPORE_FADE_S = 0.9;
+/* 2.4 s, NOT 0.9 (2026-10-04, Hannah: "it feels like a filter is put on the
+   starting spores after like 3 seconds ... less so if it happens a lot
+   slower"). The two halves of this crossfade are not the same picture in
+   motion: the prelude draws each spore once, crisp; the scene draws it
+   through the composer — real bloom and the temporal accumulation, which
+   softens anything that moves (eased now, see TemporalAccumulatePass, but
+   not to nothing over a bright background). Over 0.9 s that difference read
+   as a grade switched on; over 2.4 s it is a change of weather. The
+   worker-path prelude is paced by the scene's own frames for the length of
+   it, so the longer fade costs no extra contention. */
+const HERO_SPORE_FADE_S = 2.4;
 /* ...AND THE ADOPTED FIELD IS NAMED, because it now has a reader (2026-09-01,
    Hannah: the entry's spores belong to the first section, and leave with it).
    journey/hero-field.js gates this object's presence on the hero furniture's
@@ -2046,56 +2198,33 @@ registerTrackers(ctx);
 // 'intro-draw' animator lands last in the hero's registration order.
 // Returns the intro lifecycle handle exposed on the public API (M5).
 const introApi = setupIntro(ctx);
-
-/* ---- THE MYCELIUM WAS ALREADY THERE; THE MUSHROOM LIGHTS IT (2C) -----
-   The ground's own ink RADIATES — every floor vertex is re-keyed by
-   distance from the base, origin first, so the web streams outward from
-   the landing exactly as the stalk fires upward
-   (organism/intro.js radiateDraw). That is the network being DRAWN. What
-   it never carried is the network being ENERGISED, and biologically the
-   energy runs the other way: the fruiting body draws on a mycelium that
-   was already in the soil, and the surge spreads laterally OUT from the
-   point of contact.
-
-   That surge already exists in this file. PULSE_GLSL is a multiplicative
-   brightness ring — 1.0 at rest, >1.0 inside a travelling front — bound
-   into every ground material at :468-470, :528-530 and :646-648, advanced
-   by 'tap-pulse' above and parked the moment it decays. A floor tap has
-   used it since the beginning. So this is a CALL SITE, not new shader
-   work: the same wave the finger raises, raised instead by the stalk
-   landing, from the stem's own contact point.
-
-   uPulseP (2.35, 0.30, 1.15) against the floor tap's (2.6, 0.33, 1.4):
-   a touch slower and a touch quieter than a finger, because a mushroom
-   arriving is not a knock. Range falloff 0.30 carries it out past the
-   root flare while exp(-1.15 t) retires it inside ~3.5 s — so a MINORITY
-   of paths brighten as the front passes them and the rest simply finish
-   inking behind it. Nothing here is a top-to-bottom reveal, and nothing
-   here holds a brightness afterwards; the wave leaves the ground exactly
-   where the intro's own draw left it.
-
-   0.296 is not a taste value — it is intro.js's WINDOWS table, the first
-   frame of `stemVerts`, i.e. the frame the stalk begins to rise. Held to
-   one shot by the animator retiring itself, and never armed at all when
-   the intro is skipped (?nointro / ?capture / reduced motion park drawU
-   at 2 before the first frame), which is what keeps every frozen capture
-   and every reduced-motion visitor free of it. */
-const STEM_CONTACT_DRAW_U = 0.296;
-addAnimator('stem-contact-pulse', () => {
-  // `started` is false for every path that has no rising stalk to answer:
-  // the deferred frame before releaseIntro(), ?introat's pinned pose, and
-  // intro = 0 (?nointro / ?capture / prefers-reduced-motion), where drawU
-  // is parked at 2 from the first frame and this retires without firing.
-  if (!introApi.started) {
-    if (drawU.value > 1) animators.delete('stem-contact-pulse');
-    return;
+// Gills open outward from the stalk; the dome then rises inward from the
+// rim. Starting the dome at its apex would leave a disconnected floating lid.
+// The margin keeps its closing sweep after the radial gills reach the edge.
+// intro.js tags each cap stroke 'out' (with the gills) or 'in' (with the
+// dome); the rim keeps its own order — it traces the ring round the edge.
+for (const object of mushroom.children) {
+  const way = object.userData.capGrowth;
+  if (way !== 'out' && way !== 'in') continue;
+  const pos = object.geometry.attributes.position;
+  const draw = object.geometry.attributes.aDraw;
+  if (!draw) continue;
+  for (let i = 0; i < pos.count; i++) {
+    const radius = capGrowthKey(pos.getX(i), pos.getZ(i));
+    draw.setX(i, way === 'in' ? 1 - radius : radius);
   }
-  if (drawU.value < STEM_CONTACT_DRAW_U) return;
-  pulseC.value.set(0, groundY(0, 0), 0);
-  pulseT.value = 0;
-  pulseP.value.set(2.35, 0.30, 1.15);
-  animators.delete('stem-contact-pulse');
-});
+  draw.needsUpdate = true;
+}
+
+/* ---- NO CONTACT SURGE (retired 2026-10-04) -----------------------------
+   The stalk's arrival used to fire the floor tap's brightness ring from the
+   stem's foot (PULSE_GLSL, 'stem-contact-pulse'): a fast bright wave out
+   across the web at 2.35 units/s, armed off a stale window constant so it
+   went off 1.6 s into the growth, mid-climb. Hannah: the ground "feels
+   like it explodes out, as opposed to an organic growth". A travelling
+   flash IS that explosion; the ground's own creeping front (intro.js
+   creepDraw) now carries the energy outward, at the pace of growth. The
+   pulse itself stays where it belongs — under a visitor's tap. */
 
 // Deterministic freeze (M5, ?capture=): while frozen, every animator sees
 // t = the latched value and dt = 0 — one shared clock is the ONLY time

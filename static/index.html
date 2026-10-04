@@ -781,14 +781,6 @@
     color: var(--muted);
   }
   .menu-thesis { margin-top: 0; font-size: 1.08rem; color: var(--parchment); }
-  /* Who / What / Why — the panel's three compact disclosures, mirrored from
-     the live tier (journey/rail.js). Authored open so a no-JS visitor reads
-     all three paragraphs; the script below collapses them and runs the
-     accordion. */
-  .menu-primer { margin: 0.1rem 0 0.45rem; padding: 0 0.6rem 0 2.9rem; }
-  .menu-primer-tabs { display: flex; align-items: stretch; }
-  .menu-primer-t + .menu-primer-t { border-left: 1px solid rgba(217, 164, 65, 0.1); }
-  .menu-primer-t {
     flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 0.3rem;
     min-height: 44px; min-width: 0; padding: 0.3rem 0.2rem;
     background: none; border: 0; border-radius: 2px; cursor: pointer;
@@ -796,12 +788,6 @@
     font-weight: 700; letter-spacing: 0.22em; text-indent: 0.22em; text-transform: uppercase;
     transition: color 0.3s, background 0.3s;
   }
-  .menu-primer-t:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
-  .menu-primer-t[aria-expanded="true"] { color: var(--gold-bright); }
-  .menu-primer-c { color: rgba(217, 164, 65, 0.6); font-size: 0.9rem; font-weight: 400; line-height: 1; }
-  .menu-primer-t[aria-expanded="true"] .menu-primer-c { color: var(--gold-bright); }
-  .menu-primer-d[hidden] { display: none; }
-  .menu-primer-p { margin: 0.05rem 0 0.7rem; font-size: 0.8rem; line-height: 1.6; color: var(--muted); }
   .menu-item:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
   .menu-item:is(:hover, :focus-visible) .menu-mark { color: var(--gold-bright); }
   .menu-item[aria-current="true"],
@@ -1318,6 +1304,22 @@
     .rail:has(:focus-visible) .rail-menu-wrap:not([open]),
     .rail-inner:has(.rail-list:hover) .rail-menu-wrap:not([open]) { transition-delay: 0s; }
   }
+.manifesto-static {
+  min-height: 65vh;
+  max-width: 52rem;
+  margin: 4rem auto;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  border: 1px solid rgba(217, 164, 65, 0.24);
+  background: rgba(8, 6, 3, 0.72);
+  scroll-margin-top: 2rem;
+}
+.manifesto-static h2 {
+  margin: 0 0 1.2rem;
+  font: 400 clamp(2.2rem, 6vw, 4rem)/1.05 "Didot", "Playfair Display", Georgia, serif;
+  color: var(--parchment);
+}
+.manifesto-static .sub { max-width: 45rem; line-height: 1.8; }
+.manifesto-static .go { display: inline-block; margin-top: 1rem; }
 </style>
 </head>
 <body>
@@ -1453,21 +1455,6 @@
             <span class="menu-mark"><svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg></span>
             <span class="menu-txt"><span class="menu-line menu-thesis">We’re working to help the open-source AI art ecosystem thrive</span></span>
           </a>
-          <!-- Who / What / Why (mirrors the live panel; copy from
-               content.js site.primer, every string data-src'd). One line
-               of three controls, answers below the line in row order —
-               authored open for the no-JS reader; the script collapses
-               them into a toggleable tablist, one answer at a time. -->
-          <div class="menu-primer">
-            <div class="menu-primer-tabs">
-              <button class="menu-primer-t" type="button" id="pt-who" aria-expanded="true" aria-controls="pd-who"><span data-src="site.primer.0.label">Who</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-              <button class="menu-primer-t" type="button" id="pt-what" aria-expanded="true" aria-controls="pd-what"><span data-src="site.primer.1.label">What</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-              <button class="menu-primer-t" type="button" id="pt-why" aria-expanded="true" aria-controls="pd-why"><span data-src="site.primer.2.label">Why</span><span class="menu-primer-c" aria-hidden="true">+</span></button>
-            </div>
-            <div class="menu-primer-d" id="pd-who" role="region" aria-labelledby="pt-who"><p class="menu-primer-p" data-src="site.primer.0.body">An open community of artists, engineers, and knowledge creators — and an organization being handed to them: True Union is 100% shared with the people who contribute, granted 1% per month.</p></div>
-            <div class="menu-primer-d" id="pd-what" role="region" aria-labelledby="pt-what"><p class="menu-primer-p" data-src="site.primer.1.body">We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.</p></div>
-            <div class="menu-primer-d" id="pd-why" role="region" aria-labelledby="pt-why"><p class="menu-primer-p" data-src="site.primer.2.body">The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.</p></div>
-          </div>
           </li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire" data-menu-section="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="15.4" cy="10.4" r="0.95"/><circle cx="17.2" cy="8.8" r="0.82"/><circle cx="15.4" cy="7.4" r="0.68"/><circle cx="18" cy="6" r="0.7"/><circle cx="16.2" cy="4.2" r="0.58"/></svg></span>
@@ -1503,7 +1490,7 @@
             <span class="menu-txt"><span class="menu-line menu-thesis">The open source ecosystem can accelerate a second renaissance</span></span>
           </a>
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-row-link"><span class="menu-il"><span class="menu-pict menu-pict-dots" aria-hidden="true"><svg class="menu-dot-disc" viewBox="0 0 16 16" focusable="false"><circle cx="8" cy="2.1" r=".72"/><circle cx="4.7" cy="4" r=".72"/><circle cx="8" cy="4" r=".72"/><circle cx="11.3" cy="4" r=".72"/><circle cx="2.6" cy="6.7" r=".72"/><circle cx="5.3" cy="6.7" r=".72"/><circle cx="8" cy="6.7" r=".72"/><circle cx="10.7" cy="6.7" r=".72"/><circle cx="13.4" cy="6.7" r=".72"/><circle cx="2.6" cy="9.3" r=".72"/><circle cx="5.3" cy="9.3" r=".72"/><circle cx="8" cy="9.3" r=".72"/><circle cx="10.7" cy="9.3" r=".72"/><circle cx="13.4" cy="9.3" r=".72"/><circle cx="4.7" cy="12" r=".72"/><circle cx="8" cy="12" r=".72"/><circle cx="11.3" cy="12" r=".72"/><circle cx="8" cy="13.9" r=".72"/></svg></span>Manifesto</span><span class="menu-is">Action at a pivotal moment</span><span class="menu-badge">Soon</span></span></li>
+            <li class="menu-row"><a class="menu-row-link" href="#manifesto"><span class="menu-il"><span class="menu-pict menu-pict-dots" aria-hidden="true"><svg class="menu-dot-disc" viewBox="0 0 16 16" focusable="false"><circle cx="8" cy="2.1" r=".72"/><circle cx="4.7" cy="4" r=".72"/><circle cx="8" cy="4" r=".72"/><circle cx="11.3" cy="4" r=".72"/><circle cx="2.6" cy="6.7" r=".72"/><circle cx="5.3" cy="6.7" r=".72"/><circle cx="8" cy="6.7" r=".72"/><circle cx="10.7" cy="6.7" r=".72"/><circle cx="13.4" cy="6.7" r=".72"/><circle cx="2.6" cy="9.3" r=".72"/><circle cx="5.3" cy="9.3" r=".72"/><circle cx="8" cy="9.3" r=".72"/><circle cx="10.7" cy="9.3" r=".72"/><circle cx="13.4" cy="9.3" r=".72"/><circle cx="4.7" cy="12" r=".72"/><circle cx="8" cy="12" r=".72"/><circle cx="11.3" cy="12" r=".72"/><circle cx="8" cy="13.9" r=".72"/></svg></span>Manifesto</span><span class="menu-is">Action at a pivotal moment</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
             <li class="menu-row"><a class="menu-row-link" href="#/owned"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 22 22" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>Ownership</span><span class="menu-is">equity rewards collaboration</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
           </ul></li>
         </ol>
@@ -1777,6 +1764,13 @@
       <p class="sub" data-src="chapters.final.sub">In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.</p>
     </div>
   </section>
+
+  <div class="manifesto-static" id="manifesto" aria-labelledby="h-manifesto" tabindex="-1">
+    <p class="eyebrow">Manifesto</p>
+    <h2 id="h-manifesto" data-src="manifesto.title">True Union</h2>
+    <p class="sub" data-src="manifesto.body">A True Union is a lasting bond rooted in shared purpose, whether between individuals, within a group, or between that group and other entities. When individuals are willing to act on what they know in their hearts is right, they share a True Union with others who follow that same impulse. Groups of those individuals, moving in the same direction, form a True Union. They’re bonded by something greater than incentives or even friendship. When that group helps humanity unlock the creative potential of an immensely powerful technology, they help our species form a True Union with it. When those individuals share ownership of a company built to pursue that goal, they give their True Union a lasting structure.</p>
+    <a class="go" href="#/final">Return to Purpose</a>
+  </div>
 </main>
 
 <!-- No separate footer: the navigation redux (2026-08-09) moved the site's
@@ -1929,48 +1923,6 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && openNode) { e.preventDefault(); closeDetail(true); }
-  });
-
-  /* ---------------- menu primer: Who / What / Why ---------------- */
-  // Authored open above (the no-JS reader gets the control line and all
-  // three paragraphs below it, in row order); with JS running the line
-  // becomes a toggleable tablist — one answer at a time in the shared
-  // region below, choosing the open one closes it, Left/Right/Home/End
-  // move between the three — mirroring the live panel (journey/rail.js).
-  var primerRow = document.querySelector('.menu-primer-tabs');
-  var primerBtns = Array.prototype.slice.call(document.querySelectorAll('.menu-primer-t'));
-  if (primerRow) primerRow.setAttribute('role', 'tablist');
-  if (primerRow) primerRow.setAttribute('aria-label', 'About True Union');
-  primerBtns.forEach(function (btn) {
-    var panel = document.getElementById(btn.getAttribute('aria-controls'));
-    if (!panel) return;
-    panel.hidden = true;
-    panel.setAttribute('role', 'tabpanel');
-    btn.setAttribute('role', 'tab');
-    btn.setAttribute('aria-selected', 'false');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.addEventListener('click', function () {
-      var wasOpen = btn.getAttribute('aria-expanded') === 'true';
-      primerBtns.forEach(function (other) {
-        var otherPanel = document.getElementById(other.getAttribute('aria-controls'));
-        var on = !wasOpen && other === btn;
-        other.setAttribute('aria-selected', on ? 'true' : 'false');
-        other.setAttribute('aria-expanded', on ? 'true' : 'false');
-        if (otherPanel) otherPanel.hidden = !on;
-      });
-    });
-  });
-  if (primerRow) primerRow.addEventListener('keydown', function (e) {
-    var at = primerBtns.indexOf(document.activeElement);
-    if (at < 0) return;
-    var to = -1;
-    if (e.key === 'ArrowRight') to = (at + 1) % primerBtns.length;
-    else if (e.key === 'ArrowLeft') to = (at + primerBtns.length - 1) % primerBtns.length;
-    else if (e.key === 'Home') to = 0;
-    else if (e.key === 'End') to = primerBtns.length - 1;
-    if (to < 0) return;
-    e.preventDefault();
-    primerBtns[to].focus();
   });
 
   /* ---------------- routing: #/<chapter>[/<node>] ---------------- */

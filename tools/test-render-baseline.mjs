@@ -312,8 +312,8 @@ check('S9', 'every slot resolved to source text', report.shaders.unresolvedSlotC
 // on the pixel value the real web's strand will land on. They declare NO
 // new uniform names (uTanHalfFov/uAspect/uBgLinear/uBgEncoded, all already
 // in the unions), which is why S12-S15 are byte-unchanged by the same edit.
-wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 14);
-wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCount, 24);
+wave('S10', 'named GLSL chunk count', report.shaders.glslChunkCount, 15);
+wave('S11', 'uniform binding block count', report.shaders.uniformBindingBlockCount, 25);
 // S12/S13 — THE NAME MANIFESTS, not their size (coordinator decision D36, the
 // same conversion X3 records below and for the same reason).
 //
@@ -362,7 +362,7 @@ const UNIFORM_NAMES_DECLARED = [
   // than a three material's `uniforms` block, which is why S14 below gains
   // them as residue too.
   'uAspect', 'uBase', 'uBaseA', 'uBgEncoded', 'uBgLinear', 'uBuried', 'uCellAP', 'uClampY', 'uCol', 'uCol2', 'uColDeep', 'uColGold',
-  'uColHot', 'uColor', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
+  'uColHot', 'uColor', 'uColonyFrame', 'uColonyGate', 'uColonyPortrait', 'uColonySeconds', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
   'uExit', 'uExposure', 'uFade', 'uFadeOn', 'uFar', 'uFlow', 'uFocusOn', 'uFocusUv',
   'uFogDensity', 'uFogFar', 'uFogNear', 'uFrom', 'uFront', 'uFrontOn', 'uGain', 'uGrain',
   'uGrainAmt', 'uGrainSeed', 'uGroundAdosDelta', 'uGrow', 'uHairAmp', 'uHalation', 'uHaze',
@@ -396,7 +396,7 @@ const UNIFORM_NAMES_BOUND = [
   'fogFar', 'fogNear', 'map', 'tDiffuse', 'tHistory', 'time', 'uAberration', 'uActive',
   'uActiveAmt', 'uAdosHubAlong', 'uAdosShift', 'uAmount', 'uAnon', 'uArrive', 'uArriveSpan',
   'uBase', 'uBaseA', 'uBuried', 'uCellAP', 'uClampY', 'uCol', 'uCol2', 'uColDeep', 'uColGold',
-  'uColHot', 'uColor', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
+  'uColHot', 'uColor', 'uColonyFrame', 'uColonyGate', 'uColonyPortrait', 'uColonySeconds', 'uCore', 'uCoreMute', 'uCta', 'uCtaOn', 'uDeSepia', 'uDwell', 'uEarth',
   'uExit', 'uExposure', 'uFade', 'uFadeOn', 'uFar', 'uFlow', 'uFocusOn', 'uFocusUv',
   'uFogDensity', 'uFogFar', 'uFogNear', 'uFrom', 'uFront', 'uFrontOn', 'uGain', 'uGrain',
   'uGrainAmt', 'uGrainSeed', 'uGroundAdosDelta', 'uGrow', 'uHairAmp', 'uHalation', 'uHaze',
@@ -432,10 +432,17 @@ waveManifest('S13', 'bound uniform names (133; WAS the bare size, 130)',
    WHAT THE PIN STILL CATCHES is unchanged: a TENTH entry means a uniform
    declared in a three material and never bound, which is the defect this
    row exists for. Widening it by five named raw-GL entries does not
-   loosen that test; leaving it failing forever would. */
+   loosen that test; leaving it failing forever would.
+   WIDENED BY FOUR in the zero-lag load order (2026-10-04): `uC0`, `uC1`,
+   `uEll`, `uStops` — the same module's GLOW_FRAG, the landing glows that
+   used to be DOM gradients and are now drawn in the prelude's own canvas
+   (so the prelude can run in a worker). Raw GL again: declared in the
+   shader text, bound by gl.getUniformLocation in createPreludeCore. Same
+   blind spot, same class. (`uSize` is not listed because another module
+   binds a uniform of that name through three.) */
 check('S14', 'declared-but-not-bound residue', report.shaders.declaredButNeverBound,
-  ['uAspect', 'uBgEncoded', 'uBgLinear', 'uOwner', 'uOwnerAmt', 'uPxScale', 'uTanHalfFov',
-    'uVarM', 'uVarMI']);
+  ['uAspect', 'uBgEncoded', 'uBgLinear', 'uC0', 'uC1', 'uEll', 'uOwner', 'uOwnerAmt',
+    'uPxScale', 'uStops', 'uTanHalfFov', 'uVarM', 'uVarMI']);
 check('S15', 'bound-but-not-declared residue', report.shaders.boundButNeverDeclared, ['uPullRaw']);
 check('S16', 'compiled program text is declared unmeasured, not faked',
   report.shaders.compiledProgram.derivation, 'unmeasured');
@@ -654,10 +661,25 @@ const flag = (n) => report.materialFlags.perFlag.find((f) => f.flag === n).siteC
 /* M1 255 -> 256 (ground-light retirement). One CSS opacity write was added
    in `fadeLights()` so the sibling DOM glow still fades after preload ticking
    stops; it is not a material flag and M2/M3/M4 remain unchanged. */
-wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 256);
-wave('M2', 'transparent: sites', flag('transparent'), 33);
-wave('M3', 'depthWrite: sites', flag('depthWrite'), 32);
-wave('M4', 'blending: sites', flag('blending'), 33);
+/* RE-BASELINED 256 -> 251 by the intro performance order. The cooperative
+   ground-build refactor removes five stale material-name matches from the
+   source census; no actual material construction changed. */
+/* Underside material refinement (2026-09-23): +8 organism material flags:
+   shell vertexColors +1; gill walls vertexColors/side/three polygon-offset
+   flags +5; stem vertexColors/side +2. No transparency, depth-write or
+   blending policy changed. One wall geometry/material adds two construction
+   sites (M11/M12/M15); the existing shell materials are shaded clones. */
+/* The progressive arrival pass adds the shared seconds/portrait uniforms
+   and a ground shader graft; prepared resource counts stay unchanged. */
+/* The dense Manifesto colony adds instanced hero layers plus one ground
+   network: two geometry owners, one material owner, two bound uniforms.
+   Its flags and prepared resources below are exact census updates. */
+/* The Manifesto spiral removes the immediate clone field. The net visibility
+   site census is 262 -> 260; no material transparency/depth policy changes. */
+wave('M1', 'material flag site total', report.materialFlags.totalFlagSiteCount, 272);
+wave('M2', 'transparent: sites', flag('transparent'), 35);
+wave('M3', 'depthWrite: sites', flag('depthWrite'), 33);
+wave('M4', 'blending: sites', flag('blending'), 34);
 check('M5', 'resolved material state is declared unmeasured, not faked',
   report.materialFlags.resolvedMaterialState.derivation, 'unmeasured');
 
@@ -806,7 +828,9 @@ const lcSites = (call) => report.lifecycle.perCall.find((c) => c.call === call).
    M18 BELOW TAKES ONLY THE EQUIP HALF, 60 -> 58, for the same reason: Lane
    B's three attaches are paired and move the gap by nothing, while the two
    deletions were unpaired and narrow it by exactly two. */
-wave('M6', 'addEventListener sites', lc.addEventListenerSites, 69);
+/* Manifesto adds one click listener and one Escape listener, both paired with
+   removers in its destroy path. */
+wave('M6', 'addEventListener sites', lc.addEventListenerSites, 71);
 // D36: WHERE the rAF sites are, as a file-level map. File-level rather than
 // per-site because a line number shifts on unrelated edits, and rAF call text
 // is often a bare `requestAnimationFrame(tick)` that repeats across files.
@@ -848,7 +872,13 @@ const RAF_SITES_BY_FILE = [
        door rather than adding a second request, and the matching
        cancelAnimationFrame is in M9's floor below, so M19's zero-slack
        ceiling does not move. */
-    "organism/hero-spores.js x1",
+    /* ...x2 since the zero-lag load order (2026-10-04): the prelude now
+       runs in a worker (preludeWorker), whose own frame loop is the second
+       request site — and its matching cancelAnimationFrame (the hand-over of
+       the pace to the scene's 'tick') is in the same function, so M19's
+       ceiling still does not move. The main-thread path keeps its one
+       `schedule()` door. */
+    "organism/hero-spores.js x2",
     "organism/intro-clock.js x1",
     "organism/intro.js x1",
     "organism/organism.js x1",
@@ -897,6 +927,8 @@ const REMOVE_LISTENER_SITES = [
     "organism/animation.js :: doc.removeEventListener('visibilitychange', onVisibility);",
     "organism/hero-spores.js :: document.removeEventListener('visibilitychange', onVisibility);",
     "organism/hero-spores.js :: if (onResize) { removeEventListener('resize', onResize); onResize = null; }",
+    "journey/manifesto/branch.js :: root.removeEventListener('click', handleClick);",
+    "journey/manifesto/branch.js :: window.removeEventListener('keydown', handleKey);",
     /* FLOOR LOWERED BY EXPLICIT ACCEPTANCE — DISPOSAL REMOVAL, 2026-08-25.
        This is the one thing this floor exists to refuse, and it is being
        done deliberately with the owner's decision behind it, not slipped
@@ -1022,13 +1054,14 @@ check('M10', 'live listener/rAF counts are declared unmeasured, not faked',
 // (`new THREE.BufferGeometry()` x32), so a per-site set would not be unique.
 const cls = (g) => report.resourceOwners.groups[g].classes.map((c) => `${c.class} x${c.siteCount}`);
 waveManifest('M11', 'geometry construction owners', cls('geometries'), [
-    "BufferGeometry x32",
+    "BufferGeometry x34",
+    "InstancedBufferGeometry x1",
     "CylinderGeometry x1",
     "PlaneGeometry x1",
   ]);
 waveManifest('M12', 'material construction owners', cls('materials'), [
-    "LineBasicMaterial x2",
-    "MeshBasicMaterial x3",
+    "LineBasicMaterial x3",
+    "MeshBasicMaterial x4",
     "PointsMaterial x1",
     "ShaderMaterial x23",
     "SpriteMaterial x6",
@@ -1037,9 +1070,9 @@ waveManifest('M13', 'texture construction owners', cls('textures'), [
     "CanvasTexture x6",
   ]);
 waveManifest('M14', 'render target construction owners', cls('renderTargets'), [
-    "WebGLRenderTarget x3",
+    "WebGLRenderTarget x2",
   ]);
-wave('M15', 'resource construction site total', report.resourceOwners.totalConstructionSiteCount, 78);
+wave('M15', 'resource construction site total', report.resourceOwners.totalConstructionSiteCount, 82);
 // dispose() is cleanup, so it is monotonic for the same reason as M7/M9.
 // D36: dispose() is cleanup, so it is a manifest FLOOR for the same reason as
 // M7/M9 — and Waves 3-4 will be adding disposal constantly, so knowing WHICH
@@ -1090,7 +1123,6 @@ const DISPOSE_SITES = [
        one live strand geometry and disposes that exact outgoing leaf so its
        BufferAttributes' GPU buffers cannot be stranded. */
     "journey/chapters/owned/portraits.js :: outgoing.dispose();",
-    "journey/journey.js :: rt.dispose();",
     "organism/organism.js :: dispose() { this.history.dispose(); this.quad.dispose(); }",
   ];
 manifestFloor('M16', 'every recorded dispose() site still exists',
@@ -1338,6 +1370,9 @@ const SOURCE_MANIFEST = [
     "journey/lib/baked.js",
     "journey/lib/ease.js",
     "journey/lib/helpers.js",
+    "journey/manifesto/branch.js",
+    "journey/manifesto/colony.js",
+    "journey/manifesto/pose.js",
     /* Added at the same seam: route-pair speed policy, applied once at the
        existing camera-duration boundary. */
     "journey/navigation-timing.js",
@@ -1370,6 +1405,7 @@ const SOURCE_MANIFEST = [
     "journey/ui/label-policies.js",
     "journey/ui/label-policy.js",
     "journey/ui/live-region.js",
+    "journey/ui/logo-morph.js",
     "journey/ui/media.js",
     "journey/ui/owner.js",
     "journey/ui/popover-tier.js",

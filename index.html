@@ -17,7 +17,7 @@
 <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png">
 <link rel="manifest" href="./site.webmanifest">
 <link rel="canonical" href="ORIGIN/">
-<meta name="theme-color" content="#141008">
+<meta name="theme-color" content="#110a03">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="True Union">
 <meta property="og:title" content="True Union — helping the open-source AI art ecosystem thrive">
@@ -74,6 +74,28 @@
      specifier and therefore the same instance, and hands the live field
      over to the scene when the scene exists — see organism/hero-spores.js.
      Failing to load costs the page nothing: the hero is unchanged. -->
+<!-- THE PRELUDE'S THREAD STARTS LOADING HERE, before the parser meets
+     main.js. organism/hero-spores.js draws the spore current from a worker,
+     and a worker fetches its own copy of its modules; started from that
+     module (after parse), those fetches queued behind the organism's whole
+     graph and the current's first frame landed 0.3-1.2 s after the page's
+     (measured 2026-10-04). This only starts the fetch: hero-spores.js still
+     decides whether to use a worker at all (chooseMode) and lets this one
+     go if not. The checks below mirror its cheap ones so a QA or
+     reduced-motion load does not fetch a thread it will never use. -->
+<script>
+  (() => {
+    const q = new URLSearchParams(location.search);
+    if (typeof Worker !== 'function' || typeof OffscreenCanvas !== 'function'
+        || typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function'
+        || matchMedia('(prefers-reduced-motion: reduce)').matches
+        || q.has('capture') || q.has('introat') || q.has('nointro')
+        || q.get('prelude') === 'main') return;
+    try {
+      window.__preludeWorker = new Worker('./organism/hero-spores-worker.js', { type: 'module' });
+    } catch { /* hero-spores.js starts its own, or draws on the page */ }
+  })();
+</script>
 <script type="module" src="./organism/hero-spores.js"></script>
 </head>
 <body class="scene-preparing hero-entry-pending">
@@ -143,7 +165,7 @@
            this tier back in step with the static one, whose logo has pointed
            at #/mission and acted as a home control since it shipped. -->
       <a class="logo" href="#/mission" aria-label="True Union home">
-        <span class="wordmark">TRUE UNION</span>
+        <span class="wordmark"><span>TRUE</span> <span>UNION</span></span>
         <span class="mushroom-mark" aria-hidden="true">
           <img class="mushroom-flat" src="./assets/brand/mushroom-flat.svg" alt="">
           <img class="mushroom-glow" src="./assets/brand/mushroom-glow.svg" alt="">
@@ -210,11 +232,23 @@
 
   <!-- COLD-LOAD ENTRY BARRIER. Linked stylesheets block this parser point, and
        both the hero copy and all five preboot rail marks are now in the DOM.
-       Release their CSS animations in one rAF/style recalculation so neither
+       Release their CSS animations in one style recalculation so neither
        can acquire an earlier animation timeline. This deliberately does not
-       wait for main.js, the journey graph, WebGL or card fonts: the visible
-       shell is the readiness boundary. Reduced motion ignores the pending
-       class in CSS and is synchronously visible from first paint. -->
+       wait for main.js, the journey graph, WebGL or card fonts. Reduced
+       motion ignores the pending class in CSS and is synchronously visible
+       from first paint.
+
+       THE COPY AND THE SPORE CURRENT ARRIVE AS ONE (2026-10-04, Hannah: the
+       sky spores "load in separately to the main text ... they should all
+       load at the same time once they're all ready"). The copy used to fade
+       on the first frame and the current 0.15-0.35 s later (more on a slow
+       device), so the page read as text first, weather second. The copy now
+       waits for organism/hero-spores.js to have its first frame on screen:
+       its reveal() calls window.__heroEntryRelease() in the same task that
+       starts its own fade, so both land in one style recalculation. A
+       prelude that cannot draw (static haze, no module) releases at once;
+       ENTRY_WAIT_CAP is the backstop for one that never reports, so the
+       words are never held hostage by the weather. -->
   <script>
     (() => {
       const body = document.body;
@@ -223,14 +257,21 @@
       const ready = hero && rail && rail.querySelectorAll('.j-rail-slot').length === 5;
       if (!ready) {
         body.classList.remove('hero-entry-pending');
+        window.__heroEntryRelease = () => {};
         return;
       }
-      requestAnimationFrame((timestamp) => {
+      const ENTRY_WAIT_CAP = 1800;
+      let released = false;
+      const release = (timestamp = performance.now()) => {
+        if (released) return;
+        released = true;
         body.dataset.heroEntryStart = timestamp.toFixed(2);
         body.classList.remove('hero-entry-pending');
         body.classList.add('hero-entry-ready');
         performance.mark('hero-entry-start');
-      });
+      };
+      window.__heroEntryRelease = () => release();
+      setTimeout(() => requestAnimationFrame(release), ENTRY_WAIT_CAP);
 
       /* ...AND THE SHELL ANSWERS A PRESS FROM THIS SAME MOMENT. The reveal
          above is the readiness boundary for the PICTURE; without this it was

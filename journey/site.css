@@ -445,21 +445,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @media (hover: hover) and (pointer: fine) {
     .j-rail-menu:hover { color: var(--gold-bright); }
   }
-  /* hero `lead-draw`: the contents filaments draw themselves as the rail
-     first reveals, then stay drawn — the instrument powering on. */
+  /* NO ENTRY DRAW (2026-10-04, Hannah: "remove the entry animation on the
+     menu button ... should only play upon hover"). The filaments used to
+     draw themselves in as the rail first revealed; the mark is now simply
+     there, drawn, from the first frame, and the hover/focus rewrite below is
+     its only gesture. The dash pattern stays declared because that gesture
+     animates it. */
   .j-rail-menu .j-sym path {
     stroke-dasharray: 12;
-    stroke-dashoffset: 12;
-    transition: stroke-dashoffset 0.4s ease 0.3s;
+    stroke-dashoffset: 0;
   }
-  .j-rail.on .j-rail-menu .j-sym path,
-  .j-rail:focus-within .j-rail-menu .j-sym path { stroke-dashoffset: 0; }
   /* ---- …and it says so again when someone stops on it ----
      The MENU pill is gone from the half moon (THE HUB HAS NO PILL, below) and
      this stands in for it: after a second of dwell the three filaments draw
      themselves a second time. Same element, same property, same 12 units of
-     dash as the arrival directly above — the gesture and the entry are one
-     drawing, not two.
+     dash the mark is declared with directly above.
 
      IT RETRACTS FIRST, AND THAT IS THE WHOLE DIFFERENCE FROM A REPLAY. The
      entry runs 12 -> 0 because it begins from a glyph that is not there yet.
@@ -1364,7 +1364,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block.pos-bottomleft[data-chapter="final"] {
       bottom: max(calc(9vh + var(--purpose-rail-lift-max)),
                   calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
-                       + var(--purpose-rail-lift-max)));
+                       + var(--purpose-rail-lift-max) + var(--purpose-up-branch)));
     }
   }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
@@ -1455,6 +1455,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block.pos-bottomleft {
       bottom: max(calc(9vh - 50px),
                   calc(var(--nav-centre-bottom) + var(--nav-major) / 2 - 20px));
+    }
+  }
+  /* ...BUT NOT WHERE THE ROW REACHES UNDER IT (2026-10-04 — Hannah: check
+     how the extended navigation "falls relative to the text on mobile and
+     tablet"). The desktop seat above shares the row's band and relies on
+     the row being centred well clear of a left-hand column. Below 1280 wide
+     it is not: at 1024x768 the row's Intro mark sat under the last word of
+     the sub and the Manifesto fork stood beside it. There the block takes
+     the portrait tablet's contract instead — clear of the row AND of
+     Purpose's up-branch, by the same 30px of air. */
+  @media (min-width: 901px) and (max-width: 1279px) and (min-height: 521px) {
+    .j-block.pos-bottomleft[data-chapter="final"] {
+      bottom: calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
+                   + var(--purpose-rail-lift-max) + 56px);
     }
   }
 
@@ -2834,7 +2848,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     }
     .j-block.pos-bottomleft[data-chapter="final"] {
       bottom: max(6vh, calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
-                            + var(--final-composition-lift) + var(--final-copy-nav-air)));
+                            + var(--final-composition-lift) + var(--final-copy-nav-air)
+                            + var(--purpose-up-branch)));
     }
     .j-block.pos-bottomleft .j-h { text-wrap: balance; }
     /* Purpose's pair keeps its editorial scale while retaining a 44px touch
@@ -3813,9 +3828,13 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   --nav-minor: 40px;
   --nav-gap: 36px;
   --nav-centre-bottom: 92px;
-  --purpose-rail-lift-max: 66px;
+  --purpose-rail-lift-max: 34px;
   --final-composition-lift: 0px;
   --final-copy-nav-air: 0px;
+  /* Room for Purpose's up-branch (Manifesto, its word above it) over the
+     row: where the copy spans the width (portrait), it rises by this much
+     so the branch never sits on its last line (2026-10-04). */
+  --purpose-up-branch: 0px;
   --nav-fit-major: 0.9;    /* ~21.5px of ink inside a 36px circle */
   --nav-fit-minor: 0.83;   /* ~20px bookend glyphs */
   --nav-ring-d: 36px;      /* the core three's fine circles ("34-38px") */
@@ -3849,7 +3868,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     --nav-minor: 36px;
     --nav-gap: 28px;
     --nav-centre-bottom: 84px;
-    --purpose-rail-lift-max: 52px;
+    --purpose-rail-lift-max: 30px;
+    --purpose-up-branch: 48px;
     --nav-ring-d: 34px;
     --nav-minor-ring-d: 26px;
     --nav-connector-air: 5px;
@@ -3864,7 +3884,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     --nav-centre-bottom: 70px;
     /* Keep the preboot twin aligned with rowMetrics(): Purpose's complete
        navigation composition is nudged five pixels lower on phones. */
-    --purpose-rail-lift-max: 75px;
+    --purpose-rail-lift-max: 40px;
     --final-composition-lift: 30px;
     --final-copy-nav-air: 12px;
     --nav-fit-major: 0.85;
@@ -4153,17 +4173,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 .j-rail[data-layout="mission"] .j-rail-active-ring { opacity: 0; }
 /* ---- THE NODE (owner, third pass: "a brighter ring + perhaps a tiny
    filled gold node underneath. No underline, giant bloom, extra ring.")
-   One small filled gold point, hanging under the active item at the
-   label's depth. It rides --active-x — the same continuous coordinate the
-   old ring rode — so between chapters it simply travels along beneath the
-   row, and mid-leg (or through the rowless Owned chapter) it IS the
-   statement of where you are. */
+   One small filled gold point. It rides --active-x — the same continuous
+   coordinate the old ring rode.
+   IT TRAVELS ON THE LINE AND RESTS INSIDE THE MARK (2026-10-04 — Hannah:
+   "the dot actually should always rest and end up in the middle of the
+   section icon ... behind it ... we should only basically see it when
+   we're travelling between views ... and it should travel along the
+   line"). It used to hang at the label's depth under the row; it now sits
+   at the connectors' own height, beneath the marks, and the rail fades it
+   out wherever it is under one (rail.js clearOfMark). */
 .j-rail .j-rail-active-ring {
   position: absolute;
-  top: calc(50% + var(--nav-major) / 2 + 26px
-            - var(--purpose-active-node-lift, 0px));
+  top: 50%;
   left: 0;
-  z-index: 1;
+  z-index: 0;
   box-sizing: border-box;
   width: 5px;
   height: 5px;
@@ -4269,98 +4292,83 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   pointer-events: auto;
 }
 
-/* Purpose remains the real top-row parent while its two children occupy a
-   viewport-centred subtree. A simple L-pipe runs down and then left into the
-   exact midpoint between the children; from there, two short equal diagonals
-   aim at the children. The parent reach owns that neutral midpoint while each
-   diagonal begins after the shared optical clearance, so neither child is
-   visually preferred. There is no extra junction stem or orthogonal child stem.
+/* Purpose's two children hang off Purpose itself, on the side their
+   journeys go (2026-10-04): Manifesto above the row, Ownership below it, a
+   little back toward Connect; gathered, they stand up-left and down-right of
+   Purpose on one diagonal. The tree's origin IS Purpose's icon centre, so
+   each child is placed by its own centre (rail.js paints --purpose-*-x/y)
+   and each arm is a hairline from Purpose's ring to the child's, aimed along
+   the line between their centres with the row's connector air at both ends.
    These dedicated strokes and children may morph; the shared row never clips
    or filters. */
-.j-rail .j-rail-purpose-tree::before {
-  content: "";
-  position: absolute;
-  left: -0.5px;
-  top: var(--purpose-connector-start-y, 14px);
-  width: 1px;
-  height: var(--purpose-trunk-length, 0px);
-  background: rgba(220, 170, 76, 0.3);
-  transform: scaleY(var(--purpose-trunk-u, 0));
-  transform-origin: 50% 0;
-  pointer-events: none;
-}
-.j-rail .j-rail-purpose-tree::after {
-  content: "";
-  position: absolute;
-  left: var(--purpose-reach-start-x, var(--purpose-junction-x, 0px));
-  top: var(--purpose-split-y, 48px);
-  width: var(--purpose-reach-length, 0px);
-  height: 1px;
-  background: rgba(220, 170, 76, 0.3);
-  transform: scaleX(var(--purpose-reach-u, 0));
-  transform-origin: 100% 50%;
-  pointer-events: none;
-}
 .j-rail .j-rail-purpose-children {
   position: absolute;
-  left: var(--purpose-junction-x, 0px);
-  top: var(--purpose-child-top-y, 42px);
-  display: flex;
-  gap: var(--purpose-child-gap, 52px);
-  width: max-content;
-  height: var(--nav-major);
-  transform: translateX(-50%);
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
 }
-.j-rail .j-rail-purpose-children::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: var(--purpose-branch-origin-y, -10px);
-  width: var(--purpose-branch-length, 0px);
-  height: 1px;
-  background: rgba(220, 170, 76, 0.3);
-  transform: rotate(calc(180deg - var(--purpose-branch-angle, 0deg)))
-             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
-             scaleX(var(--purpose-fork-u, 0));
-  transform-origin: 0 50%;
-  pointer-events: none;
-}
+.j-rail .j-rail-purpose-children::before,
 .j-rail .j-rail-purpose-children::after {
   content: "";
   position: absolute;
-  left: 50%;
-  top: var(--purpose-branch-origin-y, -10px);
-  width: var(--purpose-branch-length, 0px);
+  left: 0;
+  top: -0.5px;
   height: 1px;
   background: rgba(220, 170, 76, 0.3);
-  transform: rotate(var(--purpose-branch-angle, 0deg))
-             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
-             scaleX(var(--purpose-fork-u, 0));
   transform-origin: 0 50%;
   pointer-events: none;
 }
+.j-rail .j-rail-purpose-children::before {
+  width: var(--purpose-manifesto-length, 0px);
+  transform: rotate(var(--purpose-manifesto-angle, -130deg))
+             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
+             scaleX(var(--purpose-fork-u, 0));
+}
+.j-rail .j-rail-purpose-children::after {
+  width: var(--purpose-ownership-length, 0px);
+  transform: rotate(var(--purpose-ownership-angle, 130deg))
+             translateX(var(--purpose-branch-start, var(--nav-connector-air)))
+             scaleX(var(--purpose-fork-u, 0));
+}
 .j-rail .j-rail-purpose-child::before { content: none !important; }
 .j-rail .j-rail-purpose-child::after { content: none; }
-.j-rail .j-rail-purpose-child {
+.j-rail:not(.j-rail-column) .j-rail-purpose-children > .j-rail-slot.j-rail-purpose-child {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
   will-change: transform;
 }
 .j-rail .j-rail-purpose-child .j-rail-mark {
   /* Clip only the drawn child specimen while it grows. Clipping the children
-     container itself also clips the labels that deliberately hang below its
+     container itself also clips the labels that deliberately hang off its
      box, even at a zero inset. */
   clip-path: circle(var(--purpose-mark-clip-radius, 50%) at 50% 50%);
 }
-.j-rail .j-rail-slot.j-rail-purpose-ownership {
-  transform: translate(calc(-1 * var(--purpose-child-shift-x, 0px)),
-                       var(--purpose-child-shift-y, 0px))
+/* (outranks the row's own `.j-rail:not(.j-rail-column):is(...) .j-rail-slot`
+   transform: none !important) */
+.j-rail:not(.j-rail-column) .j-rail-purpose-children > .j-rail-slot.j-rail-purpose-ownership {
+  transform: translate(calc(-50% + var(--purpose-ownership-x, 0px)),
+                       calc(-50% + var(--purpose-ownership-y, 0px)))
              scale(var(--purpose-child-scale, 0.34)) !important;
   transform-origin: 50% 50%;
+  /* out of sight while it is still under Purpose (rail.js childReveal) */
+  opacity: var(--purpose-ownership-reveal, 1);
 }
-.j-rail .j-rail-slot.j-rail-purpose-manifesto {
-  transform: translate(var(--purpose-child-shift-x, 0px),
-                       var(--purpose-child-shift-y, 0px))
+.j-rail:not(.j-rail-column) .j-rail-purpose-children > .j-rail-slot.j-rail-purpose-manifesto {
+  transform: translate(calc(-50% + var(--purpose-manifesto-x, 0px)),
+                       calc(-50% + var(--purpose-manifesto-y, 0px)))
              scale(var(--purpose-child-scale, 0.34)) !important;
   transform-origin: 50% 50%;
+  opacity: var(--purpose-manifesto-reveal, 1);
+}
+/* The up-branch reads upward: its word sits above its mark, where the
+   down-branch's sits below (the selected dot follows the same side). */
+.j-rail:not(.j-rail-column) .j-rail-slot.j-rail-purpose-child.j-rail-purpose-manifesto .j-rail-name,
+.j-rail:not(.j-rail-column) .j-rail-slot.j-rail-purpose-child.j-rail-purpose-manifesto .j-rail-soon-note {
+  top: auto !important;
+  bottom: calc(50% + var(--item-d) / 2 + 4px) !important;
 }
 
 /* The row's existing Purpose item is the sole parent in every state. This
@@ -4448,7 +4456,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   position: absolute;
   left: 0;
   top: 0;
-  z-index: 5;
+  z-index: 0;   /* behind the marks it rests in (see the node above) */
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -4461,7 +4469,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   pointer-events: none;
 }
 .j-rail.j-rail-handoff-ownership-transit .j-rail-active-ring,
-.j-rail.j-rail-handoff-ownership-tree .j-rail-active-ring {
+.j-rail.j-rail-handoff-ownership-tree .j-rail-active-ring,
+.j-rail.j-rail-branch-dot .j-rail-active-ring {
   opacity: 0 !important;
 }
 
@@ -4533,7 +4542,370 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail .j-rail-item,
   .j-rail:not(.j-rail-column) .j-rail-item { transition: none; }
 }
-.j-rail .j-rail-soon-item { cursor: default; }
+.j-rail .j-rail-purpose-manifesto button.j-rail-item {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.j-rail .j-rail-purpose-manifesto button.j-rail-item:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+
+/* Manifesto rides the existing canvas and frame loop. A soft local scrim sits
+   behind the reading measure while the sides and upper scene stay open. */
+.j-manifesto[hidden] { display: none; }
+body.j-manifesto-open .ui > :not(#site-nav, .j-rail),
+body.j-manifesto-open #site-nav > :not(.logo),
+body.j-manifesto-open .j-copy,
+body.j-manifesto-open .j-hotspots,
+body.j-manifesto-open .callouts,
+body.j-manifesto-open .scrim,
+body.j-manifesto-open .spill {
+  /* faded rather than cut (2026-10-04): the section's copy leaves as the
+     camera lifts and returns as it lands, instead of popping on both edges */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s !important;
+}
+/* ...and fades back in on landing. The keyframes name only their FROM
+   value, so each element rises to whatever opacity its own writer (the
+   copy envelope, the hero furniture) is painting this frame, and hands back
+   to that writer when the animation ends. (.spill is left out: it carries
+   the intro's own fill-mode animation, which a second name would restart.) */
+@keyframes j-manifesto-reenter { from { opacity: 0; } }
+body.j-manifesto-closing .ui > :not(#site-nav, .j-rail),
+body.j-manifesto-closing #site-nav > :not(.logo),
+body.j-manifesto-closing .j-copy,
+body.j-manifesto-closing .j-hotspots,
+body.j-manifesto-closing .callouts,
+body.j-manifesto-closing .scrim {
+  /* 1.6s = CHROME_FADE_MS in journey/manifesto/branch.js */
+  animation: j-manifesto-reenter 1.6s cubic-bezier(0.45, 0, 0.25, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.j-manifesto-closing * { animation: none; }
+}
+/* the row stays, gathered to Purpose's level with Manifesto lit (rail.js
+   setManifesto), above the reading scrim */
+body.j-manifesto-open .j-rail { z-index: 112; }
+/* ...but never over the site menu (2026-10-04 — Hannah: "the menu button
+   still sometimes shows in front of the sidebar menu thing"). The menu and
+   its scrim sit at 6/7, under this lifted row, so a menu opened over the
+   Manifesto had the row — its menu button among it — drawn on top of the
+   panel. While the reading page is up they rise over the row too. */
+body:is(.j-manifesto-open, .j-manifesto-closing) .j-menu-scrim { z-index: 113; }
+body:is(.j-manifesto-open, .j-manifesto-closing) .j-menu { z-index: 114; }
+
+/* The logo stays at the top left through the Manifesto (2026-10-03 —
+   Hannah: "keep the logo in the top left"). Everything else in the page
+   chrome is hidden above; the .ui layer itself rises over the reading scrim
+   so the mark is never dimmed by it, and a press on it goes home through the
+   branch's own eased Return (main.js -> journey.flyTo -> returnTo). */
+body.j-manifesto-open .ui { z-index: 111; }
+/* keep the reading column clear of the row at the bottom of the frame —
+   ALL of it, up to the dot's seat above the Manifesto's own mark
+   (2026-10-04, Hannah: check the extended navigation against the text on
+   mobile and tablet). A flat 8.5rem cleared the row but not the branch
+   standing on it: on a phone the last paragraph ran under the Manifesto
+   mark and its word, and at 1024x768 the dot sat on "structure.". The
+   reach is the rail's own geometry (journey/rail.js): the row's seat and
+   Purpose's lift, the up-arm (0.95 of a major slot, OWN_REACH_Y), the
+   seat above the mark (half a slot + 26px), then 24px of air. */
+body.j-manifesto-open .j-manifesto {
+  --manifesto-pad: clamp(1rem, 4vw, 4rem);
+  --manifesto-reserve: max(var(--manifesto-pad),
+    calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
+         + var(--nav-major) * 1.45 + 26px + 24px));
+  padding-bottom: var(--manifesto-reserve);
+}
+/* ...and on a desktop it sits a little lower (2026-10-04 — Hannah: "the
+   alignment of the manifesto on desktop, i think it should be pushed down a
+   little"). Centred in the space the reserve above leaves, the column rode
+   high: 132px of dark over it at 1440x900 against 315px under it. It now
+   drops by up to 6vh (~54px there), but only into slack it actually has:
+   the shift is capped at half the room left under the centred panel (its
+   own height is the translate's 50%), so the reserve over the rail is never
+   entered and a short window simply keeps the column where it was. */
+@media (min-width: 1025px) {
+  body.j-manifesto-open .j-manifesto-panel {
+    translate: 0 clamp(0px,
+      calc((100dvh - var(--manifesto-pad) - var(--manifesto-reserve)) / 2 - 50%), 6vh);
+  }
+}
+
+/* THE WORDS EXHALE BEFORE THE DESCENT: on Return the reading column
+   dissolves upward into the dark — blur, lift, fade — while the camera
+   begins to sink, and the scrim lets go a beat later, so the flight down
+   lands on an open scene instead of cutting away from a page of text. */
+.j-manifesto-panel { transition: opacity 1.1s ease, filter 1.1s ease, transform 1.4s cubic-bezier(0.3, 0.6, 0.2, 1); }
+.j-manifesto::before { transition: opacity 1.6s ease 0.35s; }
+.j-manifesto.is-returning .j-manifesto-panel {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(-0.9rem);
+  pointer-events: none;
+}
+.j-manifesto.is-returning::before { opacity: 0; }
+/* ...and it ARRIVES gradually too (2026-10-04 — Hannah: pressing Manifesto
+   "immediately darkens... jolty and unintentional"). The root leaves
+   `display: none` on the press, which a transition cannot start from, so the
+   reading shade used to land at full strength on the first frame — the left
+   half of the scene dropped from 60 to 22 (of 255) in one frame. It now rises
+   with the lift, under the words, on an animation whose `backwards` fill
+   leaves the Return's own transition free to take it away again. */
+@keyframes j-manifesto-shade-in { from { opacity: 0; } }
+.j-manifesto.is-open::before {
+  animation: j-manifesto-shade-in 2.4s cubic-bezier(0.45, 0, 0.3, 1) 0.15s backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-manifesto.is-open::before { animation: none; }
+}
+.j-manifesto {
+  position: fixed;
+  z-index: 110;
+  isolation: isolate;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(1rem, 4vw, 4rem);
+  pointer-events: none;
+  color: #f2e4c3;
+}
+.j-manifesto::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0 auto 0 0;
+  width: min(72vw, 70rem);
+  background: linear-gradient(90deg,
+    rgba(8, 7, 5, 0.76) 0%,
+    rgba(8, 7, 5, 0.64) 54%,
+    rgba(8, 7, 5, 0.18) 83%,
+    transparent 100%);
+  pointer-events: none;
+}
+.j-manifesto-panel {
+  box-sizing: border-box;
+  width: min(37rem, 46vw);
+  display: flex;
+  flex-direction: column;
+  max-height: min(78dvh, 52rem);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  padding: clamp(0.25rem, 1.2vw, 1.25rem) 0;
+  pointer-events: auto;
+}
+.j-manifesto-panel h1 {
+  flex-shrink: 0;
+  margin: 0 0 1.25rem;
+  font: 400 clamp(2rem, min(3.5vw, 6.2vh), 3.4rem)/1.04 "Didot", "Playfair Display", Georgia, serif;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   WRITTEN IN LIGHT (2026-10-03 — Hannah: the text "feels very Windows
+   2000s"; it should feel like something being revealed — "the feeling of
+   magic scrolls" — and dramatic as the whole thing rises). Nothing slides
+   or pops: each glyph of the title and each word of the body is INSCRIBED
+   — it surfaces out of a blur as warm gold light, then cools to the
+   parchment the page reads in, staggered (--w) so a sentence seems to be
+   written across the dark rather than switched on. Only opacity, filter,
+   colour and text-shadow animate, on a handful of spans at a time.
+   ================================================================ */
+/* 80 ms a word and a 2.5 s ink (were 62 ms / 1.9 s — 2026-10-04, Hannah:
+   "make the text reveal ... a little slower"); the beats between sentences
+   are priced to match in journey/manifesto/pose.js */
+.j-manifesto { --stagger: 80ms; --glyph-stagger: 70ms; }
+
+.j-manifesto-glyph {
+  display: inline-block;
+  opacity: 0;
+  white-space: pre;
+}
+.j-manifesto.title-shown .j-manifesto-glyph {
+  animation: j-manifesto-condense 2.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--w) * var(--glyph-stagger));
+}
+
+.j-manifesto-lines {
+  position: relative;            /* the lines' offsetTop is measured from here */
+  flex: 0 1 auto;                /* its text's height, shrinking only to fit */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow: hidden;              /* a reading box, never a scroller */
+  padding-top: 0.2rem;
+}
+/* the column rose: the oldest lines dissolve through the top edge */
+.j-manifesto-lines.is-lifted {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 3.2rem);
+  mask-image: linear-gradient(180deg, transparent 0, #000 3.2rem);
+}
+
+.j-manifesto-line {
+  flex-shrink: 0;
+  margin: 0;
+  color: rgba(242, 228, 195, 0.86);
+  font-size: clamp(0.95rem, min(1.2vw, 2.05vh), 1.18rem);
+  line-height: 1.62;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+  transform: translateY(var(--lift, 0px));
+  transition: transform 1.8s cubic-bezier(0.3, 0.6, 0.2, 1);
+}
+.j-manifesto-word { opacity: 0; }
+.j-manifesto-line.shown .j-manifesto-word {
+  animation: j-manifesto-ink 2.5s cubic-bezier(0.22, 0.6, 0.25, 1) both;
+  animation-delay: calc(var(--w) * var(--stagger));
+}
+
+/* THE NAME CATCHES THE LIGHT (2026-10-03 — Hannah: "some elegant way to
+   temporarily highlight each instance of True Union when it appears"). Its
+   two words ink in like every other word, but bloom a brighter gold, hold
+   that warmth for a beat while a hairline draws beneath them, and only then
+   cool into the parchment of the sentence. The weight stays (below); the
+   light and the underline pass. */
+/* The name is SET in its weight from the start (an unshown word is only
+   uninked, so a weight that arrived later would re-wrap the paragraph
+   mid-reveal) and stays bold after its light has passed. */
+.j-manifesto-word.is-name { font-weight: 600; letter-spacing: 0.01em; }
+.j-manifesto-line.shown .j-manifesto-word.is-name {
+  /* ONE underline for the whole name: a real text-decoration on both words
+     (the space between them is inside the first word's span, so the line is
+     continuous), brightening and fading on the shared beat — never two
+     segments drawing or retracting one after the other. */
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.24em;
+  text-decoration-color: rgba(240, 196, 110, 0);
+  animation-name: j-manifesto-name;
+  animation-duration: 4.2s;
+}
+@keyframes j-manifesto-name {
+  0% {
+    opacity: 0;
+    filter: blur(7px);
+    color: rgba(255, 214, 140, 0.95);
+    text-shadow: 0 0 0 rgba(255, 190, 90, 0);
+    text-decoration-color: rgba(240, 196, 110, 0);
+  }
+  14% {
+    opacity: 1;
+    filter: none;
+    color: #ffe2a2;
+    text-shadow: 0 0 18px rgba(255, 186, 84, 0.85), 0 0 4px rgba(255, 210, 130, 0.5);
+  }
+  26% { text-decoration-color: rgba(240, 196, 110, 0.85); }
+  58% {
+    color: #f6cf82;
+    text-shadow: 0 0 12px rgba(255, 186, 84, 0.45), 0 1px 12px rgba(0, 0, 0, 0.5);
+    text-decoration-color: rgba(240, 196, 110, 0.85);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    color: rgba(246, 226, 184, 0.96);
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.62);
+    text-decoration-color: rgba(240, 196, 110, 0);
+  }
+}
+
+@keyframes j-manifesto-ink {
+  0% {
+    opacity: 0;
+    filter: blur(7px);
+    color: rgba(255, 214, 140, 0.95);
+    text-shadow: 0 0 0 rgba(255, 190, 90, 0);
+  }
+  30% {
+    opacity: 1;
+    filter: blur(1.2px);
+    color: rgba(255, 226, 168, 1);
+    text-shadow: 0 0 16px rgba(255, 186, 84, 0.75), 0 1px 12px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    color: rgba(242, 228, 195, 0.86);
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.62);
+  }
+}
+@keyframes j-manifesto-condense {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateX(calc((var(--w) - 4.5) * 0.12em)) scale(1.06);
+    color: #ffd98a;
+    text-shadow: 0 0 0 rgba(255, 190, 90, 0);
+  }
+  35% {
+    opacity: 1;
+    filter: blur(1.5px);
+    color: #ffe6b0;
+    text-shadow: 0 0 28px rgba(255, 186, 84, 0.7);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    color: #f2e4c3;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.62);
+  }
+}
+
+.j-manifesto-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: normal;
+  border: 0;
+}
+
+/* The page carries no controls (branch.js, NO CONTROLS ON THE PAGE): the
+   reading region itself takes focus, without a ring — Escape leaves it. */
+.j-manifesto-panel:focus { outline: none; }
+
+@media (max-width: 720px) {
+  .j-manifesto { align-items: flex-end; justify-content: center; padding: 0.75rem; }
+
+  .j-manifesto::before {
+    inset: 22% 0 0;
+    width: 100%;
+    background: linear-gradient(0deg,
+      rgba(8, 7, 5, 0.88) 0%,
+      rgba(8, 7, 5, 0.72) 65%,
+      transparent 100%);
+  }
+
+  .j-manifesto-panel {
+    width: min(100%, 38rem);
+    max-height: min(68dvh, 38rem);
+    padding: 0.75rem 0.25rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .j-manifesto-panel h1 { font-size: 2rem; margin-bottom: 0.75rem; }
+
+  .j-manifesto-line { font-size: 1rem; line-height: 1.52; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .j-manifesto-line { transition: none; }
+  .j-manifesto-glyph, .j-manifesto-word { opacity: 1; }
+  .j-manifesto.title-shown .j-manifesto-glyph,
+  .j-manifesto-line.shown .j-manifesto-word { animation: none; }
+}
 
 /* THE TWO TIERS OF CHROME. The CORE THREE sit in fine circles; Intro and
    Outro keep their existing symbols inside noticeably smaller circles so
@@ -4967,9 +5339,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   opacity: calc(0.72 * var(--wrap-core-label-u, 0)) !important;
 }
 
-/* Touch has no synthetic hover answer inside Purpose's navigable top row.
-   Manifesto is the exception: it has no destination, so a deliberate tap
-   briefly swaps its resting name to the useful availability answer. */
+/* Touch has no synthetic hover answer inside Purpose's navigable top row. */
 @media (hover: none), (pointer: coarse) {
   /* A touch release may leave the link in the browser's synthetic :hover
      state. Intro is a silent bookend on phones, so that emulated hover must
@@ -4984,19 +5354,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     opacity: 0 !important;
     transition: none !important;
   }
-  .j-rail .j-rail-purpose-manifesto .j-rail-soon-note {
-    opacity: 0 !important;
-    transition: none !important;
-  }
   .j-rail .j-rail-purpose-manifesto .j-rail-name {
     opacity: 1 !important;
-  }
-  .j-rail .j-rail-purpose-manifesto.j-rail-note .j-rail-soon-note {
-    opacity: 1 !important;
-    transition: opacity 0.2s ease !important;
-  }
-  .j-rail .j-rail-purpose-manifesto.j-rail-note .j-rail-name {
-    opacity: 0 !important;
   }
 }
 
@@ -5194,101 +5553,6 @@ body.j-rail-on .j-hotspots { opacity: 1; }
 .j-menu-list > li:last-child .j-menu-item { padding-bottom: 0.82rem; }
 @media (max-width: 620px) and (orientation: portrait) {
   .j-menu-list > li:last-child .j-menu-item { padding-bottom: 1rem; }
-}
-
-/* ============================================================
-   LANE C (2026-08-30 polish §3B.1; restaged 2026-08-31) —
-   WHO / WHAT / WHY, side by side. One line of three controls
-   directly under the panel's opening statement (rail.js builds
-   them from content.js `site.primer`), never stacked — the
-   owner's direction — with the chosen answer sliding open in a
-   single shared region below the line. Everything here is the
-   panel's existing language — the section heading's letterspaced
-   caps, the row hover's warm tint, the hairline now standing
-   between neighbours instead of under them — sized down one step
-   so the trio reads as one quiet line of controls into the
-   thesis, not a button bar. Each answer animates its grid row
-   (0fr -> 1fr), so a switch is the old answer easing shut while
-   the new one eases open — the control line itself never moves
-   and no heights are measured; reduced motion snaps. Tap targets
-   stay >= 44px tall even at 430px, where three labels split
-   ~126px each — comfortably clear of crowding, no wrap. */
-.j-menu-primer {
-  margin: -0.15rem 0 0.45rem;
-  /* the thesis text column: item pad 0.5rem + 22px mark + 1rem gap */
-  padding: 0 0.6rem 0 calc(0.5rem + 22px + 1rem);
-}
-.j-menu-primer-tabs {
-  display: flex;
-  align-items: stretch;
-}
-.j-menu-primer-t {
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  min-height: 44px;
-  min-width: 0;
-  padding: 0.3rem 0.2rem;
-  background: none;
-  border: 0;
-  border-radius: 2px;
-  color: var(--parchment);
-  font-family: inherit;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  /* uppercase + tracking leaves a stray trailing space; nudge the centred
-     pair back onto the true axis */
-  text-indent: 0.22em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.3s, background 0.3s;
-}
-.j-menu-primer-t + .j-menu-primer-t {
-  border-left: 1px solid rgba(217, 164, 65, 0.1);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-.j-menu-primer-t:is(:hover, :focus-visible) {
-  color: var(--gold-bright);
-  background: rgba(217, 164, 65, 0.05);
-}
-.j-menu-primer-t[aria-expanded='true'] { color: var(--gold-bright); }
-/* the +: the same quiet instrument voice as the row arrows; it becomes an
-   x by rotation, so open/close is one gesture with no glyph swap */
-.j-menu-primer-c {
-  color: rgba(217, 164, 65, 0.6);
-  font-size: 0.9rem;
-  font-weight: 400;
-  line-height: 1;
-  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
-}
-.j-menu-primer-t:is(:hover, :focus-visible) .j-menu-primer-c { color: var(--gold-bright); }
-.j-menu-primer-t[aria-expanded='true'] .j-menu-primer-c {
-  transform: rotate(45deg);
-  color: var(--gold-bright);
-}
-.j-menu-primer-d {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.j-menu-primer-d.open { grid-template-rows: 1fr; }
-.j-menu-primer-di { overflow: hidden; min-height: 0; }
-.j-menu-primer-p {
-  margin: 0.35rem 0 0.7rem;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: var(--muted);
-}
-@media (max-width: 620px) and (orientation: portrait) {
-  /* the phone thesis column: first-child item gap 0.85rem, 28px mark */
-  .j-menu-primer { padding: 0 0 0 calc(28px + 0.85rem); margin-top: -0.3rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .j-menu-primer-d, .j-menu-primer-c { transition: none !important; }
 }
 
 /* ============================================================

@@ -59,6 +59,20 @@
 // automated source with an agreed freshness rule, or they do not ship.
 
 export const CONTENT = {
+  manifesto: {
+    title: 'True Union',
+    // One entry per line of the Manifesto page (journey/manifesto/branch.js):
+    // a line may hold more than one sentence. `body` is the same text as one
+    // paragraph, for the static page and screen readers.
+    lines: [
+      'A True Union is a lasting bond rooted in shared purpose, whether between individuals, within a group, or between that group and other entities.',
+      'When individuals are willing to act on what they know in their hearts is right, they share a True Union with others who follow that same impulse.',
+      'Groups of those individuals, moving in the same direction, form a True Union. They’re bonded by something greater than incentives or even friendship.',
+      'When that group helps humanity unlock the creative potential of an immensely powerful technology, they help our species form a True Union with it.',
+      'When those individuals share ownership of a company built to pursue that goal, they give their True Union a lasting structure.',
+    ],
+    get body() { return this.lines.join(' '); },
+  },
   chapters: {
     mission: {
       nav: 'Intro',
@@ -965,30 +979,5 @@ export const CONTENT = {
     // The detailed ownership statement now lives beside the Owned section's
     // dedicated page link; the panel footer is copyright only.
     legal: '© 2026 Banodoco',
-    // WHO / WHAT / WHY (2026-08-30, polish §3B.1) — three closed-by-default
-    // expanders directly under the site-map panel's opening statement, one
-    // short paragraph each. Rendered by rail.js (live tier) and the static
-    // menu; both read these strings, so a wording change lands in both tiers
-    // through one edit here plus `node tools/build-static-content.mjs`.
-    // COPY STATUS: drafted for the polish pass, grounded only in claims the
-    // site already makes — PENDING PETER'S EDITORIAL SIGN-OFF (flagged in
-    // the polish PR body; creative call, not an operational one).
-    primer: [
-      {
-        id: 'who',
-        label: 'Who',
-        body: 'An open community of artists, engineers, and knowledge creators — and an organization being handed to them: True Union is 100% shared with the people who contribute, granted 1% per month.',
-      },
-      {
-        id: 'what',
-        label: 'What',
-        body: 'We make and support open tools for AI art, connect the people building them with the people creating with them, and share what gets learned in the open.',
-      },
-      {
-        id: 'why',
-        label: 'Why',
-        body: 'The craft of AI art is being invented right now. We think it should be shaped in the open, by a community that owns its own work — not locked inside anyone’s product.',
-      },
-    ],
   },
 };

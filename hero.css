@@ -12,11 +12,30 @@
     --ink:         #f2ebdd;
     --muted:       #c9bfa8;
     --bg:          #141008;
+    /* THE SCENE'S EMPTY FRAME, as it actually reaches the screen: the clear
+       colour 0x1c160b after the film grade's lift + low-light amber gain,
+       ACES and sRGB (journey/lens.js, organism/renderer.js). The page wears
+       it from the first paint so the WebGL canvas lands on its own colour
+       instead of re-tinting the frame when it arrives — see GRADE_LIFT in
+       organism/hero-spores.js, which derives the same number. */
+    --scene-bg:    #110a03;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: var(--bg);
+    /* the grade's vignette (smoothstep 0.42 -> 0.95 of the centred-uv radius,
+       strength 0.34, in linear light) re-expressed as an encoded-space black
+       overlay; "ellipse 50% 50%" makes 100% = uv radius 0.5, so the corners
+       sit at 141%. Stops measured off the encode, not eyeballed. */
+    background:
+      radial-gradient(ellipse 50% 50% at 50% 50%,
+        rgba(0, 0, 0, 0) 84%,
+        rgba(0, 0, 0, 0.033) 100%,
+        rgba(0, 0, 0, 0.080) 110%,
+        rgba(0, 0, 0, 0.140) 120%,
+        rgba(0, 0, 0, 0.207) 130%,
+        rgba(0, 0, 0, 0.285) 141.4%) fixed,
+      var(--scene-bg);
     color: var(--ink);
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -30,7 +49,7 @@
        0.0-1.7s   ground network converges on the base
        1.6-3.8s   stalk climbs in two SLOW waves: verticals, then lattice
        3.1-4.4s   under-cap double loop: gill sweep, then rim ring
-       4.1-4.8s   cap top surface inks in       -> light spill on the page
+       4.1-4.8s   cap top surface inks in
        3.9-5.4s   the spore plume gathers
        5.55s+     the callouts boot up in numbered order: 01, 02, 03
      Every delay below is tuned against those beats — change one, move all.
@@ -52,10 +71,17 @@
   #stage canvas { display: block; cursor: grab; }
   #stage canvas:active { cursor: grabbing; }
 
-  /* --- light spill: the mushroom's glow touches the page ---
-     one warm bloom spilling from the specimen toward the text column,
-     one low ground-glow warming the CTA area from below.
-     Arrives as the cap ignites — the page warms because the mushroom lit. */
+  /* --- light spill: the page's one ambient light ---
+     one warm bloom from the specimen's side toward the text column, one low
+     ground-glow warming the CTA area from below.
+     PRESENT FROM THE FIRST PAINT, NOT FADED IN (2026-10-04, Hannah: "when I
+     load the page, a filter is applied AFTER it loads"). It used to arrive
+     3.8 s after the growth began, on top of the prelude's own back/right
+     warmth having just faded out — so the whole page's light rose, dipped
+     and rose again over the first ten seconds, which reads as a grade being
+     switched on over a finished frame. The page now wears its final light
+     from frame one and nothing page-wide changes afterwards; the mushroom's
+     own light is the scene's bloom, which is where it belongs. */
   .spill {
     position: fixed;
     inset: 0;
@@ -64,11 +90,6 @@
     background:
       radial-gradient(ellipse 58% 62% at 66% 46%, rgba(255, 190, 95, 0.075), transparent 70%),
       radial-gradient(ellipse 44% 26% at 20% 90%, rgba(255, 175, 80, 0.055), transparent 72%);
-    animation: spill-in 1.6s ease 3.8s both;
-  }
-  @keyframes spill-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
   }
 
   /* GPU preparation uses the scene's own empty draw state as its cover. The
@@ -76,7 +97,6 @@
      belongs to the mushroom waits for intro.start(). Pausing (rather than
      hiding a second overlay) makes release the exact next frame of the same
      WebGL scene. */
-  body.scene-preparing .spill,
   body.scene-preparing .co,
   body.scene-preparing .co * {
     animation-play-state: paused !important;
@@ -1110,33 +1130,34 @@
    (organism/intro.js accelerate() — main.js adds body.intro-fast when the
    skew engages). The 01/02/03 callouts keep a quick version of their 1-2-3
    sequence. --- */
-body.intro-fast .spill { animation-delay: 0.1s !important; animation-duration: 0.35s !important; }
 body.intro-fast .co { animation-duration: 0.16s !important; }
 body.intro-fast #co-inspire { --d: 0.30s; }
 body.intro-fast #co-equip   { --d: 0.44s; }
 body.intro-fast #co-connect { --d: 0.58s; }
 
-/* The home control starts as the TRUE UNION wordmark so the first frame has a
-   clear verbal identity. Once a chapter navigation is requested, main.js
-   adds `.logo-away` and the same reserved box resolves to the mushroom mark.
-   Keeping both layers in one box makes the handoff quiet and prevents the nav
-   row from moving while the journey camera departs. */
+/* The camera paints --logo-away-u over its full flight, in either direction.
+   The class remains a fallback for the static route and focus treatment. */
 .logo {
+  --logo-away-u: 0;
   width: 124px;
   min-width: 124px;
   justify-content: flex-start;
   overflow: visible;
 }
+.logo.logo-away { --logo-away-u: 1; }
 .logo .wordmark {
+  color: #c9ad78;
   display: block;
   font-size: 0.84rem;
   font-weight: 650;
   letter-spacing: 0.22em;
   line-height: 1;
   white-space: nowrap;
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: calc(1 - var(--logo-away-u));
+  transform-origin: left center;
+  transform: translateY(calc(var(--logo-away-u) * -7px))
+    scale(calc(1 - var(--logo-away-u) * 0.12));
+  filter: blur(calc(var(--logo-away-u) * 3px));
 }
 .logo .mushroom-mark {
   position: absolute;
@@ -1146,11 +1167,17 @@ body.intro-fast #co-connect { --d: 0.58s; }
   height: 42px;
   display: block;
   overflow: hidden;
-  clip-path: inset(100% 0 0 0 round 7px);
-  opacity: 0;
-  transform: translateY(-50%) scale(0.8) rotate(-4deg);
-  transform-origin: center;
-  transition: opacity 0.35s ease, transform 0.58s cubic-bezier(0.22, 1, 0.36, 1), clip-path 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+  clip-path: inset(calc((1 - var(--logo-away-u)) * 100%) 0 0 0);
+  /* THE MENU BUTTON'S GOLD (2026-10-04 — Hannah: the mushroom "feels too
+     faded"; make it "the same kind of colour of the menu button"). It was
+     dimmed three ways (0.72 opacity, brightness 0.78, saturate 0.8). The
+     artwork is #FFD474; at brightness 0.9 that is (230,191,104), the
+     button's own glyph ink (230,189,110), at the button's 0.92. */
+  opacity: calc(var(--logo-away-u) * 0.92);
+  transform: translateY(calc(-50% + (1 - var(--logo-away-u)) * 7px))
+    scale(calc(0.86 + var(--logo-away-u) * 0.14));
+  transform-origin: center bottom;
+  filter: brightness(0.9);
 }
 .logo .mushroom-mark img {
   position: absolute;
@@ -1160,35 +1187,27 @@ body.intro-fast #co-connect { --d: 0.58s; }
   height: 100%;
   object-fit: contain;
 }
-.logo .mushroom-flat {
-  opacity: 1;
-}
-.logo .mushroom-glow {
-  opacity: 0;
-  transform: scale(1.04);
-  transition: opacity 0.45s ease, transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.logo.logo-away .wordmark {
-  opacity: 0;
-  transform: translateX(-12px) scale(0.98);
-}
-.logo.logo-away .mushroom-mark {
-  opacity: 1;
-  clip-path: inset(0 0 0 0 round 7px);
-  transform: translateY(-50%) scale(1) rotate(0deg);
-}
-.logo.logo-away .mushroom-glow {
-  opacity: 1;
-  transform: scale(1);
-  transition-delay: 0.08s;
-}
-.logo.logo-away:focus-visible::after {
-  width: 42px;
-  height: 42px;
+.logo .mushroom-flat { opacity: 1; }
+.logo .mushroom-glow { opacity: calc(var(--logo-away-u) * 0.16); }
+.logo.logo-away:focus-visible::after { width: 42px; height: 42px; }
+@media (prefers-reduced-motion: reduce) {
+  .logo .wordmark { transform: none; filter: none; }
+  .logo .mushroom-mark { transform: translateY(-50%); clip-path: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .logo .wordmark,
-  .logo .mushroom-mark,
-  .logo .mushroom-glow { transition: none; }
+/* Compact wordmark balances the circular menu on phone and tablet headers. */
+@media (max-width: 1024px), (max-width: 1366px) and (pointer: coarse) {
+  .logo {
+    width: 68px;
+    min-width: 68px;
+  }
+  .logo .wordmark {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.15;
+  }
+  .logo .wordmark > span { display: block; }
+  .logo .wordmark > span:first-child { letter-spacing: 0.34em; }
 }

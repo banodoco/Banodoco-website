@@ -156,6 +156,9 @@ const TIER2 = [
   'tools/test-portrait-perturbation.mjs',
   'tools/test-animation-lifecycle.mjs',
   'tools/test-intro-lifecycle.mjs',
+  'tools/test-hero-spore-cutoff.mjs',
+  'tools/test-intro-readiness.mjs',
+  'tools/test-hero-handoff.mjs',
   'tools/test-card-warming.mjs',
   'tools/test-discord-card.mjs',
   'tools/test-detail-close-focus.mjs',
@@ -549,6 +552,7 @@ const NOT_IN_CHAIN = {
   'tools/test-no-scroll-navigation.mjs': 'wired into the `test:unit` script, which `check` also runs',
   'tools/test-rail-handoff.mjs': 'wired into the `test:unit` script, which `check` also runs',
   'tools/test-hotspot-departure.mjs': 'wired into the `test:unit` script, which `check` also runs',
+  'tools/test-manifesto-motion.mjs': 'wired into the `test:unit` script, which `check` also runs',
   'tools/test-baked-manifest.mjs': 'wired into the `test:harness` script, which `check` also runs',
   'tools/test-browser-smoke-lifecycle.mjs': 'wired into the `test:harness` script, which `check` also runs',
   'tools/test-gate-browser-smoke.mjs': 'wired into the `test:harness` script, which `check` also runs',
@@ -725,7 +729,10 @@ pin('GC-TIERS', 'D80 — each tier occupies a contiguous block, in tier order',
      which is the half of this row that says the retirement did not erode a
      tier boundary, and t2 staying CONTIGUOUS is the half that says the entry
      was removed rather than merely skipped. */
-  INPUT, { t1: '1-8', t2: '9-46', t3: '47-47', t4: '48-48' },
+  /* +3 in tier 2 by INTRO-PERF, 2026-09-22. The three intro lifecycle gates
+     sit immediately after test-intro-lifecycle; tier 3 and tier 4 shift by
+     three while tier 1 and the flagged set stay unchanged. */
+  INPUT, { t1: '1-8', t2: '9-49', t3: '50-50', t4: '51-51' },
   'a suite that changes tier, or a tier that stops being contiguous, moves exactly one key here');
 
 pin('GC-WIRED', 'D49 — suites on disk that the chain does not run, against a declared exception list',
@@ -866,7 +873,7 @@ pin('GC-SHAPE', 'every entry is a plain `node tools/<suite>.mjs`, run once, and 
        independent movements in one row, and they are separable by inspection:
        if `flagged` had shrunk here, this order would have removed something it
        did not mean to. */
-    length: 48,
+    length: 51,
   });
 
 /* --- D46: the reader is proved to be reading, and to refuse when it cannot -- */
@@ -906,7 +913,7 @@ pin('GC-SHAPE', 'every entry is a plain `node tools/<suite>.mjs`, run once, and 
        (WAS: [8, 39, 1, 1, 49]). TIER1/TIER3/TIER4 are untouched, which is the
        half of this row that says the retirement did not disturb the head of
        the chain, the aggregator, or the wave pin. */
-    [TIER1.length, TIER2.length, TIER3.length, TIER4.length, DECLARED_ORDER.length], [8, 38, 1, 1, 48]);
+    [TIER1.length, TIER2.length, TIER3.length, TIER4.length, DECLARED_ORDER.length], [8, 41, 1, 1, 51]);
 }
 
 /* --- D44 / D86 over this file's own source --- */

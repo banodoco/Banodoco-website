@@ -18,6 +18,18 @@ export function createRendererSetup({ panX, container, camY, camZ, targetY, camA
   renderer.setPixelRatio(pixelRatioPolicy.initial);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.95;
+  /* NO SYNCHRONOUS SHADER-ERROR CHECK IN PRODUCTION (2026-10-03 — load lag).
+     three.js's default reads getProgramInfoLog/getShaderInfoLog on every
+     program it links, and those calls wait for the compile to FINISH — they
+     turn KHR_parallel_shader_compile back into a blocking compile, which is
+     what the boot-time warm-up exists to avoid. Profiled on a cold load:
+     178 ms of main thread inside those two calls through the entrance.
+     ?debug=1 (the page's existing error-channel flag) turns the check back
+     on for anyone hunting a shader bug. */
+  if (renderer.debug) {
+    renderer.debug.checkShaderErrors = typeof location !== 'undefined'
+      && /[?&]debug=1(?:&|$)/.test(location.search);
+  }
   (container || document.body).appendChild(renderer.domElement);
 
   /* THE GPU'S NAME, READ HERE BECAUSE HERE IS THE ONLY PLACE IT IS FREE.

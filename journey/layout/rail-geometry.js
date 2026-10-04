@@ -111,7 +111,11 @@ export function rowMetrics(w, h) {
     // ordinary journey row keeps its established baseline.
     // The Purpose/final instrument sits five pixels lower on phones as one
     // composition; the row and subtree both consume this shared lift.
-    purposeLift: phone ? 45 + PHONE_FINAL_COMPOSITION_LIFT_PX : tablet ? 52 : 66,
+    // LOWERED 66/52/45 -> 34/30/10 (2026-10-04 — Hannah: the navigation
+    // should sit lower at Purpose). The lift made room for a subtree that
+    // hung entirely BELOW the row; its children now stand one above and one
+    // below it, so most of that room is no longer needed.
+    purposeLift: phone ? 10 + PHONE_FINAL_COMPOSITION_LIFT_PX : tablet ? 30 : 34,
     // Ink scale per tier, as a multiple of the authored ~24px symbol
     // boxes: ~21.5px of core ink inside the 36px drawn circles, ~20px
     // bookend glyphs. THE LIVE HALF OF A TWIN — site.css's preboot

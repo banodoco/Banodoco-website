@@ -506,7 +506,7 @@ export function createFinalRing(sceneApi, uniforms) {
     // this body's seat on the canopy: the soil point it stands on, its size
     // (which sets how far out its strands leave the stipe's footprint) and
     // the threshold it kindles at, so the ground under it can kindle with it
-    seats.push({ x: m.x, z: m.z, gy: m.gy, s, reveal: m.reveal, tier: T });
+    seats.push({ x: m.x, z: m.z, gy: m.gy, s, reveal: m.reveal, revealIn: m.revealIn ?? m.reveal, tier: T });
 
     memberStats.push({
       i: m.i, tier: T, h: m.h, clone: asClone, pickable, bodyId,
@@ -1266,6 +1266,7 @@ export function createFinalRing(sceneApi, uniforms) {
      *  construction — members never move (world.js is deterministic and the
      *  field is scene-parented), so this is a build product, not state. */
     seats,
+    setAerial(on) { ringLines.visible = !on; ringGlows.visible = !on; },
     setDwell(s) { primUniforms.uDwell.value = s; },
     counts: {
       ringSegs: baked ? baked.counts.ringSegs : lines.segCount,

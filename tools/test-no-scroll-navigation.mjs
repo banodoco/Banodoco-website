@@ -718,26 +718,27 @@ function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP
 assertBookendFade('Intro -> Purpose', 'mission', 0, 'final', 0.97, -1);
 assertBookendFade('Purpose -> Intro', 'final', 0.97, 'mission', 0, 1);
 
-// Ordinary button journeys use the same balanced opening/closing thirds.
-// This is deliberately phase-based: slowing one camera route must slow both
-// sides of its copy handoff by the same proportion.
+// Ordinary button journeys use a longer outgoing envelope so Intro content
+// remains readable while the camera leaves. The destination keeps its
+// established closing-third entrance.
 {
   const nodes = Object.fromEntries(copyBlocks.map(id => [id, fakeNode()]));
   const copy = makeCopyArrival(nodes);
   copy.step({ chapterId: 'mission', dt: 0, travelP: 0 });
   const ticket = { fromP: 0, targetP: 0.26, phase: 0 };
   copy.step({ chapterId: 'inspire', dt: 0, travelP: 0, railFlight: ticket });
-  ticket.phase = 0.16;
+  ticket.phase = 0.30;
   copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.08, railFlight: ticket });
   const departureHalf = copy.ease('mission');
   assert.ok(departureHalf > 0.45 && departureHalf < 0.55,
-    'ordinary departure is halfway faded at the midpoint of its opening third');
+    'ordinary departure is halfway faded at the midpoint of its longer envelope');
   assert.equal(copy.ease('inspire'), 0,
     'ordinary destination waits through the camera middle');
   ticket.phase = 0.84;
   copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.22, railFlight: ticket });
-  assert.ok(Math.abs(Number(nodes.inspire.style.opacity) - departureHalf) < 0.001,
-    'ordinary visible arrival mirrors departure on the same camera-phase duration');
+  assert.ok(Number(nodes.inspire.style.opacity) > 0.45
+      && Number(nodes.inspire.style.opacity) < 0.55,
+    'ordinary visible arrival keeps its established closing-third duration');
   ticket.phase = 1;
   copy.step({ chapterId: 'inspire', dt: 0.1, travelP: 0.26, railFlight: ticket });
   assert.equal(Number(nodes.inspire.style.opacity), 1,

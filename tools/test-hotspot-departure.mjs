@@ -150,7 +150,7 @@ for (const phase of [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32]) {
     `effective initiative-name opacity follows source copy at flight phase ${phase}`);
   assert.equal(paintedButton.style.pointerEvents, 'none',
     'an outgoing visual carry is not an interactive off-chapter control');
-  if (phase === 0.16) {
+  if (phase === 0.28) {
     const shellScale = Number(
       paintedButton.style.getPropertyValue('--j-hot-shell-sx'));
     sawReverseFormation = shellScale > 0.24 && shellScale < 1;

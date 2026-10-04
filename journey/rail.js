@@ -135,7 +135,6 @@ import {
   railHandoffState,
   railHandoffVisual,
   railHandoffWrapVisual,
-  railOwnershipIndicatorVisibility,
   railPurposeWrapPresence,
   railWrapNavigationProgress,
   railWrapCoreLabelPresence,
@@ -155,6 +154,16 @@ const SOCIAL_ICONS = {
 };
 const SOCIAL_ORDER = ['X', 'Discord', 'GitHub'];
 const CLOSE_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15"/></svg>';
+/** How clear of a mark a travelling dot is, 0..1: 0 inside its inner half
+ *  (the dot is behind the glyph, out of sight), easing to 1 once it has
+ *  cleared the ring and is out on the connecting line. `d` is the dot's
+ *  distance from the mark's centre, `r` the mark's ring radius. */
+const DOT_RADIUS = 2.5;
+function clearOfMark(d, r) {
+  const c = Math.max(0, Math.min(1, (d - r * 0.4) / (r + DOT_RADIUS)));
+  return c * c * (3 - 2 * c);
+}
+
 const MANIFESTO_ICON = '<svg class="j-menu-dot-disc" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="2.1" r=".72"/><circle cx="4.7" cy="4" r=".72"/><circle cx="8" cy="4" r=".72"/><circle cx="11.3" cy="4" r=".72"/><circle cx="2.6" cy="6.7" r=".72"/><circle cx="5.3" cy="6.7" r=".72"/><circle cx="8" cy="6.7" r=".72"/><circle cx="10.7" cy="6.7" r=".72"/><circle cx="13.4" cy="6.7" r=".72"/><circle cx="2.6" cy="9.3" r=".72"/><circle cx="5.3" cy="9.3" r=".72"/><circle cx="8" cy="9.3" r=".72"/><circle cx="10.7" cy="9.3" r=".72"/><circle cx="13.4" cy="9.3" r=".72"/><circle cx="4.7" cy="12" r=".72"/><circle cx="8" cy="12" r=".72"/><circle cx="11.3" cy="12" r=".72"/><circle cx="8" cy="13.9" r=".72"/></svg>';
 
 /* THE END OF THE HERO'S LEG is the handoff while scrolling: the rail should
@@ -787,8 +796,9 @@ export function createRail({ onNav } = {}) {
   manifestoSlot.style.setProperty('--glyph-alpha', String(manifestoBase.alpha));
   manifestoSlot.style.setProperty('--glyph-scale', '1');
   manifestoSlot.style.setProperty('--glyph-glow', '0.02');
-  const manifestoItem = el('span', 'j-rail-item j-rail-soon-item');
-  manifestoItem.setAttribute('aria-label', 'Manifesto, Soon');
+  const manifestoItem = el('button', 'j-rail-item j-rail-manifesto-item');
+  manifestoItem.type = 'button';
+  manifestoItem.setAttribute('aria-label', 'Open Manifesto');
   const manifestoMark = el('span', 'j-rail-mark');
   // The whole-specimen mark is appropriate here: the manifesto describes
   // the purpose as a whole, and its unavailable semantics are the ones stated
@@ -797,11 +807,9 @@ export function createRail({ onNav } = {}) {
   manifestoMark.appendChild(reticle());
   manifestoItem.appendChild(manifestoMark);
   manifestoItem.appendChild(el('span', 'j-rail-name', 'Manifesto'));
-  manifestoItem.appendChild(el('span', 'j-rail-soon-note', 'Soon'));
-  itemsOwner.listen(manifestoItem, 'pointerdown', (e) => {
-    if (e.pointerType !== 'touch') return;
-    manifestoSlot.classList.add('j-rail-note');
-    itemsOwner.timer(() => manifestoSlot.classList.remove('j-rail-note'), 1600);
+  itemsOwner.listen(manifestoItem, 'click', (e) => {
+    e.preventDefault();
+    navigate('manifesto');
   });
   manifestoSlot.appendChild(manifestoItem);
   purposeChildren.appendChild(manifestoSlot);
@@ -988,7 +996,7 @@ export function createRail({ onNav } = {}) {
         {
           id: 'manifesto', label: 'Manifesto',
           short: 'Action at a pivotal moment',
-          icon: MANIFESTO_ICON, badge: 'Soon',
+          icon: MANIFESTO_ICON, action: 'manifesto',
         },
         {
           id: 'ownership', label: 'Ownership',
@@ -1025,78 +1033,9 @@ export function createRail({ onNav } = {}) {
     }
     li.appendChild(a);
 
-    /* WHO / WHAT / WHY (2026-08-30 polish §3B.1; restaged 2026-08-31 on
-       the owner's direction: the three controls sit SIDE BY SIDE on one
-       line, never stacked, with the chosen answer in a single shared
-       region below that line). The trio is a tablist whose tabs also
-       toggle: all closed at rest, choosing one closes the others, and
-       choosing the open one closes it again — so the line of controls
-       itself never moves; only what follows the answer region reflows,
-       and the CSS eases that. Copy still lives in content/content.js
-       (`site.primer`, flagged there as pending Peter's editorial
-       sign-off) so a wording swap never touches this file. Each control
-       carries aria-selected for the tablist grammar plus aria-expanded
-       for the toggle truth; all three stay in the page tab order AND
-       answer Left/Right/Home/End (focus only — opening stays a
-       deliberate Enter/Space/click); a closed answer is aria-hidden so
-       what a screen reader walks matches what the eye can reach. */
-    if (section.id === 'mission' && Array.isArray(CONTENT.site.primer)) {
-      const primer = el('div', 'j-menu-primer');
-      const tabrow = el('div', 'j-menu-primer-tabs');
-      tabrow.setAttribute('role', 'tablist');
-      tabrow.setAttribute('aria-label', 'About True Union');
-      const panes = el('div', 'j-menu-primer-panes');
-      const tabs = [];
-      for (const item of CONTENT.site.primer) {
-        const btn = el('button', 'j-menu-primer-t');
-        btn.type = 'button';
-        btn.id = `j-primer-t-${item.id}`;
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-selected', 'false');
-        btn.setAttribute('aria-expanded', 'false');
-        btn.setAttribute('aria-controls', `j-primer-d-${item.id}`);
-        btn.appendChild(el('span', 'j-menu-primer-l', item.label));
-        const mark = el('span', 'j-menu-primer-c', '+');
-        mark.setAttribute('aria-hidden', 'true');
-        btn.appendChild(mark);
-        tabrow.appendChild(btn);
-        const drawer = el('div', 'j-menu-primer-d');
-        drawer.id = `j-primer-d-${item.id}`;
-        drawer.setAttribute('role', 'tabpanel');
-        drawer.setAttribute('aria-labelledby', btn.id);
-        drawer.setAttribute('aria-hidden', 'true');
-        const clip = el('div', 'j-menu-primer-di');
-        clip.appendChild(el('p', 'j-menu-primer-p', item.body));
-        drawer.appendChild(clip);
-        panes.appendChild(drawer);
-        tabs.push({ btn, drawer });
-        itemsOwner.listen(btn, 'click', () => {
-          const wasOpen = btn.getAttribute('aria-expanded') === 'true';
-          for (const t of tabs) {
-            const on = !wasOpen && t.btn === btn;
-            t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
-            t.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
-            t.drawer.setAttribute('aria-hidden', on ? 'false' : 'true');
-            t.drawer.classList.toggle('open', on);
-          }
-        });
-      }
-      itemsOwner.listen(tabrow, 'keydown', (e) => {
-        const at = tabs.findIndex((t) => t.btn === document.activeElement);
-        if (at < 0) return;
-        let to = -1;
-        if (e.key === 'ArrowRight') to = (at + 1) % tabs.length;
-        else if (e.key === 'ArrowLeft') to = (at + tabs.length - 1) % tabs.length;
-        else if (e.key === 'Home') to = 0;
-        else if (e.key === 'End') to = tabs.length - 1;
-        if (to < 0) return;
-        e.preventDefault();
-        tabs[to].btn.focus();
-      });
-      primer.appendChild(tabrow);
-      primer.appendChild(panes);
-      li.appendChild(primer);
-    }
+    /* WHO / WHAT / WHY was here (2026-08-30 polish §3B.1); removed
+       2026-10-04 on Hannah's direction ("remove the who what why in the
+       sidebar"). */
 
     const items = section.items || [];
     if (items.length) {
@@ -1116,17 +1055,19 @@ export function createRail({ onNav } = {}) {
           if (icon.childNodes.length) label.appendChild(icon);
           label.appendChild(document.createTextNode(it.label));
         }
-        if (it.link || it.internal) {
+        if (it.link || it.internal || it.action) {
           const link = el('a', 'j-menu-row-link');
-          if (it.internal) {
-            link.href = `#/${it.internal}`;
-            link.dataset.chapter = it.internal;
+          if (it.internal || it.action) {
+            const destination = it.internal || it.action;
+            link.href = `#/${destination}`;
+            if (it.internal) link.dataset.chapter = it.internal;
             itemsOwner.listen(link, 'click', (e) => {
               e.preventDefault();
               closeMenu({ focusBack: false });
-              navigate(it.internal);
+              navigate(destination);
             });
-            menuLinks[it.internal] = link;
+            if (it.internal) menuLinks[it.internal] = link;
+            else if (it.action === 'manifesto') menuLinks.manifesto = link;
           } else {
             link.href = it.link.href || '#';
             link.target = '_blank';
@@ -1134,7 +1075,7 @@ export function createRail({ onNav } = {}) {
           }
           if (label) link.appendChild(label);
           if (it.short) link.appendChild(el('span', 'j-menu-is', it.short));
-          const arrow = el('span', 'j-menu-ia', it.internal ? '→' : '↗');
+          const arrow = el('span', 'j-menu-ia', it.link ? '↗' : '→');
           arrow.setAttribute('aria-hidden', 'true');
           link.appendChild(arrow);
           row.appendChild(link);
@@ -1805,7 +1746,12 @@ export function createRail({ onNav } = {}) {
        stepping this gate on a resize crossing latched the hero copy over
        a chapter's. The bail sits AFTER the scale write on purpose: the
        content-to-navigation breathing belongs to phones too. */
-    if (mobileRail.matches) return null;
+    // Ordinary camera flights have their own presented-phase copy envelope.
+    // Returning the rail gate here used to clamp desktop Intro copy through
+    // u / 0.05, hiding it in roughly the first 0.4s of a two-second flight.
+    // Keep the rail gate for scroll and ceremonial wraps, but let the shared
+    // copy/spore departure clock own an ordinary flight end-to-end.
+    if (mobileRail.matches || horizontalFlight) return null;
     /* Mission copy fades against this same reversible coordinate, so
        scroll, direct return and an interrupted/reversed flight cannot
        disagree about which of the pair arrived first. Cold boot is
@@ -2212,7 +2158,18 @@ export function createRail({ onNav } = {}) {
        frame's value when the paint runs first in a frame; both are
        continuous in p, so the seam is invisible. */
     ringPresence = ringOpacity;
-    activeRing.style.opacity = (ringOpacity * dockingU).toFixed(6);
+    /* THE NODE RESTS INSIDE ITS MARK AND IS SEEN ONLY IN TRANSIT (2026-10-04
+       — Hannah: the dot "should always rest and end up in the middle of the
+       section icon... behind it... we should only basically see it when
+       we're travelling between views... and it should travel along the
+       line"). It rides the connector's own height (site.css) and sinks out
+       of sight under every mark it reaches or passes, rising only on the
+       open line between two marks. */
+    let underMark = 1;
+    for (let i = 0; i < ROW_N; i++) {
+      underMark = Math.min(underMark, clearOfMark(Math.abs(ringX - L.centres[i]), L.ringDia[i] / 2));
+    }
+    activeRing.style.opacity = (ringOpacity * dockingU * underMark).toFixed(6);
     root.style.setProperty('--nav-position', horizontalPosition.toFixed(4));
     root.classList.toggle('j-rail-wrap-progress', !!wrap);
     root.style.setProperty(
@@ -2325,13 +2282,89 @@ export function createRail({ onNav } = {}) {
      tree trembling after the camera has landed. Purpose <-> Connect flights
      use their explicit endpoints here; merely crossing Owned's p-band can
      never summon its subtree. */
+  /* MANIFESTO IS OWNERSHIP'S SIBLING, AND TRAVELS LIKE IT (2026-10-04).
+     It is not a chapter on the route, so p can never name it: journey.js
+     says whether its page is the one open (`manifestoOpen`) and, while the
+     row is travelling to or from it without a journey flight, hands over a
+     ticket whose phase is the branch camera's own eased clock. A journey
+     flight into it (from another section) carries `manifestoOpen` too. The
+     painted channel, `manifestoVisual`, is captured and interpolated with
+     handoffVisual on every ticket, so the dot departs from its pixels. */
+  let manifestoOpen = false;
+  let manifestoTicket = null;
+  let manifestoVisual = 0;
+  let manifestoFrom = 0;
+  /* THE DOT'S LAST LEG RIDES THE CLIMB (2026-10-04 — Hannah: the dot should
+     "not reach the end until we've reached the actual top of the manifesto
+     journey"). The opening beat above still gathers the row and brings the
+     dot into Purpose in ~2 s; from there the leg up the branch to the
+     Manifesto is scaled by this arrival (journey.js setManifestoArrive, the
+     camera's own ascent), so the dot climbs while the camera climbs and
+     lands as it reaches the top. Held while the page is being left, so a
+     departure starts from the dot's painted position. */
+  let manifestoArriveInput = null;
+  let manifestoArrive = 0;
+  /* ...AND WALKS BACK DOWN ON THE DESCENT (2026-10-04 — Hannah: from the
+     Manifesto back to Purpose the dot "travels down too fast. It doesn't
+     travel at the speed of the journey, like it does when I go to
+     Ownership"). The row still folds home over the descent's first half
+     (below); the dot no longer rides that fold. It leaves from where it is
+     painted, comes down the Manifesto's arm on the camera's own clock
+     (RETURN_ARM_SHARE of it), and drops into Purpose's seat as the camera
+     lands. `branchPainted` is last frame's route position, the departure. */
+  const RETURN_ARM_SHARE = 0.85;
+  // the row's fold home from the Manifesto: the opening beat's own length
+  // (journey/manifesto/branch.js RAIL_OPEN_SECONDS)
+  const RETURN_FOLD_SECONDS = 2.2;
+  let branchPainted = 0;
+  let litPainted = 0;
+  let returnDot = null;   // { from, lit } while a Manifesto -> Purpose ticket runs
+
   function paintPurposeHandoff(selectedChapterId, flight, wrap) {
-    const ticket = flight || wrap;
+    const ticket = flight || wrap || manifestoTicket;
+    const manifestoTarget = manifestoOpen ? 1 : 0;
+    /* A descent out of the Manifesto is several seconds long, where a jump
+       out of Ownership is about one. Spread over all of it, the row's
+       half-gathered middle (peers and labels overlapping) lingered on
+       screen; so the tree folds home over the descent's first half, on its
+       own ease, and the row then simply travels with the camera. */
+    let handoffPhase = ticket ? Math.max(0, Math.min(1, Number(ticket.phase) || 0)) : 1;
+    /* ...except into Ownership, the other child (2026-10-04 — Hannah: the dot
+       to Ownership "moves too fast in the downward part"). There the row
+       never ungathers — the two siblings' channels hand over and their sum
+       holds it gathered — so there is no half-gathered middle to hurry
+       past, and the crossing takes the whole descent: the dot goes down
+       Ownership's arm while the camera sinks into the ground. */
+    const leavingTo = flight ? chapterAt(flight.targetP).id : selectedChapterId;
+    const staysGathered = railHandoffRest(leavingTo).ownership >= 1;
+    const cameraPhase = handoffPhase;
+    /* ...and it folds on the OPENING's clock, not the descent's (2026-10-04
+       — Hannah: turning back partway up, the row came home "really fast and
+       snappy ... it should be more like the navigation going the other
+       direction"). It used to take the descent's first half, eased twice
+       (the descent's own ease, then this one): fine from the top (4.8 s,
+       so ~2.4 s), but a turn-back early in the climb has a short descent
+       and the row snapped home in well under a second. It now unfolds over
+       RETURN_FOLD_SECONDS of the passage's own wall time on the same
+       smoother curve the opening uses (branch.js openPhase), whatever the
+       height; the descent is never shorter than that (pose.js
+       RETURN_MIN_SECONDS), so the fold always lands with the camera. */
+    if (ticket && !wrap && !manifestoOpen && manifestoFrom > 0.001 && handoffFlight === ticket
+        && !staysGathered) {
+      const k = Number.isFinite(ticket.elapsed)
+        ? Math.min(1, ticket.elapsed / RETURN_FOLD_SECONDS)
+        : Math.min(1, handoffPhase / 0.5);
+      handoffPhase = k * k * k * (k * (k * 6 - 15) + 10);
+    }
     if (ticket) {
       if (handoffFlight !== ticket) {
         handoffFlight = ticket;
         handoffFrom = { ...handoffVisual };
         navPoseFrom = navPoseVisual;
+        manifestoFrom = manifestoVisual;
+        returnDot = !wrap && !manifestoOpen && manifestoFrom > 0.001 && leavingTo === 'final'
+          ? { from: branchPainted, lit: litPainted }
+          : null;
       }
       handoffVisual = wrap
         ? railHandoffWrapVisual({
@@ -2341,15 +2374,21 @@ export function createRail({ onNav } = {}) {
         })
         : railHandoffVisual({
           from: handoffFrom,
-          targetChapterId: chapterAt(flight.targetP).id,
-          phase: ticket.phase,
+          // Manifesto's rest is Purpose's tree with its own branch lit
+          targetChapterId: manifestoOpen ? 'final'
+            : flight ? chapterAt(flight.targetP).id : selectedChapterId,
+          phase: handoffPhase,
         });
+      manifestoVisual = manifestoFrom + (manifestoTarget - manifestoFrom) * handoffPhase;
     } else {
       handoffFlight = null;
+      returnDot = null;
       handoffVisual = railHandoffRest(selectedChapterId);
+      manifestoVisual = manifestoTarget;
     }
 
-    const treeU = Math.max(0, Math.min(1, handoffVisual.tree));
+    const manifestoU = Math.max(0, Math.min(1, manifestoVisual));
+    const treeU = Math.max(0, Math.min(1, Math.max(handoffVisual.tree, manifestoU)));
     /* THE NAVIGATION'S POSE IS CARRIED ACROSS A TICKET CHANGE, LIKE EVERY
        OTHER PAINTED VALUE HERE (2026-08-30). It is deliberately not the tree's
        coordinate: a lap breathes the row from its hero pose to its persistent
@@ -2371,93 +2410,178 @@ export function createRail({ onNav } = {}) {
         ? railHandoffVisual({
           from: { tree: navPoseFrom, ownership: 0 },
           targetChapterId: chapterAt(flight.targetP).id,
-          phase: flight.phase,
+          phase: flight === handoffFlight ? handoffPhase : flight.phase,
         }).tree
         : treeU;
     const navPoseU = navPoseVisual;
     const ownershipU = Math.max(0, Math.min(1, handoffVisual.ownership));
+    /* The Manifesto wears the Ownership geometry — the row gathered down to
+       Purpose's own level, the subtree open — with ITS node lit instead
+       (2026-10-03 — Hannah: "keep the bottom navigation... similar to when
+       we go to ownership... the simpler version of it that's down one level
+       in the tree"). Geometry reads gatherU. Between the two siblings the
+       channels cross (one falls as the other rises), and their SUM is what
+       keeps the row gathered through the crossing. */
+    const gatherU = Math.min(1, ownershipU + manifestoU);
     const { L, purposeX } = rowFrame();
-    /* The children are a viewport-centred pair, not a cluster hanging from
-       the rightmost Purpose slot. Purpose remains the physical parent while
-       the row is open, so the connector needs two anchors: its root follows
-       Purpose as it gathers, while its junction stays on the viewport axis.
-       The tree's late Ownership grow scales around its root; divide by that
-       scale below so the painted junction (and therefore the pair) remains
-       exactly centred even during that grow. */
-    const childOffset = (L.minor + 52) / 2;
-    const childGap = Math.max(2, childOffset * 2 - L.minor);
-    const childX = -childOffset;
-    const ownershipGrowthX = Math.max(0, Math.min(1, (ownershipU - 0.52) / 0.48));
-    const ownershipGrowth = ownershipGrowthX * ownershipGrowthX * (3 - 2 * ownershipGrowthX);
-    const treeScale = 1 + 0.10 * ownershipGrowth;
-    /* A quiet L-pipe locates the branch without turning it into a flowchart:
-       down from Purpose's lower ring edge, then left to the viewport axis.
-       The junction itself has only two short diagonal arms into the child
-       centres. Lengths and angles are recomputed in the same scaled tree
-       frame on every camera tick, so gathering and reversal do not detach
-       the strokes from either endpoint. */
+    /* PURPOSE'S CHILDREN STAND WHERE THEIR JOURNEYS GO (2026-10-04 —
+       Hannah: "the Manifesto is going up and Ownership is going down... it
+       should be above"; then "they should be in the same shape when we go
+       to manifesto or ownership, and they should probably be smaller
+       there"). The Manifesto lifts the camera into the sky and Ownership
+       sinks it into the ground, so the tree says so, in ONE shape: both
+       hang half a pitch back from Purpose, toward Connect — Manifesto
+       ABOVE the row, Ownership BELOW it — short arms, not a chart. Inside
+       either one the row gathers away and that same little tree remains,
+       centred as a group at the same size ("it shouldn't shrink when it
+       goes into the down tree view"). The children grow out of Purpose
+       itself; everything is in the tree's own frame, whose origin IS
+       Purpose's icon centre. */
+    const treeScale = 1;
     const connectorAir = L.connectorAir;
-    const dotRadius = 2.5;
-    const connectorStartY = L.minorRingD / 2 + connectorAir;
-    /* The elbow sits eight pixels above the ordinary active-dot seat. The
-       ordinary dot follows this same camera-paced lift through
-       --purpose-active-node-lift, so when Ownership takes over both dots
-       still occupy the raised elbow's exact pixel; reversal hands it back at
-       that same pixel too. */
-    const ELBOW_LIFT_PX = 8;
-    const splitY = L.major / 2 + 26 - ELBOW_LIFT_PX;
-    const dotClearance = dotRadius + connectorAir;
-    const trunkLength = Math.max(0, splitY - dotClearance - connectorStartY);
-    /* Drop both children from the junction by one shared amount. The branch
-       ray is aimed at each child centre, but its painted length stops at the
-       minor hit-box edge. That leaves exactly the same ring-to-connector air
-       as the top row: (minor hit box - minor ring) / 2. */
-    const childDrop = 10;
-    const childTopY = splitY + childDrop;
-    const branchDrop = L.major / 2 + childDrop;
-    const branchCentreLength = Math.hypot(childOffset, branchDrop);
-    const childEndClearance = L.minorRingD / 2 + connectorAir;
-    const branchLength = Math.max(
-      0,
-      branchCentreLength - connectorAir - childEndClearance,
-    );
-    const branchAngle = Math.atan2(branchDrop, childOffset) * 180 / Math.PI;
-    /* The pack has one horizontal front. Previously the Purpose tree moved
-       toward centre while the indicator also traversed left inside that
-       moving tree, so the dot visibly outran the contracting line. Pace the
-       entire row, Purpose root and its hairlines with the horizontal leg's
-       share of the dot path, and keep the dot at that moving root until the
-       diagonal begins. It now reads as one point physically pushing the
-       cards and line into their centred stack. */
-    const indicatorHorizontalLength = Math.abs(purposeX);
-    const indicatorVerticalLength = L.major / 2 + 26;
-    const indicatorTotalLength = indicatorHorizontalLength
-      + branchCentreLength + indicatorVerticalLength;
-    const indicatorJunctionAt = indicatorHorizontalLength / indicatorTotalLength;
-    const indicatorIconAt = (indicatorHorizontalLength + branchCentreLength)
-      / indicatorTotalLength;
-    const horizontalGatherU = Math.max(0, Math.min(1,
-      ownershipU / indicatorJunctionAt));
-    const indicatorDiagonalU = Math.max(0, Math.min(1,
-      (ownershipU - indicatorJunctionAt) / (indicatorIconAt - indicatorJunctionAt)));
-    const indicatorVerticalU = Math.max(0,
-      (ownershipU - indicatorIconAt) / (1 - indicatorIconAt));
-    const treeX = purposeX * (1 - horizontalGatherU);
-    const junctionX = -treeX / treeScale;
-    // The long reach terminates on the pair's exact midpoint axis. Keeping
-    // its endpoint at the junction (rather than inset toward Manifesto)
-    // makes the parent line visually neutral; the two diagonal branches own
-    // their own equal connectorAir offsets away from that centred endpoint.
-    const reachStartX = junctionX;
-    const reachLength = Math.max(
-      0,
-      Math.abs(junctionX) - dotClearance,
-    );
-    const trunkU = Math.max(0, Math.min(1, treeU / 0.34));
-    const reachU = Math.max(0, Math.min(1, (treeU - 0.18) / 0.44));
-    const forkU = Math.max(0, Math.min(1, (treeU - 0.50) / 0.36));
+    const ringR = L.minorRingD / 2;
+    const purposeRowIndex = ROW.findIndex(entry => entry.id === 'final');
+    const pitch = purposeRowIndex > 0
+      ? Math.abs(L.centres[purposeRowIndex] - L.centres[purposeRowIndex - 1])
+      : L.major * 1.8;
+    /* INSIDE A CHILD THE TREE OPENS INTO ITS OWN SHAPE (2026-10-04 —
+       Hannah, of the three marks shown inside Ownership or the Manifesto:
+       "spread out a little bit more ... maybe there should be a right angle
+       between them ... the whole thing gets wider"). Beside the row the
+       children keep their half-pitch place toward Connect, which is what
+       ties them to it; once the row has gathered away that tie reads as "part
+       of a larger menu", so the arms lengthen as the row gathers.
+       NOT A RIGHT ANGLE, A JAW (same day, Hannah: "too high and not wide
+       enough ... like a crocodile opening its mouth ... wider and less
+       high"). The square opening stood the group up into a tall diamond;
+       it now opens LOW and LONG from Purpose as the hinge — the arms reach
+       well back toward where Connect was and rise only a little, about 24
+       degrees each off the row's axis. */
+    const ownU = gatherU * gatherU * (3 - 2 * gatherU);
+    const OWN_REACH_X = L.major * 2.1;
+    const OWN_REACH_Y = L.major * 0.95;
+    const REST_X = -pitch / 2 + (-OWN_REACH_X + pitch / 2) * ownU;
+    const REST_Y = L.major * 1.1 + (OWN_REACH_Y - L.major * 1.1) * ownU;
     const childU = Math.max(0, Math.min(1, (treeU - 0.64) / 0.36));
-    const childScale = 0.34 + 0.66 * childU;
+    /* THE CHILDREN UNSTACK FROM UNDER PURPOSE (2026-10-04 — Hannah: arriving
+       at Purpose, Ownership and the Manifesto "just kind of expand from
+       nowhere ... it should feel like they're being unstacked from below
+       Purpose", the way the row stacks itself into Purpose on the way to
+       Ownership). They used to appear half way out along their arms at a
+       third of their size and grow there inside a widening clip. Now each
+       starts AT Purpose's centre, already most of its size, and slides out
+       along its own arm on the same coordinate; it is out of sight while it
+       is under Purpose and comes into view as it clears Purpose's ring
+       (childReveal), so it reads as drawn out from beneath the parent.
+       Leaving Purpose plays the same thing backwards: they slide home. */
+    const emerge = childU * childU * (3 - 2 * childU);
+    const childScale = 0.6 + 0.4 * childU;
+    // side +1 = Ownership (down), -1 = Manifesto (up)
+    const childAt = (side) => ({ x: REST_X * emerge, y: side * REST_Y * emerge });
+    const ownershipAt = childAt(1);
+    const manifestoAt = childAt(-1);
+    const armOf = (c) => ({
+      angle: Math.atan2(c.y, c.x) * 180 / Math.PI,
+      length: Math.max(0, Math.hypot(c.x, c.y) - 2 * (ringR + connectorAir)),
+    });
+    const ownershipArm = armOf(ownershipAt);
+    const manifestoArm = armOf(manifestoAt);
+    /* ONE DOT, TWO BRANCHES, ONE HUB (2026-10-04 — Hannah: press either
+       child and the dot "should just go fairly quickly into the center of
+       the purpose one, and then travel with [it]... as that becomes the
+       actual middle. Then when it hits the middle, it should travel up or
+       down"; between the siblings "it should travel along the actual
+       connecting lines"). The route is the tree's own strokes:
+         Purpose's seat -> into Purpose (quickly, the first HUB_SHARE of
+         the flight) -> riding Purpose while the row gathers to the centre
+         -> out along the arm -> through the child -> to its seat (below
+         Ownership, above Manifesto, the side the branch opens).
+       Between the siblings the signed difference of their channels is the
+       position, so a crossing runs child seat -> child -> arm -> Purpose ->
+       the other arm -> the other child -> its seat, through Purpose once. */
+    /* ...AND EVERY SEAT IS THE MARK'S OWN CENTRE (2026-10-04 — Hannah: the
+       dot "should always rest and end up in the middle of the section icon
+       ... It shouldn't go above. It should always just be behind it in
+       every view"). The seats below Purpose and Ownership and above the
+       Manifesto are gone: the route is the strokes alone, mark centre to
+       mark centre, and the dot is out of sight wherever it rests. */
+    const purposeSeatY = 0;
+    const seatD = 0;
+    const HUB_SHARE = 0.12;
+    const armLeg = Math.hypot(REST_X, REST_Y);
+    const horizontalLeg = Math.abs(purposeX);
+    const hubAt = HUB_SHARE;
+    const gatheredAt = hubAt + (1 - hubAt) * horizontalLeg / (horizontalLeg + armLeg + seatD);
+    const iconAt = gatheredAt + (1 - gatheredAt) * armLeg / (armLeg + seatD);
+    const seg = (u, from, to) => Math.max(0, Math.min(1, (u - from) / Math.max(1e-6, to - from)));
+    /* The pack has one front: the row and Purpose's root gather while the
+       dot rides Purpose, so the dot reads as travelling with the centre. */
+    const horizontalGatherU = gatheredAt > hubAt
+      ? seg(gatherU, hubAt, gatheredAt)
+      : (gatherU > 0 ? 1 : 0);
+    // Gathered, the GROUP is centred, not Purpose: Purpose sits right of
+    // the axis by half its children's reach (every gathered slot carries the
+    // same offset, so the row still packs into Purpose's seat).
+    const groupShift = (-REST_X / 2) * horizontalGatherU;
+    const treeX = purposeX * (1 - horizontalGatherU) + groupShift;
+    let branchSide = manifestoU > ownershipU ? -1 : 1;
+    const crossing = ownershipU > 0.001 && manifestoU > 0.001;
+    if (crossing) branchSide = ownershipU - manifestoU >= 0 ? 1 : -1;
+    let branchU = crossing
+      ? gatheredAt + (1 - gatheredAt) * Math.abs(ownershipU - manifestoU)
+      : Math.max(ownershipU, manifestoU);
+    if (manifestoOpen) manifestoArrive = manifestoArriveInput === null ? 1 : manifestoArriveInput;
+    else if (manifestoU <= 0.001) manifestoArrive = 0;
+    // Scaled, not capped: a cap would park the dot until the falling channel
+    // reached it, then rush it home; scaled, a departure moves it at once.
+    if (branchSide < 0 && branchU > gatheredAt) {
+      branchU = gatheredAt + (branchU - gatheredAt) * manifestoArrive;
+    }
+    if (returnDot) {
+      // down the arm with the camera, then into Purpose's seat as it lands;
+      // gatheredAt and hubAt are the same pixel (Purpose's centre), so the
+      // route skips the ride-along that only exists on the way out
+      branchSide = -1;
+      const from = returnDot.from;
+      if (from > gatheredAt && cameraPhase < RETURN_ARM_SHARE) {
+        branchU = from + (gatheredAt - from) * (cameraPhase / RETURN_ARM_SHARE);
+      } else {
+        const k = from > gatheredAt
+          ? (cameraPhase - RETURN_ARM_SHARE) / (1 - RETURN_ARM_SHARE)
+          : cameraPhase;
+        branchU = Math.min(from, hubAt) * (1 - Math.max(0, Math.min(1, k)));
+      }
+    }
+    branchPainted = branchU;
+    const child = branchSide > 0 ? ownershipAt : manifestoAt;
+    let indicatorX, indicatorY;
+    if (branchU <= hubAt) {
+      indicatorX = 0; indicatorY = purposeSeatY * (1 - seg(branchU, 0, hubAt));
+    } else if (branchU <= gatheredAt) {
+      indicatorX = 0; indicatorY = 0;
+    } else if (branchU <= iconAt) {
+      const k = seg(branchU, gatheredAt, iconAt);
+      indicatorX = child.x * k; indicatorY = child.y * k;
+    } else {
+      indicatorX = child.x; indicatorY = child.y + branchSide * seatD * seg(branchU, iconAt, 1);
+    }
+    /* Softened, never lost, while it rides over a mark. Purpose's glyph is
+       where it WAITS, and at 75% it fought the icon there (2026-10-04 —
+       Hannah: "when the dot is behind purpose it also should be slightly
+       faded"), so it sinks further under Purpose than under a child it is
+       only passing through. */
+    const clearOf = (x, y) => clearOfMark(Math.hypot(indicatorX - x, indicatorY - y), ringR);
+    /* ...and the same under a child (2026-10-04 — Hannah: travelling up "it
+       should fade out when it's going behind the Manifesto icon and behind
+       the Ownership icon, like it does when it's going through the Purpose
+       one"). It was kept at 75% there, which read as the dot crossing in
+       FRONT of the mark; every mark it passes is now one it passes under. */
+    // Under a mark it is now gone, not dimmed: it rests behind its icon.
+    const UNDER_PURPOSE = 0, UNDER_CHILD = UNDER_PURPOSE;
+    const indicatorVisibility = Math.min(
+      UNDER_PURPOSE + (1 - UNDER_PURPOSE) * clearOf(0, 0),
+      UNDER_CHILD + (1 - UNDER_CHILD) * clearOf(child.x, child.y));
+    const forkU = Math.max(0, Math.min(1, (treeU - 0.50) / 0.36));
     /* Ownership is a branch destination, but it must speak the same selected
        language as every top-row chapter.  Drive its ink, halo and 5% arrival
        scale from the branch's own camera-paced coordinate using the exact
@@ -2480,13 +2604,27 @@ export function createRail({ onNav } = {}) {
       'active',
       selectedChapterId === 'owned' && ownershipU >= 0.9999,
     );
-    const labelStage = railPurposeLabelStage({ tree: treeU, ownership: ownershipU });
+    // The Manifesto lights as the dot arrives, not on the opening beat.
+    // On the way home it dims as the dot leaves it, on the same clock.
+    const manifestoLit = returnDot
+      ? returnDot.lit * (1 - Math.max(0, Math.min(1, cameraPhase / RETURN_ARM_SHARE)))
+      : manifestoU * manifestoArrive;
+    litPainted = manifestoLit;
+    const manifestoTo = GLYPH_COLOURS.active;
+    manifestoSlot.style.setProperty('--glyph-r', (manifestoBase.rgb[0] + (manifestoTo.rgb[0] - manifestoBase.rgb[0]) * manifestoLit).toFixed(2));
+    manifestoSlot.style.setProperty('--glyph-g', (manifestoBase.rgb[1] + (manifestoTo.rgb[1] - manifestoBase.rgb[1]) * manifestoLit).toFixed(2));
+    manifestoSlot.style.setProperty('--glyph-b', (manifestoBase.rgb[2] + (manifestoTo.rgb[2] - manifestoBase.rgb[2]) * manifestoLit).toFixed(2));
+    manifestoSlot.style.setProperty('--glyph-alpha', (manifestoBase.alpha + (manifestoTo.alpha - manifestoBase.alpha) * manifestoLit).toFixed(3));
+    manifestoSlot.style.setProperty('--glyph-scale', (1 + 0.05 * manifestoLit).toFixed(4));
+    manifestoSlot.style.setProperty('--glyph-glow', (0.02 + 0.26 * manifestoLit).toFixed(3));
+    manifestoSlot.classList.toggle('active', manifestoLit >= 0.9999);
+    const labelStage = railPurposeLabelStage({ tree: treeU, ownership: gatherU });
     const labelFade = labelStage === 'leaving'
       ? Math.max(0, Math.min(1, 1 - treeU / PURPOSE_LABEL_TOP_AT))
       : 1;
 
     root.classList.toggle('j-rail-purpose-visible', treeU > 0.001);
-    root.classList.toggle('j-rail-purpose-gathering', ownershipU > 0.001);
+    root.classList.toggle('j-rail-purpose-gathering', gatherU > 0.001);
     /* A stationary pointer can cross a moving icon during a direct arrival.
        Do not let that incidental :hover expose Purpose's above-seat labels
        before the camera has actually landed. */
@@ -2506,74 +2644,57 @@ export function createRail({ onNav } = {}) {
        with just a modest vertical tightening around the three visible marks. */
     root.style.setProperty(
       '--nav-scrim-extra',
-      `${(340 * (1 - ownershipU)).toFixed(3)}px`,
+      `${(340 * (1 - gatherU)).toFixed(3)}px`,
     );
     root.style.setProperty(
       '--nav-scrim-height',
-      `${(260 - 20 * ownershipU).toFixed(3)}px`,
+      `${(260 - 20 * gatherU).toFixed(3)}px`,
     );
     root.style.setProperty(
       '--purpose-peer-open-u',
-      (1 - Math.min(1, ownershipU / 0.82)).toFixed(5),
+      (1 - Math.min(1, gatherU / 0.82)).toFixed(5),
     );
     root.style.setProperty('--purpose-scrim-u', navPoseU.toFixed(5));
-    root.style.setProperty('--purpose-rail-lift', `${(L.purposeLift * navPoseU).toFixed(3)}px`);
+    // An opened tree that reaches further DOWN than the resting one is paid
+    // upward: the row rises by what Ownership's arm gained, so its seat (the
+    // lowest thing on screen) stays where it always was — 10px from the
+    // bottom of a phone otherwise. The jaw reaches less far down than the
+    // resting tree, so today this is 0 and Purpose holds its height.
+    const openedLift = Math.max(0, REST_Y - L.major * 1.1);
+    root.style.setProperty('--purpose-rail-lift', `${(L.purposeLift * navPoseU + openedLift).toFixed(3)}px`);
     root.style.setProperty('--purpose-tree-x', `${treeX.toFixed(3)}px`);
-    root.style.setProperty('--purpose-junction-x', `${junctionX.toFixed(3)}px`);
     root.style.setProperty('--purpose-tree-opacity', treeU.toFixed(5));
     root.style.setProperty('--purpose-tree-blur', `${(3 * (1 - treeU)).toFixed(3)}px`);
-    root.style.setProperty('--purpose-trunk-u', trunkU.toFixed(5));
-    root.style.setProperty('--purpose-trunk-length', `${trunkLength.toFixed(3)}px`);
-    root.style.setProperty('--purpose-reach-u', reachU.toFixed(5));
-    root.style.setProperty('--purpose-reach-start-x', `${reachStartX.toFixed(3)}px`);
-    root.style.setProperty('--purpose-reach-length', `${reachLength.toFixed(3)}px`);
-    root.style.setProperty('--purpose-connector-start-y', `${connectorStartY.toFixed(3)}px`);
-    root.style.setProperty('--purpose-split-y', `${splitY.toFixed(3)}px`);
-    root.style.setProperty('--purpose-child-top-y', `${childTopY.toFixed(3)}px`);
-    root.style.setProperty('--purpose-branch-origin-y', `${(-childDrop).toFixed(3)}px`);
-    root.style.setProperty(
-      '--purpose-active-node-lift',
-      `${(ELBOW_LIFT_PX * treeU).toFixed(3)}px`,
-    );
     root.style.setProperty('--purpose-fork-u', forkU.toFixed(5));
-    root.style.setProperty('--purpose-branch-start', `${connectorAir.toFixed(3)}px`);
-    root.style.setProperty('--purpose-branch-length', `${branchLength.toFixed(3)}px`);
-    root.style.setProperty('--purpose-branch-angle', `${branchAngle.toFixed(4)}deg`);
+    root.style.setProperty('--purpose-branch-start', `${(ringR + connectorAir).toFixed(3)}px`);
+    root.style.setProperty('--purpose-ownership-x', `${ownershipAt.x.toFixed(3)}px`);
+    root.style.setProperty('--purpose-ownership-y', `${ownershipAt.y.toFixed(3)}px`);
+    root.style.setProperty('--purpose-manifesto-x', `${manifestoAt.x.toFixed(3)}px`);
+    root.style.setProperty('--purpose-manifesto-y', `${manifestoAt.y.toFixed(3)}px`);
+    root.style.setProperty('--purpose-ownership-angle', `${ownershipArm.angle.toFixed(4)}deg`);
+    root.style.setProperty('--purpose-ownership-length', `${ownershipArm.length.toFixed(3)}px`);
+    root.style.setProperty('--purpose-manifesto-angle', `${manifestoArm.angle.toFixed(4)}deg`);
+    root.style.setProperty('--purpose-manifesto-length', `${manifestoArm.length.toFixed(3)}px`);
     root.style.setProperty('--purpose-child-u', childU.toFixed(5));
     root.style.setProperty('--purpose-child-scale', childScale.toFixed(5));
     root.style.setProperty('--purpose-tree-scale', treeScale.toFixed(5));
     root.style.setProperty('--purpose-parent-scale', treeScale.toFixed(5));
-    root.style.setProperty('--purpose-child-gap', `${childGap.toFixed(3)}px`);
-    root.style.setProperty('--purpose-child-shift-x', `${(childX * (1 - childU)).toFixed(3)}px`);
-    root.style.setProperty('--purpose-child-shift-y', `${(-22 * (1 - childU)).toFixed(3)}px`);
-    root.style.setProperty('--purpose-mark-clip-radius', `${(50 * childU).toFixed(3)}%`);
+    root.style.setProperty('--purpose-mark-clip-radius', '50%');
+    // hidden while under Purpose, in view once clear of its ring (a child's
+    // centre at 2 rings' radius has its edge just touching Purpose's)
+    const childReveal = (c) => {
+      const k = Math.max(0, Math.min(1, (Math.hypot(c.x, c.y) - ringR * 0.6) / (ringR * 1.4)));
+      return (k * k * (3 - 2 * k)).toFixed(5);
+    };
+    root.style.setProperty('--purpose-ownership-reveal', childReveal(ownershipAt));
+    root.style.setProperty('--purpose-manifesto-reveal', childReveal(manifestoAt));
+    const branchDot = manifestoOpen || !!manifestoTicket || manifestoU > 0.001;
     const dedicatedIndicator = selectedChapterId === 'owned'
       || (flight && chapterAt(flight.fromP).id === 'owned')
-      || ownershipU > 0.001;
-    /* Pace the dot by the three visible path lengths. Its horizontal leg is
-       the moving Purpose root above; it then follows the Ownership ray
-       through the icon centre and takes the standard vertical label-depth
-       leg to its resting seat. */
-    /* The complete tree grows 10% at settled Ownership, but the selected dot
-       is navigation chrome and must keep Inspire's exact screen-space offset
-       below its icon. Divide only that icon-to-dot leg by the tree scale so
-       the painted distance remains L.major / 2 + 26 at every phase. */
-    const indicatorEndY = childTopY + L.major / 2 + (L.major / 2 + 26) / treeScale;
-    const ownershipIconY = childTopY + L.major / 2;
-    const indicatorX = ownershipU <= indicatorJunctionAt
-      ? 0
-      : ownershipU <= indicatorIconAt
-        ? junctionX + childX * indicatorDiagonalU
-        : junctionX + childX;
-    const indicatorY = ownershipU <= indicatorJunctionAt
-      ? splitY
-      : ownershipU <= indicatorIconAt
-        ? splitY + branchDrop * indicatorDiagonalU
-        : ownershipIconY + (indicatorEndY - ownershipIconY) * indicatorVerticalU;
-    const indicatorVisibility = railOwnershipIndicatorVisibility({
-      diagonal: indicatorDiagonalU,
-      vertical: indicatorVerticalU,
-    });
+      || ownershipU > 0.001 || branchDot;
+    // the row's own node yields to the branch dot (as it does to Ownership's
+    // through the handoff classes), so exactly one point is ever travelling
+    root.classList.toggle('j-rail-branch-dot', branchDot);
     root.style.setProperty(
       '--purpose-indicator-opacity',
       (dedicatedIndicator ? treeU * indicatorVisibility : 0).toFixed(5),
@@ -2587,8 +2708,8 @@ export function createRail({ onNav } = {}) {
         width: L.width,
         phase: horizontalGatherU,
       });
-      slot.li.style.setProperty('--purpose-gather-x', `${gatherX.toFixed(3)}px`);
-      const gatheredAway = slot.id !== 'final' && ownershipU >= 0.9999;
+      slot.li.style.setProperty('--purpose-gather-x', `${(gatherX + groupShift).toFixed(3)}px`);
+      const gatheredAway = slot.id !== 'final' && gatherU >= 0.9999;
       slot.li.style.visibility = gatheredAway ? 'hidden' : '';
       slot.item.inert = gatheredAway;
       slot.item.setAttribute('aria-hidden', String(gatheredAway));
@@ -2819,8 +2940,12 @@ export function createRail({ onNav } = {}) {
     // rail's own aria-current and the panel's. The panel follows `now`'s
     // truth, not `active`'s, because it is the one surface that can name
     // the epilogue — Owned -> Final changes it without changing `active`.
-    if (nowNext !== semanticId) {
-      semanticId = nowNext;
+    // Manifesto is not on the route, so p cannot name it; while its page is
+    // open it is the current entry (the row's own item says so in
+    // setManifesto) and the epilogue is its parent rather than the page.
+    const semanticNow = manifestoOpen ? 'manifesto' : nowNext;
+    if (semanticNow !== semanticId) {
+      semanticId = semanticNow;
       for (const s of slots) {
         if (s.id === semanticId) s.item.setAttribute('aria-current', 'true');
         else s.item.removeAttribute('aria-current');
@@ -2883,6 +3008,23 @@ export function createRail({ onNav } = {}) {
     root, menu, update, releaseModal, reveal, setHeroEase,
     cueNavigation, stopNavigationCue,
     setOnNav(fn) { navigate = typeof fn === 'function' ? fn : () => {}; },
+    /** Whether the Manifesto is the open page, and the ticket (phase 0..1,
+     *  mutated in place, compared by identity) the row travels on while it
+     *  goes to or from there without a journey flight. */
+    /** The camera's climb into the Manifesto, 0..1, each frame it is under
+     *  way; null when there is none to report (at rest the open page's dot
+     *  is home). */
+    setManifestoArrive(u) {
+      manifestoArriveInput = u === null || u === undefined ? null
+        : Math.max(0, Math.min(1, Number(u) || 0));
+    },
+    setManifesto(open, ticket = null) {
+      manifestoOpen = !!open;
+      manifestoTicket = ticket || null;
+      if (manifestoOpen) manifestoItem.setAttribute('aria-current', 'page');
+      else manifestoItem.removeAttribute('aria-current');
+      manifestoItem.setAttribute('aria-label', manifestoOpen ? 'Manifesto' : 'Open Manifesto');
+    },
     /** QA */
     get menuOpen() { return menuIsOpen; },
     get expanded() { return expanded(); },

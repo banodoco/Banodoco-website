@@ -160,10 +160,20 @@ export const BAKEDUMP = _qs.get('bakedump') === '1'; // boolean
 const _pr = parseFloat(_qs.get('pr'));
 export const PIN_PR = Number.isFinite(_pr) && _pr > 0 ? Math.min(_pr, 3) : null; // number | null
 
+/** ?prelude=main — draw the load prelude (organism/hero-spores.js) on the
+ *  page's own thread instead of its worker, for an A/B of the off-thread
+ *  path. Any other value, or none, leaves the normal choice. */
+export const PRELUDE_THREAD = _qs.get('prelude'); // string | null
+
 /** ?notaa=<truthy, substring match> — disable the TAA accumulation pass,
  *  for A/B measuring its cost/quality. Read by: organism/organism.js.
  *  QA-only. SUBSTRING MATCH, not a parsed key (see note at bottom). */
 export const NOTAA = _search.includes('notaa'); // boolean
+
+/** ?taaclassic — the accumulation's original plain history blend (no
+ *  neighbourhood clamp, no rejection), for A/B against the moving-spore fix
+ *  in organism/organism.js's TemporalAccumulatePass. */
+export const TAA_CLASSIC = _qs.has('taaclassic'); // boolean
 
 /** ?nofade=<truthy, substring match> — disable the ground/gill coverage
  *  fade shader term, for A/B measuring it. Read by: organism/organism.js.

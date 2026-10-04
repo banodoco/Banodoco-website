@@ -67,7 +67,11 @@ export function purposeNavPocket({ width, height }) {
        other two simply get more margin. Shot against y100/hh96 at 1440x900:
        indistinguishable on the desktop frame, which is what makes the extra
        coverage free. */
-    y: Math.min(96, height * 0.135),
+    /* RE-SEATED 96 -> 114 and 104 -> 126 (2026-10-04): the Purpose row sits
+       lower now (rail-geometry purposeLift 66 -> 34) and its fork is one arm
+       up (Manifesto, word above) and one down (Ownership, word below), so
+       the absence is centred nearer the row and reaches both ways. */
+    y: Math.min(114, height * 0.135),
     /* 170 -> 205: the instrument spans 356px at every laptop size and the old
        ellipse spanned 340, so its two ends overhung the absence by 8px each —
        which is precisely where the near-vertical arteries beside the Purpose
@@ -77,7 +81,7 @@ export function purposeNavPocket({ width, height }) {
        width * 0.35 branch is untouched and still governs every frame under
        586px, so the phone ellipse is the same width it was. */
     halfWidth: Math.min(205, width * 0.35),
-    halfHeight: Math.min(104, height * 0.135),
+    halfHeight: Math.min(126, height * 0.15),
   };
 }
 

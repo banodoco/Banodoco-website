@@ -661,7 +661,7 @@ const CAMERA_ROOTS = ['journey', 'organism/furniture.js', 'main.js'];
 const SCANNED = jsFilesUnder(CAMERA_ROOTS);
 const NAMING_CAMERA = SCANNED.filter((f) => /\bcamera\b/.test(code(read(f))));
 
-pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in code: the design\'s eleven, plus the TWO publication owners whose whole job is to name it once',
+pin('C5', 'E-B3 — the FILE-level allow-list. Fifteen files name the camera in code: the existing owners plus the Manifesto branch camera handoff',
   (i) => [i.naming, i.naming.length, i.scanned.length,
     i.naming.includes('main.js'), i.naming.includes('organism/furniture.js')],
   { naming: NAMING_CAMERA, scanned: SCANNED },
@@ -670,7 +670,7 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
     'journey/chapters/final/index.js', 'journey/chapters/final/interact.js',
     'journey/chapters/inspire/index.js', 'journey/chapters/owned/index.js',
     'journey/director.js', 'journey/frame/publication.js', 'journey/journey.js',
-    'journey/lens.js', 'journey/seams.js', 'journey/ui.js',
+    'journey/lens.js', 'journey/manifesto/branch.js', 'journey/seams.js', 'journey/ui.js',
     'journey/ui/frame-projection.js'],
     /* RE-BASELINED 103 -> 104 by order J04e, 2026-08-22.
        WAS (pre-J04e): 12, 103, false, false.
@@ -862,13 +862,16 @@ pin('C5', 'E-B3 — the FILE-level allow-list. Thirteen files name the camera in
        It names NO camera in code — it reads one geometry attribute off a
        handle it is given (`sceneApi.groups.heroField`) and multiplies it, and
        it holds no pose, no projection and no THREE object — so the
-       fourteen-file naming allow-list above and both exclusion booleans are
+       fifteen-file naming allow-list above and both exclusion booleans are
        BYTE-IDENTICAL. Only the disk-derived scan cardinality moved, by the
        one accepted file, which is the number this pin carries precisely so
        that a scan which quietly stopped reading files reports a shrunken
        denominator instead of a clean list. */
-    14, 129, false, false],
-  'boundaries.md section B.7 pins 11 and the two publication owners are named. main.js and organism/furniture.js are in the SCANNED roots and in neither list — section B.6a\'s reclassification, and the scan is what keeps it true. The scanned cardinality is pinned beside the hits so a scan that read nothing reports 0/0 rather than a clean 12');
+    /* RE-BASELINED 129 -> 130 by the intro performance order: journey/ui/
+       logo-morph.js is a new scanned module and does not name the camera. */
+    // Manifesto pose.js adds one pure module; camera owner files are unchanged.
+    15, 133, false, false],
+  'boundaries.md section B.7 pins the camera-owning files, including the Manifesto branch handoff. main.js and organism/furniture.js are in the SCANNED roots and in neither list — section B.6a\'s reclassification, and the scan is what keeps it true. The scanned cardinality is pinned beside the hits so a scan that read nothing reports 0/0 rather than a clean allow-list');
 
 pin('C6', 'D46 — the camera scan DOES see a code mention and does NOT see a prose one, which is the whole difference between 11 and the raw grep\'s 44',
   (i) => [/\bcamera\b/.test(i.code('const c = sceneApi.camera;')),

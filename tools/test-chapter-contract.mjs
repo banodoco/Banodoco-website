@@ -2130,9 +2130,7 @@ check('T3 [static ratchet] journey/journey.js names no chapter inside applyFrame
      a ROW rather than going unnoticed, and so that a SECOND one cannot appear
      quietly — both of which the text alone still detects. */
   const namedElsewhere = siteSet(files[0], codeEmptyStrings(raw), (l) => /chapters\.(?:mission|inspire|connect|owned|final)/.test(l), { withLine: false });
-  assert.deepEqual(A(namedElsewhere), [
-    'journey/journey.js :: const portraits = chapters.owned && chapters.owned.portraits;',
-  ], 'exactly one named-chapter reach survives in journey.js, and it is prepareGpu\'s');
+  assert.deepEqual(A(namedElsewhere), [], 'journey.js keeps no named-chapter reach outside the capability seam');
 
   /* DISTINCTNESS, because dropping the line component is only safe while the
      four texts stay distinct. Two rows that became textually equal would
@@ -2157,8 +2155,8 @@ check('T3 [static ratchet] journey/journey.js names no chapter inside applyFrame
      `pickChapterFocus` and `chapters.<id>` — and be keyed identically into
      both sets, so the four rows would silently become three reaches. */
   const keyedRows = [...focusSites, ...namedElsewhere];
-  assert.equal(A(keyedRows.length), 4,
-    'four rows are keyed over journey.js — cardinality against the subject, so a blind scan reads 0');
+  assert.equal(A(keyedRows.length), 3,
+    'three rows are keyed over journey.js — cardinality against the subject, so a blind scan reads 0');
   assert.equal(A(new Set(keyedRows).size), keyedRows.length,
     'and the rows are textually DISTINCT, so keying on text alone cannot merge two reaches into one');
 

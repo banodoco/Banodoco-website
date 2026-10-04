@@ -269,6 +269,21 @@ const RECEIVERS = {
     'assert.match': A2,
     'assert.ok': AOK,
   },
+  /* Intro performance regressions use plain node:assert receivers so the
+     gates exercise the shipped handoff and preparation seams directly. */
+  'tools/test-hero-spore-cutoff.mjs': {
+    'assert.equal': A2,
+    'assert.deepEqual': A2,
+  },
+  'tools/test-intro-readiness.mjs': {
+    'assert.equal': A2,
+    'assert.deepEqual': A2,
+    'assert.rejects': A2,
+  },
+  'tools/test-hero-handoff.mjs': {
+    'assert.equal': A2,
+    'assert.deepEqual': A2,
+  },
   'tools/test-card-warming.mjs': { check: CHECKC },
   /* Wired into the gate by U01c, 2026-08-22 — U01b's suite by transfer, and
      U01c's own. Both declare `check(condition, msg)`: the predicate is
@@ -292,6 +307,7 @@ const RECEIVERS = {
     'assert.deepEqual': A2,
     'assert.ok': AOK,
   },
+  'tools/test-manifesto-motion.mjs': { 'assert.equal': A2, 'assert.deepEqual': A2, 'assert.ok': AOK },
   'tools/test-discord-card.mjs': { check: CHECKC },
   'tools/test-detail-close-focus.mjs': { check: CHECKP3 },
   'tools/test-ui-lifecycle.mjs': { 'L.same': SAME, pin: PIN },
@@ -710,8 +726,10 @@ L.same('AP1b', 'D45 — the gated set this sweep derived from package.json, as a
   /* RE-BASELINED 2026-08-27 for the Purpose/Ownership rail handoff contract,
      also wired through test:unit and declared above. */
   /* Hotspot departure adds one gated suite and, once declared above, one
-     scanned subject. The single explicit unscannable suite is unchanged. */
-  [GATED.length, SUBJECTS.length, Object.keys(UNSCANNABLE).length], [54, 53, 1],
+     scanned subject. The intro performance order adds three more gated
+     suites and three scanned subjects; the single explicit unscannable suite
+     is unchanged. */
+  [GATED.length, SUBJECTS.length, Object.keys(UNSCANNABLE).length], [58, 57, 1],
   'derived by reading test:unit + test:contracts + test:static, not hand-listed');
 pin('AP2', 'D46 — every scanned suite reached at least one assertion call site (a ZERO is a rotted receiver declaration, and zero is also the passing answer)',
   (i) => Object.keys(i.sources).filter((f) => sitesOf({ src: i.sources[f], recv: i.recv[f] }) === 0),
@@ -1223,6 +1241,10 @@ pin('AP16', 'D46 — THE STATED LIMIT AS DATA: the declared receivers this deriv
     'tools/test-detail-shell-monotone.mjs :: assert.ok',
     'tools/test-discord-card.mjs :: check',
     'tools/test-error-classes.mjs :: check',
+    'tools/test-hero-handoff.mjs :: assert.deepEqual',
+    'tools/test-hero-handoff.mjs :: assert.equal',
+    'tools/test-hero-spore-cutoff.mjs :: assert.deepEqual',
+    'tools/test-hero-spore-cutoff.mjs :: assert.equal',
     'tools/test-hotspot-departure.mjs :: assert.deepEqual',
     'tools/test-hotspot-departure.mjs :: assert.equal',
     'tools/test-hotspot-departure.mjs :: assert.ok',
@@ -1233,6 +1255,12 @@ pin('AP16', 'D46 — THE STATED LIMIT AS DATA: the declared receivers this deriv
     'tools/test-intro-lifecycle.mjs :: assert.notDeepEqual',
     'tools/test-intro-lifecycle.mjs :: assert.notEqual',
     'tools/test-intro-lifecycle.mjs :: assert.ok',
+    'tools/test-intro-readiness.mjs :: assert.deepEqual',
+    'tools/test-intro-readiness.mjs :: assert.equal',
+    'tools/test-intro-readiness.mjs :: assert.rejects',
+    'tools/test-manifesto-motion.mjs :: assert.deepEqual',
+    'tools/test-manifesto-motion.mjs :: assert.equal',
+    'tools/test-manifesto-motion.mjs :: assert.ok',
     /* no-scroll navigation, 2026-08-27 — the focused transport checks use
        top-level node:assert calls whose descriptions live in the message
        argument, so this derivation deliberately cannot recover their ids. */

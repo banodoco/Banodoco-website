@@ -118,7 +118,7 @@ import {
   makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, REVEAL_W,
   BATCH_LINE,
 } from './world.js';
-import { makeGlowTexture, capUnderPt } from '../../anatomy.js';
+import { makeGlowTexture, capUnderPt, CAP_Y, CAP_R } from '../../anatomy.js';
 import { scaleFor } from './species.js';
 import { bodyVariation, varyPoint } from './variation.js';
 import { isBaked, geometry, payload } from '../../lib/baked.js';
@@ -708,7 +708,13 @@ export function createFinalSky(sceneApi, uniforms) {
   const treeMat = makeStrandMat(uniforms, 0.7);
   const treeLines = new THREE.LineSegments(baked ? baked.g.trees : trees.geo(), treeMat);
   treeLines.frustumCulled = false;
-  group.add(treeLines);
+  /* THE TREES ARE RETIRED (2026-10-04 — Hannah: from the orbital view they
+     "look like toy trees... mess up the whole proportion relative to the
+     mushrooms", and a forest contradicts a picture of one mycelial network).
+     Their job — a far plane that makes the epilogue feel alive and full —
+     passes to the horizon plumes below. The geometry is still BUILT, so
+     every draw the shared `rand` makes after it (the mist) and the bake
+     payload's `trees` key are untouched; it is only never drawn. */
   counts.treeSegs = trees.segCount;
 
   /* ================================================================
@@ -786,6 +792,145 @@ export function createFinalSky(sceneApi, uniforms) {
       addSprite(lx, y, lz, 26, 8, 0.44, 0.042, drift);
     }
   }
+  /* ================================================================
+     4. Far plumes — the field breathing on the skyline
+     ================================================================
+     Columns of spores rising off the epilogue's FARTHEST field bodies, above
+     the field's skyline, where the trees used to stand. They are real
+     mushrooms in both views — the Purpose rest sees them on the horizon,
+     and the Manifesto's colony draws the same seats from above — and every
+     column is GATED ON ITS OWN BODY'S REVEAL, the same threshold pair (both
+     deals, uRevIn) the ring members' plumes read. A column can therefore
+     never stand over a mushroom that has not arrived, nor outlive one that
+     has gone (2026-10-04 — Hannah: spores showing "before or after that
+     mushroom has come or gone... feels deeply wrong").
+     Same substance, same shaders, same live uniforms; only the air differs
+     (below), and the dots are larger because they are read from 20-40
+     units away. Own rng stream, so nothing above moves. */
+  function addHorizonPlumes(bodies) {
+    const hr = makeRng(0x9107e);
+    const head = (REST.headingDeg * Math.PI) / 180;
+    const relOf = (b) => {
+      const a = Math.atan2(b.z - REST.z, b.x - REST.x) - head;
+      return Math.atan2(Math.sin(a), Math.cos(a));
+    };
+    const distOf = (b) => Math.hypot(b.x - REST.x, b.z - REST.z);
+    // the field's own bodies (seats), farthest first, across the frame but
+    // never in the hero's sky sector or over the copy's frame-left
+    const sources = bodies
+      .filter(b => b.tier >= 4 && Number.isFinite(b.reveal))
+      .filter(b => { const rel = relOf(b); return rel > -0.22 && rel < 0.85 && !(rel > 0.06 && rel < 0.34); })
+      .sort((a, b) => distOf(b) - distOf(a))
+      .slice(0, 12);
+    /* SHED THE WAY A GILLED MUSHROOM SHEDS (2026-10-04 — Hannah: "is that
+       realistic now? In terms of how they actually spread?", then "keep
+       going"). These far bodies used to send up 300-dot columns, which no
+       mushroom does: spores DROP from the gills at their terminal speed,
+       drift a little downwind and settle — the faint print at a body's
+       foot — and only a minority, caught in the cap's own small updraft,
+       are taken by the wind across the field. The same law as the Manifesto
+       colony's shedders (manifesto/colony.js), so the field and the colony
+       around it breathe alike from any height. Each dot is gated on its
+       body's own kindle thresholds, as before: it can neither precede nor
+       outlive its mushroom. */
+    const FALL = 70, LOFT = 40;
+    const N = sources.length * (FALL + LOFT);
+    const position = new Float32Array(N * 3), aShed = new Float32Array(N * 4);
+    const aGate = new Float32Array(N * 3), aBody = new Float32Array(N);
+    let i = 0;
+    sources.forEach((b) => {
+      for (let k = 0; k < FALL + LOFT; k++, i++) {
+        position[i * 3] = b.x; position[i * 3 + 1] = b.gy; position[i * 3 + 2] = b.z;
+        const loft = k >= FALL;
+        aShed[i * 4] = hr() * 1000;                                   // seed
+        aShed[i * 4 + 1] = loft ? 60 + hr() * 50 : 20 + hr() * 14;   // period
+        aShed[i * 4 + 2] = hr();                                      // phase
+        aShed[i * 4 + 3] = loft ? 1 : 0;                              // cohort
+        aBody[i] = b.s;
+        // the body's own kindle thresholds (authored deal, arrival deal)
+        aGate[i * 3] = b.reveal; aGate[i * 3 + 1] = 0; aGate[i * 3 + 2] = b.revealIn ?? b.reveal;
+      }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+    g.setAttribute('aShed', new THREE.BufferAttribute(aShed, 4));
+    g.setAttribute('aBody', new THREE.BufferAttribute(aBody, 1));
+    g.setAttribute('aGate', new THREE.BufferAttribute(aGate, 3));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: uniforms.uTime, uPull: uniforms.uPull, uRevIn: uniforms.uRevIn,
+        uAmount: uniforms.uAmount, uFogNear: uniforms.uFogNear, uFogFar: uniforms.uFogFar,
+      },
+      vertexShader: /* glsl */ `
+        attribute vec4 aShed;    // seed, period, phase, cohort (0 drop, 1 lofted)
+        attribute float aBody;   // the owner's scale
+        attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
+        uniform float uTime, uPull, uRevIn, uFogNear, uFogFar;
+        varying float vAlpha;
+        varying vec3 vColor;
+        float hash(float n) { return fract(sin(n) * 43758.5453); }
+        void main() {
+          float th = uRevIn > 0.5 ? aGate.z : aGate.x;
+          float reveal = smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
+          float t = fract(uTime / aShed.y + aShed.z);
+          float h1 = hash(aShed.x * 12.9898), h2 = hash(aShed.x * 78.233 + 1.), h3 = hash(aShed.x * 45.164 + 2.);
+          float s = aBody;
+          vec3 wind = normalize(vec3(${BREEZE.x.toFixed(4)}, 0.0, ${BREEZE.z.toFixed(4)}));
+          vec3 side = vec3(-wind.z, 0., wind.x);
+          float ang = h2 * 6.2832, rr = ${CAP_R.toFixed(2)} * s * (0.18 + 0.72 * sqrt(h1));
+          vec3 p = position + vec3(cos(ang) * rr, ${CAP_Y.toFixed(2)} * s * 0.80, sin(ang) * rr);
+          float fall = p.y - position.y;
+          float life, glow;
+          if (aShed.w < 0.5) {
+            float tf = 0.30;
+            float k = clamp(t / tf, 0., 1.);
+            p.y -= fall * k;
+            p += wind * (0.25 + 1.6 * h3) * s * 3.0 * k + side * (h1 - 0.5) * 1.2 * s * k;
+            p.y = max(p.y, position.y + 0.03);
+            glow = mix(1.0, 0.45, step(tf, t));
+            life = smoothstep(0., 0.04, t) * (1. - smoothstep(0.55, 1., t));
+          } else {
+            float lift = smoothstep(0., 0.12, t);
+            p.y += (0.4 + 0.8 * h1) * s * 3.0 * lift;
+            float carry = smoothstep(0.06, 1., t);
+            p += wind * (8. + 10. * h3) * carry + vec3(0., (1.0 + 1.8 * h2) * carry, 0.);
+            p += (side * sin(uTime * 0.07 + aShed.x) + vec3(0., 0.4 * cos(uTime * 0.05 + aShed.x * 1.7), 0.)) * 1.2 * carry;
+            life = smoothstep(0., 0.06, t) * (1. - smoothstep(0.65, 1., t));
+            glow = 0.75;
+          }
+          vec4 mv = modelViewMatrix * vec4(p, 1.);
+          float depth = -mv.z;
+          float fogF = clamp((uFogFar - depth) / max(1., uFogFar - uFogNear), 0., 1.);
+          float tw = 0.8 + 0.2 * sin(uTime * 1.4 + aShed.x * 7.);
+          vAlpha = life * glow * reveal * fogF * tw;
+          vColor = mix(vec3(1.0, 0.70, 0.36), vec3(1.0, 0.86, 0.60), h2);
+          // one apparent size at any depth: the colony's pixel band
+          gl_PointSize = clamp(0.22 * 300. / max(depth, 1.), 1.6, 2.8) * mix(1., 0.8, 1. - glow);
+          gl_Position = projectionMatrix * mv;
+          if (vAlpha < 0.002) gl_Position = vec4(2., 2., 2., 1.);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uAmount;
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.;
+          float a = pow(max(0., 1. - d * d), 1.5);
+          gl_FragColor = vec4(vColor * a * vAlpha * uAmount, 1.);
+        }
+      `,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+    });
+    const pts = new THREE.Points(g, mat);
+    pts.frustumCulled = false;
+    group.add(pts);
+    counts.horizonPlumes = sources.length;
+    return pts;
+  }
+
   // Baked: the spore loop and tree emission never ran, so the counts
   // (and the sprite drift/y round-trip) come from the payload (2026-08-17).
   if (baked) Object.assign(counts, baked.counts);
@@ -804,6 +949,7 @@ export function createFinalSky(sceneApi, uniforms) {
       treeSegs: counts.treeSegs,
       sprites: sprites.map(s => ({ y: s.spr.position.y, drift: s.drift })),
     },
+    addHorizonPlumes,
     /** sprite fade + slow lateral mist drift (sprites sit outside the
      *  shared shader uniforms) */
     update(t, amount) {

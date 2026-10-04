@@ -1043,10 +1043,30 @@ pin('D1', 'THE ANTECEDENT: every module in the shipped graph has one bare specif
        relative `../hero-field.js`. So both cardinalities move together by
        exactly one, and BOTH INVARIANT SETS STAY EMPTY — which is the
        property this row actually asserts. */
-    referenced: 143,
+    /* RE-BASELINED 143 -> 144 and 142 -> 143 by the intro performance order:
+       journey/ui/logo-morph.js adds one imported graph member and one scanned
+       module, with no query-busted or multi-form specifier.
+
+       RE-BASELINED 144 -> 145 and 143 -> 144 for the Manifesto branch:
+       journey/manifesto/branch.js is one imported graph member and one
+       scanned module, also with a single bare specifier form. */
+    // Manifesto pose.js: one canonical import, no additional evaluation form.
+    /* RE-BASELINED scanned 146 -> 147 (referenced unchanged at 147) by the
+       zero-lag load order, 2026-10-04: organism/hero-spores-worker.js, the
+       load prelude's worker entry. It is one more scanned module but no new
+       IMPORT specifier — the page reaches it as `new Worker(new URL(...))`,
+       and inside the worker it imports ./hero-spores.js, which the worker
+       evaluates in its own realm (a second global, not a second evaluation
+       in this page). Both invariant sets stay empty. */
+    /* RE-BASELINED 147 -> 148 (both) by the same work, 2026-10-04:
+       journey/boot/hero-gpu.js, the hero's own GPU warm-up, split out of
+       journey.js so the growth stops waiting behind the whole journey. One
+       imported graph member, reached by one bare specifier form from
+       handoff.js and journey.js alike. */
+    referenced: 148,
     multiForm: [],
     cacheBusted: [],
-    scanned: 142,
+    scanned: 148,
   },
   'the empty multiForm set is a zero over a DISCOVERED world, not over a string: `referenced` and `scanned` are pinned beside it so a scan that read nothing reports 0/0 rather than a clean empty set (D102)');
 

@@ -167,7 +167,9 @@ const POCKET_EDGE = 1.08;
    reach. rail.js builds the fork out of `major` (ring, drop, ring) and the
    labels hang under it; this is that depth expressed against the same
    number, so it tracks the bands instead of being a desktop pixel. */
-const forkReach = (major) => 2 * major + 22;
+// (2026-10-04) the fork is one arm down (Ownership: 1.1 major, half a hit
+// box, its word) and one arm up (Manifesto, mirrored)
+const forkReach = (major) => 1.6 * major + 16;
 const POCKET_VIEWPORTS = [
   [1366, 768], [1440, 900], [1512, 982], [1600, 1000], [1680, 1050],  // laptops
   [744, 1133], [768, 1024], [820, 1180],                              // tablets
@@ -380,33 +382,29 @@ assert.match(handoffCss,
 assert.match(handoffCss,
   /\.j-rail-purpose-indicator \{[\s\S]*?--purpose-indicator-x[\s\S]*?--purpose-indicator-y[\s\S]*?transition: none;/,
   'the dedicated indicator is positioned directly from camera progress');
+assert.doesNotMatch(handoffCss, /--purpose-(?:trunk|reach|junction|split-y|child-top-y|branch-origin-y|child-gap|child-shift)/,
+  'the old L-pipe (trunk, reach, centred junction) is gone: the arms leave Purpose itself');
 assert.match(handoffCss,
-  /\.j-rail-purpose-tree::before[\s\S]*?purpose-trunk-length[\s\S]*?scaleY\(var\(--purpose-trunk-u[\s\S]*?transform-origin: 50% 0/,
-  'the connector first grows vertically down from Purpose');
+  /\.j-rail \.j-rail-purpose-children \{[\s\S]*?left: 0;[\s\S]*?top: 0;/,
+  'the children are placed in the tree frame, whose origin is Purpose\'s icon centre');
 assert.match(handoffCss,
-  /\.j-rail-purpose-tree::after[\s\S]*?purpose-reach-start-x[\s\S]*?purpose-reach-length[\s\S]*?scaleX\(var\(--purpose-reach-u[\s\S]*?transform-origin: 100% 50%/,
-  'the connector grows left while stopping short of the viewport-centred split');
+  /\.j-rail-purpose-children::before \{[\s\S]*?--purpose-manifesto-length[\s\S]*?rotate\(var\(--purpose-manifesto-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
+  'the Manifesto arm runs from Purpose\'s ring toward Manifesto, after shared air');
 assert.match(handoffCss,
-  /\.j-rail-purpose-children \{[\s\S]*?left: var\(--purpose-junction-x[\s\S]*?translateX\(-50%\)/,
-  'the child pair is anchored symmetrically on the viewport-centred junction');
-assert.match(handoffCss,
-  /\.j-rail-purpose-tree::after[\s\S]*?top: var\(--purpose-split-y[\s\S]*?\.j-rail-purpose-children \{[\s\S]*?top: var\(--purpose-child-top-y/,
-  'the horizontal elbow and compact child pair share one projected vertical frame');
-assert.match(handoffCss,
-  /\.j-rail-purpose-children::before[\s\S]*?purpose-branch-length[\s\S]*?180deg - var\(--purpose-branch-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
-  'the left branch grows diagonally after shared air around the centred split');
-assert.match(handoffCss,
-  /\.j-rail-purpose-children::after[\s\S]*?purpose-branch-length[\s\S]*?rotate\(var\(--purpose-branch-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
-  'the right branch mirrors the left after shared air around the split');
+  /\.j-rail-purpose-children::after \{[\s\S]*?--purpose-ownership-length[\s\S]*?rotate\(var\(--purpose-ownership-angle[\s\S]*?translateX\(var\(--purpose-branch-start[\s\S]*?scaleX\(var\(--purpose-fork-u/,
+  'the Ownership arm runs from Purpose\'s ring toward Ownership, after shared air');
 assert.match(handoffCss,
   /\.j-rail-purpose-child::before \{ content: none !important; \}/,
-  'no stepped child stems remain in the clean angular split');
+  'no stepped child stems remain');
 assert.match(handoffCss,
-  /\.j-rail-slot\.j-rail-purpose-ownership[\s\S]*?purpose-child-shift-x[\s\S]*?purpose-child-scale/,
-  'Ownership translates and scales toward lower-left from the junction');
+  /\.j-rail-purpose-children > \.j-rail-slot\.j-rail-purpose-ownership \{[\s\S]*?--purpose-ownership-x[\s\S]*?--purpose-ownership-y[\s\S]*?purpose-child-scale/,
+  'Ownership is placed by its own centre and grows in place');
 assert.match(handoffCss,
-  /\.j-rail-slot\.j-rail-purpose-manifesto[\s\S]*?purpose-child-shift-x[\s\S]*?purpose-child-scale/,
-  'Manifesto mirrors the growth toward lower-right');
+  /\.j-rail-purpose-children > \.j-rail-slot\.j-rail-purpose-manifesto \{[\s\S]*?--purpose-manifesto-x[\s\S]*?--purpose-manifesto-y[\s\S]*?purpose-child-scale/,
+  'Manifesto is placed by its own centre and grows in place');
+assert.match(handoffCss,
+  /\.j-rail-purpose-manifesto \.j-rail-name,[\s\S]*?top: auto !important;[\s\S]*?bottom: calc\(50% \+ var\(--item-d\) \/ 2 \+ 4px\) !important;/,
+  'the up-branch\'s word sits above its mark');
 assert.match(handoffCss,
   /\.j-rail-purpose-child \.j-rail-mark[\s\S]*?clip-path: circle\(var\(--purpose-mark-clip-radius/,
   'only each drawn child mark is clipped while it opens from the junction');
@@ -425,12 +423,22 @@ assert.match(railSource,
 assert.match(railSource,
   /else \{[\s\S]*?handoffFlight = null;[\s\S]*?handoffVisual = railHandoffRest\(selectedChapterId\);/,
   'after landing, exact semantic rest replaces noisy numeric settling residue');
+// 2026-10-04: beside the row the children keep their half-pitch place toward
+// Connect; once the row has gathered away (inside Ownership or the
+// Manifesto) the arms open into a low, long jaw — reaching further back than
+// they rise — one blend on the gather.
 assert.match(railSource,
-  /const trunkU =[\s\S]*?const reachU =[\s\S]*?const forkU =[\s\S]*?const childU =[\s\S]*?--purpose-child-scale/,
-  'vertical, horizontal, fork and child growth are staged from the same live camera projection');
+  /const OWN_REACH_X = L\.major \* 2\.1;\s*const OWN_REACH_Y = L\.major \* 0\.95;\s*const REST_X = -pitch \/ 2 \+ \(-OWN_REACH_X \+ pitch \/ 2\) \* ownU;\s*const REST_Y = L\.major \* 1\.1 \+ \(OWN_REACH_Y - L\.major \* 1\.1\) \* ownU;[\s\S]*?const childAt = \(side\) => \(\{ x: REST_X \* emerge, y: side \* REST_Y \* emerge \}\);/,
+  'one tree: Manifesto (side -1) above the row, Ownership below it, half a pitch back toward Connect beside the row, opened into a wide low jaw once it gathers');
 assert.match(railSource,
-  /const horizontalGatherU =[\s\S]*?ownershipU \/ indicatorJunctionAt[\s\S]*?const treeX = purposeX \* \(1 - horizontalGatherU\)[\s\S]*?const junctionX = -treeX \/ treeScale[\s\S]*?--purpose-junction-x/,
-  'one path-length-paced horizontal front moves Purpose while the scaled child junction stays viewport-centred');
+  /const openedLift = Math\.max\(0, REST_Y - L\.major \* 1\.1\);[\s\S]*?--purpose-rail-lift'[\s\S]*?\+ openedLift/,
+  'an opened tree that reaches further down is paid upward, so the lowest seat does not move');
+assert.match(railSource,
+  /const groupShift = \(-REST_X \/ 2\) \* horizontalGatherU;[\s\S]*?gatherX \+ groupShift/,
+  'inside a branch the same tree is centred as a group');
+assert.match(railSource,
+  /const horizontalGatherU = gatheredAt > hubAt[\s\S]*?const treeX = purposeX \* \(1 - horizontalGatherU\) \+ groupShift/,
+  'one horizontal front moves Purpose to the centre while the dot rides it');
 assert.doesNotMatch(railSource, /--purpose-row-(?:clip|blur|opacity)/,
   'the camera projector never mutates the shared row surface');
 assert.match(railSource,
@@ -450,7 +458,7 @@ assert.match(railSource,
   /--purpose-gather-open-u.*1 - horizontalGatherU/,
   'Ownership packing publishes the indicator-paced open fraction for connectors');
 assert.match(railSource,
-  /--purpose-peer-open-u'[^\n]*\n[\s\S]*?ownershipU \/ 0\.82/,
+  /--purpose-peer-open-u'[^\n]*\n[\s\S]*?gatherU \/ 0\.82/,
   'non-Purpose peers use an earlier camera-paced fade envelope');
 assert.match(css,
   /\.j-rail\.j-rail-purpose-gathering \.j-rail-list > \.j-rail-slot::after[\s\S]*?scaleX\(var\(--purpose-gather-open-u, 1\)\)/,
@@ -471,16 +479,16 @@ assert.match(railSource,
   /const labelStage = railPurposeLabelStage[\s\S]*?j-rail-purpose-labels-[\s\S]*?--purpose-label-fade/,
   'row label seats and their fade are projected from the same handoff frame');
 assert.match(railSource,
-  /const gatheredAway = slot\.id !== 'final' && ownershipU >= 0\.9999[\s\S]*?slot\.li\.style\.visibility = gatheredAway \? 'hidden' : ''/,
+  /const gatheredAway = slot\.id !== 'final' && gatherU >= 0\.9999[\s\S]*?slot\.li\.style\.visibility = gatheredAway \? 'hidden' : ''/,
   'fully covered peer slots hide only at the exact gather endpoint');
 assert.match(railSource,
-  /j-rail-purpose-gathering', ownershipU > 0\.001/,
+  /j-rail-purpose-gathering', gatherU > 0\.001/,
   'Purpose arrival cannot activate horizontal gathering unless the explicit Ownership phase is nonzero');
 assert.match(railSource,
-  /gatheredAway = slot\.id !== 'final' && ownershipU >= 0\.9999[\s\S]*?slot\.item\.inert = gatheredAway/,
+  /gatheredAway = slot\.id !== 'final' && gatherU >= 0\.9999[\s\S]*?slot\.item\.inert = gatheredAway/,
   'fully absorbed non-Purpose controls leave interaction and accessibility surfaces');
 assert.match(geometrySource,
-  /centreFromBottom: phone \? 70 : tablet \? 84 : 92,[\s\S]*?purposeLift: phone \? 45 \+ PHONE_FINAL_COMPOSITION_LIFT_PX : tablet \? 52 : 66/,
+  /centreFromBottom: phone \? 70 : tablet \? 84 : 92,[\s\S]*?purposeLift: phone \? 10 \+ PHONE_FINAL_COMPOSITION_LIFT_PX : tablet \? 30 : 34/,
   'ordinary chapters keep their established seat while mobile Purpose adds the shared Final composition lift and 5px lower nudge');
 assert.match(geometrySource,
   /return Object\.freeze\(\{[\s\S]*?purposeLift: m\.purposeLift/,
@@ -498,14 +506,33 @@ assert.match(handoffCss,
   /j-rail-handoff-ownership-transit \.j-rail-active-ring,[\s\S]*?opacity: 0 !important/,
   'the ordinary indicator yields immediately while the dedicated Ownership indicator owns transit');
 assert.match(railSource,
-  /connectorAir = L\.connectorAir[\s\S]*?dotRadius = 2\.5[\s\S]*?connectorStartY = L\.minorRingD \/ 2 \+ connectorAir[\s\S]*?ELBOW_LIFT_PX = 8[\s\S]*?splitY = L\.major \/ 2 \+ 26 - ELBOW_LIFT_PX[\s\S]*?dotClearance = dotRadius \+ connectorAir[\s\S]*?trunkLength = Math\.max\(0, splitY - dotClearance - connectorStartY\)[\s\S]*?childDrop = 10[\s\S]*?childTopY = splitY \+ childDrop[\s\S]*?branchDrop = L\.major \/ 2 \+ childDrop[\s\S]*?branchCentreLength = Math\.hypot\(childOffset, branchDrop\)[\s\S]*?childEndClearance = L\.minorRingD \/ 2 \+ connectorAir[\s\S]*?branchLength = Math\.max\([\s\S]*?branchCentreLength - connectorAir - childEndClearance[\s\S]*?indicatorHorizontalLength = Math\.abs\(purposeX\)[\s\S]*?indicatorJunctionAt[\s\S]*?horizontalGatherU[\s\S]*?indicatorDiagonalU[\s\S]*?indicatorVerticalU[\s\S]*?reachStartX = junctionX[\s\S]*?Math\.abs\(junctionX\) - dotClearance[\s\S]*?ownershipIconY = childTopY \+ L\.major \/ 2[\s\S]*?indicatorX = ownershipU <= indicatorJunctionAt[\s\S]*?\? 0[\s\S]*?indicatorY[\s\S]*?--purpose-indicator-x/,
-  'every subtree stroke leaves shared air while the selected dot keeps its continuous travel path');
+  /const HUB_SHARE = 0\.12;[\s\S]*?const horizontalGatherU = gatheredAt > hubAt[\s\S]*?seg\(gatherU, hubAt, gatheredAt\)[\s\S]*?if \(branchU <= hubAt\) \{[\s\S]*?indicatorY = purposeSeatY \* \(1 - seg\(branchU, 0, hubAt\)\);[\s\S]*?\} else if \(branchU <= gatheredAt\) \{[\s\S]*?indicatorX = 0; indicatorY = 0;[\s\S]*?indicatorX = child\.x \* k; indicatorY = child\.y \* k;[\s\S]*?indicatorY = child\.y \+ branchSide \* seatD \* seg\(branchU, iconAt, 1\)/,
+  'the dot enters Purpose quickly, rides its centre while the row gathers, then runs the arm into the child\'s centre');
 assert.match(railSource,
-  /--purpose-active-node-lift'[\s\S]*?ELBOW_LIFT_PX \* treeU/,
-  'the ordinary Purpose dot rises reversibly to the lifted elbow on the same tree coordinate');
+  /let branchU = crossing[\s\S]*?gatheredAt \+ \(1 - gatheredAt\) \* Math\.abs\(ownershipU - manifestoU\)/,
+  'a sibling crossing runs the arms through Purpose\'s centre exactly once');
+// 2026-10-04: the Manifesto side of the route is scaled by the camera's climb
+// (setManifestoArrive), and the cap is held while the page is being left.
+assert.match(railSource,
+  /if \(manifestoOpen\) manifestoArrive = [^\n]*;\s*else if \(manifestoU <= 0\.001\) manifestoArrive = 0;\s*[\s\S]*?if \(branchSide < 0 && branchU > gatheredAt\) \{\s*branchU = gatheredAt \+ \(branchU - gatheredAt\) \* manifestoArrive;/,
+  'the dot climbs to the Manifesto with the camera and leaves from where it was painted');
+// 2026-10-04: every dot rests at its mark's centre, behind it, and is seen
+// only out on the line between marks.
 assert.match(css,
-  /\.j-rail \.j-rail-active-ring \{[\s\S]*?top: calc\(50% \+ var\(--nav-major\) \/ 2 \+ 26px[\s\S]*?- var\(--purpose-active-node-lift, 0px\)\)/,
-  'the ordinary active dot consumes the projected elbow lift instead of jumping at Ownership handoff');
+  /\.j-rail \.j-rail-active-ring \{[\s\S]*?top: 50%;[\s\S]*?z-index: 0;/,
+  'the row dot rides the connectors\' height, beneath the marks');
+assert.match(railSource,
+  /const purposeSeatY = 0;\s*const seatD = 0;/,
+  'the branch dot\'s seats are the marks\' own centres');
+assert.match(railSource,
+  /underMark = Math\.min\(underMark, clearOfMark\(Math\.abs\(ringX - L\.centres\[i\]\), L\.ringDia\[i\] \/ 2\)\)[\s\S]*?ringOpacity \* dockingU \* underMark/,
+  'the row dot is out of sight under every mark it reaches or passes');
+assert.match(railSource,
+  /const UNDER_PURPOSE = 0, UNDER_CHILD = UNDER_PURPOSE;/,
+  'the branch dot is out of sight under every mark');
+assert.equal(
+  new Function(railSource.match(/const DOT_RADIUS = [^;]+;\nfunction clearOfMark[\s\S]*?\n\}/)[0] + '; return clearOfMark(0, 12);')(),
+  0, 'a dot at a mark\'s centre is fully hidden');
 assert.doesNotMatch(railSource,
   /indicatorSplitAt|indicatorBranchU|indicatorTurnAt/,
   'the dedicated dot has no shortcut or legacy elbow jump path');
@@ -519,8 +546,8 @@ assert.match(css,
   /\.j-rail \.j-rail-slot:is\(\.j-rail-major, \.j-rail-minor\)\.active \.j-rail-mark::after \{[\s\S]*?border-width: 1px;[\s\S]*?rgba\(248, 208, 112, 0\.95\)[\s\S]*?0 0 7px/,
   'the shared active class owns Ownership and Inspire ring weight/glow parity');
 assert.match(railSource,
-  /ownershipGrowthX[\s\S]*?treeScale = 1 \+ 0\.10 \* ownershipGrowth[\s\S]*?--purpose-tree-scale/,
-  'the complete Purpose subtree grows modestly and continuously near settled Ownership');
+  /const treeScale = 1;[\s\S]*?--purpose-tree-scale/,
+  'the Purpose subtree keeps its size inside a branch');
 assert.match(css,
   /\.j-rail-slot\.j-rail-purpose-child \.j-rail-name,[\s\S]*?font-size: 0\.76rem !important;[\s\S]*?letter-spacing: 0\.02em !important/,
   'Ownership and Manifesto labels use the same type specimen as Inspire');
@@ -537,7 +564,7 @@ assert.match(canopySource,
   /uniforms\.uNavPocketPx\.value\.set\([\s\S]*?pocket\.x \* dpr/,
   'the shared Final line pocket follows responsive viewport and device pixel ratio');
 assert.match(railSource,
-  /--nav-scrim-extra'[\s\S]*?340 \* \(1 - ownershipU\)[\s\S]*?--nav-scrim-height'[\s\S]*?260 - 20 \* ownershipU/,
+  /--nav-scrim-extra'[\s\S]*?340 \* \(1 - gatherU\)[\s\S]*?--nav-scrim-height'[\s\S]*?260 - 20 \* gatherU/,
   'the broad row scrim gathers camera-synchronously to the compact Ownership subtree');
 assert.match(css,
   /width: calc\(100% \+ var\(--nav-scrim-extra, 340px\)\);[\s\S]*?height: var\(--nav-scrim-height, 260px\);/,
@@ -576,17 +603,14 @@ assert.match(railSource,
   'Manifesto uses Purpose\'s minor visible circle/icon scale');
 
 assert.match(railSource,
-  /const manifestoItem = el\('span', 'j-rail-item j-rail-soon-item'\)/,
-  'Manifesto is an unavailable span, not a link');
+  /const manifestoItem = el\('button', 'j-rail-item j-rail-manifesto-item'\)[\s\S]*?aria-label', 'Open Manifesto'[\s\S]*?navigate\('manifesto'\)/,
+  'Manifesto is a keyboard-operable branch action');
 assert.match(railSource,
   /const manifestoBase = GLYPH_COLOURS\.future[\s\S]*?--glyph-r'[\s\S]*?--glyph-g'[\s\S]*?--glyph-b'[\s\S]*?--glyph-alpha'[\s\S]*?--glyph-glow'/,
   'Manifesto has explicit warm resting ink before hover');
-assert.match(railSource,
-  /manifestoItem[\s\S]*?pointerType !== 'touch'[\s\S]*?manifestoSlot\.classList\.add\('j-rail-note'\)[\s\S]*?1600/,
-  'Manifesto exposes its Soon answer briefly after a deliberate touch');
 assert.match(css,
-  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?j-rail-purpose-labels-above[\s\S]*?opacity: 0 !important;[\s\S]*?j-rail-purpose-manifesto\.j-rail-note \.j-rail-soon-note[\s\S]*?opacity: 1 !important;[\s\S]*?j-rail-purpose-manifesto\.j-rail-note \.j-rail-name[\s\S]*?opacity: 0 !important;/,
-  'touch-only Purpose suppresses sticky top-row labels but lets Manifesto answer Soon');
+  /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?j-rail-purpose-labels-above[\s\S]*?opacity: 0 !important;[\s\S]*?j-rail \.j-rail-purpose-manifesto \.j-rail-name[\s\S]*?opacity: 1 !important;/,
+  'touch-only Purpose suppresses sticky top-row labels while Manifesto stays a named control');
 assert.match(css,
   /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?data-layout="mission"[\s\S]*?data-chapter="mission"[\s\S]*?\.j-rail-name[\s\S]*?opacity: 0 !important;/,
   'touch-only Intro cannot retain a synthetic hover label after arrival');
@@ -603,13 +627,13 @@ assert.match(css,
   /--connector-next-item-d: var\(--nav-major\)[\s\S]*?:nth-last-child\(2\)[\s\S]*?--connector-next-item-d: var\(--nav-minor\)[\s\S]*?left: var\(--connector-left,[\s\S]*?var\(--slot-ring-d\) \/ 2[\s\S]*?width: var\(--connector-width,[\s\S]*?var\(--connector-next-ring-d\) \/ 2/,
   'preboot connectors use the same current/next ring-edge geometry as rowFrame');
 assert.match(railSource,
-  /--purpose-scrim-u', navPoseU\.toFixed\(5\)[\s\S]*?--purpose-rail-lift', `\$\{\(L\.purposeLift \* navPoseU\)\.toFixed\(3\)\}px`/,
+  /--purpose-scrim-u', navPoseU\.toFixed\(5\)[\s\S]*?--purpose-rail-lift', `\$\{\(L\.purposeLift \* navPoseU \+ openedLift\)\.toFixed\(3\)\}px`/,
   'Purpose publishes one continuous composition clock for scrim density and rail lift');
 assert.match(css,
   /opacity: calc\(0\.72[\s\S]*?- 0\.16 \* var\(--purpose-scrim-u, 0\)\)[\s\S]*?transform: translate\(-50%,[\s\S]*?var\(--purpose-rail-lift, 0px\)[\s\S]*?rgba\(12, 8, 3, calc\(0\.7 - 0\.08 \* var\(--purpose-scrim-u, 0\)\)\)/,
   'Purpose scrim stays bottom-anchored and fades continuously as its raised tree forms');
-assert.doesNotMatch(railSource, /manifestoItem\.href|navigate\('manifesto'\)/,
-  'Manifesto cannot mint a route');
+assert.match(railSource, /id: 'manifesto'[\s\S]*?action: 'manifesto'/,
+  'the site-map Manifesto item uses the same branch action');
 assert.match(css,
   /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.j-rail \.j-rail-list,[\s\S]*?\.j-rail \.j-rail-purpose-tree,[\s\S]*?\.j-rail \.j-rail-purpose-indicator,[\s\S]*?transition: none !important;/,
   'reduced motion switches the row, subtree and dedicated indicator instantly');

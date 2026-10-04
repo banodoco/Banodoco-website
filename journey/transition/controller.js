@@ -375,9 +375,16 @@ export function createTransitionController({
    *  is the snap a placement is owed. */
   function armHeroExit(wrap) {
     if (heroShownNow() <= 0.05) return;
-    // 0.35 s reads as a fade on the shortest jumps; the wrap's 4 s lap gets
-    // 0.6 s so the furniture is gone before the camera swings through it.
-    heroExit = { from: heroShownNow(), t: 0, dur: wrap ? 0.6 : 0.35, holdSnaps: 2 };
+    // Ordinary departures follow the same presented camera phase as copy.
+    // The wrap keeps its own lap clock because it has no ordinary route
+    // coordinate to share.
+    heroExit = {
+      from: heroShownNow(),
+      t: 0,
+      dur: wrap ? 0.6 : 0.35,
+      holdSnaps: 2,
+      presentedFlight: !wrap,
+    };
   }
 
   /** Arm the arrival term for a jump. Called for EVERY jump: a jump to
@@ -433,7 +440,11 @@ export function createTransitionController({
       heroExit = null; return 0;
     }
     heroExit.t += dt;
-    const f = clamp01(heroExit.t / heroExit.dur);
+    const phase = heroExit.presentedFlight && railFlight
+      ? clamp01(Number(railFlight.phase) || 0)
+      : null;
+    const f = phase === null ? clamp01(heroExit.t / heroExit.dur)
+      : clamp01((phase - 0.025) / (0.55 - 0.025));
     const e = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
     const v = heroExit.from * (1 - e);
     if (f >= 1) heroExit = null;
@@ -537,7 +548,11 @@ export function createTransitionController({
    *
    *  EVERY ORDINARY JUMP IS BIT-IDENTICAL: outside a lap the gate is
    *  already 1, nothing is held, and this wrote 1 over 1. */
-  function clearHeroTerms() {
+  function clearHeroTerms(depart = false) {
+    // Ordinary chapter jumps use the presented copy/furniture scalar as their
+    // departure clock. A second fixed 350ms envelope here used to make the
+    // adopted hero field disagree with the text during longer flights and
+    // retargets. Ceremonial wraps retain their dedicated lap envelope above.
     heroExit = null;
     heroEntry = null;
     if (heroGate < 1) heroGateHold = 2;   // the jump's own two placeAt passes

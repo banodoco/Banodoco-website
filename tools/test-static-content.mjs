@@ -50,7 +50,8 @@ assert.match(html, /if \(CHAPTERS\.indexOf\(chapter\) < 0\) return \{ chapter: n
 assert.match(html, /history\.replaceState\(null, '', '#\/mission'\)/);
 assert.doesNotMatch(html, /\bid="\/unknown"/);
 
-assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 143);
+// 145 -> 139: the menu's Who/What/Why primer (six bindings) removed 2026-10-04
+assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 139);
 assert.equal((html.match(/<[a-z][^>]*\bdata-sym="/gi) ?? []).length, 11);
 assert.match(html, /data-src="chapters\.final\.nav">Purpose<\/span>/);
 assert.match(html, /class="menu-no">1\.<\/span><span class="menu-name">Inspiring<\/span>/);
@@ -70,10 +71,8 @@ assert.doesNotMatch(html, /We’re creating a platform that help the community a
        pinned. The two `doesNotMatch`es below are the other half: the word may
        not come back on these rows in either the visible or the accessible
        layer.
-     · the badge count went 4 -> 2. The two Equipping teasers' pills were the
-       only ones removed. 2RP's (content-driven, nodes.tworp.badge) and
-       Manifesto's stay, and the very next assertion still pins Manifesto's
-       verbatim — neither is an Equip label. */
+     · the badge count went 4 -> 1. The two Equipping teasers and the shipped
+       Manifesto control all became available. 2RP remains the only Soon item. */
 assert.equal((html.match(/class="menu-row-link menu-teaser"/g) ?? []).length, 2,
   'Equipping exposes exactly two concealed initiative teasers');
 /* Anchored on the menu ANCHOR, not on `data-menu-section="equip"` alone —
@@ -85,9 +84,10 @@ assert.ok(equipMenu, 'the static Equipping menu exists');
 assert.doesNotMatch(equipMenu, /Soon/i, 'no Equipping row says Soon in any form');
 assert.doesNotMatch(equipMenu, /aria-label=/i,
   'a concealed Equipping row states its own name rather than an overriding status');
-assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 2,
-  '2RP and Manifesto each keep one Soon badge; the two Equipping teasers no longer carry one');
-assert.match(html, /class="menu-dot-disc"[\s\S]*>Manifesto<\/span><span class="menu-is">Action at a pivotal moment<\/span><span class="menu-badge">Soon<\/span>/);
+assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 1,
+  '2RP alone keeps its Soon badge after Manifesto ships');
+assert.match(html, /href="#manifesto"[\s\S]*>Manifesto<\/span><span class="menu-is">Action at a pivotal moment<\/span>/);
+assert.match(html, /id="manifesto"[\s\S]*data-src="manifesto\.title">True Union<\/h2>[\s\S]*data-src="manifesto\.body"/);
 assert.match(html, />Ownership<\/span><span class="menu-is">equity rewards collaboration<\/span>/);
 assert.match(html, /href="https:\/\/arcagidan\.com\/"[\s\S]*?<span class="menu-ia" aria-hidden="true">↗<\/span>/);
 assert.match(html, /href="#\/owned"[\s\S]*?<span class="menu-ia" aria-hidden="true">→<\/span>/);

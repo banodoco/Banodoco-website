@@ -247,7 +247,8 @@ pin('C2', 'the site set of controller members journey.js reaches, derived from j
   ['transition.abandonForJump', 'transition.armHeroEntry', 'transition.armHeroExit',
     'transition.beginBlend', 'transition.beginFlight', 'transition.blend',
     'transition.blendCancelled', 'transition.cameraStateDisagree', 'transition.chapterEntry',
-    'transition.clearHeroTerms', 'transition.dropCamBlend', 'transition.heroExiting',
+    'transition.clearHeroTerms', 'transition.dropCamBlend', 'transition.endCamBlend',
+    'transition.heroExiting',
     'transition.landWrapHome', 'transition.railFlight', 'transition.railWrap',
     'transition.rewoundHome', 'transition.setBlending', 'transition.steerWrapBlend',
     'transition.steerWrapTo', 'transition.stepCamBlend', 'transition.stepHeroEntry',
@@ -599,6 +600,21 @@ const SCENARIOS = {
     r.log.push(`entry:${n3(r.t.stepHeroEntry(0))}`);    // a placement is not an arrival
     return [r.log, `exiting=${r.t.heroExiting}`];
   },
+  /* ORDINARY DEPARTURE — the same bounded fade used by non-wrap jumps must
+     survive placeAt's two synchronous passes, then retire over 350 ms. An
+     arrival back into Mission does not arm a departure term. */
+  ordinaryDeparture(factory) {
+    const r = makeRig(factory, { heroShown: 1, presence: 1 });
+    r.t.armHeroExit(false);
+    r.log.push(`armed:${r.t.heroExiting}`);
+    r.log.push(`hold1:${n3(r.t.stepHeroExit(0))}`);
+    r.log.push(`hold2:${n3(r.t.stepHeroExit(0))}`);
+    r.log.push(`mid:${n3(r.t.stepHeroExit(0.175))}`);
+    r.log.push(`done:${n3(r.t.stepHeroExit(0.175))}/${r.t.heroExiting}`);
+    r.t.armHeroEntry('mission', 1);
+    r.log.push(`return:${r.t.heroExiting}`);
+    return [r.log, `exiting=${r.t.heroExiting}`];
+  },
 };
 
 const runScenario = (factory, name) => {
@@ -610,7 +626,7 @@ pin('E0', 'D46 CONTROL — the controller compiled out of its own text is the SA
   (i) => Object.keys(SCENARIOS).sort()
     .map((n) => `${n}:${runScenario(i.imported, n).join('|') === runScenario(i.compiled, n).join('|')}`),
   { imported: CTRL.createTransitionController, compiled: compileController(SRC.controller) },
-  ['cancellation:true', 'entry:true', 'landing:true', 'reversal:true', 'rewind:true'],
+  ['cancellation:true', 'entry:true', 'landing:true', 'ordinaryDeparture:true', 'reversal:true', 'rewind:true'],
   'without this row the E-mutants below would be mutating a text nobody ships');
 
 pin('E1', 'ENDPOINT — a click blend steps on the camera\'s own eased clock, publishes the rail phase, and LANDS: the state and the camera agree again, the chapters are told, and the grade goes back to being a function of p',
@@ -670,6 +686,13 @@ pin('E5', 'ENTRY — the departure term survives exactly the jump\'s own two pla
     '>> exiting=false'],
   'every number here is the authored law, not an observation blessed: holdSnaps is 2 because placeAt runs TWO dt = 0 applyFrame passes and the third is a REAL placement; 0.717 is 0.8 x (1 - smootherstep(0.15/0.6)); 0.500 and 0.210 are smootherstep past the 0.55 lead over the 1 + 0.15 - 0.55 body; 0.240 is COPY_IN_K x 0.1');
 
+pin('E6', 'ORDINARY DEPARTURE — the non-wrap departure envelope survives both placement passes, fades across the authored 350 ms, and a Mission return leaves exit ownership clear',
+  (i) => runScenario(i.f, 'ordinaryDeparture'),
+  { f: compileController(SRC.controller) },
+  ['armed:true', 'hold1:1.000', 'hold2:1.000', 'mid:0.500', 'done:0.000/false', 'paintHero(0.000)', 'return:false',
+    '>> exiting=false'],
+  'regression for ordinary chapter jumps: clearHeroTerms(true) must have the same two-pass hold and 350 ms decay as armHeroExit(false), while armHeroEntry("mission") owns the return');
+
 /* ------------------------------------------------------------------ *
  * F — the manifest entry.                                             *
  * ------------------------------------------------------------------ */
@@ -722,7 +745,7 @@ L.same('G9', 'D76 — pin() call sites counted in this file equal the registry s
 SENTINEL.reach('main');
 let exitCode = L.report();
 
-if (PROVE) {
+  if (PROVE) {
   console.log('\n--- D58/D88 mutants: each names its killer; the null control runs FIRST ---\n');
 
   /* D88 — THE NULL-MUTANT CONTROL, AND IT RUNS FIRST. It targets a REAL pin
@@ -791,7 +814,9 @@ if (PROVE) {
     M('E4', 'the rewind lands one frame early — rewoundHome fires while the lap is still travelling', null,
       bend('E4', 'camBlend.play < 0 && camBlend.t <= 0', 'camBlend.play < 0 && camBlend.t <= 1')),
     M('E5', 'the departure term is given one held snap instead of two — the jump\'s own second placement pass kills it', null,
-      bend('E5', 'holdSnaps: 2 }', 'holdSnaps: 1 }')),
+      bend('E5', 'holdSnaps: 2,', 'holdSnaps: 1,')),
+    M('E6', 'the ordinary departure duration drifts off the authored 350 ms envelope', null,
+      bend('E6', 'dur: wrap ? 0.6 : 0.35,', 'dur: wrap ? 0.6 : 0.25,')),
     M('F1', 'the entry is filed away from its named neighbours', null,
       (i) => ({ ...i, src: i.src.replace('    "journey/transition/controller.js",\n', '') })),
     M('F2', 'a second transition entry appears in the manifest', null,

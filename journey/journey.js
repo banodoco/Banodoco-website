@@ -1,3 +1,4 @@
+import { createLogoMorph } from './ui/logo-morph.js';
 // journey-v6 entry point — W3-A GREY-BOX PROTOTYPE.
 //
 // Boots after the hero's entry choreography (see the bootstrap in index.html)
@@ -43,6 +44,9 @@ import { applyChapterFrame } from './frame-application.js';
 import { inputPortOf } from './claim.js';
 import { createTransitionController } from './transition/controller.js';
 import { createFramePublisher } from './frame/publication.js';
+import { createManifestoBranch } from './manifesto/branch.js';
+import { compileForFrame } from './boot/hero-gpu.js';
+import { navCopyDeparture, ticketClock } from './ui/bands.js';
 
 const journeyRegistry = createChapterRegistry();
 export function prepareChapter(sceneApi) { return journeyRegistry.prepare(sceneApi); }
@@ -382,6 +386,7 @@ export function boot(opts = {}) {
 
   let detailNode = null;      // currently open node id, or null
   let ui = null;
+  let manifestoBranch = null;
 
   function cueNavigation() {
     // The hint is an answer to a blocked gesture at REST. During a camera
@@ -586,9 +591,26 @@ export function boot(opts = {}) {
      bought the departure term (the up-wrap scrim flash, 2026-08-16) moved
      with them. What stays here is the PAINTER: the elements, and its own
      memo of what it last put up. */
+  const logoMorph = createLogoMorph(document.querySelector('.logo'));
   let heroShown = 1;      // last painted value — the exit fades from what is actually up
 
   const heroPresence = (p) => 1 - smooth01((p - HERO_PRESENCE_START) / HERO_PRESENCE_FADE);
+
+  // Ordinary departures publish one scalar for both DOM copy and hero
+  // furniture. Route progress reaches the old fade threshold much earlier
+  // than the presented camera flight, which made desktop text and spores
+  // vanish on separate clocks. Scroll and ceremonial wraps retain their
+  // authored position/lap envelopes.
+  const ordinaryDepartureOpacity = (controller) => {
+    const flight = controller.railFlight;
+    if (!flight || !(flight.targetP > flight.fromP)
+        || Math.abs(flight.fromP - HERO_REST_P) > 0.001) return null;
+    // the same seconds the section copy leaves on (ui/bands.js)
+    const clock = ticketClock(flight);
+    if (clock) return navCopyDeparture(clock.t, clock.dur);
+    const phase = clamp01(Number(flight.phase) || 0);
+    return 1 - smooth01((phase - 0.025) / 0.525);
+  };
 
   /** The ONE place the hero furniture's visibility reaches the DOM. */
   function paintHeroFurniture(a) {
@@ -676,6 +698,14 @@ export function boot(opts = {}) {
      exactly once — tools/test-frame-publication.mjs's `C4` is the pin. */
   sceneApi.frame = framePublisher.frame;
 
+  // Prepare the small related-specimen extension during readiness. Clones
+  // share the hero's geometry and materials, so activation allocates no field.
+  manifestoBranch = createManifestoBranch(sceneApi, {
+    scroll, field: Object.values(chapters).find(chapter => typeof chapter.setManifesto === 'function'),
+    // Return (button or Escape) is a navigation to Manifesto's parent
+    onReturn: () => navigateFromControl('final'),
+  });
+
 
   // Explore CTA hands off into the journey (GB-1.1): one restrained flow
   // toward the cap, then the orbit. No reset, no reload.
@@ -700,7 +730,173 @@ export function boot(opts = {}) {
    * old scroll-loop camera path only for Intro <-> Outro; its hero furniture
    * timing is endpoint-authored, so near-end pairs must remain direct. Read
    * the logical chapter before directJumpTo() snaps state to its destination. */
+  /* ================================================================
+     MANIFESTO IS A PLACE IN THE NAVIGATION (2026-10-04 — Hannah: "it feels
+     like manifesto isn't properly integrated into the navigation system...
+     clean up all the seams")
+     ================================================================
+     It lives one level below Purpose, beside Ownership, and every way in or
+     out of it is now the same kind of move the rest of the site makes:
+
+       * IN. From Purpose's rest the camera simply lifts; from anywhere else
+         the journey is placed on Purpose first (an ordinary flight ticket, so
+         the row travels there and Purpose's world arrives on its own eased
+         states) while the Manifesto's camera eases off the pose it was
+         holding. Either way the row's dot travels down Purpose's right-hand
+         branch to Manifesto on the opening beat, the mirror of Ownership's.
+       * OUT. A Return lands back on Purpose. Any other destination — a row
+         item, Ownership, the menu, the logo — is ONE descent straight onto
+         that section's rest: the journey's state moves there at the press,
+         exactly as a direct jump's does, so the section being left retires
+         and the destination arrives WHILE the camera sinks (they used to
+         change on touchdown — the "weird mushrooms" left standing around the
+         hero), and the row's dot, the copy, the grade and the fog all ride
+         the descent's own eased phase as they ride a camera blend's.
+
+     The Manifesto's branch keeps the camera throughout (its pose is authored,
+     not a blend); this file supplies only the tickets and the clock. */
+  let manifestoPassage = null;   // { kind: 'open'|'leave', target?, ticket, look0?, look1?, look?, flight }
+
+  function railManifesto(open, ticket = null) {
+    if (ui && ui.rail && ui.rail.setManifesto) ui.rail.setManifesto(open, ticket);
+  }
+  function restPoseOf(chapterId) {
+    const p = restProgress(chapterId);
+    const pose = poseAt(p, { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 },
+      director.heroPose, ASPECT ?? sceneApi.camera.aspect, innerWidth);
+    const fog = director.fogAt(p);
+    return { position: pose.pos.clone(), target: pose.target.clone(), fov: pose.fov,
+      fogNear: fog.near, fogFar: fog.far };
+  }
+  function endManifestoPassage() {
+    const passage = manifestoPassage;
+    manifestoPassage = null;
+    if (!passage) return;
+    if (passage.flight) transition.endCamBlend(true);
+    else guarded('lens', () => lens.setLookOverride(null));
+  }
+  /** One frame of the passage, after the branch has posed the camera and
+   *  before anything reads the tickets (the rail, the copy, the hero). */
+  function stepManifestoPassage(dt) {
+    const passage = manifestoPassage;
+    if (!passage) return;
+    passage.ticket.elapsed = (passage.ticket.elapsed || 0) + dt;
+    const phase = passage.kind === 'open'
+      ? manifestoBranch.openPhase : manifestoBranch.returnPhase;
+    passage.ticket.phase = phase;
+    if (passage.look) {
+      for (const k in passage.look) {
+        passage.look[k] = passage.look0[k] + (passage.look1[k] - passage.look0[k]) * phase;
+      }
+      guarded('lens', () => lens.setLookOverride(passage.look));
+    }
+    if (passage.kind === 'open' && phase >= 1) {
+      endManifestoPassage();
+      railManifesto(true, null);
+    }
+  }
+  /** Begin a passage that moves the journey's STATE to `chapterId` while the
+   *  branch keeps the camera: the half of directJumpTo that is not the blend. */
+  function placeForPassage(chapterId, kind, dstX, seconds) {
+    const targetP = restProgress(chapterId);
+    const flying = transition.railFlight;
+    const fromP = flying ? flightProgress(flying) : journey.progress;
+    const look0 = { ...lens.look };
+    transition.abandonForJump();
+    transition.clearHeroTerms(chapterId !== 'mission');
+    // the same capture hygiene directJumpTo keeps before placing
+    if (!director.owned) guarded('director', () => director.applyHeroPose());
+    const ticket = { fromP, targetP, phase: 0 };
+    transition.beginFlight({
+      railWrap: null,
+      railFlight: ticket,
+      chapterEntry: startChapterEntry(chapterId, chapters[chapterId], guarded),
+    });
+    placeAt(targetP, { snap: false });
+    const look1 = lens.lookOf(targetP);
+    transition.setBlending(true, dstX, seconds);
+    manifestoPassage = { kind, ticket, look0, look1, look: { ...look1 }, flight: true };
+  }
+
+  function enterManifesto() {
+    if (manifestoBranch.active) return;   // already there: the current page
+    if (ui && ui.rail && ui.rail.stopNavigationCue) ui.rail.stopNavigationCue();
+    closeDetail();
+    if (typeof opts.onNavigate === 'function') opts.onNavigate('manifesto');
+    const settledOnPurpose = !transition.blend && !transition.railFlight && !transition.railWrap
+      && Math.abs(journey.progress - restProgress('final')) < 1e-4;
+    if (settledOnPurpose) {
+      const ticket = { fromP: journey.progress, targetP: journey.progress, phase: 0 };
+      manifestoPassage = { kind: 'open', ticket, flight: false };
+      railManifesto(true, ticket);
+      manifestoBranch.begin();
+      return;
+    }
+    // From another section (or mid-flight): Purpose is placed now and its
+    // world arrives under the lift; the camera departs from where it is.
+    // The presented frame is banked first: placeAt lets the director write
+    // Purpose's pose, and the departure must start from what was on screen.
+    const cam = sceneApi.camera, fog = sceneApi.scene.fog;
+    const departFrom = {
+      position: cam.position.clone(), target: sceneApi.controls.target.clone(), fov: cam.fov,
+      fogNear: fog ? fog.near : undefined, fogFar: fog ? fog.far : undefined,
+    };
+    const anchor = restPoseOf('final');
+    railManifesto(true, null);
+    placeForPassage('final', 'open', anchor.position.x, 3.2);
+    manifestoBranch.begin({ anchor, departFrom });
+  }
+
+  function leaveManifesto(chapterId) {
+    if (ui && ui.rail && ui.rail.stopNavigationCue) ui.rail.stopNavigationCue();
+    const toPurpose = chapterId === 'final';
+    const descending = manifestoBranch.returning;
+    // the same destination pressed again belongs to the descent on screen
+    if (descending && manifestoPassage && manifestoPassage.target === chapterId) return;
+    // An opening still under way is completed (its world has arrived); a
+    // descent being bent is overtaken, as a jump overtakes a jump — its
+    // tickets are replaced below, never landed mid-fall.
+    if (manifestoPassage && !descending) endManifestoPassage();
+    if (typeof opts.onNavigate === 'function') opts.onNavigate(chapterId);
+    const landed = () => {
+      endManifestoPassage();
+      railManifesto(false, null);
+    };
+    const settled = Math.abs(journey.progress - restProgress(chapterId)) < 1e-4
+      && !transition.railFlight;
+    if (settled && !descending) {
+      // The plain Return: the journey is already on Purpose; only the row's
+      // dot travels, on the descent's clock.
+      const ticket = { fromP: journey.progress, targetP: journey.progress, phase: 0 };
+      manifestoPassage = { kind: 'leave', target: chapterId, ticket, flight: false };
+      railManifesto(false, ticket);
+      manifestoBranch.returnTo(landed);
+      return;
+    }
+    /* Anywhere else — or a change of mind mid-descent (which bends the fall
+       toward the new destination; it never lands first and flies on). */
+    const land = restPoseOf(chapterId);
+    railManifesto(false, null);
+    if (!descending) {
+      placeForPassage(chapterId, 'leave', land.position.x, manifestoBranch.awaySeconds);
+      manifestoPassage.ticket.dur = manifestoBranch.awaySeconds;
+      manifestoBranch.returnTo(landed, { land });
+    } else {
+      manifestoBranch.retarget(landed, { land, home: toPurpose });
+      placeForPassage(chapterId, 'leave', land.position.x, manifestoBranch.returnSeconds);
+    }
+    manifestoPassage.target = chapterId;
+  }
+
   function navigateFromControl(chapterId) {
+    if (chapterId === 'manifesto') {
+      if (manifestoBranch) enterManifesto();
+      return;
+    }
+    if (manifestoBranch && manifestoBranch.active) {
+      leaveManifesto(chapterId);
+      return;
+    }
     if (typeof opts.onNavigate === 'function') opts.onNavigate(chapterId);
     /* A second bookend click belongs to the lap already on screen. Ask the
        transition that owns that lap to steer its own ticket; reconstructing
@@ -920,7 +1116,7 @@ export function boot(opts = {}) {
     // before placeAt's dt = 0 passes can snap the scrim off on the click
     // frame — the up-wrap flash (2026-08-16; see the departure term).
     if (wrap && chapterId !== 'mission') transition.armHeroExit(true);
-    else if (!wrap) transition.clearHeroTerms();
+    else if (!wrap) transition.clearHeroTerms(chapterId !== 'mission');
     // pos0 is banked, so assert the un-owned invariant before placing: if the
     // director is un-owned the camera may be MID-LAP (a nav click over a
     // flying down-wrap — the blend just dropped without restoring), and
@@ -1199,6 +1395,9 @@ export function boot(opts = {}) {
           + (skim ? FLYBY_EXTRA_S : 0)
           + (slowedEquipExit ? EQUIP_CONNECT_EXTRA_S : 0);
       const dur = navigationDurationSeconds(baseDuration, fromChapterId, chapterId);
+      // The copy layer prices its arrival in seconds (copy-arrival.js), so
+      // the ordinary ticket declares how long its flight is.
+      if (transition.railFlight) transition.railFlight.dur = dur;
       /* THE INTERRUPT'S MOMENTUM (2026-09-02). A replacement leg used to open
          at zero azimuth velocity: the camera was sweeping, and a fresh
          smootherstep starts flat, so an overtaking click dropped the rate to
@@ -1499,6 +1698,15 @@ export function boot(opts = {}) {
     // throw-abandons-the-blend rule travelled with the stepper into the
     // controller; see stepCamBlend there.
     if (transition.blend) transition.stepCamBlend(dt);
+    if (manifestoBranch && manifestoBranch.active) manifestoBranch.update(dt);
+    stepManifestoPassage(dt);
+    // The row's dot finishes its way up to the Manifesto on the climb's own
+    // clock, after the passage's opening beat has handed the rail over.
+    if (manifestoBranch && ui && ui.rail && ui.rail.setManifestoArrive) {
+      ui.rail.setManifestoArrive(manifestoBranch.active && !manifestoBranch.returning
+        ? manifestoBranch.arrivePhase : null);
+    }
+    logoMorph.update(blendThisFrame, Math.abs(p - restProgress('mission')) > 1e-4, dt);
 
     // Route state is parked at the destination throughout a direct click.
     // Reconstruct the coordinate actually being presented from the camera's
@@ -1614,8 +1822,10 @@ export function boot(opts = {}) {
     // with the DEPARTURE term (heroExit): a jump out of the hero fades what
     // is up over the blend's opening beat instead of stepping it on the
     // click frame — the up-wrap scrim flash (2026-08-16).
+    const departureOpacity = ordinaryDepartureOpacity(transition);
     paintHeroFurniture(Math.max(
-      heroPresence(frame.presentedP) * transition.stepHeroEntry(frame.dt),
+      (departureOpacity === null ? heroPresence(frame.presentedP) : departureOpacity)
+        * transition.stepHeroEntry(frame.dt),
       transition.stepHeroExit(frame.dt)));
 
     /* THE UI'S FIVE. Four of them are now the frame's own members; the three
@@ -1631,7 +1841,8 @@ export function boot(opts = {}) {
       { cameraStateDisagree: transition.cameraStateDisagree,
         railWrap: transition.railWrap,
         railFlight: transition.railFlight,
-        travelP: frame.presentedP }));
+        travelP: frame.presentedP,
+        departureOpacity }));
 
     /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
        used to replaceState `#/<chapter>` from right here, every time the
@@ -1784,6 +1995,7 @@ export function boot(opts = {}) {
          is one nobody guards. `activate()` is idempotent and re-publishes. */
       window.journey = state;
       if (first) {
+        warmHiddenChapters();
         const target = activationEntry || queuedEntry;
         queuedEntry = null;
         if (target && target !== 'mission') navigateFromControl(target);
@@ -1862,148 +2074,91 @@ export function boot(opts = {}) {
     },
   };
 
-  /** Wait until commands submitted by the warm draws have actually completed.
-   *  Shader compilation alone does not upload buffers/textures or generate
-   *  mipmaps, which is why the old compileAsync-only boundary still hitched. */
-  async function drainGpu(renderer) {
-    const gl = renderer.getContext();
-    if (gl.isContextLost()) throw new Error('WebGL context lost during preparation');
-    if (gl.fenceSync && gl.clientWaitSync) {
-      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-      gl.flush();
-      const startedAt = performance.now();
-      try {
-        for (;;) {
-          const result = gl.clientWaitSync(sync, 0, 0);
-          if (result === gl.ALREADY_SIGNALED || result === gl.CONDITION_SATISFIED) return true;
-          if (result === gl.WAIT_FAILED) throw new Error('GPU readiness fence failed');
-          if (performance.now() - startedAt > 8000) {
-            /* Warmup is an optimisation, not an availability gate. A busy
-               software renderer may keep a valid fence pending well past the
-               startup budget; publishing then is safer than replacing the
-               whole interactive site with the fallback. Context loss and an
-               actual WAIT_FAILED result remain fatal above. */
-            console.warn('[journey-v6] GPU warmup fence exceeded 8s; continuing');
-            return false;
-          }
-          await new Promise(resolve => setTimeout(resolve, 8));
-        }
-      } finally {
-        gl.deleteSync(sync);
-      }
-    }
-    gl.finish();
-    return true;
-  }
-
   async function prepareGpu() {
+    const PREPARE_TIMEOUT_MS = 8000;
     const r = sceneApi.renderer;
     if (!r) throw new Error('No WebGL renderer for journey preparation');
-    const gl = r.getContext();
-    /* THE NAME IS ASKED FOR ONCE, AT CONTEXT CONSTRUCTION, AND THIS READS THE
-       ANSWER. Both halves of the probe below are synchronous round-trips to
-       the GPU process, and by the time preparation runs the command queue is
-       at its deepest: measured 228 ms in getExtension + 185 ms in getParameter
-       = 413 ms of the entry, with the prelude's spore stream frozen for all of
-       it (evidence/r12-stutter §3, hitch class C). organism/renderer.js now
-       reads it while the queue is still empty, where the identical two calls
-       cost ~0, and hands it out on the scene API. The fallback keeps this
-       function honest on any scene that predates that field. */
-    const rendererName = typeof sceneApi.rendererName === 'string'
-      ? sceneApi.rendererName
-      : (() => {
-        const debugInfo = gl.getExtension && gl.getExtension('WEBGL_debug_renderer_info');
-        return debugInfo ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '') : '';
-      })();
-    const softwareRenderer = /swiftshader|llvmpipe|software rasterizer/i.test(rendererName);
-
-    // Image decode plus both initial Canvas2D atlas bakes must finish before
-    // the visible clock starts. Prepare the first remix here too: its old
-    // first-input idle task could otherwise become a new post-intro hitch.
-    const portraits = chapters.owned && chapters.owned.portraits;
-    if (portraits && portraits.photosReady) await portraits.photosReady;
-    if (portraits && portraits.prepareRemix) portraits.prepareRemix(r);
+    // Portrait images and the next remix are optional. Their own owners
+    // load/build them when needed; neither image loading nor initTexture()
+    // for an unseen remix belongs on the mushroom's readiness path.
+    // The hero's own programs, the growth's shell variants among them, were
+    // linked before the growth by journey/boot/hero-gpu.js; this pass covers
+    // whatever the built journey added to the visible scene.
 
     if (r.compileAsync) {
-      try { await r.compileAsync(sceneApi.scene, sceneApi.camera); }
-      catch (asyncError) {
-        if (!r.compile) throw asyncError;
+      let compileTimer;
+      const compileOutcome = await Promise.race([
+        Promise.resolve().then(() => compileForFrame(sceneApi, sceneApi.scene))
+          .then(() => ({ done: true }), (error) => ({ error })),
+        new Promise(resolve => {
+          compileTimer = setTimeout(() => resolve({ timeout: true }), PREPARE_TIMEOUT_MS);
+        }),
+      ]);
+      clearTimeout(compileTimer);
+      if (compileOutcome.timeout) {
+        // Compilation is a warmup optimisation. Let the intro proceed and
+        // allow three to finish lazily; do not turn a slow driver into a
+        // permanently blank hero.
+        console.warn('[journey-v6] shader warmup timed out; continuing');
+      } else if (compileOutcome.error) {
+        if (!r.compile) throw compileOutcome.error;
         r.compile(sceneApi.scene, sceneApi.camera);
       }
     } else if (r.compile) {
       r.compile(sceneApi.scene, sceneApi.camera);
     }
 
-    // Submit every chapter's real draw list to a tiny offscreen target. Every
-    // changed scene flag is restored in finally, including descendants that
-    // are normally invisible or outside the hero camera's frustum. Software
-    // WebGL can spend minutes synchronously rasterising these hidden warmup
-    // frames; shader compilation above is sufficient there, and avoids making
-    // a performance optimisation an availability gate.
-    if (!softwareRenderer) for (const id of Object.keys(chapters)) {
-      /* ONE CHAPTER PER TASK, NOT ALL OF THEM IN ONE. This loop used to run
-         start to finish inside a single task: measured 617 ms at 1440x900,
-         834 ms under a 4x CPU throttle, during which the prelude's one rAF
-         site cannot run at all (evidence/r12-stutter §3, hitch class D).
-         Ending the task between chapters costs the preparation nothing — it
-         is already async and already bounded by the GPU — and lets the
-         browser run its rendering steps, and therefore hero-spores' frame,
-         between each. Measured after: the 617 ms block becomes 218 + 133 ms.
-
-         DELIBERATELY setTimeout AND NOT requestAnimationFrame, though an rAF
-         is the more obvious way to say "give the stream a frame". journey.js
-         holds no rAF site of its own, and the harness pins that: M8 counts
-         rAF sites per file and M19 is a monotonic ceiling on the
-         request-without-cancel imbalance, which exists precisely to catch a
-         frame request that nobody can cancel. An rAF here would have been
-         exactly that — this loop has no teardown path to cancel it from — so
-         the yield is a plain task boundary instead, which is all the split
-         actually needs. Both pins stay where they were. */
-      await new Promise(resolve => setTimeout(resolve, 0));
-      const g = chapters[id] && chapters[id].group;
-      if (!g) continue;
-      let anchor = g;
-      while (anchor.parent && anchor.parent !== sceneApi.scene) anchor = anchor.parent;
-      const saved = new Map();
-      const remember = (o) => {
-        if (!saved.has(o)) saved.set(o, { visible: o.visible, frustumCulled: o.frustumCulled });
-      };
-      for (const root of sceneApi.scene.children) {
-        remember(root);
-        root.visible = root === anchor;
-      }
-      for (let o = g; o && o !== sceneApi.scene; o = o.parent) {
-        remember(o);
-        o.visible = true;
-      }
-      g.traverse((o) => {
-        remember(o);
-        o.visible = true;
-        if (o.isMesh || o.isLine || o.isLineSegments || o.isPoints || o.isSprite) {
-          o.frustumCulled = false;
-        }
-      });
-
-      const rt = new THREE.WebGLRenderTarget(64, 64);
-      const prev = r.getRenderTarget();
-      try {
-        r.setRenderTarget(rt);
-        r.render(sceneApi.scene, sceneApi.camera);
-      } finally {
-        r.setRenderTarget(prev);
-        rt.dispose();
-        for (const [o, old] of saved) {
-          o.visible = old.visible;
-          o.frustumCulled = old.frustumCulled;
-        }
-      }
-    }
-    if (!softwareRenderer) await drainGpu(r);
-    else console.info('[journey-v6] software renderer — hidden GPU warm draws skipped');
     performance.mark('journey-gpu-ready');
     return true;
   }
 
+
+  /* EVERY CHAPTER'S SHADERS, WARMED BEFORE ITS FIRST VISIT (2026-10-03 —
+     Hannah: "a bunch of lag in general... something kind of slowing things
+     down"). prepareGpu() below compiles through compileAsync, and
+     compileAsync only visits VISIBLE objects — at boot that is the hero and
+     little else, so every chapter compiled its programs on the frame it
+     first appeared. Measured on a cold load at 1440x900: the first flight
+     to Inspire froze 1.3-2.1 s (3 programs), Owned 0.4-2.2 s (18), Final
+     ~0.3 s (7), each a dead stop in the middle of a camera move. Here each
+     chapter group is compiled in its own idle slice once the hero has
+     finished growing; its hidden parts are shown only for the synchronous
+     part of the call, so no frame draws them. A visit before the warm-up reaches it simply
+     compiles lazily, exactly as before. */
+  function warmHiddenChapters() {
+    const r = sceneApi.renderer;
+    if (!r || typeof r.compileAsync !== 'function') return;
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+    const groups = Object.values(chapters).map((c) => c && c.group).filter(Boolean);
+    const next = () => {
+      const group = groups.shift();
+      if (!group) return;
+      idle(() => {
+        // compileAsync walks visible objects only, and a chapter keeps parts
+        // of itself hidden until they are needed: show the whole subtree for
+        // the synchronous call, then put back exactly what was hidden
+        const hidden = [];
+        group.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+        let pending;
+        try {
+          pending = compileForFrame(sceneApi, group);
+          // and upload its textures, which otherwise also wait for first sight
+          if (typeof r.initTexture === 'function') {
+            const seen = new Set();
+            group.traverse((o) => {
+              for (const m of [].concat(o.material || [])) {
+                const slots = [m.map, ...Object.values(m.uniforms || {}).map((u) => u && u.value)];
+                for (const t of slots) if (t && t.isTexture && !seen.has(t)) { seen.add(t); r.initTexture(t); }
+              }
+            });
+          }
+        } catch { pending = null; }
+        finally { for (const o of hidden) o.visible = false; }
+        Promise.resolve(pending).catch(() => {}).then(next);
+      }, { timeout: 4000 });
+    };
+    setTimeout(next, HERO_INTRO_MS);
+  }
   state.ready = prepareGpu();
   if (!deferActivation) state.activate();
 

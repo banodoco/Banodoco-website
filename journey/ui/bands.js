@@ -39,3 +39,75 @@ export function bandOpacity(p, band) {
   const a = Math.min(inLo, inHi);
   return a * a * (3 - 2 * a);
 }
+
+/* ==================================================================== *
+ * NAVIGATION COPY TIMING — WHEN words leave and arrive on a direct
+ * navigation, in seconds. (Lives beside the band curve: both are pure
+ * answers to "how visible is this copy now", and this file is the one
+ * the node harnesses can already execute.)
+ *
+ * 2026-10-04 — Hannah: Connect -> Epilogue's text "feels great, for the
+ * rest it mostly feels too fast", and then: "does the fade out match that?"
+ * Both ends used to be fixed SHARES of the camera flight's eased phase, so
+ * every fade was a fixed fraction of a flight that runs anywhere from 1.3 s
+ * to 3.4 s: words left in 0.27-0.67 s and arrived in 0.20-0.49 s depending
+ * only on how far the camera had to go. The rim flyby she liked is the
+ * longest ordinary leg, which is why it was the one that felt right.
+ *
+ * Every ordinary leg now spends the flyby's own seconds:
+ *
+ *   departure  a smoothstep of DEPART_S (90->10% ~0.6 s), from a short beat
+ *              after the click;
+ *   arrival    a smoothstep of ARRIVE_S (10->90% ~0.5 s) that lands
+ *              ARRIVE_LEAD_S before the camera does, never earlier than
+ *              half-way through the flight, and never before the departure
+ *              has had DEPART_MIN_S to go.
+ *
+ * On long legs both fit inside the flight, exactly as the flyby did. On the
+ * shortest ones the departure keeps its unhurried length, and the arrival
+ * yields instead — finishing a few tenths after the camera settles rather
+ * than overlapping the outgoing words or snapping in. Pure and DOM-free:
+ * the copy layer (copy-arrival.js) and the hero furniture (journey.js)
+ * read the same schedule off the same ticket clock.
+ * ==================================================================== */
+
+const DEPART_DELAY_MAX_S = 0.45;  // the beat before words start to leave...
+const DEPART_DELAY_SHARE = 0.12;  // ...or this share of a shorter flight
+const DEPART_S = 1.0;
+const DEPART_MIN_S = 0.8;
+const ARRIVE_S = 0.8;
+const ARRIVE_LEAD_S = 1.3;
+const ARRIVE_MIN_SHARE = 0.5;
+
+/** The schedule for a flight of `dur` seconds. */
+export function navCopySchedule(dur) {
+  const departStart = Math.min(DEPART_DELAY_MAX_S, DEPART_DELAY_SHARE * dur);
+  const arriveStart = Math.max(ARRIVE_MIN_SHARE * dur, dur - ARRIVE_LEAD_S,
+    departStart + DEPART_MIN_S);
+  return {
+    departStart,
+    departDur: Math.min(DEPART_S, arriveStart - departStart),
+    arriveStart,
+    arriveDur: ARRIVE_S,
+  };
+}
+
+/** Outgoing words' opacity multiplier, `t` seconds into a `dur` s flight. */
+export function navCopyDeparture(t, dur) {
+  const s = navCopySchedule(dur);
+  return 1 - smoothA((t - s.departStart) / s.departDur);
+}
+
+/** Incoming words' arrival fraction (0..1). May reach 1 after `dur`. */
+export function navCopyArrival(t, dur) {
+  const s = navCopySchedule(dur);
+  return smoothA((t - s.arriveStart) / s.arriveDur);
+}
+
+/** A ticket's declared duration and elapsed seconds, or null if it is one
+ *  that predates the seconds law (it then keeps its phase envelope). */
+export function ticketClock(ticket) {
+  const dur = Number(ticket && ticket.dur);
+  const t = Number(ticket && ticket.elapsed);
+  return dur > 0 && Number.isFinite(dur) && Number.isFinite(t) ? { t, dur } : null;
+}

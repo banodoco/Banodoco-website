@@ -81,7 +81,8 @@ export function capUnderPt(u, a) {
   const edge = Math.pow(Math.max(0, (u - 0.8) / 0.2), 2);
   const y = CAP_Y + 0.5 * Math.pow(Math.max(0, 1 - u), 1.8) + 0.03
           + rimYoff(a) * Math.pow(u, 1.6) + marginDroop(u, a)
-          - 0.11 * edge;
+          - 0.11 * edge
+          - 0.36 * Math.exp(-Math.pow(u / 0.22, 2));
   const x = Math.cos(a) * r - 0.075 * (1 - u * u);
   return new THREE.Vector3(x, y, Math.sin(a) * r);
 }
@@ -107,7 +108,7 @@ export const CAP_THROAT = { x: -0.075, y: 3.66, z: 0 };
 export function stemRadius(y) {
   const t = y / STEM_TOP;
   return 0.27 - 0.07 * t + 0.42 * Math.exp(-y / 0.26)
-       + 0.05 * Math.exp((y - STEM_TOP) / 0.35);
+       + 0.30 * Math.pow(THREE.MathUtils.smoothstep(y, 2.95, 3.82), 2);
 }
 
 /** Stem axis offset [dx, dz] at local height y. Byte-faithful mirror of
