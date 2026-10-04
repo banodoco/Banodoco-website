@@ -35,7 +35,12 @@ export const GROWTH = Object.freeze({
   ground: [0.000, 0.640],
   stem: [0.050, 0.400],
   gills: [0.370, 0.560],
-  rim: [0.530, 0.650],
+  // 0.53 -> 0.56 (2026-10-04 — Hannah: the edge "flashes up"): the ring
+  // used to start tracing while the gills were still ~0.15 s from the edge,
+  // so its front arc drew as a bright line hanging below the underside.
+  // It now begins as the gills arrive (their 'out' front reaches the rim
+  // at ~0.557) and closes a beat later.
+  rim: [0.560, 0.660],
   dome: [0.610, 0.820],
   spores: [0.650, 1.000],
 });
@@ -183,7 +188,7 @@ export function setupIntro(ctx) {
       // under the cap, outward from the throat; the ring round the edge;
       // then the dome, inward from that ring to the crown
       [gills, G.gills[0], G.gills[1]], [gillCore, 0.390, 0.580],
-      [rim, G.rim[0], G.rim[1]], [rimPts, 0.550, 0.670],
+      [rim, G.rim[0], G.rim[1]], [rimPts, 0.580, 0.680],
       [capMesh, G.dome[0], G.dome[1]], [overlay, 0.635, 0.845], [overlayPts, 0.655, 0.860],
       [capBeads, 0.625, 0.850],
       // the air: motes while it grows, then the shed — the longest single
@@ -195,6 +200,13 @@ export function setupIntro(ctx) {
     // (with the dome) — organism.js re-keys them by radius after this runs
     for (const o of [gills, gillCore]) o.userData.capGrowth = 'out';
     for (const o of [capMesh, overlay, overlayPts, capBeads]) o.userData.capGrowth = 'in';
+    // THE RIM IS ONE BAND SWEPT ROUND ONCE (2026-10-04 — Hannah: the edge
+    // "gets built out in a weird way"). Keyed by buffer order it traced the
+    // edge as a thin line three times over (one per stacked ring), then the
+    // lip, and only then filled the posts between them — and the gill ends
+    // showed through the gaps as a row of teeth. Keyed by angle, every part
+    // of the band at an azimuth arrives together, sweeping from the back.
+    for (const o of [rim, rimPts]) o.userData.capGrowth = 'round';
     // The stem's top quarter is built to run up INSIDE the cap (the joint is
     // buried). Left alone it would ink in against open sky and then get
     // swallowed as the cap's body fades in — drawn, then un-drawn. So the
