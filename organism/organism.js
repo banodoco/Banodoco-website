@@ -917,12 +917,39 @@ function capGrowthKey(x, z) {
   const a = Math.atan2(z, x + 0.075);
   return Math.min(0.985, Math.hypot(x + 0.075, z) / rimRad(a));
 }
+/* THE TOP GROWS IN FROM THE RING LIKE A TIDE, NOT A COMB (2026-10-04 —
+   Hannah: once the ring is in, "the edge of the mushroom gets built out in
+   a weird way that feels glitchy"). The inward key was 1 - capGrowthKey,
+   and that key is CAPPED at 0.985: the whole outer band — the last 1.5% to
+   the rim and the rolled margin beyond it — shared one key, so every
+   stroke all the way round the edge appeared on the same frame. Seen from
+   the hero camera that was a fence of short ticks hanging off the rim,
+   preceded by stray dashes from the shell's first ring of triangles.
+   Now the front is continuous: depth from the rim is uncapped and the
+   rolled margin past the rim fills a beat AFTER the front passes it
+   (rather than leading it). And the edge KNITS ROUND instead of popping:
+   each azimuth starts at its own moment — the side facing the hero camera
+   first (CAP_FRONT_AZ), the far side last, over the first ~30% of the
+   window, with a little irregularity — then grows inward from there, so
+   the band that used to appear on one frame zips round from the front to
+   meet at the back. Every sector still closes at the apex together (the
+   key is monotonic in depth at every angle). Ink and opaque shell read
+   this one key, so the body never runs ahead of its strokes. */
+const CAP_FRONT_AZ = 1.65;   // the hero camera's azimuth in the cap's frame (1.58-1.77 across viewports)
+function capInKey(x, z) {
+  const a = Math.atan2(z, x + 0.075);
+  const r = Math.hypot(x + 0.075, z) / rimRad(a);
+  const depth = r <= 1 ? 1 - r : 0.02 + Math.min(0.06, (r - 1) * 1.5);
+  const round = Math.abs(angWrap(a - CAP_FRONT_AZ)) / Math.PI;      // 0 front .. 1 back
+  const tide = 0.5 + 0.3 * Math.sin(2 * a + 0.6) + 0.2 * Math.sin(5 * a - 1.3);
+  const start = 0.24 * round + 0.06 * tide;
+  return Math.min(0.985, start + (0.95 - start) * Math.min(1, depth));
+}
 function growCapBody(mesh, start, end, fromRim = false) {
   const pos = mesh.geometry.attributes.position;
   const keys = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
-    const radius = capGrowthKey(pos.getX(i), pos.getZ(i));
-    keys[i] = fromRim ? 1 - radius : radius;
+    keys[i] = fromRim ? capInKey(pos.getX(i), pos.getZ(i)) : capGrowthKey(pos.getX(i), pos.getZ(i));
   }
   mesh.geometry.setAttribute('aBodyGrowth', new THREE.BufferAttribute(keys, 1));
   mesh.material.onBeforeCompile = shader => {
@@ -2210,8 +2237,7 @@ for (const object of mushroom.children) {
   const draw = object.geometry.attributes.aDraw;
   if (!draw) continue;
   for (let i = 0; i < pos.count; i++) {
-    const radius = capGrowthKey(pos.getX(i), pos.getZ(i));
-    draw.setX(i, way === 'in' ? 1 - radius : radius);
+    draw.setX(i, way === 'in' ? capInKey(pos.getX(i), pos.getZ(i)) : capGrowthKey(pos.getX(i), pos.getZ(i)));
   }
   draw.needsUpdate = true;
 }
