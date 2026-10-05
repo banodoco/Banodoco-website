@@ -122,6 +122,7 @@
 import { CONTENT } from '../content/content.js';
 import { CHAPTERS, chapterAt, restProgress, HERO_END_P } from './route.js';
 import { buildSymbol } from './symbols.js';
+import { controlWrapDirection } from './navigation.js';
 import { CARD_ICONS } from './cards/index.js';
 import { installBackdropDismiss } from './backdrop.js';
 import { claimInput, releaseInput } from './scroll.js';
@@ -2716,6 +2717,8 @@ export function createRail({ onNav } = {}) {
     });
   }
 
+  let lapFlight = null;   // the flight the Manifesto exit below was decided for
+  let lapDir = 0;
   function update(p, {
     modalDetail = false,
     cameraStateDisagree = false,
@@ -2723,6 +2726,31 @@ export function createRail({ onNav } = {}) {
     railFlight = null,
   } = {}) {
     let railP = p;
+    /* LEAVING THE MANIFESTO FOR A BOOKEND IS THE BOOKEND'S OWN LAP (2026-10-05
+       — Hannah: Manifesto -> Intro lit Connect, Equip and Inspire "as if we're
+       passing through them"; it "should act like we're going straight from
+       purpose ... to intro"). The descent hands the row an ordinary flight
+       from Purpose's rest, because the branch owns the camera and no lap is
+       flown — but the row draws the lap Purpose -> Intro always draws, on the
+       descent's clock. Only the row's picture changes: the handoff below
+       still reads the flight, so the Manifesto's subtree folds home as before. */
+    const handoffWrap = railWrap;
+    if (railFlight !== lapFlight) {
+      // Decided once, when the ticket arrives (the Manifesto is still painted
+      // then; it fades out over the descent, so it cannot be re-read later).
+      lapFlight = railFlight;
+      lapDir = 0;
+      if (railFlight && !railWrap && manifestoVisual > 0.001) {
+        const fromId = chapterAt(railFlight.fromP).id;
+        if (Math.abs(railFlight.fromP - restProgress(fromId)) < 1e-4) {
+          lapDir = controlWrapDirection(fromId, chapterAt(railFlight.targetP).id);
+        }
+      }
+    }
+    if (!railWrap && railFlight && lapDir) {
+      railWrap = { dir: lapDir, homeP: railFlight.fromP, targetP: railFlight.targetP,
+        phase: railFlight.phase };
+    }
     // Every tier paints the same row now — the phone no longer keeps a
     // separate edge file, so it takes the same wrap/flight/position paths.
     if (railWrap) {
@@ -2886,7 +2914,7 @@ export function createRail({ onNav } = {}) {
     const nextLayout = visNow === 'mission' ? 'mission' : 'chapter';
     if (root.dataset.layout !== nextLayout) root.dataset.layout = nextLayout;
 
-    paintPurposeHandoff(nowNext, railFlight, railWrap);
+    paintPurposeHandoff(nowNext, railFlight, handoffWrap);
 
     /* THE PURPOSE -> OWNERSHIP SUBTREE IS SEMANTIC, NOT GEOMETRIC.
        `railP` / `visNow` are intentionally absent from railHandoffState():
