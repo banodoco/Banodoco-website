@@ -57,6 +57,7 @@ import { railDock } from '../../layout/rail-geometry.js';
    beat tempo (`grand`, 2026-08-24) paces this chapter's whole arrival —
    see THE ARRIVAL IS PERFORMED at LIGHT_PACE_RATE. */
 import { HOTSPOT_ARRIVAL } from '../../constants/copy.js';
+import { CONNECT_PLUME } from '../../../flags.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -991,6 +992,26 @@ export function createConnect(sceneApi) {
     keeps: [0.42, 0.42, 0.60, 0.80, 0.48, 0.52, 0.58],
   });
 
+  /* PLUME TRIAL (?plume=dim|faint, 2026-10-05). The aerial view puts the
+     spore plume across the headline; this fades it by the chapter's own
+     visual presence and writes the captured base back the frame Connect
+     goes dark, so every other section sees the plume exactly as shipped. */
+  const plumeKeep = CONNECT_PLUME === 'faint' ? 0.30 : CONNECT_PLUME === 'dim' ? 0.55 : 1;
+  const plumeMats = [];
+  if (plumeKeep < 1 && sceneApi.spores && sceneApi.spores.sporePts) {
+    sceneApi.spores.sporePts.traverse((o) => {
+      const u = o.material && o.material.uniforms && o.material.uniforms.uOpacity;
+      if (u) plumeMats.push({ u, base: u.value });
+    });
+  }
+  let plumeShown = 1;
+  function setPlume(a) {
+    const g = 1 - (1 - plumeKeep) * a;
+    if (g === plumeShown) return;
+    plumeShown = g;
+    for (const e of plumeMats) e.u.value = e.base * g;
+  }
+
   /* ================================================================
      Per-frame
      ================================================================ */
@@ -1063,6 +1084,7 @@ export function createConnect(sceneApi) {
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
     if (!group.visible) {
       heroGroundDim.clear();                 // preserves any sibling claim
+      setPlume(0);
       return;
     }
 
@@ -1071,6 +1093,7 @@ export function createConnect(sceneApi) {
     // the hero's own materials back byte-exactly on retire
     const visualAmount = amount * resolve * entryReveal;
     heroGroundDim.set(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
+    setPlume(visualAmount);
 
     U.uTime.value = t;
     U.uAmount.value = visualAmount;

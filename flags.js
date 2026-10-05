@@ -142,6 +142,19 @@ export const POSE = _qs.get('pose'); // string | null
  *  journey/chapters/connect/camera.js. QA/design review only. */
 export const CONNECT_VIEW = _qs.get('connect'); // string | null
 
+/** ?spread=1 — design trial, paired with ?connect=aerial: re-seat the three
+ *  Connect hubs wider on the ground (ADOS further left, Hivemind and
+ *  Banodoco further right of the aerial frame). Moving a hub re-grows its
+ *  route, so the Connect ground builds live instead of from the bake. Read
+ *  by: journey/chapters/connect/tendrils.js, tendrils-baked.js. QA only. */
+export const CONNECT_SPREAD = _qs.get('spread') === '1'; // boolean
+
+/** ?plume=dim|faint — design trial: fade the spore plume while Connect is
+ *  on screen (dim ~55%, faint ~30% of its brightness), riding the chapter's
+ *  own presence so it hands back untouched on the way out. Read by:
+ *  journey/chapters/connect/index.js. QA only. */
+export const CONNECT_PLUME = _qs.get('plume'); // string | null
+
 /** ?livebuild=1 — force the journey to build its chapter geometry from
  *  the live procedural builders, skipping the baked-geometry fetch (see
  *  journey/lib/baked.js). The bake is the shipped fast path; livebuild is

@@ -85,6 +85,7 @@ import { FRONT_SOFT, makeStrandMat, makePointMat } from './tendrils-materials.js
 import { readBakedTendrils } from './tendrils-baked.js';
 import { FIXED_HOTSPOTS } from '../../structure.js';
 import { CONNECT_NODES, CONNECT_FOCAL_ID } from '../../../content/connect-nodes.js';
+import { CONNECT_SPREAD } from '../../../flags.js';
 
 const TAU = Math.PI * 2;
 const V3 = THREE.Vector3;
@@ -203,9 +204,22 @@ for (const id of HUB_IDS) {
 function hubWorkingSet() {
   return Object.fromEntries(HUB_IDS.map((id) => {
     const n = CONNECT_NODES[id];
-    return [id, { ...n, pos: new V3(n.pos[0], n.pos[1], n.pos[2]) }];
+    const p = (CONNECT_SPREAD && SPREAD_POS[id]) || n.pos;
+    return [id, { ...n, pos: new V3(p[0], p[1], p[2]) }];
   }));
 }
+
+/* SPREAD TRIAL (?spread=1, 2026-10-05, Hannah: "should Hivemind and Discord
+   and Banodoco be a little bit more over to the right and should ADOS be a
+   little bit more off to the left?"). Ray-cast from the ?connect=aerial rest
+   at 1440x900 onto groundY through ADOS (185, 770), Hivemind (1030, 520),
+   Discord (1275, 690) — against (300, 820) / (870, 480) / (1015, 790) for the
+   shipped hubs seen from the same camera. */
+const SPREAD_POS = {
+  ados:     [2.04, 0, 4.07],
+  hivemind: [6.70, 0, -3.27],
+  discord:  [9.41, 0, -2.91],
+};
 
 // Stipe footprint: routes leave the base at the stem's visible edge.
 const BASE_R = 0.52;

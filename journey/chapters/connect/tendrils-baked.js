@@ -17,6 +17,7 @@
 // not create a cross-module post-pass.
 import * as THREE from 'three';
 import { isBaked, geometry, payload } from '../../lib/baked.js';
+import { CONNECT_SPREAD } from '../../../flags.js';
 
 const V3 = THREE.Vector3;
 
@@ -36,6 +37,7 @@ const V3 = THREE.Vector3;
    back to the live builders in full, never a half-baked mix. */
 export function readBakedTendrils() {
   if (!isBaked('connect')) return null;
+  if (CONNECT_SPREAD) return null;   // ?spread=1 moves the hubs: the bake no longer matches
   try {
     const P = payload('connect');
     if (!P || !P.counts || typeof P.counts.totalSegs !== 'number'
