@@ -136,6 +136,12 @@ export const P = _qs.get('p'); // string | null
  *  QA/deep-link tooling. */
 export const POSE = _qs.get('pose'); // string | null
 
+/** ?connect=aerial — design trial: CONNECT's rest seen from ~50 deg above
+ *  (the cap read from on top, the three destinations laid out across the
+ *  ground below it) instead of the shipped near-grazing look. Read by:
+ *  journey/chapters/connect/camera.js. QA/design review only. */
+export const CONNECT_VIEW = _qs.get('connect'); // string | null
+
 /** ?livebuild=1 — force the journey to build its chapter geometry from
  *  the live procedural builders, skipping the baked-geometry fetch (see
  *  journey/lib/baked.js). The bake is the shipped fast path; livebuild is

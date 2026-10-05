@@ -76,6 +76,7 @@ import * as THREE from 'three';
 import { trapEase, azEase, quadBezier } from '../../lib/ease.js';
 import { CONNECT_APPROACH_RAMP } from '../../constants.js';
 import { INSPIRE } from '../inspire/camera.js';
+import { CONNECT_VIEW } from '../../../flags.js';
 
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -266,6 +267,23 @@ const REST_KEY = {
   hold: true,
   note: 'connect-rest',
 };
+
+/* AERIAL TRIAL (?connect=aerial, 2026-10-05, Hannah: "a lot more aerial,
+   kind of looking down... around the same distance, but angled... like 50
+   degrees... seeing a lot more of the cap... the three things in a similar
+   position relative to where they are now"). Pitch -50 deg; eye 8.85 from
+   the stipe (the shipped rest is 9.01). Fitted on 1440x900 so the cap stays
+   upper-left and Hivemind / Discord / ADOS keep the shipped arrangement —
+   mid, right, lower-left. A straight top-down cannot match the old screen
+   spots exactly (at 50 deg the ground shows its true plan, so Hivemind rides
+   higher and Discord comes inward); the fit trades those few hundred px for
+   keeping the cap in frame. Gaze rests on the ground plane. */
+if (CONNECT_VIEW === 'aerial') {
+  REST_KEY.pos.set(7.398, 7.557, 3.036);
+  REST_KEY.tgt.set(3.391, 0.0, -1.879);
+  REST_KEY.fov = 57;
+  REST_KEY.note = 'connect-rest-aerial';
+}
 
 // The approach gesture's two ends, derived — never copied — from the poses
 // they must match: INSPIRE (the arrival's landing) and REST_KEY (the keyed
