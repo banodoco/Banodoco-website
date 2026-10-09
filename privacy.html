@@ -28,7 +28,7 @@
   <main>
     <nav aria-label="Site"><a href="/">← Banodoco</a></nav>
     <h1>BNDC privacy policy</h1>
-    <p class="date">Last updated: 9 October 2026</p>
+    <p class="date">Last updated: 10 October 2026</p>
     <p>This policy describes how the Banodoco community team operates BNDC (Brain of BNDC), our Discord bot, and the associated Hivemind community knowledge corpus. It covers Discord-derived data processed by those services.</p>
 
     <h2>What we collect</h2>
@@ -39,20 +39,20 @@
 
     <h2>Storage and retention</h2>
     <p>We store community data outside Discord in Supabase/PostgreSQL. Operational files or logs may also be stored on the systems that run or administer the bot. The managed Supabase database uses the provider’s <a href="https://supabase.com/security">encryption at rest and TLS in transit</a>. This does not establish equivalent protection for every local file or log. Our database retention is separate from any retention settings at AI providers.</p>
-    <p>The archive currently has no automatic fixed expiry for stored message records; records may be retained for more than 30 days. Removing a record from public results is different from deleting its underlying stored contents. To request deletion of stored data, use the contact route below.</p>
+    <p>The archive currently has no automatic fixed expiry for stored message records; records may be retained for more than 30 days. You can delete your stored messages using the command below. For other stored data or help with a deletion request, contact the moderation team.</p>
 
     <h2>Who receives data</h2>
-    <p>Hosting, database and AI service providers process data to operate these features. For AI-assisted answers, we send the question and selected discussion context to the configured model provider. The support-answer route uses OpenRouter, with other workflows or fallback routes using providers such as DeepSeek and Anthropic. Provider routes and their retention terms can differ; we do not make a blanket zero-retention guarantee for all processing.</p>
+    <p>Hosting, database and AI service providers process data to operate these features. For AI-assisted answers, we send the question and selected discussion context to OpenAI for inference under Zero Data Retention. These settings apply to the content sent to the AI provider; they do not mean that our own community database has zero retention.</p>
     <p>Hivemind makes community messages and associated source information publicly searchable and accessible outside Discord. Bot replies and community updates can reproduce or link to community content. Sharing preferences control participating update and sharing features, as described below. Public material may be copied by others; removing it from our public corpus cannot recall copies already obtained by third parties.</p>
 
     <h2>AI use</h2>
-    <p>Retrieving earlier discussions as context for an answer is model inference, rather than model training. The currently configured <a href="https://openrouter.ai/meta/muse-spark-1.3-contributor">OpenRouter Meta Muse Spark contributor model</a> states that prompts and outputs may be used to improve Meta’s products. We therefore do not promise that all submitted content is excluded from provider model improvement. We also cannot control third parties’ use of publicly accessible content.</p>
+    <p>Retrieving earlier discussions as context for an answer is model inference, rather than model training. We use OpenAI with Zero Data Retention enforced and do not use the submitted content to train models. Content submitted through this configuration is not used by OpenAI for model training. We cannot control third parties’ use of publicly accessible content.</p>
 
     <h2>Your controls</h2>
     <ul>
-      <li><strong>Remove existing messages from the public corpus:</strong> run <code>/remove-from-hivemind</code> with BNDC inside the server. The default is a preview. Run it with <code>dry_run: False</code> to mark your existing messages in that server as removed from the public Hivemind feeds. This retains the underlying database records, does not delete the original Discord messages, and does not prevent collection of future messages.</li>
-      <li><strong>Update sharing preferences:</strong> use <code>/update_details</code> with BNDC to change the “Include in updates/transcripts?” and “Okay to share my content?” settings. These preferences are separate from corpus removal and a request to delete stored records.</li>
-      <li><strong>Request access, correction, full deletion or an ongoing collection restriction:</strong> contact a Banodoco server moderator privately and identify the request as a BNDC data request. Include your Discord user ID and the relevant server or message links so the team can locate the records and verify the request. These requests require manual handling; the commands above do not automatically perform full deletion or impose an ongoing collection restriction.</li>
+      <li><strong>Delete your stored messages:</strong> run <code>/remove-from-hivemind</code> with BNDC inside the server. The default is a preview. Run it with <code>dry_run: False</code> to delete your stored messages for that server from our database and public Hivemind corpus. This does not delete the original Discord messages. It does not by itself prevent collection of future messages.</li>
+      <li><strong>Update sharing preferences:</strong> use <code>/update_details</code> with BNDC to change the “Include in updates/transcripts?” and “Okay to share my content?” settings. These preferences are separate from deleting your stored messages.</li>
+      <li><strong>Request access, correction, deletion of other stored data or an ongoing collection restriction:</strong> contact a Banodoco server moderator privately and identify the request as a BNDC data request. Include your Discord user ID and the relevant server or message links so the team can locate the records and verify the request. These requests require manual handling. The message-deletion command does not by itself impose an ongoing collection restriction.</li>
     </ul>
 
     <h2>Privacy contact</h2>
