@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1eb">
+  <meta name="description" content="How Banodoco's BNDC Discord bot collects, uses and stores community data, and how to request removal or deletion.">
+  <title>BNDC privacy policy — Banodoco</title>
+  <link rel="icon" href="/assets/brand/mark-b-mask-96.png" type="image/png">
+  <style>
+    :root { color-scheme: light; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1f1f1d; background: #f4f1eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 2rem 1.25rem 4rem; }
+    main, footer { max-width: 46rem; margin: auto; }
+    nav { margin-bottom: 3rem; }
+    h1 { font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.1; }
+    h2 { margin-top: 2.25rem; font-size: 1.3rem; }
+    p, li { font-size: 1.05rem; line-height: 1.65; }
+    li + li { margin-top: .5rem; }
+    a { color: #8c3819; text-underline-offset: .2em; }
+    a:focus-visible { outline: 2px solid #8c3819; outline-offset: .3rem; }
+    code { overflow-wrap: anywhere; }
+    .date, footer { color: #625f59; font-size: .95rem; }
+    footer { border-top: 1px solid #cfc9bf; padding-top: 1.25rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="Site"><a href="/">← Banodoco</a></nav>
+    <h1>BNDC privacy policy</h1>
+    <p class="date">Last updated: 9 October 2026</p>
+    <p>This policy describes how the Banodoco community team operates BNDC (Brain of BNDC), our Discord bot, and the associated Hivemind community knowledge corpus. It covers Discord-derived data processed by those services.</p>
+
+    <h2>What we collect</h2>
+    <p>In channels the bot can access and is configured to process, we collect message text, attachment and embed information, message links and identifiers, author and channel identifiers, timestamps, reactions and related conversation context. Stored records can include message edits and deletion markers. We also process member names, identifiers and roles for onboarding and role management, and the social links and sharing preferences members provide through the bot.</p>
+
+    <h2>Why we use it</h2>
+    <p>BNDC retrieves relevant earlier discussions and resources to answer questions in community support channels, including links to its sources. Storing this information lets the bot find knowledge from past conversations rather than asking members to repeat it. Other uses include the community knowledge archive, resource curation, community updates, introduction review and member-role administration.</p>
+
+    <h2>Storage and retention</h2>
+    <p>We store community data outside Discord in Supabase/PostgreSQL. Operational files or logs may also be stored on the systems that run or administer the bot. The managed Supabase database uses the provider’s <a href="https://supabase.com/security">encryption at rest and TLS in transit</a>. This does not establish equivalent protection for every local file or log. Our database retention is separate from any retention settings at AI providers.</p>
+    <p>The archive currently has no automatic fixed expiry for stored message records; records may be retained for more than 30 days. Removing a record from public results is different from deleting its underlying stored contents. To request deletion of stored data, use the contact route below.</p>
+
+    <h2>Who receives data</h2>
+    <p>Hosting, database and AI service providers process data to operate these features. For AI-assisted answers, we send the question and selected discussion context to the configured model provider. The support-answer route uses OpenRouter, with other workflows or fallback routes using providers such as DeepSeek and Anthropic. Provider routes and their retention terms can differ; we do not make a blanket zero-retention guarantee for all processing.</p>
+    <p>Hivemind makes community messages and associated source information publicly searchable and accessible outside Discord. Bot replies and community updates can reproduce or link to community content. Sharing preferences control participating update and sharing features, as described below. Public material may be copied by others; removing it from our public corpus cannot recall copies already obtained by third parties.</p>
+
+    <h2>AI use</h2>
+    <p>Retrieving earlier discussions as context for an answer is model inference, rather than model training. The currently configured <a href="https://openrouter.ai/meta/muse-spark-1.3-contributor">OpenRouter Meta Muse Spark contributor model</a> states that prompts and outputs may be used to improve Meta’s products. We therefore do not promise that all submitted content is excluded from provider model improvement. We also cannot control third parties’ use of publicly accessible content.</p>
+
+    <h2>Your controls</h2>
+    <ul>
+      <li><strong>Remove existing messages from the public corpus:</strong> run <code>/remove-from-hivemind</code> with BNDC inside the server. The default is a preview. Run it with <code>dry_run: False</code> to mark your existing messages in that server as removed from the public Hivemind feeds. This retains the underlying database records, does not delete the original Discord messages, and does not prevent collection of future messages.</li>
+      <li><strong>Update sharing preferences:</strong> use <code>/update_details</code> with BNDC to change the “Include in updates/transcripts?” and “Okay to share my content?” settings. These preferences are separate from corpus removal and a request to delete stored records.</li>
+      <li><strong>Request access, correction, full deletion or an ongoing collection restriction:</strong> contact a Banodoco server moderator privately and identify the request as a BNDC data request. Include your Discord user ID and the relevant server or message links so the team can locate the records and verify the request. These requests require manual handling; the commands above do not automatically perform full deletion or impose an ongoing collection restriction.</li>
+    </ul>
+
+    <h2>Privacy contact</h2>
+    <p>Contact the moderation team through the <a href="https://discord.gg/NnFxGvx94b" rel="noreferrer">Banodoco Discord server</a>. Please use a private message for personal information rather than posting it in a public support channel. Ask for the team responsible for BNDC and Hivemind if your request concerns stored data or this policy.</p>
+
+    <h2>Changes</h2>
+    <p>We update this page when these practices change. The date above identifies the current version. Discord's own processing is governed by <a href="https://discord.com/privacy">Discord's privacy policy</a>.</p>
+  </main>
+  <footer>Banodoco · <a href="/">Home</a></footer>
+</body>
+</html>

@@ -378,7 +378,7 @@ def create_app(*, root=None, config=None, transport=upstream_json, clock=time.ti
         # Python/templates ship in the artifact to run the server, not as assets.
         parts = Path(path).parts
         public_roots = {"assets", "content", "journey", "journey-v6", "organism", "ownership", "static", "vendor"}
-        public_files = {"index.html", "404.html", "favicon.ico", "flags.js", "hero.css", "inspire-exits.js",
+        public_files = {"index.html", "privacy.html", "404.html", "favicon.ico", "flags.js", "hero.css", "inspire-exits.js",
                         "main.js", "robots.txt", "site.webmanifest", "sitemap.xml", "release-revision.txt"}
         if (any(p.startswith(".") or "\\" in p for p in parts)
                 or not (path in public_files or parts and parts[0] in public_roots)):

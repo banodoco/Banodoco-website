@@ -3,6 +3,7 @@
      real origin+basepath (one sed line, noted in DEPLOY.md). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>ORIGIN/</loc></url>
+  <url><loc>ORIGIN/privacy.html</loc></url>
   <url><loc>ORIGIN/static/</loc></url>
   <url><loc>ORIGIN/ownership/</loc></url>
 </urlset>

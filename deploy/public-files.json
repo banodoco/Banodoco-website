@@ -5,6 +5,7 @@
     "flags.js",
     "hero.css",
     "index.html",
+    "privacy.html",
     "inspire-exits.js",
     "main.js",
     "robots.txt",
@@ -64,6 +65,7 @@
   ],
   "required": [
     "index.html",
+    "privacy.html",
     "inspire-exits.js",
     "404.html",
     "main.js",
