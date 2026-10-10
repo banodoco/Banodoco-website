@@ -2516,10 +2516,15 @@ export function createRail({ onNav } = {}) {
     const iconAt = gatheredAt + (1 - gatheredAt) * armLeg / (armLeg + seatD);
     const seg = (u, from, to) => Math.max(0, Math.min(1, (u - from) / Math.max(1e-6, to - from)));
     /* The pack has one front: the row and Purpose's root gather while the
-       dot rides Purpose, so the dot reads as travelling with the centre. */
-    const horizontalGatherU = gatheredAt > hubAt
-      ? seg(gatherU, hubAt, gatheredAt)
-      : (gatherU > 0 ? 1 : 0);
+       dot rides Purpose, so the dot reads as travelling with the centre.
+       THE ROW CLOSES IN OVER THE WHOLE MOVE (2026-10-06 — Hannah: going to
+       the Manifesto or Ownership "the navigation thing closes in ... feels
+       too quick"). It used to finish at gatheredAt, the moment the dot
+       leaves Purpose for the arm — about three quarters of the way through
+       the flight to Ownership. It now gathers until the flight lands; the
+       dot's route is in the tree's own frame, so it rides the still-closing
+       row out along the arm. */
+    const horizontalGatherU = seg(gatherU, hubAt, 1);
     // Gathered, the GROUP is centred, not Purpose: Purpose sits right of
     // the axis by half its children's reach (every gathered slot carries the
     // same offset, so the row still packs into Purpose's seat).
@@ -2653,7 +2658,9 @@ export function createRail({ onNav } = {}) {
     );
     root.style.setProperty(
       '--purpose-peer-open-u',
-      (1 - Math.min(1, gatherU / 0.82)).toFixed(5),
+      // on the row's own front, so the peers fade as they close in rather
+      // than vanishing while the row is still travelling
+      (1 - Math.min(1, horizontalGatherU / 0.92)).toFixed(5),
     );
     root.style.setProperty('--purpose-scrim-u', navPoseU.toFixed(5));
     // An opened tree that reaches further DOWN than the resting one is paid

@@ -11,6 +11,7 @@
 
 import { CONTENT } from '../content/content.js';
 import { CARD_ICONS } from './cards/index.js';
+import { SOON_ICONS } from './cards/soon-icons.js';
 import { createRail } from './rail.js';
 import { createRailExclusion, railBox } from './layout/rail-geometry.js';
 import { createFrameProjection } from './ui/frame-projection.js';
@@ -440,6 +441,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
       btn.classList.add('j-hot--icon-tab');
       dotEl.classList.add('j-hot-ico');
       dotEl.innerHTML = CARD_ICONS[id];
+    } else if (SOON_ICONS[id]) {
+      // The two unbuilt Equip chips get a pictograph in their tab in place of
+      // the ember (2026-10-05). They keep the soon housing and blurred name;
+      // only the mark changes (site.css .j-hot--soon .j-hot-ico).
+      dotEl.classList.add('j-hot-ico');
+      dotEl.innerHTML = SOON_ICONS[id];
     }
     btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);

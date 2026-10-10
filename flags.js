@@ -136,24 +136,21 @@ export const P = _qs.get('p'); // string | null
  *  QA/deep-link tooling. */
 export const POSE = _qs.get('pose'); // string | null
 
-/** ?connect=aerial — design trial: CONNECT's rest seen from ~50 deg above
- *  (the cap read from on top, the three destinations laid out across the
- *  ground below it) instead of the shipped near-grazing look. Read by:
- *  journey/chapters/connect/camera.js. QA/design review only. */
-export const CONNECT_VIEW = _qs.get('connect'); // string | null
+/** ?connect=classic — CONNECT's previous composition: the near-grazing rest
+ *  and the hub seats it was authored against. The default (since
+ *  2026-10-05) is 'aerial' — the rest seen from ~50 deg above, the cap read
+ *  from on top, the three hubs spread across the ground. Classic re-seats
+ *  the hubs, so its Connect ground builds live instead of from the bake.
+ *  Read by: journey/chapters/connect/camera.js, tendrils.js,
+ *  tendrils-baked.js, journey/portrait.js. QA/design comparison only. */
+export const CONNECT_VIEW = _qs.get('connect') === 'classic' ? 'classic' : 'aerial'; // 'aerial' | 'classic'
 
-/** ?spread=1 — design trial, paired with ?connect=aerial: re-seat the three
- *  Connect hubs wider on the ground (ADOS further left, Hivemind and
- *  Banodoco further right of the aerial frame). Moving a hub re-grows its
- *  route, so the Connect ground builds live instead of from the bake. Read
- *  by: journey/chapters/connect/tendrils.js, tendrils-baked.js. QA only. */
-export const CONNECT_SPREAD = _qs.get('spread') === '1'; // boolean
-
-/** ?plume=dim|faint — design trial: fade the spore plume while Connect is
- *  on screen (dim ~55%, faint ~30% of its brightness), riding the chapter's
- *  own presence so it hands back untouched on the way out. Read by:
- *  journey/chapters/connect/index.js. QA only. */
-export const CONNECT_PLUME = _qs.get('plume'); // string | null
+/** ?plume=off|dim — how far the spore plume fades while Connect is on
+ *  screen (Connect and Equip). Default 'faint' (~30% of its brightness, so the plume no longer
+ *  runs through the headline from the aerial camera); 'dim' keeps ~55%,
+ *  'off' leaves it untouched (the pre-2026-10-05 behaviour). Read by:
+ *  journey/chapters/connect/index.js. The override is QA only. */
+export const CONNECT_PLUME = _qs.get('plume') || 'faint'; // 'faint' | 'dim' | 'off'
 
 /** ?livebuild=1 — force the journey to build its chapter geometry from
  *  the live procedural builders, skipping the baked-geometry fetch (see

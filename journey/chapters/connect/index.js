@@ -57,7 +57,7 @@ import { railDock } from '../../layout/rail-geometry.js';
    beat tempo (`grand`, 2026-08-24) paces this chapter's whole arrival —
    see THE ARRIVAL IS PERFORMED at LIGHT_PACE_RATE. */
 import { HOTSPOT_ARRIVAL } from '../../constants/copy.js';
-import { CONNECT_PLUME } from '../../../flags.js';
+import { createPlumeFade } from '../../plume-fade.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -992,25 +992,15 @@ export function createConnect(sceneApi) {
     keeps: [0.42, 0.42, 0.60, 0.80, 0.48, 0.52, 0.58],
   });
 
-  /* PLUME TRIAL (?plume=dim|faint, 2026-10-05). The aerial view puts the
-     spore plume across the headline; this fades it by the chapter's own
-     visual presence and writes the captured base back the frame Connect
-     goes dark, so every other section sees the plume exactly as shipped. */
-  const plumeKeep = CONNECT_PLUME === 'faint' ? 0.30 : CONNECT_PLUME === 'dim' ? 0.55 : 1;
-  const plumeMats = [];
-  if (plumeKeep < 1 && sceneApi.spores && sceneApi.spores.sporePts) {
-    sceneApi.spores.sporePts.traverse((o) => {
-      const u = o.material && o.material.uniforms && o.material.uniforms.uOpacity;
-      if (u) plumeMats.push({ u, base: u.value });
-    });
-  }
-  let plumeShown = 1;
-  function setPlume(a) {
-    const g = 1 - (1 - plumeKeep) * a;
-    if (g === plumeShown) return;
-    plumeShown = g;
-    for (const e of plumeMats) e.u.value = e.base * g;
-  }
+  /* The spore plume steps back while Connect is up; the fade, its pacing
+     to a click's move and its hand-over with Equip live in
+     journey/plume-fade.js. Full at the Connect rest, none at the Equip and
+     Owned rests. */
+  const plumeFade = createPlumeFade(sceneApi, {
+    id: 'connect',
+    from: restProgress('equip'), rest: restProgress('connect'), to: restProgress('owned'),
+  });
+  owner.own(() => plumeFade.dispose());
 
   /* ================================================================
      Per-frame
@@ -1070,6 +1060,7 @@ export function createConnect(sceneApi) {
     else if (tgtT >= litShownT) litShownT = Math.min(tgtT, litShownT + dt * LIGHT_PACE_RATE);
     else if (blendGoverned) litShownT = Math.max(tgtT, litShownT - dt * LIGHT_RETREAT_RATE);
     else litShownT = tgtT;
+    stepAdos(litShownT, dt);
     applyFronts(litShownT);
 
     const k = Math.min(1, dt * 3.0);
@@ -1084,7 +1075,6 @@ export function createConnect(sceneApi) {
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
     if (!group.visible) {
       heroGroundDim.clear();                 // preserves any sibling claim
-      setPlume(0);
       return;
     }
 
@@ -1093,7 +1083,6 @@ export function createConnect(sceneApi) {
     // the hero's own materials back byte-exactly on retire
     const visualAmount = amount * resolve * entryReveal;
     heroGroundDim.set(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
-    setPlume(visualAmount);
 
     U.uTime.value = t;
     U.uAmount.value = visualAmount;
@@ -1240,10 +1229,39 @@ export function createConnect(sceneApi) {
 
   /** The front loop — the pre-pacing driveAt body verbatim, parameterised on
    *  the leg-t the fronts actually display. */
+  /* ADOS TAKES ITS TIME (2026-10-05, Hannah: "could you make the ados root
+     extent in connect last a little bit longer? it feels too fast often").
+     The schedule shares one fixed window by reach, and the aerial re-seat
+     shortened ADOS's run (uLitMax 1.134 -> 0.919) while lengthening
+     Hivemind's, so its slice fell from 38% to 32%. Measured on a nav click
+     (uLit, 2% -> 98%): Hivemind 1.00 s, Discord 0.98 s, ADOS 0.73 s — the
+     event the page exists for ran quickest. Re-weighting inside the window
+     barely moves it (x1.8 buys ~25% and takes it from the other two), so
+     ADOS's front gets its own performed position on top of litShownT: never
+     ahead of it, falling with it instantly, and rising no faster than one
+     full run per ADOS_MIN_S. Linear u, before frontEase, so the run keeps its
+     shape and only its tempo slows. 1.3 measures 1.23 s on the same click —
+     a beat longer than the other two (0.9 measured 0.83 s, 1.5 1.37 s); its
+     label lands ~0.18 s later. Its dot, core and chip all read litR, so they
+     wait for the light as before. */
+  const ADOS_MIN_S = 1.3;
+  const ADOS_ROUTE = net.hubMeta.find((h) => h.id === FOCAL).route;
+  let adosU = 0;
+  function adosTargetU(legT) {
+    const w = LIT_WIN[ADOS_ROUTE];
+    const u = (legT - w[0]) / (w[1] - w[0]);
+    return u < 0 ? 0 : u > 1 ? 1 : u;
+  }
+  function stepAdos(legT, dt) {
+    const u = adosTargetU(legT);
+    adosU = (dt === 0 || u <= adosU) ? u : Math.min(u, adosU + dt / ADOS_MIN_S);
+  }
+
   function applyFronts(legT) {
     litMin = 1; litAvg = 0;
     for (let i = 0; i < 3; i++) {
-      const L = frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
+      const L = i === ADOS_ROUTE ? frontEase(adosU)
+        : frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
       litR[i] = L;
       // HEAD_PEAK 0.55: warm emphasis while this route's front travels.
       headR[i] = L > 0 && L < 1 ? 0.55 * Math.sin(Math.PI * L) ** 0.6 : 0;
@@ -1399,6 +1417,7 @@ export function createConnect(sceneApi) {
      *  exactly as shipped (M5 values). */
     drive(p) {
       entryReveal = 1;
+      plumeFade.drive(p);
       driveAt(p);
       updateAdosExclusion();
     },
@@ -1412,6 +1431,7 @@ export function createConnect(sceneApi) {
     entryDuration: ENTRY_DURATION_S,
     beginEntry() {
       entryReveal = 0;
+      plumeFade.enter();   // driveEntry carries no p; a nav entry lands here
       driveAt(SPAN_LO);
       // The replay opens on a RESET performance. Before the departure floor
       // this reset was implicit (the next tick's instant fall); with a
@@ -1420,6 +1440,7 @@ export function createConnect(sceneApi) {
       // Invisible by the same argument as the reveal: entryReveal is 0 until
       // driveEntry's own clock raises it.
       litShownT = litTargetT();
+      adosU = adosTargetU(litShownT);
       updateAdosExclusion();
     },
     entryReady() {
@@ -1439,6 +1460,7 @@ export function createConnect(sceneApi) {
       // the light stands exactly where the conducted schedule puts it, so a
       // deep link or capture renders the finished (or exactly-partial) state.
       litShownT = litTargetT();
+      adosU = adosTargetU(litShownT);
       updateAdosExclusion();
       for (const id of NODE_IDS) amt[id] = hot[id] ? 1 : 0;
     },
@@ -1449,11 +1471,13 @@ export function createConnect(sceneApi) {
      *  precedent; an optional contract member, chapter-contract.js). While a
      *  blend is up the machine owns p, so a fall in the conducted light
      *  position is a departure to PERFORM (the animator's retreat floor),
-     *  not a gesture to track. `dstCamX`/`durS` are deliberately unused:
-     *  the floor is a rate matched to the owner's scroll-backward reference
-     *  (see THE DEPARTURE IS PERFORMED TOO), not a schedule against the
-     *  move. The clearing call settles any downward residue SYNCHRONOUSLY
-     *  rather than leaving it to "the next tick": a blend can end on the
+     *  not a gesture to track. `dstCamX`/`durS` are deliberately unused BY
+     *  THE LIGHT: the floor is a rate matched to the owner's scroll-backward
+     *  reference (see THE DEPARTURE IS PERFORMED TOO), not a schedule
+     *  against the move. Only the plume fade reads `durS`
+     *  (journey/plume-fade.js, THE FADE TAKES THE WHOLE MOVE). The clearing
+     *  call settles any downward residue SYNCHRONOUSLY rather than leaving
+     *  it to "the next tick": a blend can end on the
      *  frame loop's last frame before it idles at the landed rest (measured:
      *  the retreat froze mid-window at [0, 1, 0.49] across a 7 s park when
      *  this was tick-deferred), and a banked half-arrival across that sleep
@@ -1464,8 +1488,9 @@ export function createConnect(sceneApi) {
      *  protected rests hold resolve at exactly 0), and on a manual-claim
      *  cancel it is the same hard hand-back step every cancelled jump on
      *  this site already makes. */
-    setBlending(on) {
+    setBlending(on, dstCamX, durS) {
       blendGoverned = !!on;
+      plumeFade.setBlending(on, durS);
       if (!blendGoverned) litShownT = Math.min(litShownT, litTargetT());
     },
     /** RETIRE THIS CHAPTER'S EXTERNAL ATTACHMENTS — and ONLY those (R05).

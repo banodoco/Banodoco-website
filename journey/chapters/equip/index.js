@@ -31,6 +31,9 @@
 // settles on — is chapters/equip/camera.js.
 import * as THREE from 'three';
 import { FIXED_HOTSPOTS } from '../../structure.js';
+import { restProgress } from '../../route.js';
+import { createPlumeFade } from '../../plume-fade.js';
+import { capOcclusionFor } from '../../cap-occlusion.js';
 
 /* ------------------------------------------------------------------ */
 /* The two anatomical anchors                                          */
@@ -70,6 +73,40 @@ const STALK_LOCAL = new THREE.Vector3(0, 2.85, 0);
 // (919, 148) @1440x900, (546, 273) @744x1133, (358, 225) @430x932 — in the
 // lit ceiling on every frame, clear of the copy block on every frame.
 const GILL_LOCAL = new THREE.Vector3(-0.9, 3.18, -1.2);
+
+// QUARK ON A PORTRAIT PHONE (2026-10-05, Hannah: "In equip the lower one
+// disappears on mobile too"). The phone copy block wraps tall and climbs the
+// frame — its top at 634 px of 932 (430 wide), 520 of 844 (390), 343 of 667
+// (375) — and STALK_LOCAL's mid-column point projects inside it below 430
+// wide, where hotspot-frame.js's copy rule refuses the chip outright (it was
+// never drawn at 390 or 375; not a regression of anything in this file). On
+// a portrait phone the stalk anchor climbs the column, still on the stalk
+// the chip names, until it clears the copy. 3.2 is the stalk's top, where
+// it flares into the gills: measured on the live camera (sway-local
+// (0, y, 0) projected), 3.2 clears the copy
+// with the copy rule's 26 px leave margin on every phone from 360x780 up
+// (360x780, 375x812, 390x844, 393x852, 412x915, 430x932). Not on the short
+// frames — 360x740 and 375x667 — where the copy covers the whole visible
+// stalk (375x667: copy top 343, stalk top at 355). The pulse rings from the
+// same point the chip points at.
+//
+// NOT ONLY PHONES (2026-10-05, a ~1000x710 landscape window: "i cant see the
+// lower one"). The landscape copy block is a fixed ~640 px wide (52-692 at
+// 1000 wide) while the stalk projects near 0.6 of the width, so below ~1100
+// wide the stalk sits under the copy's x-range and the mid-column point lands
+// inside its margin (1000x710: copy top 463, point at 454). The stalk top
+// clears it (399). It is never closer to the copy than the mid-column point,
+// so the gate is simply width. Height matters too (1200x700 still lost it at
+// a 1200 gate), so the gate is the HORIZONTAL clearance alone, which needs
+// no height: the stalk projects at ~0.559 W and the copy ends at ~0.052 W +
+// 640, so the stalk clears the copy's x-range (plus its margin) only from
+// ~1290 wide. Below STALK_HIGH_BELOW_W every frame — phone, portrait tablet,
+// small landscape — uses the stalk top; wider frames keep the authored
+// mid-column.
+const STALK_HIGH_BELOW_W = 1300;
+const STALK_LOCAL_HIGH = new THREE.Vector3(0, 3.2, 0);
+const stalkHigh = () => typeof innerWidth === 'number'
+  && innerWidth < STALK_HIGH_BELOW_W;
 
 /* ------------------------------------------------------------------ */
 /* The arrival ripple                                                  */
@@ -125,6 +162,31 @@ export function createEquip(sceneApi) {
   const camera = sceneApi.camera;
   const _w = new THREE.Vector3();
 
+  /* The spore plume steps back while Equip is up, as it does on Connect
+     (2026-10-05, Hannah: "Currently they kinda DOMINATE the actual items
+     here"): full at the Equip rest, none at the Inspire and Connect rests.
+     Shared with Connect so the hand-over between the two neighbours holds
+     the plume steady — see journey/plume-fade.js. The same presence lets the
+     cap hide the spores above it, since this is the one view from beneath
+     it ("they seem to move through the mushroom") — journey/cap-occlusion.js. */
+  const capOcclusion = capOcclusionFor(sceneApi);
+  const KEEP_EQUIP = 0.40;
+  const plumeFade = createPlumeFade(sceneApi, {
+    id: 'equip',
+    from: restProgress('inspire'), rest: restProgress('equip'), to: restProgress('connect'),
+    // Lighter than Connect: with the cap now hiding the plume behind it, 0.20
+    // left the underside bare ("makes equip look a little boring, we should
+    // have a bit MORE spore noise there"); 0.65 was then "WAY too bright".
+    // 0.40, with the lens fade midway too (cap-occlusion.js NEAR_LO/HI), is
+    // the asked-for midpoint between the two.
+    keep: KEEP_EQUIP,
+    onAmount: (a) => capOcclusion.set(a),
+  });
+
+  function localOf(id) {
+    return id === 'quark' && stalkHigh() ? STALK_LOCAL_HIGH : LOCAL_OF[id];
+  }
+
   function worldOf(local) {
     _w.copy(local);
     return swayGroup ? swayGroup.localToWorld(_w) : _w;
@@ -171,7 +233,7 @@ export function createEquip(sceneApi) {
   function ring(id, authored = false) {
     const now = seconds();
     if (!authored && now - lastRingAt < RIPPLE_REARM_S) return false;
-    const local = LOCAL_OF[id];
+    const local = localOf(id);
     if (!local || typeof sceneApi.pulseFrom !== 'function') return false;
     lastRingAt = now;
     if (authored) revealAt[id] = now;
@@ -278,11 +340,11 @@ export function createEquip(sceneApi) {
      *  copy-arrival.js holds it down while |dp/dt| is high and breathes it in
      *  once the ride is inside COPY_SETTLE_LO. Gating the rings on it means the
      *  ripple cannot fire past a scrubbing finger. */
-    drive() { advanceIntro(copyEase()); },
+    drive(p) { plumeFade.drive(p); advanceIntro(copyEase()); },
 
     /** A nav landing replays the introduction from the top — labels included:
      *  they sit back down so each can rise again on its own ring. */
-    beginEntry() { stage = 0; revealAt.quark = revealAt.brotchen = null; },
+    beginEntry() { stage = 0; revealAt.quark = revealAt.brotchen = null; plumeFade.enter(); },
     /** The nav entry's own 0..1 clock, smootherstepped by frame-application. */
     driveEntry(f) { advanceIntro(f); },
     /** CAMERA-PURE, and it has to be: the entry clock must not start while the
@@ -302,7 +364,7 @@ export function createEquip(sceneApi) {
      *  room after the second, so the entry does not finish mid-answer. */
     entryDuration: 2.2,
     /** A camera blend owns the frame; the ripple waits for it. */
-    setBlending(on) { blendOwned = !!on; },
+    setBlending(on, dstCamX, durS) { blendOwned = !!on; plumeFade.setBlending(on, durS); },
     setGliding(on) { gliding = !!on; },
     get gliding() { return gliding; },
 
@@ -314,7 +376,7 @@ export function createEquip(sceneApi) {
      *  node when there is one, the stalk otherwise — the stalk is the column
      *  the composition is built around. */
     focus: {
-      world() { return worldOf(LOCAL_OF[hot] || STALK_LOCAL).clone(); },
+      world() { return worldOf(localOf(hot) || STALK_LOCAL).clone(); },
     },
 
     interaction: null,
@@ -342,7 +404,7 @@ export function createEquip(sceneApi) {
        *  FIXED_HOTSPOTS and a registrar must not be handed an array it might
        *  sort. */
       nodeIds: [...NODES],
-      nodeWorld(id) { return worldOf(LOCAL_OF[id] || STALK_LOCAL).clone(); },
+      nodeWorld(id) { return worldOf(localOf(id) || STALK_LOCAL).clone(); },
       /** THE REVEAL IS THE LADDER (R3 — this chapter used to declare
        *  `nodeReveal: null` and let both chips ride the copy ease together;
        *  the owner's direction ties each chip's appearance to its own pulse:

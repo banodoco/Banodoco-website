@@ -44,6 +44,7 @@ import {
   PHONE_FINAL_SCENE_LIFT_PX,
   cameraWorldUnitsForPixels,
 } from './layout/final-composition.js';
+import { CONNECT_VIEW } from '../flags.js';
 
 /* ------------------------------------------------------------------ */
 /* Aspect weight                                                       */
@@ -93,6 +94,16 @@ const ZERO = { back: 1, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
 
 const ORBIT_DEAD_FRACTION = 0.15384615384615385;   // == chapters/inspire/camera.js ARRIVAL_DEAD
 const ORBIT_P0 = ORBIT_DEAD_FRACTION * restProgress('inspire');
+
+/* AERIAL REST, PORTRAIT (default since 2026-10-05). The shipped key
+   above was tuned on the old near-grazing rest; laid over the aerial rest it
+   pushed Hivemind and Banodoco off a phone's right edge. Fitted jointly on
+   390x844 (with the phone lift below) and 820x1180 so the cap sits under the
+   copy, ADOS left, Hivemind and Banodoco right, everything above the rail:
+   a steeper look (pitch ~-63 deg) at the 72 deg fov ceiling. */
+const AERIAL_CONNECT_KEY = {
+  p: restProgress('connect'), back: 1.12, rise: 9.975, truck: 1.423, tgtUp: 3.917, tgtRight: -1.686, fov: 15,
+};
 
 const KEYS = [
   // Mission + orbit head: zero — the hero's own mobile pose is the portrait
@@ -263,7 +274,9 @@ const KEYS = [
   // the mushroom/network move down together while pitch stays bit-identical.
   // That last property is load-bearing — Connect's reveal is derived from
   // forward.y, so changing tgtUp alone would leave the ground under-resolved.
-  { p: restProgress('connect'), back: 1.62, rise: 2.30, truck: 0, tgtUp: 2.30, tgtRight: -0.30, fov: 8 },
+  // The aerial rest (default) uses AERIAL_CONNECT_KEY; ?connect=classic this.
+  CONNECT_VIEW === 'aerial' ? AERIAL_CONNECT_KEY
+    : { p: restProgress('connect'), back: 1.62, rise: 2.30, truck: 0, tgtUp: 2.30, tgtRight: -0.30, fov: 8 },
 
   // The approach to the trunk + the exterior descent: near-zero field —
   // clearance to the stipe is small and the leg's whole job is the
@@ -643,11 +656,39 @@ function phoneConnectWeight(p) {
   return 1 - smooth01((p - rest) / (startOf('owned') - rest));
 }
 
+/* NEAR-SQUARE LANDSCAPE, AERIAL CONNECT (2026-10-05, Hannah: "at some
+   screen sizes like large ipad some of the actual labels arent visible").
+   The aerial rest is fitted at 16:10 and its hubs sit wide; as a landscape
+   frame narrows toward square, the fixed vertical fov squeezes them out
+   sideways, and the portrait field only starts below aspect 1. Measured on
+   the projected hubs: from aspect 0.96 to 1.09 at least one hub crossed
+   hotspot-frame.js's |ndc x| 0.92 placement bound, so its label was refused
+   (Banodoco worst, at 1.10x the bound). A dolly back about the target —
+   pitch and gaze untouched, so Connect's camera-pure resolve is unchanged —
+   ramped in below aspect 1.5 to +35% at 0.95, handed to the portrait field
+   by (1 - w) and enveloped to the Connect span. Every hub now stays inside
+   0.79 of the bound at every aspect 0.45-2.2; the price is the cap lip
+   reaching the frame edge (up to ~4% past it) between 1.0 and 1.5. 16:10
+   and wider are untouched. */
+const AERIAL_NARROW_FROM = 1.5, AERIAL_NARROW_TO = 0.95, AERIAL_NARROW_BACK = 0.35;
+
+function aerialNarrowBack(pose, p, aspect, w) {
+  if (CONNECT_VIEW !== 'aerial' || !(aspect < AERIAL_NARROW_FROM)) return;
+  const k = AERIAL_NARROW_BACK * (1 - w) * phoneConnectWeight(p)
+    * smooth01((AERIAL_NARROW_FROM - aspect) / (AERIAL_NARROW_FROM - AERIAL_NARROW_TO));
+  if (!(k > 0)) return;
+  pose.pos.x = pose.target.x + (pose.pos.x - pose.target.x) * (1 + k);
+  pose.pos.y = pose.target.y + (pose.pos.y - pose.target.y) * (1 + k);
+  pose.pos.z = pose.target.z + (pose.pos.z - pose.target.z) * (1 + k);
+}
+
 /** Blend the authored portrait field over a landscape pose, in place.
  *  Pure in (pose, p, aspect, viewportWidth); a no-op (bit-identical pose) for
- *  aspect >= 1. */
+ *  aspect >= 1, except across the Connect span of the aerial view below
+ *  aspect 1.5 (aerialNarrowBack above). */
 export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
   const w = portraitWeight(aspect);
+  aerialNarrowBack(pose, p, aspect, w);
   if (w <= 0) return pose;
   const o = offsetAt(p);
   // tablet band: fold the delta field straight into this frame's offsets so

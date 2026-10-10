@@ -1,0 +1,396 @@
+/* hero-deco.css — the illustrated-hero exploration (see hero-deco.js).
+   Linked only when ?deco=filigree|hairline|mycelium; every rule is also
+   scoped under html[data-deco] so it can never leak into the shipped page. */
+
+:root[data-deco] {
+  --gild: linear-gradient(176deg, #fbe7bd 0%, #f0c67e 38%, #d99a4a 70%, #b9772f 100%);
+  --gild-glow: drop-shadow(0 0 14px rgba(240, 170, 80, 0.28)) drop-shadow(0 2px 18px rgba(10, 6, 2, 0.9));
+}
+
+/* ---------- shared: the gilded type ---------- */
+[data-deco] :is(h1, .j-h) .thr {
+  font-style: italic;
+  background: var(--gild);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--gild-glow);
+  padding: 0 0.12em 0.08em 0.02em; /* keep the italic overhang inside the clip */
+}
+[data-deco] h1 .dc { position: relative; display: inline-block; }
+[data-deco] h1 .dc-ink {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-family: "Bodoni Moda", "Didot", serif;
+  font-weight: 400;
+  font-size: 2.05em;
+  line-height: 0.7;
+  margin: 0 -0.12em 0 -0.06em;
+  background: var(--gild);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--gild-glow);
+  padding-top: 0.08em;
+}
+
+/* the headline gets five lines in the two drop-cap variants */
+[data-deco="filigree"] .hero,
+[data-deco="mycelium"] .hero { max-width: 48rem; }
+[data-deco="filigree"] h1,
+[data-deco="mycelium"] h1 { line-height: 1.04; margin-bottom: 1.6rem; }
+[data-deco="filigree"] h1 .l1,
+[data-deco="mycelium"] h1 .l1 { margin-bottom: 0.02em; }
+[data-deco="filigree"] h1 :is(.l2, .l3),
+[data-deco="mycelium"] h1 :is(.l2, .l3) { padding-left: 0.62em; }
+[data-deco="filigree"] h1 .l4,
+[data-deco="mycelium"] h1 .l4 { padding-left: 0.04em; }
+
+/* ======================= filigree ======================= */
+/* no left rail (Hannah, 2026-10-05: "remove the left decoration thing");
+   the inset stays only so the filigree behind the W clears the edge */
+[data-deco="filigree"] .hero { padding-left: calc(5.2vw + 36px); }
+[data-deco="filigree"] h1 .l5 {
+  margin: 0.02em 0 -0.08em -0.04em;
+  line-height: 1;
+}
+[data-deco="filigree"] h1 .thr {
+  font-family: "Cormorant Garamond", "Didot", serif;
+  font-weight: 500;
+  font-size: 1.72em;
+  letter-spacing: -0.01em;
+}
+/* the generated root filigree, behind the W (assets/deco/filigree-cap.webp:
+   the letter sits in its open centre-right) */
+[data-deco="filigree"] h1 .dc::before {
+  content: "";
+  position: absolute;
+  left: -1.5em;
+  top: -1.95em;
+  width: 4.5em;
+  height: 5.45em;
+  background: url("./assets/deco/filigree-cap.webp") center / contain no-repeat;
+  opacity: 0.95;
+  pointer-events: none;
+  animation: deco-fade 2.2s ease 0.5s both;
+}
+[data-deco="filigree"] .sub {
+  font-family: "EB Garamond", Garamond, Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  max-width: 27rem;
+}
+.deco { position: fixed; pointer-events: none; background: center / contain no-repeat; }
+[data-deco="filigree"] .deco-rail-r.deco-mid-b {
+  height: 30vh;
+  aspect-ratio: 277 / 1421;
+  background-image: url("./assets/deco/mid-b.webp");
+}
+[data-deco="filigree"] .deco-rail-r {
+  right: 3.2vw;
+  top: 50%;
+  translate: 0 -50%;
+  height: 34vh;
+  aspect-ratio: 220 / 1581;
+  background-image: url("./assets/deco/mid-a.webp");
+  opacity: 0.72;
+  animation: deco-rise 2.4s cubic-bezier(.22, 1, .36, 1) 0.9s both;
+}
+
+/* ---------- filigree, carried into the chapters ---------- */
+[data-deco="filigree"] .j-h .thr {
+  font-family: "Cormorant Garamond", "Didot", serif;
+  font-weight: 500;
+  font-size: 1.22em;
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+}
+[data-deco="filigree"] .j-sub {
+  font-family: "EB Garamond", Garamond, Georgia, serif;
+  font-size: 1.12rem;
+  line-height: 1.5;
+}
+/* the gilded word inside a running heading: its italic overhang padding
+   must not open a gap before the next word */
+[data-deco="filigree"] .j-h .thr { padding: 0 0.06em 0.08em 0.02em; margin-right: -0.06em; }
+
+/* chapter ornaments (hero-deco.js ORN). Heads are sized in ems of the
+   heading they crown, so they keep its measure at every width. */
+[data-deco="filigree"] .deco-orn { display: block; pointer-events: none; opacity: 0.88; }
+[data-deco="filigree"] .deco-head {
+  font-size: clamp(1.9rem, 3.1vw, 3rem);   /* = .j-h, so em = heading em */
+  height: auto;
+  margin: 0 0 0.7rem;
+}
+[data-deco="filigree"] .deco-head-inspire { width: 10.2em; margin-inline: auto; }
+[data-deco="filigree"] .deco-head-owned   { width: 11.4em; margin-inline: auto; }
+[data-deco="filigree"] .deco-side {
+  position: absolute;
+  width: auto;
+  opacity: 1;
+  /* the same gold as the gilded word beside it (a brightness lift here
+     washed the strips toward white — Hannah: "too white ... should be the
+     same color as the main highlighted thing"); a warm halo only */
+  filter: drop-shadow(0 0 4px rgba(217, 154, 74, 0.6));
+}
+/* outer edge of the strip 14px off the text edge (the block pads 2rem) */
+[data-deco="filigree"] .deco-side-l { right: calc(100% - 2rem + 14px); }
+[data-deco="filigree"] .deco-side-r { left: calc(100% - 2rem + 14px); }
+@media (max-width: 900px) and (orientation: portrait) {
+  [data-deco="filigree"] .deco-side { display: none; }
+  [data-deco="filigree"] .deco-head { font-size: 1.6rem; max-width: 100%; margin-inline: auto; }
+}
+
+/* ---------- the Manifesto: its own figure ----------
+   Five beats, each with a gold mark in the margin that lights as its line
+   is inscribed (journey/site.css adds .shown to a line when it starts),
+   and a closing tailpiece under the last. The body steps in by the margin
+   the marks need; the title keeps the page's left edge. */
+/* the page centres in the space BELOW the logo row, not the whole screen
+   (Hannah: "way too high ... True Union almost overlaps with the mushroom"),
+   and leaves room at the foot for the tailpiece */
+[data-deco="filigree"] .j-manifesto { padding-top: 7.5rem; padding-bottom: 5.5rem; }
+/* "True Union" in the gilt of the highlighted words (Hannah: "make the True
+   Union show in the special colour"). Each glyph is inscribed by site.css's
+   j-manifesto-condense, which fills forwards on parchment + a text-shadow —
+   both would sit over a gradient fill — so here the glyphs run a copy of it
+   with the same timing and blur that glows in gold and SETTLES INTO the
+   gradient: colour fades to transparent over the clipped gilt, and the glow
+   rides on filter, since a text-shadow paints over background-clip text. */
+[data-deco="filigree"] .j-manifesto-glyph {
+  background: var(--gild);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+}
+[data-deco="filigree"] .j-manifesto.title-shown .j-manifesto-glyph { animation-name: deco-condense; }
+@keyframes deco-condense {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateX(calc((var(--w) - 4.5) * 0.12em)) scale(1.06);
+    color: #ffd98a;
+  }
+  35% {
+    opacity: 1;
+    filter: blur(1.5px) drop-shadow(0 0 14px rgba(255, 186, 84, 0.7));
+    color: #ffe6b0;
+  }
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(240, 170, 80, 0.28)) drop-shadow(0 2px 18px rgba(10, 6, 2, 0.9));
+    transform: none;
+    color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-deco="filigree"] .j-manifesto-glyph { color: transparent; filter: var(--gild-glow); }
+}
+[data-deco="filigree"] .j-manifesto-panel { max-height: min(calc(100dvh - 13rem), 52rem); }
+[data-deco="filigree"] .j-manifesto-line {
+  position: relative;
+  font-family: "EB Garamond", Garamond, Georgia, serif;
+  font-size: clamp(1.05rem, min(1.32vw, 2.25vh), 1.3rem);
+  line-height: 1.5;
+}
+[data-deco="filigree"] .j-manifesto-word.is-name { font-weight: 600; }
+[data-deco="filigree"] .deco-tail {
+  position: fixed;          /* seated by hero-deco.js off the lines' foot */
+  display: block;
+  width: min(24rem, 34vw);
+  height: auto;
+  translate: -50% 0;
+  opacity: 0;
+  pointer-events: none;
+  /* leaves exactly as the reading panel does (site.css: .is-returning
+     .j-manifesto-panel — fade, blur and lift over the whole return), since it hangs
+     outside the panel and would otherwise not follow it */
+  transition: opacity 1.1s ease, filter 1.1s ease, transform 1.4s cubic-bezier(0.3, 0.6, 0.2, 1);
+}
+/* ...and arrives once the last beat has been written */
+[data-deco="filigree"] .deco-tail.shown {
+  opacity: 0.92;
+  transition: opacity 2.4s ease 2.2s;
+}
+[data-deco="filigree"] .j-manifesto.is-returning .deco-tail {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(-0.9rem);
+  transition: opacity var(--manifesto-return-s, 1.1s) cubic-bezier(0.4, 0, 0.6, 1),
+              filter var(--manifesto-return-s, 1.1s) cubic-bezier(0.4, 0, 0.6, 1),
+              transform var(--manifesto-return-s, 1.4s) cubic-bezier(0.3, 0.6, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-deco="filigree"] .deco-tail, [data-deco="filigree"] .deco-tail.shown { transition: none; }
+}
+
+/* ======================= hairline ======================= */
+[data-deco="hairline"] .hero { padding-left: calc(5.2vw + 34px); }
+[data-deco="hairline"] h1 .thr {
+  position: relative;
+  display: inline-block;
+  font-family: "Cormorant Garamond", "Didot", serif;
+  font-weight: 500;
+  font-size: 1.24em;
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+}
+[data-deco="hairline"] h1 .swash {
+  position: absolute;
+  left: -2%;
+  right: -34%;
+  bottom: -0.36em;
+  height: 0.42em;
+  background: url("./assets/deco/flourish-under.webp") center / 100% 100% no-repeat;
+  filter: none;
+  opacity: 0.9;
+  clip-path: inset(0 100% 0 0);
+  animation: deco-wipe 1.6s cubic-bezier(.6, 0, .2, 1) 1s forwards;
+}
+[data-deco="hairline"] .deco-hair {
+  left: calc(2.4vw - 6px);
+  top: 14vh;
+  height: 68vh;
+  aspect-ratio: 40 / 670;
+}
+.deco-hair svg { width: 100%; height: 100%; overflow: visible; }
+.deco-hair .ln {
+  stroke: #e3b56c;
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.7;
+  animation: deco-draw 1.4s ease var(--d, 0s) forwards;
+  vector-effect: non-scaling-stroke;
+}
+.deco-hair .dt { fill: #e9c27e; opacity: 0; animation: deco-in 1s ease var(--d, 1.2s) forwards; }
+.deco-hair .st {
+  fill: #f6d08a;
+  filter: drop-shadow(0 0 4px rgba(246, 190, 100, 0.8));
+  opacity: 0;
+  animation: deco-in 1.2s ease 0.6s forwards;
+}
+
+/* ======================= mycelium ======================= */
+[data-deco="mycelium"] .hero { padding-left: calc(5.2vw + 20px); }
+[data-deco="mycelium"] h1 .l5 { margin: 0.12em 0 0 0.3em; line-height: 1; }
+[data-deco="mycelium"] h1 .thr {
+  font-family: "Pinyon Script", "Cormorant Garamond", cursive;
+  font-style: normal;
+  font-size: 1.85em;
+  letter-spacing: 0;
+  padding: 0.1em 0.3em 0.15em 0.15em;
+}
+[data-deco="mycelium"] .sub {
+  font-family: "EB Garamond", Garamond, Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  max-width: 27rem;
+}
+.deco-roots {
+  position: absolute;
+  z-index: 0;
+  width: 4.6em;
+  height: 4.6em;
+  left: 50%;
+  top: 50%;
+  transform: translate(-48%, -47%);
+  overflow: visible;
+  pointer-events: none;
+}
+.deco-roots .rt {
+  stroke: #eab76a;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 2px rgba(240, 170, 80, 0.55));
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.9;
+  vector-effect: non-scaling-stroke;
+  animation: deco-draw var(--l, .5s) ease-out calc(var(--d, 0s) + 0.6s) forwards;
+}
+.deco-roots .tp {
+  fill: #ffd995;
+  filter: drop-shadow(0 0 3px rgba(255, 196, 100, 0.95));
+  opacity: 0;
+  animation: deco-in 0.6s ease calc(var(--d, 0s) + 0.6s) forwards;
+}
+
+/* ---------- motion ---------- */
+@keyframes deco-fade { from { opacity: 0; } }
+@keyframes deco-in { to { opacity: 1; } }
+@keyframes deco-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes deco-draw { to { stroke-dashoffset: 0; } }
+@keyframes deco-wipe { to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) {
+  [data-deco] .deco, [data-deco] .deco *, [data-deco] h1 .dc::before, [data-deco] .swash {
+    animation: none !important;
+    stroke-dashoffset: 0;
+    clip-path: none;
+  }
+  .deco-hair .dt, .deco-hair .st, .deco-roots .tp { opacity: 1; }
+}
+
+/* ---------- small screens: keep the type, drop the side rails ---------- */
+@media (max-width: 900px) and (orientation: portrait) {
+  [data-deco] .deco { display: none; }
+  [data-deco] .hero { padding-left: 7vw; }
+  [data-deco] h1 :is(.l2, .l3, .l4) { padding-left: 0 !important; }
+  [data-deco] h1 .l5 { margin-left: 0 !important; }
+}
+
+/* ---------- the exploration switcher (QA only) ---------- */
+.deco-switch {
+  position: fixed;
+  z-index: 50;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(217, 164, 65, 0.35);
+  border-radius: 999px;
+  background: rgba(14, 9, 2, 0.72);
+  backdrop-filter: blur(6px);
+  font: 500 11px/1 "Inter", -apple-system, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.deco-switch a {
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: rgba(233, 205, 150, 0.7);
+  text-decoration: none;
+  pointer-events: auto;
+}
+.deco-switch a:hover { color: #f6d08a; }
+.deco-switch a[aria-current] { background: rgba(217, 164, 65, 0.2); color: #f6d08a; }
+
+/* short landscape screens (1280x720 etc): the filigree's crown reached the
+   wordmark — a smaller ornament, same seat */
+@media (max-height: 780px) and (orientation: landscape) {
+  [data-deco="filigree"] h1 .dc::before { left: -1.1em; top: -1.35em; width: 3.6em; height: 4.35em; }
+}
+@media (max-width: 900px) and (orientation: portrait) {
+  [data-deco] .sub { font-size: 1.06rem; line-height: 1.5; }
+}
+
+/* ---- Purpose branch labels: the section you are in names itself in the
+   same gilded italic as the chapter words (Ownership on Owned, Manifesto
+   while its page is open). The other child keeps its plain label. ---- */
+[data-deco="filigree"] .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-item[aria-current] .j-rail-name {
+  font-family: "Cormorant Garamond", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 1.02rem !important;
+  letter-spacing: 0.01em !important;
+  padding: 0 0.08em 0.1em 0.02em !important;
+  background: var(--gild) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  filter: drop-shadow(0 0 6px rgba(240, 170, 80, 0.35)) drop-shadow(0 1px 6px rgba(10, 6, 2, 0.9));
+}

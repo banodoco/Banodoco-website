@@ -66,10 +66,17 @@
  *                 copy anchor and its `uAdosShift` uniform all track, and
  *                 the node the chapter publishes as its `focus` capability.
  *                 Present on the focal row only; absent means false. */
+// AERIAL RE-SEAT (2026-10-05). These positions are the ones ray-cast from the
+// aerial Connect rest at 1440x900 (journey/chapters/connect/camera.js) onto
+// groundY through ADOS (275, 770), Hivemind (1160, 525) and Discord
+// (1175, 765) — Hannah: spread them, Hivemind and Banodoco to the right,
+// ADOS to the left, then Banodoco down-left a little and ADOS back right a
+// little. The seats the earlier notes argue about live on as CLASSIC_POS in
+// journey/chapters/connect/tendrils.js, behind ?connect=classic.
 export const CONNECT_NODES = {
-  ados:     { pos: [4.61, 0, 3.06],  az: 0.65,  bow: 1,  strands: 3, continuations: 2, spokes: 13, coreScale: 0.46, focal: true },
-  hivemind: { pos: [5.00, 0, -2.60], az: -0.48, bow: -1, strands: 3, continuations: 3, spokes: 11, coreScale: 0.40 },
-  discord:  { pos: [7.86, 0, -0.58], az: -0.15, bow: 1,  strands: 2, continuations: 3, spokes: 9,  coreScale: 0.36 },
+  ados:     { pos: [2.66, 0, 3.56],  az: 0.65,  bow: 1,  strands: 3, continuations: 2, spokes: 13, coreScale: 0.46, focal: true },
+  hivemind: { pos: [7.85, 0, -4.12], az: -0.48, bow: -1, strands: 3, continuations: 3, spokes: 11, coreScale: 0.40 },
+  discord:  { pos: [8.92, 0, -1.60], az: -0.15, bow: 1,  strands: 2, continuations: 3, spokes: 9,  coreScale: 0.36 },
 };
 
 // Immutable to consumers. The builder grounds hub positions by writing Y, so

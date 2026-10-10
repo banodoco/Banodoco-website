@@ -3,7 +3,9 @@ import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySec
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
-const RAIL_OPEN_SECONDS = 2.2;
+// 2.2 -> 3.0 (2026-10-06 — Hannah: the row "closes in ... too quick"),
+// level with the ~3 s flight down to Ownership.
+const RAIL_OPEN_SECONDS = 3.0;
 const DEPART_SECONDS = 3.2;
 // the least time a descent may take to swing onto a destination pressed late
 const RETARGET_SECONDS = 1.8;
@@ -357,6 +359,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     returnStart = u;
     returnK = 0;
     returnRate = 1 / (land ? awaySecondsFrom(returnStart) : returnSecondsFrom(returnStart));
+    // the words take the whole fall to go (Hannah, 2026-10-06: "the fade out
+    // should take the time of the transition") — site.css reads this
+    root.style.setProperty('--manifesto-return-s', `${(1 / returnRate).toFixed(2)}s`);
     direction = -1;
     paused = false;
   }

@@ -268,16 +268,17 @@ const REST_KEY = {
   note: 'connect-rest',
 };
 
-/* AERIAL TRIAL (?connect=aerial, 2026-10-05, Hannah: "a lot more aerial,
+/* AERIAL REST — the default since 2026-10-05 (?connect=classic keeps the
+   pose above; 2026-10-05, Hannah: "a lot more aerial,
    kind of looking down... around the same distance, but angled... like 50
    degrees... seeing a lot more of the cap... the three things in a similar
-   position relative to where they are now"). Pitch -50 deg; eye 8.85 from
-   the stipe (the shipped rest is 9.01). Fitted on 1440x900 so the cap stays
-   upper-left and Hivemind / Discord / ADOS keep the shipped arrangement —
-   mid, right, lower-left. A straight top-down cannot match the old screen
-   spots exactly (at 50 deg the ground shows its true plan, so Hivemind rides
-   higher and Discord comes inward); the fit trades those few hundred px for
-   keeping the cap in frame. Gaze rests on the ground plane. */
+   position relative to where they are now"). Pitch -50 deg; eye 11.0 from
+   the stipe (the classic rest is 9.01) at fov 57 — pulled back from a first
+   8.85 / fov 70 fit that cropped the cap and put the spore cloud close
+   enough to bloom into bokeh. Fitted on 1440x900 so the whole cap sits
+   upper-left; the hubs were then re-seated on the ground under this camera
+   (content/connect-nodes.js), since from 50 deg the classic seats bunch
+   toward the stem. Gaze rests on the ground plane. */
 if (CONNECT_VIEW === 'aerial') {
   REST_KEY.pos.set(7.398, 7.557, 3.036);
   REST_KEY.tgt.set(3.391, 0.0, -1.879);

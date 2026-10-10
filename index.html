@@ -52,6 +52,25 @@
 <link rel="stylesheet" href="./hero.css">
 <link rel="stylesheet" href="./journey/site.css">
 <link rel="stylesheet" href="./journey/cards/cards.css">
+<!-- HERO DECORATION EXPLORATION (2026-10-05): inert unless ?deco=filigree|
+     hairline|mycelium. Sets html[data-deco] before first paint and links the
+     display fonts + hero-deco.css only then; hero-deco.js (after the hero
+     markup) re-sets the headline. A visitor without the flag loads nothing. -->
+<script>
+  (() => {
+    const v = new URLSearchParams(location.search).get('deco');
+    if (!['filigree', 'hairline', 'mycelium'].includes(v)) return;
+    document.documentElement.dataset.deco = v;
+    for (const href of [
+      'https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Pinyon+Script&display=swap',
+      './hero-deco.css',
+    ]) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = href;
+      document.head.appendChild(l);
+    }
+  })();
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -229,6 +248,8 @@
            placement, labels shown here in the intro and on hover after. -->
     </div>
   </div>
+
+  <script src="./hero-deco.js"></script>
 
   <!-- COLD-LOAD ENTRY BARRIER. Linked stylesheets block this parser point, and
        both the hero copy and all five preboot rail marks are now in the DOM.

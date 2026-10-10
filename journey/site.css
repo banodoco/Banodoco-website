@@ -4645,12 +4645,17 @@ body.j-manifesto-open .j-manifesto {
 .j-manifesto-panel { transition: opacity 1.1s ease, filter 1.1s ease, transform 1.4s cubic-bezier(0.3, 0.6, 0.2, 1); }
 .j-manifesto::before { transition: opacity 1.6s ease 0.35s; }
 .j-manifesto.is-returning .j-manifesto-panel {
+  /* the fade spans the camera's whole return (branch.js returnTo writes
+     its length); the open state above keeps its own quicker timing */
+  transition: opacity var(--manifesto-return-s, 1.1s) cubic-bezier(0.4, 0, 0.6, 1),
+              filter var(--manifesto-return-s, 1.1s) cubic-bezier(0.4, 0, 0.6, 1),
+              transform var(--manifesto-return-s, 1.4s) cubic-bezier(0.3, 0.6, 0.2, 1);
   opacity: 0;
   filter: blur(6px);
   transform: translateY(-0.9rem);
   pointer-events: none;
 }
-.j-manifesto.is-returning::before { opacity: 0; }
+.j-manifesto.is-returning::before { opacity: 0; transition: opacity var(--manifesto-return-s, 1.6s) cubic-bezier(0.4, 0, 0.6, 1); }
 /* ...and it ARRIVES gradually too (2026-10-04 — Hannah: pressing Manifesto
    "immediately darkens... jolty and unintentional"). The root leaves
    `display: none` on the press, which a transition cannot start from, so the
