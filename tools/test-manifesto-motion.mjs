@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { CONTENT } from '../content/content.js';
-import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
+import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, MOBILE_LIFT_SECONDS, descentU, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
 
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 for (const t of [0, 0.2, 0.8, SPIRAL_START_SECONDS]) {
@@ -36,6 +36,35 @@ for (const aspect of [1440 / 900, 390 / 844]) {
   const distance = Math.hypot(pose.position.x, pose.position.y - 3.15, pose.position.z);
   const capFraction = 4.7 / (2 * distance * Math.tan(pose.fov * Math.PI / 360) * aspect);
   assert.ok(capFraction >= (aspect < 1 ? 0.20 : 0.03) && capFraction <= (aspect < 1 ? 0.30 : 0.05), `${aspect}: cap scale ${capFraction}`);
+}
+// On phones the opening is a translation, not a tilt toward the field.
+const phoneFrom = { ...from, roll: .2 };
+for (const seconds of [0, .5, 1, 2, 3, MOBILE_LIFT_SECONDS]) {
+  const pose = manifestoPose(phoneFrom, seconds, 390 / 844);
+  assert.equal(pose.position.x, from.position.x);
+  assert.equal(pose.position.z, from.position.z);
+  for (const axis of ['x', 'z']) assert.ok(Math.abs(
+    (pose.target[axis] - pose.position[axis]) - (from.target[axis] - from.position[axis])) < 1e-9,
+    'the opening lift has no lateral camera or target movement');
+  const pitchLift = (pose.target.y - pose.position.y) - (from.target.y - from.position.y);
+  assert.ok(pitchLift >= -1e-9, 'the opening may look up, never tilt down toward the departing field');
+  if (seconds <= 1.5) assert.ok(Math.abs(pitchLift) < 1e-9, 'camera and target initially translate together');
+  assert.equal(pose.fov, from.fov);
+  assert.equal(pose.roll, phoneFrom.roll);
+}
+assert.ok(manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).position.y >= from.position.y + 14);
+assert.ok(manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).target.y >
+  manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).position.y, 'the opening finishes looking into the air');
+assert.equal(manifestoPose(phoneFrom, CAMERA_SECONDS, .5).position.y, 38);
+for (const startU of [.08, .2, .6, 1]) {
+  const initial = manifestoPose(phoneFrom, startU * CAMERA_SECONDS, .5).position.y - from.position.y;
+  for (const k of [.1, .3, .5, .9]) {
+    const seconds = descentU(startU, k, .5, from.position.y) * CAMERA_SECONDS;
+    const height = manifestoPose(phoneFrom, seconds, .5).position.y - from.position.y;
+    const eased = k*k*k*(k*(k*6-15)+10);
+    assert.ok(Math.abs(height - initial * (1 - eased)) < 1e-6,
+      'returns invert the complete new lift without a second landing move');
+  }
 }
 assert.equal(TITLE_SECONDS, 0, 'the title is written on the press');
 // the reading rhythm follows the text: a shorter sentence hands on sooner,
@@ -433,7 +462,8 @@ tissue.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,1,1,1],3)
 const shader = new THREE.ShaderMaterial({uniforms:{uProg:{value:2},uOpacity:{value:0.3}},vertexShader:'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',fragmentShader:'varying vec3 vColor; void main() { gl_FragColor = vec4(vColor,1.); }'});
 cap.add(new THREE.LineSegments(tissue,shader));
 stem.add(new THREE.Mesh(tissue,new THREE.MeshBasicMaterial()));
-const colony = createAerialColony({groups:{stem,mushroom:cap}},[]);
+const viewCamera = new THREE.PerspectiveCamera(from.fov, 390 / 844, .1, 1000);
+const colony = createAerialColony({groups:{stem,mushroom:cap}, camera: viewCamera},[]);
 window.innerWidth = 1440;
 colony.prepare(from,1440/900);
 const resourceState = () => colony.group.children.map(o => [o,o.geometry,o.material,o.geometry.attributes.position,o.geometry.attributes.aColonyReveal,o.geometry.attributes.aColonyLink]);
@@ -496,8 +526,33 @@ console.log('Manifesto away descent: longer than a Return from every height pass
 // The phone path excludes distant bodies from real instance submission,
 // rather than merely darkening the same full landscape in the fragment shader.
 colony.prepare(from, 390 / 844);
-colony.set(1, 80, 200, CAMERA_SECONDS);
+const paintPhone = seconds => {
+  const pose = manifestoPose(from, seconds, viewCamera.aspect);
+  viewCamera.position.set(pose.position.x, pose.position.y, pose.position.z);
+  viewCamera.lookAt(pose.target.x, pose.target.y, pose.target.z);
+  viewCamera.fov = pose.fov; viewCamera.updateProjectionMatrix();
+  colony.set(1, 80, 200, seconds);
+};
+paintPhone(CAMERA_SECONDS);
 const phoneInstances = colony.lod.near + colony.lod.far;
 assert.ok(phoneInstances > 0 && phoneInstances <= 140);
-assert.equal(colony.group.children[0].geometry.instanceCount + colony.group.children[1].geometry.instanceCount, phoneInstances);
-console.log(`Mobile colony submits ${phoneInstances}/${colony.bodies.length} bodies per source layer.`);
+const drawnCount = () => colony.group.children[0].geometry.instanceCount + colony.group.children[1].geometry.instanceCount;
+const endpointCount = drawnCount();
+assert.ok(endpointCount > 0 && endpointCount < phoneInstances, 'only currently visible admitted bodies enter instance draws');
+viewCamera.lookAt(viewCamera.position.x, viewCamera.position.y + 20, viewCamera.position.z);
+colony.set(1, 80, 200, CAMERA_SECONDS);
+assert.equal(drawnCount(), 0, 'looking into empty sky submits zero mushroom instances, not transparent bodies');
+paintPhone(CAMERA_SECONDS);
+assert.equal(drawnCount(), endpointCount, 'turning back restores exactly the visible instances');
+const tickAttributes = colony.group.children.filter(o => o.geometry.attributes.aColonyPose)
+  .flatMap(o => ['aColonyPose', 'aColonyTone', 'aColonyReveal'].map(key => o.geometry.attributes[key]));
+const stillVersions = tickAttributes.map(a => a.version);
+for (let i = 0; i < 60; i++) paintPhone(CAMERA_SECONDS);
+assert.deepEqual(tickAttributes.map(a => a.version), stillVersions, 'a steady view does not reupload instance buffers');
+assert.deepEqual(resourceState(), resources, 'frustum changes reuse the existing geometry, material and tissue');
+const drawnBodies = () => colony.group.children.slice(0, 2).map(o => Array.from(
+  o.geometry.attributes.aColonyPose.array.slice(0, o.geometry.instanceCount * 4)));
+paintPhone(CAMERA_SECONDS * .5); const outward = drawnBodies();
+paintPhone(CAMERA_SECONDS); paintPhone(CAMERA_SECONDS * .5);
+assert.deepEqual(drawnBodies(), outward, 'returning through a pose restores the same visible bodies');
+console.log(`Mobile colony: ${phoneInstances}/${colony.bodies.length} bodies intersect the flight; ${endpointCount} submitted at the endpoint, zero when facing sky.`);

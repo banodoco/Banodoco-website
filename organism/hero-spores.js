@@ -236,7 +236,7 @@ const COMPOSITION = {
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 620, nH: 5, land: 1, landFromLeft: true, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 620, nH: 5, land: 1, landFromBottom: true, landDuration: 1.45, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
@@ -567,6 +567,17 @@ function seedOne(F, i, c, rand, atEntry) {
   // ordinary stream particle remains continuous until it peels away.
   const lg = ring ? 1 : lum * (c.lum || 1) * (core ? 1.25 : 1);
   F.color[i3] *= lg; F.color[i3 + 1] *= lg; F.color[i3 + 2] *= lg;
+  // Seed one existing stream member in the phone's lower centre from the
+  // very first frame. It keeps the ordinary drift, light and particle count;
+  // selection later claims it where it has actually travelled, with no jump.
+  if (c.landFromBottom && i === F.nA && !atEntry) {
+    const sourceX = -0.06;
+    const siteY = F.sites[1] / (F.sites[2] * F.tanHalfFov);
+    const sourceY = Math.max(-0.42, siteY + 0.28);
+    F.frame[i3] = sourceX * halfH * F.aspect;
+    F.frame[i3 + 1] = sourceY * halfH;
+    F.q[i] = sourceY + fallJ * F.aspect * (sourceX - c.xIn);
+  }
   F.attrsDirty = true;
 }
 
@@ -766,12 +777,16 @@ function pickPeeler(F, site) {
     // particle the visitor is meant to follow the hardest one to see.
     const bandCost = F.band[i] === 0 || F.band[i] === 2 ? 0.35 : 0;
     const lead = sxN - xN;
-    // The phone ground sits lower than the desktop landing. Its left-side
-    // stream is consequently higher above the site; the old short-drop cap
-    // rejected those spores and recruited a downwind one from the right.
-    // Keep the wind's direction and allow the longer, still-visible fall.
-    if (F.comp.landFromLeft && lead < UPWIND[0]) continue;
-    const upwindDrop = F.comp.landFromLeft ? 1.8 : 0.85;
+    if (F.comp.landFromBottom) {
+      // The phone's landing begins in the lower middle of the view, above
+      // its ground site. Choose a real visible member; never haul a spore
+      // up from below the ground or pull one across from the side.
+      if (Math.abs(xN) <= 0.32 && yN <= -0.15 && drop >= 0.08 && drop <= 0.8) {
+        offer(0, i, Math.abs(xN) + 0.7 * Math.abs(yN + 0.42) + bandCost);
+      }
+      continue;
+    }
+    const upwindDrop = 0.85;
     // the stream runs high on the left (it descends as it travels), so an
     // upwind settle is allowed a longer fall than an overhead one
     if (lead >= UPWIND[0] && lead <= UPWIND[1] && drop >= 0.12 && drop <= upwindDrop) {
@@ -971,7 +986,7 @@ function advance(F, dt, gust) {
         // priced by the DROP, not the arc: a flutter is mostly descent
         L.dur = L.dur * Math.min(1.25, Math.max(0.85, (drop / halfH) / 0.45));
         if (rate > 1) L.dur = L.dur / 1.15;
-        L.dur = Math.max(FLUT_MIN_S, L.dur);
+        L.dur = Math.max(FLUT_MIN_S, L.dur) * (c.landDuration || 1);
       }
       const u = Math.min(1, (F.t - L.t0) / L.dur);
       flutterAt(F, L, u, FLUT_POS);

@@ -4,6 +4,7 @@
 // formerly-closure state arrives through `ctx` (built in organism.js).
 import * as THREE from 'three';
 import { TKDBG } from '../flags.js';
+import { sporeBoundaryDistance, sporeLifetimeOpacity } from './spore-lifetime.js';
 import { EXITS as INSPIRE_EXITS, EXIT_SLOT } from '../inspire-exits.js';
 
 // =====================================================================
@@ -119,7 +120,7 @@ export function createSpores(ctx) {
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
   let dispDir;                             // D29 per-dot decoherence directions
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
-  let sporePts, sporeVel = [], sporeOrigin, sporeAge;
+  let sporePts, sporeVel = [], sporeOrigin, sporeAge, sporeFade;
   {
     const pp = [], pc = [], ps = [], org = [];
     const N = 4200;
@@ -356,6 +357,18 @@ export function createSpores(ctx) {
     // release progress, 0 = just shed and still dropping, 1 = fully carried
     sporeAge = new Float32Array(N).fill(1);
     sporePts = makePoints(pp, pc, ps, 2.4);
+    sporeFade = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      sporeFade[i] = sporeLifetimeOpacity(
+        sporeBoundaryDistance(pp[i * 3], pp[i * 3 + 1], org[i * 3]), 1);
+    }
+    sporePts.geometry.setAttribute('aSporeFade',
+      new THREE.BufferAttribute(sporeFade, 1).setUsage(THREE.DynamicDrawUsage));
+    // Lifetime belongs to the particle, independently of chapter emphasis,
+    // plume dimming, and the opening-spore field's one-time dismissal.
+    sporePts.material.vertexShader = sporePts.material.vertexShader
+      .replace('attribute float psize;', 'attribute float psize;\nattribute float aSporeFade;')
+      .replace('vColor = color;', 'vColor = color * aSporeFade;');
     scene.add(sporePts);
   }
 
@@ -370,7 +383,9 @@ export function createSpores(ctx) {
       arr[i3 + 1] = sporeOrigin[i3] * ctx.swaySin + sporeOrigin[i3 + 1] * ctx.swayCos;
       arr[i3 + 2] = sporeOrigin[i3 + 2];
       sporeAge[i] = 0;
+      sporeFade[i] = 0;
     }
+    sporePts.geometry.attributes.aSporeFade.needsUpdate = true;
     pos.needsUpdate = true;
   }
 
@@ -567,12 +582,15 @@ export function createSpores(ctx) {
         }
         // spent — release again from its own gill spot. The bounds are closed on
         // every side so nothing can wander off and never come back.
-        if (x > 6.8 || y > 7.6 || y < 0.2 || x < gx - 2.5) {
+        const remaining = sporeBoundaryDistance(x, y, gx);
+        if (remaining < 0) {
           x = gx; y = gy; z = sporeOrigin[i3 + 2]; sporeAge[i] = 0;
-        }
+          sporeFade[i] = 0;
+        } else sporeFade[i] = sporeLifetimeOpacity(remaining, sporeAge[i]);
         arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
       }
       pos.needsUpdate = true;
+      sporePts.geometry.attributes.aSporeFade.needsUpdate = true;
     });
     driftAttached = true;
   }

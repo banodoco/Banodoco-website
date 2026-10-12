@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BODY_DISSOLVE_GLSL } from '../lib/body-dissolve.js';
-import { aerialPlacements, planAerialReveals, manifestoPose, CAMERA_SECONDS } from './pose.js';
+import { aerialPlacements, planAerialReveals, manifestoPose, isMobileManifesto, CAMERA_SECONDS } from './pose.js';
 import { groundY, makeRng } from '../chapters/final/world.js';
 
 // Prepared once with Final. Every instance shares the hero's actual buffers;
@@ -106,6 +106,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   const random = makeRng(0x41e21a);
   const bodies = aerialPlacements(seats, random, groundY);
   const group = new THREE.Group();
+  group.name = 'manifesto-aerial-colony';
   group.visible = false;
   const gate = { value: 0 };
   const clock = { value: 0 }, portrait = { value: 0 };
@@ -121,11 +122,17 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   // Each tier owns its instance attributes; prepare() fills them.
   const tierOf = (name, thin) => ({
     name, thin, layers: [], starts: new Float32Array(0), drawn: -1,
+    bodyIds: new Int32Array(0), activeIds: new Int32Array(bodies.length).fill(-1),
     poses: new THREE.InstancedBufferAttribute(poseBase.slice(), 4),
     tones: new THREE.InstancedBufferAttribute(toneBase.slice(), 2),
     arrivals: new THREE.InstancedBufferAttribute(new Float32Array(bodies.length * 2), 2),
   });
   const tiers = [tierOf('near', 1), tierOf('far', FAR_THIN)];
+  const specimenBounds = new THREE.Sphere(new THREE.Vector3(), -1);
+  const layerBounds = new THREE.Sphere();
+  const viewFrustum = new THREE.Frustum(), viewMatrix = new THREE.Matrix4();
+  const viewProjection = new THREE.Matrix4(), worldBody = new THREE.Sphere();
+  let phoneView = false;
   // the welding grid, in hero units: FAR_CELL_PX of the tallest a far body
   // can be (NEAR_PX) — so a weld never spans more than ~1 px on screen
   const farCell = BODY_HEIGHT * FAR_CELL_PX / NEAR_PX;
@@ -160,6 +167,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   function addTierLayer(source, frame, tier) {
     const src = source.material;
     if (!src || !(src.isMeshBasicMaterial || src.uniforms?.uProg || src.userData?.uWin)) return;
+    if (!source.geometry.boundingSphere) source.geometry.computeBoundingSphere();
+    specimenBounds.union(layerBounds.copy(source.geometry.boundingSphere).applyMatrix4(frame));
     const geometry = new THREE.InstancedBufferGeometry();
     // Attribute references are shared, never copied per body; only the
     // (strided) index is this layer's own — see LOD_STRIDE.
@@ -247,6 +256,59 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   }
   walk(sceneApi.groups.stem, new THREE.Matrix4());
   walk(sceneApi.groups.mushroom.parent, new THREE.Matrix4());
+  // Bound every actual shell, strand and spark layer together. A generous
+  // margin also covers animated tissue; crossing a screen edge never clips
+  // a cap merely because its foot is already outside the frame.
+  const bodyBounds = bodies.map(b => {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), p = specimenBounds.center;
+    return new THREE.Sphere(new THREE.Vector3(
+      b.x + b.s*(c*p.x+s*p.z), b.gy+b.s*p.y, b.z+b.s*(-s*p.x+c*p.z)),
+    specimenBounds.radius*b.s*1.15 + .5);
+  });
+
+  function writeBody(tier, src, dst) {
+    tier.arrivals.array[dst*2] = plan[src*2]; tier.arrivals.array[dst*2+1] = plan[src*2+1];
+    for (let k = 0; k < 4; k++) tier.poses.array[dst*4+k] = poseBase[src*4+k];
+    tier.tones.array[dst*2] = toneBase[src*2]; tier.tones.array[dst*2+1] = toneBase[src*2+1];
+  }
+
+  function cullPhoneBodies(seconds) {
+    const camera = sceneApi.camera;
+    camera.updateMatrixWorld();
+    group.updateWorldMatrix(true, false);
+    // Twelve percent beyond the visible image is kept as an edge guard.
+    viewProjection.copy(camera.projectionMatrix);
+    viewProjection.elements[0] /= 1.12;
+    viewProjection.elements[5] /= 1.12;
+    viewMatrix.multiplyMatrices(viewProjection, camera.matrixWorldInverse);
+    viewFrustum.setFromProjectionMatrix(viewMatrix);
+    for (const tier of tiers) {
+      let count = 0, changed = false;
+      for (let i = 0; i < tier.bodyIds.length && tier.starts[i] <= seconds; i++) {
+        const src = tier.bodyIds[i];
+        // The opening lift leaves the existing field behind before any new
+        // colony body is submitted. Spores retain their independent paths.
+        if (plan[src*2] >= 0 && gate.value <= .001) continue;
+        worldBody.copy(bodyBounds[src]).applyMatrix4(group.matrixWorld);
+        if (!viewFrustum.intersectsSphere(worldBody)) continue;
+        if (tier.activeIds[count] !== src) {
+          tier.activeIds[count] = src;
+          writeBody(tier, src, count);
+          changed = true;
+        }
+        count++;
+      }
+      if (changed) {
+        tier.arrivals.needsUpdate = true;
+        tier.poses.needsUpdate = true;
+        tier.tones.needsUpdate = true;
+      }
+      if (tier.drawn !== count) {
+        tier.drawn = count;
+        for (const geometry of tier.layers) geometry.instanceCount = count;
+      }
+    }
+  }
 
   /* THE GROUND MAT GROWS BY PATCH, AND LIGHTS AS IT GROWS (2026-10-04 —
      Hannah: "when the ground network appears, it should just light up
@@ -494,6 +556,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     // the placements, for layers that dress the same field (sky.js plumes)
     bodies,
     prepare(from, aspect) {
+      phoneView = isMobileManifesto(aspect) && !!sceneApi.camera;
       planAerialReveals(bodies, from, aspect, plan);
       for (let i = 0; i < owners.length; i++) {
         const owner = owners[i];
@@ -513,11 +576,11 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
       for (const tier of tiers) {
         const mine = order.filter(i => near[i] === (tier.name === 'near'));
         tier.starts = new Float32Array(mine.length);
+        tier.bodyIds = Int32Array.from(mine);
+        tier.activeIds.fill(-1);
         mine.forEach((src, dst) => {
           tier.starts[dst] = plan[src*2];
-          tier.arrivals.array[dst*2] = plan[src*2]; tier.arrivals.array[dst*2+1] = plan[src*2+1];
-          for (let k = 0; k < 4; k++) tier.poses.array[dst*4+k] = poseBase[src*4+k];
-          tier.tones.array[dst*2] = toneBase[src*2]; tier.tones.array[dst*2+1] = toneBase[src*2+1];
+          writeBody(tier, src, dst);
         });
         tier.arrivals.needsUpdate = true; tier.poses.needsUpdate = true; tier.tones.needsUpdate = true;
         tier.drawn = -1;
@@ -526,6 +589,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     },
     /** QA: how many bodies each tier holds on the prepared flight. */
     get lod() { return { near: tiers[0].starts.length, far: tiers[1].starts.length }; },
+    get drawn() { return { near: tiers[0].drawn, far: tiers[1].drawn }; },
     setSeatLight(v) { seatLight.value = Math.max(0, Math.min(1, v)); },
     set(progress, near, far, seconds) {
       /* The ring's own seats stand in for Final's ring from the branch's
@@ -538,7 +602,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
       group.visible = progress > 0 || seatLight.value > 0.001;
       gate.value = progress;
       clock.value = seconds;
-      for (const tier of tiers) {
+      if (phoneView) cullPhoneBodies(seconds);
+      else for (const tier of tiers) {
         let count = 0;
         while (count < tier.starts.length && tier.starts[count] <= seconds) count++;
         if (count !== tier.drawn) {
