@@ -133,9 +133,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'manifesto-note-trigger';
-      button.textContent = '[1]';
+      button.textContent = '1';
       button.setAttribute('aria-label', 'Read note 1 about fungi');
-      marker.append('\u00a0', button, closingPunctuation);
+      marker.append(button, closingPunctuation);
       line.appendChild(marker);
       note = attachManifestoNote(button, CONTENT.manifesto.note);
     }

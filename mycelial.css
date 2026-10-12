@@ -351,9 +351,9 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
   border: 0;
   background: none;
   color: var(--mycelial-amber, #f6b652);
-  padding: .15em .18em;
+  padding: .15em 0;
   font: inherit;
-  font-size: .72em;
+  font-size: .65em;
   vertical-align: super;
   cursor: help;
   pointer-events: auto;
