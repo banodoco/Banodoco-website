@@ -22,7 +22,11 @@ assert.equal(reading.seconds, reading.reveal.at(-1) + beats.at(-1) * WORD_STAGGE
   'mobile camera endpoint is the last complete word fade');
 const end = manifestoPose(from, CAMERA_SECONDS, aspect);
 assert.equal(end.position.y, 38);
-assert.ok(Math.hypot(end.position.x, end.position.z) < 40);
+assert.equal(end.position.x, from.position.x, 'overhead zoom keeps its horizontal position');
+assert.equal(end.position.z, from.position.z, 'overhead zoom keeps its horizontal position');
+const down = end.position.y - end.target.y;
+assert.ok(Math.hypot(end.target.x - end.position.x, end.target.z - end.position.z) / down < 1.1e-5,
+  'mobile endpoint looks straight down with a stable heading');
 assert.deepEqual(manifestoPose(from, 0, aspect).position, from.position);
 for (let t = 2; t < CAMERA_SECONDS; t += 1) {
   assert.ok(manifestoPose(from, t, aspect).position.y > manifestoPose(from, t - 0.5, aspect).position.y,
@@ -55,4 +59,4 @@ const count = plan => bodies.filter((_, i) => plan[i * 2] <= CAMERA_SECONDS).len
 assert.ok(count(mobilePlan) > 30, 'nearby field still has organic detail');
 assert.ok(count(mobilePlan) <= 140, 'phone never draws the full aerial field');
 assert.equal(count(desktopPlan), bodies.length, 'desktop full field preserved');
-console.log(`Mobile manifesto: 38-unit elevation, <40-unit radius, full ${reading.seconds.toFixed(2)}s reading motion; ${count(mobilePlan)}/${count(desktopPlan)} scheduled bodies.`);
+console.log(`Mobile manifesto: 38-unit elevation, fixed overhead heading, full ${reading.seconds.toFixed(2)}s reading motion; ${count(mobilePlan)}/${count(desktopPlan)} scheduled bodies.`);

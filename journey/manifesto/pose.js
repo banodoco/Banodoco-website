@@ -33,7 +33,7 @@ export const AWAY_EXTRA_SECONDS = 1.0;
 export const awaySecondsFrom = (u) => returnSecondsFrom(u) * AWAY_SCALE + AWAY_EXTRA_SECONDS;
 export const SPIRAL_START_SECONDS = 1.0;
 export const MOBILE_LIFT_SECONDS = 5;
-const MOBILE_LIFT_HEIGHT = 14;
+const MOBILE_LIFT_HEIGHT = 16;
 // The title is written the moment the page opens (2026-10-04 — Hannah: it
 // should "fade in as soon as I press manifesto ... and then the texts appear
 // afterwards").
@@ -83,11 +83,10 @@ const mix = (a, b, t) => a + (b - a) * t;
 export const isMobileManifesto = aspect => aspect < 0.9 ||
   (typeof window !== 'undefined' && window.innerWidth > 0 && window.innerWidth <= 720);
 export function frameShiftAt(seconds, aspect = 1.6, from = { position: { x: -14.72, z: 2.7 } }) {
-  const portrait = isMobileManifesto(aspect);
-  const start = portrait ? MOBILE_LIFT_SECONDS : SPIRAL_START_SECONDS;
-  const spiral = smoother((seconds - start) / (CAMERA_SECONDS - start));
-  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * (portrait ? 30 : 100) / 180;
-  const distance = (portrait ? 5 : 11) * spiral;
+  if (isMobileManifesto(aspect)) return { x: 0, z: 0 };
+  const spiral = smoother((seconds - SPIRAL_START_SECONDS) / (CAMERA_SECONDS - SPIRAL_START_SECONDS));
+  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * 100 / 180;
+  const distance = 11 * spiral;
   return { x: -Math.sin(az) * distance, z: Math.cos(az) * distance };
 }
 
@@ -144,54 +143,59 @@ function mobileHeightAbove(fromY, seconds) {
     + (38 - fromY - MOBILE_LIFT_HEIGHT) * ascentAt(seconds, 0.5);
 }
 
-/** The lift and orbit share one flight clock. Desktop starts its orbit after
- * one second. Phones rise vertically first, look into the air, then ease into
- * the nearby aerial view. Increasing atan2(z,x) is counterclockwise in the
- * field's authored x/z plan (the same convention as Final arcOf). */
+/** Phones rise and tilt into an overhead view, then keep climbing on the
+ * reading clock. A tiny residual horizontal direction (0.00057 degrees from
+ * vertical) preserves the departure heading through lookAt and return blends;
+ * exact vertical would make the camera's world-up basis singular. */
+function mobilePose(from, seconds) {
+  const tilt = smoother(seconds / MOBILE_LIFT_SECONDS);
+  const dx = from.target.x - from.position.x, dz = from.target.z - from.position.z;
+  const horizontal = Math.hypot(dx, dz);
+  const dy = from.target.y - from.position.y;
+  const pitch = mix(Math.atan2(dy, horizontal), -Math.PI / 2 + 1e-5, tilt);
+  const y = from.position.y + mobileHeightAbove(from.position.y, seconds);
+  const distance = mix(Math.hypot(horizontal, dy), y - 0.4, tilt);
+  const reach = Math.cos(pitch) * distance;
+  const hx = horizontal > 1e-9 ? dx / horizontal : 0;
+  const hz = horizontal > 1e-9 ? dz / horizontal : -1;
+  return {
+    position: { x: from.position.x, y, z: from.position.z },
+    target: seconds <= 0 ? { ...from.target } : {
+      x: from.position.x + hx * reach,
+      y: y + Math.sin(pitch) * distance,
+      z: from.position.z + hz * reach,
+    },
+    fov: mix(from.fov, 46, tilt),
+    roll: (from.roll || 0) * (1 - tilt),
+    field: smoother((seconds - MOBILE_LIFT_SECONDS) / 4.5),
+    atmosphere: smoother(seconds / 8),
+  };
+}
+
+/** Desktop retains its authored lift and counterclockwise orbit. */
 export function manifestoPose(from, seconds, aspect = 1.6) {
-  // The lift and orbit overlap. Keeping the old 2.2s phase boundary made the
-  // camera visibly settle before the counter-clockwise expansion began.
-  const portrait = isMobileManifesto(aspect);
+  if (isMobileManifesto(aspect)) return mobilePose(from, seconds);
   const lift = smoother(seconds / 3.0);
-  const spiralStart = portrait ? MOBILE_LIFT_SECONDS : SPIRAL_START_SECONDS;
-  const spiral = smoother((seconds - spiralStart) / (CAMERA_SECONDS - spiralStart));
-  // Phones stay within a nearby patch. Keep the full reading clock instead
-  // of stopping the desktop flight early: even its last paragraph has motion.
+  const spiral = smoother((seconds - SPIRAL_START_SECONDS) / (CAMERA_SECONDS - SPIRAL_START_SECONDS));
   const ascent = ascentAt(seconds, aspect);
-  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * (portrait ? 30 : 100) / 180;
-  const r = mix(Math.hypot(from.position.x, from.position.z), portrait ? 34 : 60, spiral);
+  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * 100 / 180;
+  const r = mix(Math.hypot(from.position.x, from.position.z), 60, spiral);
   const height = Math.max(70, 76 / Math.max(0.38, aspect));
-  const liftHeight = 8;
-  const side = portrait ? 0 : 21;
-  const ahead = portrait ? 12 : 0;
-  // Keep the reading column clear by easing the dense field toward the
-  // right-hand middle as the aerial view settles. Translating the camera and
-  // target together preserves the authored orbit while changing only the
-  // screen-space composition. Portrait needs a larger world-space offset
-  // because its narrower aspect magnifies horizontal framing changes.
   const { x: shiftX, z: shiftZ } = frameShiftAt(seconds, aspect, from);
-  const mobileRise = portrait ? mobileHeightAbove(from.position.y, seconds) : 0;
-  // Translate the target with the lift, then look gently upward so even the
-  // distant caps leave the viewport. Holding it near the ground pitched the
-  // camera down. The later look-down still reaches the same endpoint.
-  const lens = portrait ? smoother((seconds - MOBILE_LIFT_SECONDS) / 3) : lift;
-  const skyLook = portrait ? 6 * smoother((seconds - 1.5) / (MOBILE_LIFT_SECONDS - 1.5)) : 0;
   return {
     position: {
-      x: (seconds <= spiralStart ? from.position.x : Math.cos(az) * r) + shiftX,
-      y: portrait ? from.position.y + mobileRise
-        : from.position.y + liftHeight * lift + (height - from.position.y - liftHeight) * ascent,
-      z: (seconds <= spiralStart ? from.position.z : Math.sin(az) * r) + shiftZ,
+      x: (seconds <= SPIRAL_START_SECONDS ? from.position.x : Math.cos(az) * r) + shiftX,
+      y: from.position.y + 8 * lift + (height - from.position.y - 8) * ascent,
+      z: (seconds <= SPIRAL_START_SECONDS ? from.position.z : Math.sin(az) * r) + shiftZ,
     },
     target: {
-      x: mix(from.target.x, -3 - Math.sin(az) * side + Math.cos(az) * ahead, spiral) + shiftX,
-      y: portrait ? mix(from.target.y + mobileRise + skyLook, 0.4, spiral)
-        : mix(mix(from.target.y, 3.15, lift), 0.4, spiral),
-      z: mix(from.target.z, -1 + Math.cos(az) * side + Math.sin(az) * ahead, spiral) + shiftZ,
+      x: mix(from.target.x, -3 - Math.sin(az) * 21, spiral) + shiftX,
+      y: mix(mix(from.target.y, 3.15, lift), 0.4, spiral),
+      z: mix(from.target.z, -1 + Math.cos(az) * 21, spiral) + shiftZ,
     },
-    fov: mix(from.fov, 46, lens),
-    roll: (from.roll || 0) * (1 - lens),
-    field: smoother((seconds - spiralStart) / 4.5),
+    fov: mix(from.fov, 46, lift),
+    roll: (from.roll || 0) * (1 - lift),
+    field: smoother((seconds - SPIRAL_START_SECONDS) / 4.5),
     atmosphere: smoother(seconds / 8),
   };
 }

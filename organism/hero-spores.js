@@ -577,6 +577,12 @@ function seedOne(F, i, c, rand, atEntry) {
     F.frame[i3] = sourceX * halfH * F.aspect;
     F.frame[i3 + 1] = sourceY * halfH;
     F.q[i] = sourceY + fallJ * F.aspect * (sourceX - c.xIn);
+    // This is the one spore the eye follows. Its original random size was
+    // subpixel on a dense phone display, then area-dimmed by the shader and
+    // lost behind the navigation scrim. Give it a small readable core and
+    // the current body's light from frame one; kindling still blooms gently.
+    F.size[i] = Math.max(F.size[i], 0.18);
+    F.color[i3] *= 2.8; F.color[i3 + 1] *= 2.8; F.color[i3 + 2] *= 2.8;
   }
   F.attrsDirty = true;
 }

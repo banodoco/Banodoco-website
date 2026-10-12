@@ -33,28 +33,30 @@ assert.ok(manifestoPose(from, 26).position.y > manifestoPose(from, 16).position.
 assert.deepEqual(manifestoPose(from, CAMERA_SECONDS), manifestoPose(from, CAMERA_SECONDS + 10));
 for (const aspect of [1440 / 900, 390 / 844]) {
   const pose = manifestoPose(from, CAMERA_SECONDS, aspect);
-  const distance = Math.hypot(pose.position.x, pose.position.y - 3.15, pose.position.z);
+  const distance = aspect < 1 ? pose.position.y - 3.15
+    : Math.hypot(pose.position.x, pose.position.y - 3.15, pose.position.z);
   const capFraction = 4.7 / (2 * distance * Math.tan(pose.fov * Math.PI / 360) * aspect);
-  assert.ok(capFraction >= (aspect < 1 ? 0.20 : 0.03) && capFraction <= (aspect < 1 ? 0.30 : 0.05), `${aspect}: cap scale ${capFraction}`);
+  assert.ok(capFraction >= (aspect < 1 ? 0.20 : 0.03) && capFraction <= (aspect < 1 ? 0.36 : 0.05), `${aspect}: cap scale ${capFraction}`);
 }
-// On phones the opening is a translation, not a tilt toward the field.
+// Phones rise vertically while smoothly tilting down, then stay overhead.
 const phoneFrom = { ...from, roll: .2 };
-for (const seconds of [0, .5, 1, 2, 3, MOBILE_LIFT_SECONDS]) {
+let lastPitch = Infinity;
+for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .02) {
   const pose = manifestoPose(phoneFrom, seconds, 390 / 844);
   assert.equal(pose.position.x, from.position.x);
   assert.equal(pose.position.z, from.position.z);
-  for (const axis of ['x', 'z']) assert.ok(Math.abs(
-    (pose.target[axis] - pose.position[axis]) - (from.target[axis] - from.position[axis])) < 1e-9,
-    'the opening lift has no lateral camera or target movement');
-  const pitchLift = (pose.target.y - pose.position.y) - (from.target.y - from.position.y);
-  assert.ok(pitchLift >= -1e-9, 'the opening may look up, never tilt down toward the departing field');
-  if (seconds <= 1.5) assert.ok(Math.abs(pitchLift) < 1e-9, 'camera and target initially translate together');
-  assert.equal(pose.fov, from.fov);
-  assert.equal(pose.roll, phoneFrom.roll);
+  const dx = pose.target.x - pose.position.x, dz = pose.target.z - pose.position.z;
+  const pitch = Math.atan2(pose.target.y - pose.position.y, Math.hypot(dx, dz));
+  assert.ok(pitch <= lastPitch + 1e-9, 'opening tilts continuously toward overhead');
+  lastPitch = pitch;
+  assert.ok(Math.abs(Math.atan2(dz, dx) - Math.atan2(from.target.z - from.position.z,
+    from.target.x - from.position.x)) < 1e-8, 'heading never flips at the overhead handoff');
+  if (seconds >= MOBILE_LIFT_SECONDS) {
+    assert.ok(Math.abs(pitch + Math.PI / 2) < 1.1e-5, 'remaining zoom stays straight down');
+    assert.equal(pose.roll, 0);
+  }
 }
-assert.ok(manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).position.y >= from.position.y + 14);
-assert.ok(manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).target.y >
-  manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).position.y, 'the opening finishes looking into the air');
+assert.ok(manifestoPose(phoneFrom, MOBILE_LIFT_SECONDS, .5).position.y >= from.position.y + 16);
 assert.equal(manifestoPose(phoneFrom, CAMERA_SECONDS, .5).position.y, 38);
 for (const startU of [.08, .2, .6, 1]) {
   const initial = manifestoPose(phoneFrom, startU * CAMERA_SECONDS, .5).position.y - from.position.y;
@@ -394,6 +396,8 @@ assert.deepEqual(snapshot(), original);
 accessible.destroy();
 console.log('Manifesto branch: no page controls, full reading flight, long reading hold, far plane, eased Return, mid-descent retarget, focus, reduced motion and Escape pass.');
 
+// Geometry fixtures select their viewport by aspect after the DOM branch tests.
+window.innerWidth = 1440;
 // All frame directions have a prepared continuation, with no rows or ring.
 let seed = 41;
 const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
@@ -428,7 +432,12 @@ for (const aspect of [1440/900,390/844]) {
   assert.equal(first.at(-2), -1, 'existing field bodies remain outside the arrival schedule');
   const counts = [0, .28, .5, .71, .93, 1].map(f => f * CAMERA_SECONDS).map(t => placements.filter((b,i) => aerialRevealAt(t,first[i*2],first[i*2+1]) > 0.1).length);
   assert.equal(counts[0], 0, 'new aerial bodies start absent');
-  assert.ok(counts[2] > counts[1] && counts[3] > counts[2] && counts[4] > counts[3] && counts[5] > counts[4], 'arrivals continue through middle, late, and final expansion');
+  if (aspect >= 0.9) {
+    assert.ok(counts[2] > counts[1] && counts[3] > counts[2] && counts[4] > counts[3] && counts[5] > counts[4], 'desktop arrivals continue through middle, late, and final expansion');
+  } else {
+    assert.ok(counts.at(-1) > counts[1], 'the overhead patch grows as the phone zooms out');
+    assert.ok(counts.every((n, i) => i === 0 || n >= counts[i - 1]), 'admitted mobile bodies remain present');
+  }
   const scheduledCount = placements.filter((_, i) => first[i*2] <= CAMERA_SECONDS).length;
   assert.equal(counts.at(-1), scheduledCount, 'admitted arrivals settle with the camera');
   if (aspect < 0.9) assert.ok(scheduledCount <= 140, 'mobile only admits the near patch');
@@ -449,6 +458,19 @@ console.log('Manifesto arrivals: repeatable edge schedule, stable original field
 const { readFileSync } = await import('node:fs');
 const threeURL = new URL('../vendor/three/three.module.js', import.meta.url).href;
 const THREE = await import(threeURL);
+const { applyCameraRoll } = await import('../journey/camera-roll.js');
+const orientationCamera = new THREE.PerspectiveCamera();
+let lastQuaternion = null;
+for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .01) {
+  const pose = manifestoPose(phoneFrom, seconds, 390 / 844);
+  orientationCamera.position.set(pose.position.x, pose.position.y, pose.position.z);
+  applyCameraRoll(orientationCamera, new THREE.Vector3(pose.target.x, pose.target.y, pose.target.z), pose.roll);
+  const q = orientationCamera.quaternion;
+  assert.ok(q.toArray().every(Number.isFinite), 'overhead camera has a finite orientation');
+  if (lastQuaternion) assert.ok(q.angleTo(lastQuaternion) < .007, 'no yaw/roll flip through the overhead handoff');
+  lastQuaternion = q.clone();
+}
+
 const poseURL = new URL('../journey/manifesto/pose.js', import.meta.url).href;
 const dissolveURL = new URL('../journey/lib/body-dissolve.js', import.meta.url).href;
 let colonySource = readFileSync(new URL('../journey/manifesto/colony.js', import.meta.url),'utf8')
