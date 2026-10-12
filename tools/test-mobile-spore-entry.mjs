@@ -35,13 +35,15 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
             'selection starts with the ordinary particle size, without a bright pop');
           const x=f.frame[idx]/(f.frame[idx+2]*f.tanHalfFov*f.aspect);
           const y=f.frame[idx+1]/(f.frame[idx+2]*f.tanHalfFov);
-          let neighbours=0;
+          let neighbours=0, lane=0, above=0;
           for(let j=0;j<f.nA+f.nH;j++) {
             if(j===l.hi) continue;
             const k=j*3, half=f.frame[k+2]*f.tanHalfFov;
             if(Math.hypot(f.frame[k]/(half*f.aspect)-x,f.frame[k+1]/half-y)<.25) neighbours++;
+            if(Math.abs(f.frame[k]/(half*f.aspect)-x)<=.18) {lane++; if(f.frame[k+1]/half>y) above++;}
           }
           assert.ok(neighbours>=3, 'landing is recruited from the visible body of the current');
+          assert.ok(lane>=8 && above/lane>=.8, 'source is in the bottom fifth of the actual stream');
           recruitmentChecked=true;
         }
       }
@@ -52,8 +54,9 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
       const endY=l.p3[1]/(l.p3[2]*f.tanHalfFov);
       assert.ok(f.t<2.5, 'selection does not delay the loading sequence');
       if(m==='mobile') {
-        assert.ok(Math.abs(start)<.32, 'landing starts near the horizontal centre');
-        assert.ok(startY<-.15 && startY>endY+.08, 'landing begins low in the view and falls to ground');
+        assert.ok(start>=-.65 && start<=.35, 'landing leaves the original stream above its ground site');
+        assert.ok(startY>endY+.08, 'landing falls from the original current to ground');
+        assert.ok(Math.abs(end)<.12 && endY<-.7, 'only the landing path reaches lower centre');
         assert.ok(l.dur>=1.85*1.45, 'mobile fall retains its slower duration in normal and ready paths');
         // Same seed without the mobile tempo multiplier must choose exactly
         // the same source; only the descent clock changes.
@@ -79,3 +82,20 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
   }
 
 }
+
+// Golden ordinary-current frame from cde1743's parent, before the unwanted
+// screen-slope change. These particles span near/far and left/right lanes;
+// no landing is active, so this guards the actual wind integration too.
+globalThis.innerWidth=390; globalThis.innerHeight=664;
+const mode=createHeroMode(), m=mode.resolve(), v=growthView(mode.viewFor(m),m,0);
+const originalStream=createField({mode:m,camX:.15+v.panX,camY:v.camY,camZ:v.camZ,
+  tgtX:v.panX,tgtY:v.targetY,tanHalfFov:Math.tan(v.fov*Math.PI/360),aspect:390/664},0x5be1);
+originalStream.landings=[];
+for(let i=0;i<120;i++) advance(originalStream,1/60,.72);
+assert.deepEqual([0,17,118,301,619].map(i=>Array.from(originalStream.frame.slice(i*3,i*3+3))),
+  [[-0.7242848873138428,2.4423511028289795,7.77317476272583],
+   [-6.784584999084473,7.653721809387207,14.272785186767578],
+   [0.14577136933803558,1.7302907705307007,10.94500732421875],
+   [2.920044183731079,-0.5111774206161499,9.87977123260498],
+   [-0.40327972173690796,2.473459005355835,9.219886779785156]],
+  'ordinary mobile stream retains its exact pre-cde1743 positions after two seconds');

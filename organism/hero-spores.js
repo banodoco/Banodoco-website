@@ -234,10 +234,10 @@ const COMPOSITION = {
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
-  // down through the lower centre. It remains a travelling current.
+  // to the right around mid-height. It remains a travelling current.
   mobile: {
     nA: 620, nH: 5, land: 1, landFromBottom: true, landDuration: 1.45, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
-    fall: [0.50, 1.05], screenFall: [0.76, 1.16], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
+    fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
 
@@ -627,16 +627,8 @@ function frameAnchors(F, view) {
 }
 
 /** Build the field for the current composition. */
-// A phone's current bends down through the lower centre where the landing
-// begins. Author its screen slope so tall phones carry the same real stream
-// there; every member still uses the ordinary seed and wind integrator.
-function compositionFor(view) {
-  const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
-  return c.screenFall ? { ...c, fall: c.screenFall.map(slope => slope / view.aspect) } : c;
-}
-
 function createField(view, seed) {
-  const c = compositionFor(view);
+  const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const rand = makeRng(seed);
   const n = c.nA + c.nH + RING_BANKS * RING_N + TRAIL_BANKS * TRAIL_N;
   const F = {
@@ -706,7 +698,7 @@ function planLandings(F) {
  *  the particles keep their identity and their streamline, the aim is
  *  re-read for the new mode, and the composition follows the frame. */
 function reframe(F, view) {
-  const c = compositionFor(view);
+  const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
   const oldAspect = F.aspect;
   const oldTanHalfFov = F.tanHalfFov;
   // Crossing a breakpoint re-aims the whole field: each particle's own
@@ -775,11 +767,23 @@ function pickPeeler(F, site) {
     const bandCost = F.band[i] === 0 || F.band[i] === 2 ? 0.35 : 0;
     const lead = sxN - xN;
     if (F.comp.landFromBottom) {
-      // The phone's landing begins in the lower middle of the view, above
-      // its ground site. Choose a real visible member; never haul a spore
-      // up from below the ground or pull one across from the side.
-      if (Math.abs(xN) <= 0.32 && yN <= -0.15 && drop >= 0.08 && drop <= 0.8) {
-        offer(0, i, Math.abs(xN) + 0.7 * Math.abs(yN + 0.42) + bandCost);
+      // Recruit from the original current, above and slightly upwind of
+      // the ground. Only this member bends toward the lower-centre site
+      // once kindling ends; the rest of the stream keeps its composition.
+      if (xN >= -0.65 && xN <= 0.25 && drop >= 0.18 && drop <= 1.8) {
+        // The underside is relative to the current itself, not the screen:
+        // select its lowest fifth in this narrow horizontal neighbourhood.
+        let neighbours = 0, above = 0;
+        for (let j = 0; j < F.nA + F.nH; j++) {
+          if (j === i || F.retired[j]) continue;
+          const j3 = j * 3, hh = F.frame[j3 + 2] * F.tanHalfFov;
+          if (Math.abs(F.frame[j3] / (hh * F.aspect) - xN) > 0.18) continue;
+          neighbours++;
+          if (F.frame[j3 + 1] / hh > yN) above++;
+        }
+        if (neighbours >= 8 && above / neighbours >= 0.8) {
+          offer(0, i, Math.abs(xN + 0.2) + 0.35 * Math.abs(drop - 0.9) + bandCost);
+        }
       }
       continue;
     }
