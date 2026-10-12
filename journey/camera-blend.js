@@ -7,8 +7,11 @@ import { arcLerp } from './camera-path.js';
  *  (measured 0.38 s parked, then 24 units in ~0.7 s — see the block at
  *  buildRoutePace). Without one — a degenerate leg, or a fixture-built blend —
  *  it falls back to the shipped linear map. Monotone by construction: the
- *  metric is a strictly positive per-segment sum. */
+ *  metric is a nonnegative per-segment sum; stationary departure samples
+ *  consume no time. */
 function routePaceP(blend, e) {
+  if (e <= 0) return blend.routeFromP;
+  if (e >= 1) return blend.routeTargetP;
   const pace = blend.routePace;
   if (!pace) {
     return blend.routeFromP + (blend.routeTargetP - blend.routeFromP) * e;
@@ -48,6 +51,12 @@ export function blendEaseRate(f, slope, k) {
   return slope ? r + slope * Math.pow(1 - f, k - 1) * ((1 - f) - k * f) : r;
 }
 
+/** Shared camera/rail/wordmark phase for a flight. */
+export function blendPhase(blend, f) {
+  const departingFirstLeg = blend.routeFaithful && blend.routeTargetP > blend.routeFromP;
+  return departingFirstLeg ? f * f * (3 - 2 * f) : blendEase(f);
+}
+
 /** Build the frame-critical direct-jump camera compositor once. */
 export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEnd) {
   const dstPos = sceneApi.camera.position.clone();
@@ -57,7 +66,11 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
     blend.t += dt * blend.play;
     if (blend.t < 0) blend.t = 0;
     const f = Math.min(blend.t / blend.dur, 1);
-    const e = f * f * f * (f * (f * 6 - 15) + 10);
+    // The first outward leg has a long authored stationary prelude. Its
+    // distance table now skips that hold; a cubic launch then makes movement
+    // perceptible promptly, with zero velocity at both ends. Use this same
+    // phase for the rail and camera so the wordmark remains synchronized.
+    const e = blendPhase(blend, f);
     // The rail consumes the camera's exact eased clock for both ordinary
     // clicks and cyclic wraps. Journey progress itself is already parked at
     // the destination during a direct flight, so it cannot supply this phase.

@@ -256,9 +256,8 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   function replayBootInput(state) {
     const input = takeBootInput();
     if (!input || !state) return;
-    // Scroll is an instruction request now, not journey travel. The early
-    // gesture may still accelerate the intro so the controls arrive promptly,
-    // but none of its buffered distance is replayed into progress.
+    // Scroll only requests a navigation hint after normal activation;
+    // it neither accelerates growth nor replays distance into progress.
     if (state.cueNavigation) state.cueNavigation(input.kind);
   }
 
@@ -407,18 +406,17 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     fastHandoffStarted = true;
     cancelPreludeWait();
     clearTimeout(activationTimer);
-    const departMs = window.innerWidth <= 620 ? 220 : 480;
     document.body.classList.add('intro-fast');
     releaseIntro();
-    const accelerated = scene.intro.accelerate({
-      totalMs: HERO_INTRO_MS + 900,
-      rampMs: departMs,
+    // Start travel first so its actual, destination-dependent duration is
+    // available. The specimen finishes three-quarters through that same flight.
+    activateJourney();
+    const travelMs = readyState.transitionSeconds * 1000;
+    if (travelMs > 0) scene.intro.accelerate({
+      totalMs: HERO_SCENE_COMPLETE_MS,
+      rampMs: travelMs * 0.75,
+      exactDuration: true,
     });
-    // Do not install a second visual departure while the live journey is
-    // still preparing. The queued destination is state, not paint: once
-    // activateJourney() drains it, the normal camera/copy/rail ticket owns
-    // the whole departure from the frame that is actually on screen.
-    setTimeout(activateJourney, accelerated ? departMs : 80);
   }
   entryQueue.whenRequested(beginFastHandoff);
 
@@ -554,7 +552,10 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     if (e.type === 'touchmove' && (!e.touches || e.touches.length !== 1)) return;
     if ((e.type === 'wheel' || e.type === 'touchmove' || e.type === 'keydown')
         && e.cancelable) e.preventDefault();
-    if (collectBootInput(e)) beginFastHandoff();
+    // Scrolling can cue the navigation once it is ready, but must not
+    // accelerate growth or start travel. Only an explicit chapter request
+    // takes the fast handoff path.
+    collectBootInput(e);
   };
   introCaptureLive = true;
   for (const type of INTRO_INPUT_EVENTS) {

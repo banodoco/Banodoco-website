@@ -1,5 +1,7 @@
+import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
-import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, CAMERA_SECONDS, TITLE_SECONDS } from './pose.js';
+import { manifestoConcepts } from '../../content/manifesto-concepts.js';
+import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -24,17 +26,17 @@ const CHROME_FADE_MS = 1600;
 export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onReturn = null, scroll = null, field = null } = {}) {
   const root = document.createElement('section');
   root.className = 'j-manifesto';
+  root.style.setProperty('--stagger', `${WORD_STAGGER_SECONDS}s`);
+  root.style.setProperty('--word-reveal-duration', `${WORD_REVEAL_SECONDS}s`);
   root.id = 'manifesto';
   root.hidden = true;
   root.setAttribute('aria-label', 'Manifesto');
   root.innerHTML = `
     <div class="j-manifesto-panel" role="region" aria-labelledby="j-manifesto-title" tabindex="-1">
       <h1 id="j-manifesto-title"></h1>
-      <p class="j-manifesto-sr-only"></p>
-      <div class="j-manifesto-lines" aria-hidden="true"></div>
+      <div class="j-manifesto-lines"></div>
     </div>`;
   const title = root.querySelector('#j-manifesto-title');
-  const srBody = root.querySelector('.j-manifesto-sr-only');
   const lines = root.querySelector('.j-manifesto-lines');
   // The title is inscribed letter by letter and the body word by word (see
   // "WRITTEN IN LIGHT" in journey/site.css): each piece is its own span,
@@ -49,37 +51,86 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     glyph.textContent = ch;
     title.appendChild(glyph);
   }
-  srBody.textContent = CONTENT.manifesto.body;
-  // The approved body is five line beats. Keep the visual duplication
-  // out of the accessibility tree; screen readers get the exact full copy once.
+  // The approved body is five paragraph beats, with its animated words
+  // in the accessibility tree so the inline note is keyboard accessible.
   // One line per entry of CONTENT.manifesto.lines (a line may hold two
   // sentences); falls back to one line per sentence of the body.
   const sentences = CONTENT.manifesto.lines
     || CONTENT.manifesto.body.match(/[^.!?]+[.!?]+/g) || [CONTENT.manifesto.body];
   const lineEls = [];
+  let note = null;
   for (const sentence of sentences) {
     const line = document.createElement('p');
     line.className = 'j-manifesto-line';
     const words = sentence.trim().split(/\s+/);
-    // "True Union" is the name the whole text is about: both of its words
-    // carry .is-name, which inks them in with a lingering highlight
-    const isName = (i) => (/^True$/.test(words[i]) && /^Union\b/.test(words[i + 1] || ''))
-      || (/^Union\b/.test(words[i]) && words[i - 1] === 'True');
+    const concepts = manifestoConcepts(words);
+    // Highlight the brand name within the manifesto.
+    const isName = (i) => /^Mycelial\b/.test(words[i] || '');
+    let phraseThread = null;
     words.forEach((word, i) => {
       const span = document.createElement('span');
       span.className = isName(i) ? 'j-manifesto-word is-name' : 'j-manifesto-word';
-      // both words of the name share the first word's beat, so they light
-      // and underline together as one name rather than one word after another
+      // Multiword names share their first word’s warm reveal beat.
       const beat = isName(i) && i > 0 && isName(i - 1) ? i - 1 : i;
       span.setAttribute('style', `--w:${beat}`);
       // The space rides inside an (inline) span, so wrapping is unchanged —
       // on the word BEFORE it normally, but after the name it opens the next
-      // word instead, so the name's highlight hairline ends at "Union".
+      // word instead, keeping the name grouped through its reveal.
       const lead = i > 0 && isName(i - 1) && !isName(i) ? ' ' : '';
+      const concept = concepts.get(i);
+      const endsThread = concept?.id === 'kinship' && i === concept.end;
       const trail = i < words.length - 1 && !(isName(i) && !isName(i + 1)) ? ' ' : '';
-      span.textContent = `${lead}${word}${trail}`;
-      line.appendChild(span);
+      if (concept) {
+        // The outer span keeps the existing ink/opacity clock. Only the inner
+        // ink changes colour, so a paired pulse cannot reveal future words.
+        const ink = document.createElement('span');
+        ink.className = `manifesto-concept concept-${concept.id} concept-${concept.role} concept-position-${concept.offset || 0}`;
+        ink.style.setProperty('--concept-index', concept.offset || 0);
+        if (concept.id === 'imagination' || concept.id === 'vitality') {
+          [...concept.ink].forEach((character, characterIndex) => {
+            const glyph = document.createElement('span');
+            glyph.className = concept.id === 'imagination' ? 'manifesto-spectrum-glyph' : 'manifesto-vitality-glyph';
+            glyph.style.setProperty('--spectrum-index', concept.characterOffset + characterIndex);
+            glyph.style.setProperty('--glyph-delay', `${characterIndex * 24}ms`);
+            glyph.style.setProperty('--jitter-phase', `${((concept.characterOffset + characterIndex) * 47) % 173}ms`);
+            glyph.textContent = character;
+            ink.appendChild(glyph);
+          });
+        } else {
+          ink.textContent = concept.ink || word;
+        }
+        span.append(lead, ink, concept.suffix || '', endsThread ? '' : trail);
+      } else {
+        span.textContent = `${lead}${word}${trail}`;
+      }
+      // A single inline decoration flows across words and line breaks. It is
+      // outside word opacity, so the thread is never chopped into word pulses.
+      if (concept?.id === 'kinship' && i === concept.start) {
+        phraseThread = document.createElement('span');
+        phraseThread.className = 'manifesto-phrase-thread';
+        phraseThread.style.setProperty('--phrase-beat', concept.start);
+        line.appendChild(phraseThread);
+      }
+      (phraseThread || line).appendChild(span);
+      if (endsThread) {
+        phraseThread = null;
+        // Keep the following separator outside the decorated phrase.
+        if (trail) line.append(trail);
+      }
     });
+    if (lineEls.length === 0) {
+      const marker = document.createElement('span');
+      marker.className = 'j-manifesto-word manifesto-note-marker';
+      marker.style.setProperty('--w', words.length);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'manifesto-note-trigger';
+      button.textContent = '[1]';
+      button.setAttribute('aria-label', 'Read note 1 about fungi');
+      marker.append(' ', button);
+      line.appendChild(marker);
+      note = attachManifestoNote(button, CONTENT.manifesto.note);
+    }
     lines.appendChild(line);
     lineEls.push(line);
   }
@@ -236,25 +287,49 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
      narrow screens — the whole column LIFTS by exactly that overflow, on a
      slow ease, and the oldest lines dissolve through the box's top edge
      (`.is-lifted`'s mask). The text rises with the camera instead of asking
-     the visitor to scroll a box. Measured only when the count or the
-     viewport changes; per frame it is two number compares. */
+     the visitor to scroll a box. Measured when the count, viewport, or text layout changes; per frame
+     it is two number compares. */
   let liftKey = '';
   function liftColumn() {
     const key = `${shownLines}|${window.innerWidth}x${window.innerHeight}`;
     if (key === liftKey) return;
     liftKey = key;
     const last = lineEls[shownLines - 1];
-    const box = lines.clientHeight;
-    const bottom = last ? last.offsetTop + last.offsetHeight : 0;
-    const lift = Number.isFinite(bottom - box) ? Math.max(0, Math.ceil(bottom - box)) : 0;
+    // Keep fractional layout geometry: offsetTop/clientHeight round separately,
+    // and a phantom 1px overflow used to enable a 3.2rem fade over fitting text.
+    // All paragraphs share the same animated translate, so subtracting their
+    // rects cancels it, including while the previous lift is still easing.
+    const box = lines.getBoundingClientRect().height;
+    const padding = parseFloat(getComputedStyle(lines).paddingTop) || 0;
+    const bottom = last
+      ? last.getBoundingClientRect().bottom - lineEls[0].getBoundingClientRect().top + padding
+      : 0;
+    const overflow = bottom - box;
+    const lift = Number.isFinite(overflow) && overflow > 1 ? Math.ceil(overflow) : 0;
     if (lines.style && lines.style.setProperty) lines.style.setProperty('--lift', `${-lift}px`);
     lines.classList.toggle('is-lifted', lift > 0);
   }
+  // Font loading and flex reflow can change the reading box without changing
+  // either the viewport or the number of revealed paragraphs.
+  const layoutObserver = new ResizeObserver(() => {
+    liftKey = '';
+    if (active && !root.hidden) liftColumn();
+  });
+  layoutObserver.observe(lines);
+  lineEls.forEach(line => layoutObserver.observe(line));
   function paintLines(count) {
     const next = Math.max(0, Math.min(sentences.length, count));
     if (next === shownLines && lineEls.length) { liftColumn(); return; }
+    const previous = shownLines;
     shownLines = next;
-    lineEls.forEach((line, i) => line.classList.toggle('shown', i < shownLines));
+    lineEls.forEach((line, i) => {
+      if (i >= previous && i < shownLines) {
+        // A frame may cross the scheduled beat by a few milliseconds. Catch
+        // CSS up to that same clock so its final fade ends with the camera.
+        line.style.setProperty('--reveal-lateness', `${Math.max(0, elapsed - lineSeconds[i])}s`);
+      }
+      line.classList.toggle('shown', i < shownLines);
+    });
     liftColumn();
   }
   /** Open the branch. `anchor` (a pose plus its fog) is the rest the flight
@@ -302,6 +377,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     document.body.classList.add('j-manifesto-open');
     root.hidden = false;
     root.classList.add('is-open');
+    liftKey = '';
+    liftColumn();
     panel.focus({ preventScroll: true });
     if (reduceMotion.matches) { u = 1; apply(1); }
   }
@@ -343,6 +420,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     return true;
   }
   function returnTo(onFinish = null, { land = null } = {}) {
+    note?.close();
     if (!active) { if (onFinish) onFinish(); return; }
     if (direction < 0) { retarget(onFinish, { land }); return; }
     finish = onFinish;
@@ -366,6 +444,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     paused = false;
   }
   function exit() {
+    note?.close();
     active = false;
     direction = 0;
     u = 0;
@@ -516,6 +595,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     get progress() { return u; },
     get shownLines() { return shownLines; },
     destroy() {
+      layoutObserver.disconnect();
+      note?.destroy();
       window.removeEventListener('keydown', handleKey);
       root.remove();
       if (active) exit();

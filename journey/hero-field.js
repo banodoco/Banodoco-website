@@ -162,7 +162,9 @@ export function createHeroFieldGate(sceneApi) {
      *  own painted scalar; 1 means the field is fully the visitor's, 0
      *  means this is not its section. */
     set(a) {
-      const next = a > 1 ? 1 : a < 0 ? 0 : (a || 0);
+      // This is opening atmosphere, not recurring hero furniture. Preserve
+      // the departure fade, but never restore light on a return/reversal.
+      const next = Math.min(shown, a > 1 ? 1 : a < 0 ? 0 : (a || 0));
       shown = next;
       /* A read-only mirror for the instrumented probes (evidence/
          r11-fieldgate). userData rather than a window global: the global

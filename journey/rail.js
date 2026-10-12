@@ -901,7 +901,7 @@ export function createRail({ onNav } = {}) {
   menu.inert = true;
 
   const menuHead = el('div', 'j-menu-head');
-  const menuH = el('h2', 'j-menu-h', 'True Union');
+  const menuH = el('h2', 'j-menu-h', 'Mycelial');
   menuH.id = 'j-menu-h';
   menuH.tabIndex = -1;
   menuHead.appendChild(menuH);
@@ -2631,6 +2631,7 @@ export function createRail({ onNav } = {}) {
 
     root.classList.toggle('j-rail-purpose-visible', treeU > 0.001);
     root.classList.toggle('j-rail-purpose-gathering', gatherU > 0.001);
+    root.classList.toggle('j-rail-purpose-travelling', (!!ticket && cameraPhase < 0.9999) || crossing);
     /* A stationary pointer can cross a moving icon during a direct arrival.
        Do not let that incidental :hover expose Purpose's above-seat labels
        before the camera has actually landed. */

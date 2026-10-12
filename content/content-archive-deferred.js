@@ -28,7 +28,7 @@ export const DEFERRED_CONTENT = {
     equip: {
       nav: 'Equip',
       heading: 'Equip the ecosystem.',
-      sub: 'True Union builds tools that help the community push open models further — expanding what is possible and what remains open.',
+      sub: 'Mycelial builds tools that help the community push open models further — expanding what is possible and what remains open.',
     },
   },
 

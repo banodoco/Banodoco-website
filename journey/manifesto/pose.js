@@ -1,5 +1,9 @@
-// One branch clock, sampled in the journey's camera composition slot.
-export const CAMERA_SECONDS = 28;
+import { CONTENT } from '../../content/content.js';
+
+// The CSS reveal and camera finish share these durations. Paragraph pauses
+// retain their own reading rhythm; the flight follows the finished last word.
+export const WORD_STAGGER_SECONDS = 0.11;
+export const WORD_REVEAL_SECONDS = 3;
 // THE DESCENT IS A FLIGHT TOO (2026-10-03 — Hannah: the way back "feels
 // weird and sudden and lacking in drama"). It used to rewind the whole 28s
 // ascent in 2.2s on a LINEAR clock — full speed on the first frame, a dead
@@ -39,7 +43,7 @@ export const TITLE_SECONDS = 0;
    the rhythm is even and a short sentence hands on sooner. */
 export const FIRST_LINE_SECONDS = 2.0;
 const LINE_BREATH_SECONDS = 1.6;
-const LINE_SECONDS_PER_WORD = 0.11;
+const LINE_SECONDS_PER_WORD = 0.14;
 export function lineSecondsFor(wordCounts) {
   const out = [];
   let t = FIRST_LINE_SECONDS;
@@ -49,6 +53,12 @@ export function lineSecondsFor(wordCounts) {
   });
   return out;
 }
+export function revealSecondsFor(wordCounts) {
+  const starts = lineSecondsFor(wordCounts);
+  return Math.max(0, ...wordCounts.map((words, i) =>
+    starts[i] + Math.max(0, words - 1) * WORD_STAGGER_SECONDS + WORD_REVEAL_SECONDS));
+}
+export const CAMERA_SECONDS = revealSecondsFor(CONTENT.manifesto.lines.map(line => line.trim().split(/\s+/).length));
 export const AERIAL_BODY_COUNT = 560;
 export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 export const smoother = (v) => { v = clamp01(v); return v * v * v * (v * (v * 6 - 15) + 10); };
@@ -260,7 +270,8 @@ export function aerialRevealAt(seconds, start, duration) {
 }
 export function planAerialReveals(bodies, from, aspect, output) {
   const frames = [];
-  for (let seconds = 2.5; seconds <= 27; seconds += 0.25) {
+  const clockScale = CAMERA_SECONDS / 28;
+  for (let seconds = 2.5 * clockScale; seconds <= CAMERA_SECONDS - clockScale; seconds += 0.25 * clockScale) {
     const pose = manifestoPose(from, seconds, aspect);
     const { position: p, target: q } = pose;
     const n = Math.hypot(q.x-p.x,q.y-p.y,q.z-p.z);
@@ -276,7 +287,7 @@ export function planAerialReveals(bodies, from, aspect, output) {
     if (b.tier >= 4) { output[i*2] = -1; output[i*2+1] = 1; continue; }
     const hash = Math.sin(b.x*12.9898 + b.z*78.233) * 43758.5453;
     const jitter = hash - Math.floor(hash);
-    const desired = Math.min(25.5, 1.8 + Math.hypot(b.x,b.z)*0.15 + jitter*4.8);
+    const desired = Math.min(25.5, 1.8 + Math.hypot(b.x,b.z)*0.15 + jitter*4.8) * clockScale;
     let best = Infinity, start = desired, chosen = -1;
     for (const f of frames) {
       const x = b.x-f.p.x, y = b.gy+b.s*3.2-f.p.y, z = b.z-f.p.z;
@@ -288,15 +299,15 @@ export function planAerialReveals(bodies, from, aspect, output) {
       if (edge > 1.02) continue;
       const reading = aspect < 0.9 ? ny < 0.30 : nx < -0.05;
       const side = Math.abs(nx) > Math.abs(ny) ? (nx > 0 ? 0 : 1) : (ny > 0 ? 2 : 3);
-      const bucket = Math.min(6, Math.floor(f.seconds/4))*4 + side;
+      const bucket = Math.min(6, Math.floor(f.seconds/(CAMERA_SECONDS/7)))*4 + side;
       // Prefer arrivals just inside the frame, with a loose placement-seeded
       // cadence; the reading column is the last choice for an arrival.
-      const score = Math.abs(f.seconds-desired)*0.16 + Math.abs(edge-0.82)*3 + (reading ? 0.2 : 0) + edgeLoad[bucket]*0.18;
+      const score = Math.abs(f.seconds-desired)/clockScale*0.16 + Math.abs(edge-0.82)*3 + (reading ? 0.2 : 0) + edgeLoad[bucket]*0.18;
       if (score < best) { best = score; start = f.seconds; chosen = bucket; }
     }
     if (chosen >= 0) edgeLoad[chosen]++;
-    const duration = 1.3 + jitter*1.5;
-    output[i*2] = Math.min(28-duration, Math.max(2.5, start + jitter*0.55));
+    const duration = (1.3 + jitter*1.5) * clockScale;
+    output[i*2] = Math.min(CAMERA_SECONDS-duration, Math.max(2.5 * clockScale, start + jitter*0.55 * clockScale));
     output[i*2+1] = duration;
   }
   return output;

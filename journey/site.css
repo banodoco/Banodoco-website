@@ -674,7 +674,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-line {
     display: block;
     margin-top: 0.22rem;
-    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
     font-size: 1rem;
     line-height: 1.32;
     color: var(--muted);
@@ -1003,7 +1003,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-h {
     margin: 0 0 1rem;
-    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
     font-weight: 400;
     font-size: clamp(1.9rem, 3.1vw, 3rem);
     line-height: 1.12;
@@ -2216,7 +2216,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     to   { opacity: 1; }
   }
   .j-pop-t {
-    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-family: "Cormorant Garamond", Georgia, serif;
     font-weight: 400;
     font-size: 1.05rem;
     letter-spacing: 0.01em;
@@ -2400,7 +2400,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-card-x:hover { color: var(--gold-bright); }
   .j-card-h {
     margin: 0 0 0.55rem;
-    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-family: "Cormorant Garamond", Georgia, serif;
     font-weight: 400;
     font-size: 1.35rem;
     color: var(--parchment);
@@ -4421,7 +4421,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   top: calc(50% + var(--nav-minor) / 2 + 4px);
   left: 50%;
   transform: translateX(-50%);
-  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   font-size: 0.66rem;
   font-weight: 400;
   line-height: 1;
@@ -4709,7 +4709,7 @@ body.j-manifesto-open .j-manifesto {
 .j-manifesto-panel h1 {
   flex-shrink: 0;
   margin: 0 0 1.25rem;
-  font: 400 clamp(2rem, min(3.5vw, 6.2vh), 3.4rem)/1.04 "Didot", "Playfair Display", Georgia, serif;
+  font: 400 clamp(2rem, min(3.5vw, 6.2vh), 3.4rem)/1.04 "Cormorant Garamond", Georgia, serif;
   white-space: nowrap;
 }
 
@@ -4723,10 +4723,9 @@ body.j-manifesto-open .j-manifesto {
    written across the dark rather than switched on. Only opacity, filter,
    colour and text-shadow animate, on a handful of spans at a time.
    ================================================================ */
-/* 80 ms a word and a 2.5 s ink (were 62 ms / 1.9 s — 2026-10-04, Hannah:
-   "make the text reveal ... a little slower"); the beats between sentences
-   are priced to match in journey/manifesto/pose.js */
-.j-manifesto { --stagger: 80ms; --glyph-stagger: 70ms; }
+/* A slower 110 ms word cadence and 3 s ink reveal. Paragraph timing in
+   manifesto/pose.js preserves the existing breath between passages. */
+.j-manifesto { --stagger: 110ms; --glyph-stagger: 70ms; }
 
 .j-manifesto-glyph {
   display: inline-block;
@@ -4767,29 +4766,13 @@ body.j-manifesto-open .j-manifesto {
 }
 .j-manifesto-word { opacity: 0; }
 .j-manifesto-line.shown .j-manifesto-word {
-  animation: j-manifesto-ink 2.5s cubic-bezier(0.22, 0.6, 0.25, 1) both;
-  animation-delay: calc(var(--w) * var(--stagger));
+  animation: j-manifesto-ink var(--word-reveal-duration, 3s) cubic-bezier(0.22, 0.6, 0.25, 1) both;
+  animation-delay: calc(var(--w) * var(--stagger) - var(--reveal-lateness, 0s));
 }
 
-/* THE NAME CATCHES THE LIGHT (2026-10-03 — Hannah: "some elegant way to
-   temporarily highlight each instance of True Union when it appears"). Its
-   two words ink in like every other word, but bloom a brighter gold, hold
-   that warmth for a beat while a hairline draws beneath them, and only then
-   cool into the parchment of the sentence. The weight stays (below); the
-   light and the underline pass. */
-/* The name is SET in its weight from the start (an unshown word is only
-   uninked, so a weight that arrived later would re-wrap the paragraph
-   mid-reveal) and stays bold after its light has passed. */
+/* The closing name keeps its bold weight throughout its warm reveal. */
 .j-manifesto-word.is-name { font-weight: 600; letter-spacing: 0.01em; }
 .j-manifesto-line.shown .j-manifesto-word.is-name {
-  /* ONE underline for the whole name: a real text-decoration on both words
-     (the space between them is inside the first word's span, so the line is
-     continuous), brightening and fading on the shared beat — never two
-     segments drawing or retracting one after the other. */
-  text-decoration-line: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.24em;
-  text-decoration-color: rgba(240, 196, 110, 0);
   animation-name: j-manifesto-name;
   animation-duration: 4.2s;
 }
@@ -4799,7 +4782,6 @@ body.j-manifesto-open .j-manifesto {
     filter: blur(7px);
     color: rgba(255, 214, 140, 0.95);
     text-shadow: 0 0 0 rgba(255, 190, 90, 0);
-    text-decoration-color: rgba(240, 196, 110, 0);
   }
   14% {
     opacity: 1;
@@ -4807,18 +4789,15 @@ body.j-manifesto-open .j-manifesto {
     color: #ffe2a2;
     text-shadow: 0 0 18px rgba(255, 186, 84, 0.85), 0 0 4px rgba(255, 210, 130, 0.5);
   }
-  26% { text-decoration-color: rgba(240, 196, 110, 0.85); }
   58% {
     color: #f6cf82;
     text-shadow: 0 0 12px rgba(255, 186, 84, 0.45), 0 1px 12px rgba(0, 0, 0, 0.5);
-    text-decoration-color: rgba(240, 196, 110, 0.85);
   }
   100% {
     opacity: 1;
     filter: none;
     color: rgba(246, 226, 184, 0.96);
     text-shadow: 0 1px 12px rgba(0, 0, 0, 0.62);
-    text-decoration-color: rgba(240, 196, 110, 0);
   }
 }
 
@@ -5157,7 +5136,7 @@ body.j-manifesto-open .j-manifesto {
   background: none !important;
   box-shadow: none !important;
   color: var(--parchment);
-  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif !important;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif !important;
   font-style: normal !important;
   font-weight: 400 !important;
   font-size: 0.76rem !important;
@@ -5205,7 +5184,7 @@ body.j-manifesto-open .j-manifesto {
 .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-item { opacity: 1; }
 .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-name,
 .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-soon-note {
-  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif !important;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif !important;
   font-size: 0.76rem !important;
   line-height: 1 !important;
   letter-spacing: 0.02em !important;
@@ -5255,7 +5234,7 @@ body.j-manifesto-open .j-manifesto {
   left: 50%;
   transform: translateX(-50%);
   color: var(--gold-bright);
-  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   font-style: italic;
   font-weight: 400;
   font-size: 0.76rem;

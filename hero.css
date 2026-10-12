@@ -37,7 +37,7 @@
         rgba(0, 0, 0, 0.285) 141.4%) fixed,
       var(--scene-bg);
     color: var(--ink);
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
@@ -533,7 +533,7 @@
   }
   h1 {
     margin: 0 0 1.35rem;
-    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
     font-weight: 400;
     font-size: clamp(2.5rem, 4.4vw, 4.25rem);
     line-height: 1.1;

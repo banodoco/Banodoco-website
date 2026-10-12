@@ -1,0 +1,543 @@
+/* Mycelial — editorial identity. Shared by the live and static journeys. */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./assets/fonts/mycelial/cormorant-italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./assets/fonts/mycelial/cormorant-regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./assets/fonts/mycelial/cormorant-medium.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./assets/fonts/mycelial/dm-sans-regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./assets/fonts/mycelial/dm-sans-medium.ttf) format('truetype');
+}
+
+:root {
+  --gold: #f6b652;
+  --gold-bright: #f6ca8a;
+  --parchment: #f7ebd7;
+  --ink: #f7ebd7;
+  --muted: #c9baa4;
+  --bg: #0b0704;
+  --mycelial-display: 'Cormorant Garamond', Georgia, serif;
+  --mycelial-body: 'DM Sans', Arial, sans-serif;
+}
+body, button, input, select, textarea { font-family: var(--mycelial-body); }
+::selection { background: #f6b652; color: #0b0704; }
+/* A single generous signature; it remains the home control during travel. */
+.ui #site-nav { --header-left: 5.2vw; padding: 2.1rem var(--header-left); }
+/* The artwork's bright ring spans 912px of its 1254px canvas. Render that
+   ring at the menu's 44px diameter, independently of its transparent margin. */
+.ui .logo {
+  --brand-away: var(--logo-away-u, 0);
+  --brand-reading-offset: calc(clamp(1rem, 4vw, 4rem) - var(--header-left));
+  /* Position and wordmark share the journey's frame-stepped passage clock. */
+  translate: calc(var(--brand-reading-offset) * var(--logo-reading-u, 0)) 0;
+  transition: none;
+  --brand-width: 240px;
+  width: calc(44px + (var(--brand-width) - 44px) * (1 - var(--brand-away)));
+  min-width: 44px;
+  height: 44px;
+  gap: 0;
+}
+.ui .logo .wordmark-window {
+  position: absolute;
+  left: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(var(--brand-width) - 44px);
+  overflow: hidden;
+  pointer-events: none;
+}
+.ui .logo .wordmark {
+  /* Translate by the lettering plus its icon gap, not the wider window.
+     Otherwise the visible name is clipped before the camera arrives. */
+  width: max-content;
+  font-family: var(--mycelial-display);
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.045em;
+  padding-left: 12px;
+  color: var(--parchment);
+  opacity: 1;
+  filter: none;
+  transform: translateX(calc(var(--brand-away) * -100%));
+  /* The journey paints the eased transition each frame. */
+  transition: none;
+}
+.ui .logo .mushroom-mark {
+  width: 44px; height: 44px; left: 0;
+  overflow: visible;
+  clip-path: none; opacity: 1; filter: none;
+  transform: translateY(-50%);
+  transform-origin: center;
+  z-index: 1;
+}
+.ui .logo .mushroom-mark img {
+  width: 60.5px;
+  height: 60.5px;
+  inset: -7.43px auto auto -8.25px;
+}
+.ui .logo .mushroom-glow { display: none; }
+.ui .logo:hover .wordmark { color: var(--gold-bright); }
+.ui .logo:focus-visible { outline: 1px solid var(--gold-bright); outline-offset: 12px; }
+.ui .logo:focus-visible::after { display: none; }
+/* Preserve the original mission wording, with the scale and italic rhythm
+   of the supplied identity boards. The 3D organism remains the hero art. */
+.ui .hero {
+  max-width: 57vw;
+  padding: 0 0 9vh 5.2vw;
+}
+.ui .hero h1 {
+  font-family: var(--mycelial-display);
+  font-weight: 400;
+  font-size: clamp(3.8rem, 5.8vw, 6.2rem);
+  line-height: .96;
+  letter-spacing: -.035em;
+  margin-bottom: 1.7rem;
+  text-shadow: none;
+}
+.ui .hero h1::after {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  margin-top: 1.6rem;
+  background: #eeb665;
+  animation: fade-on 0.9s ease 0.15s both;
+}
+@media (prefers-reduced-motion: no-preference) {
+  body.hero-entry-pending .ui .hero h1::after {
+    opacity: 0;
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui .hero h1::after { animation: none; }
+}
+.ui .hero h1 em {
+  color: #f3bd7c;
+  letter-spacing: -.045em;
+  text-shadow: none;
+  font-weight: 400;
+}
+.ui .hero .sub {
+  font-family: var(--mycelial-body);
+  max-width: 34rem;
+  text-wrap: balance;
+  color: #d0c2af;
+  font-size: 13px;
+  line-height: 2.1;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  text-shadow: none;
+  margin-bottom: 0;
+}
+.j-h, .j-menu-h, .j-manifesto-panel h1 {
+  font-family: var(--mycelial-display);
+  font-weight: 400;
+  letter-spacing: -.03em;
+}
+.j-h { font-size: clamp(2.35rem, 3.7vw, 3.75rem); line-height: 1.04; }
+/* Purpose's longer headline needs a wider measure at this display scale.
+   Keep its anchor and phone layout; let desktop copy form a balanced pair. */
+.j-block[data-chapter="final"] .j-h { text-wrap: balance; }
+@media (min-width: 901px) {
+  .j-block.pos-topright[data-chapter="connect"] {
+    width: min(42rem, 89.6vw);
+    max-width: 42rem;
+  }
+  .j-block[data-chapter="connect"] .j-sub { max-width: 38rem; }
+  .j-block.pos-bottomleft[data-chapter="final"] {
+    width: min(56rem, 89.6vw);
+    max-width: 56rem;
+  }
+  .j-block[data-chapter="final"] .j-sub { max-width: 36rem; }
+}
+.mycelial-heading-accent {
+  color: #f3bd7c;
+  font-family: var(--mycelial-display);
+  font-style: italic;
+  font-weight: 400;
+  text-shadow: none;
+}
+.j-sub { font-family: var(--mycelial-body); font-size: 13px; line-height: 2; letter-spacing: .2em; text-transform: uppercase; }
+.j-rail-name, .j-menu-kicker { font-family: var(--mycelial-body); letter-spacing: .16em; }
+.j-manifesto-panel h1 { color: var(--parchment); font-size: clamp(3rem, 5vw, 5rem); }
+.j-manifesto .j-manifesto-line {
+  font-family: var(--mycelial-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 2;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+.j-menu-panel { background-color: #100b06; }
+/* The crawler/reduced-motion page shares the identity without inheriting
+   the live scene's fixed composition. */
+body:has(.manifesto-static) h1,
+body:has(.manifesto-static) h2 { font-family: var(--mycelial-display); font-weight: 400; letter-spacing: -.025em; }
+body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
+@media (min-width: 1800px) {
+  .ui .hero { max-width: 60rem; }
+}
+@media (max-width: 1024px) {
+  .ui #site-nav { --header-left: 5vw; padding: 2.1rem var(--header-left); }
+  .ui .logo { --brand-width: 210px; }
+  .ui .logo .wordmark { font-size: 36px; }
+  .ui .hero { max-width: 100%; padding: 4.5vh 6vw 0; justify-content: flex-start; }
+  .ui .hero h1 { font-size: clamp(2.9rem, 6.4vw, 4.5rem); line-height: 1; }
+  .ui .hero .sub { max-width: 32rem; font-size: 12px; line-height: 2; }
+  .j-h { font-size: clamp(2rem, 5vw, 3rem); }
+}
+@media (max-width: 600px) {
+  .ui #site-nav { --header-left: 6vw; padding: 2.1rem var(--header-left); }
+  .ui .logo { --brand-width: 180px; }
+  .ui .logo .wordmark { font-size: 32px; }
+  .ui .hero { padding: 3.5vh 6vw 0; text-align: left; }
+  .ui .hero h1 { font-size: clamp(2.65rem, 10.8vw, 4rem); line-height: .97; margin: 0 0 1.3rem; }
+  .ui .hero h1 .hl { white-space: nowrap; }
+  .ui .hero h1::after { width: 32px; margin-top: 1.2rem; }
+  .ui .hero .sub { max-width: 100%; font-size: 11px; line-height: 2; letter-spacing: .18em; margin: 0; }
+  .j-h { font-size: clamp(2rem, 8vw, 2.8rem); }
+  .j-sub { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }
+  .j-manifesto-panel h1 { font-size: 2.8rem; }
+  .j-manifesto .j-manifesto-line { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }
+}
+@media (max-height: 700px) and (min-width: 1025px) {
+  .ui .hero h1 { font-size: clamp(3rem, 5vw, 4.5rem); }
+  .ui .hero { padding-bottom: 5vh; }
+}
+@media (max-height: 740px) and (max-width: 600px) {
+  .ui .hero { padding-top: 1vh; }
+  .ui .hero h1 { font-size: 9.6vw; }
+}
+/* Secondary documents use the same recognizable signature. */
+.logo:has(.mycelial-secondary-name) { display: flex; align-items: center; gap: 10px; width: auto; min-width: 170px; color: var(--parchment); }
+.mycelial-secondary-mark { width: 46px; height: 46px; object-fit: contain; }
+.mycelial-secondary-name { font: 500 34px/1 var(--mycelial-display); letter-spacing: -.04em; }
+body:has(.mycelial-secondary-name) h1,
+body:has(.mycelial-secondary-name) h2 { font-family: var(--mycelial-display); }
+
+/* Supporting copy and wayfinding echo the reference's spaced small capitals. */
+.j-rail .j-rail-slot .j-rail-name,
+.j-menu-kicker,
+.rail-label,
+.nav-cta,
+.kicker {
+  font-family: var(--mycelial-body);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: .2em;
+}
+.j-rail .j-rail-slot .j-rail-name {
+  font-family: var(--mycelial-body) !important;
+  font-size: 10px !important;
+  letter-spacing: .16em !important;
+}
+.j-rail .j-rail-slot:is([data-chapter="inspire"], [data-chapter="equip"], [data-chapter="connect"]) .j-rail-name {
+  font-size: 9px !important;
+}
+body:has(.mycelial-secondary-name) .sub:not([data-src="manifesto.body"]) {
+  font-family: var(--mycelial-body);
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: .2em;
+  line-height: 2;
+}
+
+/* Keep the existing heading as the manifesto region's accessible name;
+   the fixed home signature supplies its one visible Mycelial title. */
+.j-manifesto-panel #j-manifesto-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (min-width: 621px) and (max-width: 900px) and (orientation: portrait) {
+  .ui #site-nav { padding-top: 24px; }
+}
+@media (max-width: 620px) and (orientation: portrait) {
+  .ui #site-nav { padding-top: 20.8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui .logo, .ui .logo .wordmark { transition: none; }
+}
+/* Reserve the fixed signature's band even when the reading column fills
+   the viewport. Its existing clipped line lift stays inside this region. */
+.j-manifesto {
+  --mycelial-reading-top: 112px;
+  padding-top: var(--mycelial-reading-top);
+}
+.j-manifesto .j-manifesto-panel {
+  min-height: 0;
+  max-height: min(52rem, calc(100dvh - var(--mycelial-reading-top) - var(--manifesto-reserve, 8.5rem)));
+}
+body .j-manifesto .j-manifesto-panel { translate: none; }
+/* Layout belongs to the reading surface, not the chrome visibility flag.
+   That flag is released before the exit fade finishes. */
+.j-manifesto { padding-bottom: var(--manifesto-reserve); }
+@media (max-width: 720px) {
+  .ui .logo {
+    --brand-reading-offset: calc(max(1rem, (100vw - 38rem) / 2 + .25rem) - var(--header-left));
+  }
+}
+/* Give the complete manifesto a wider reading measure before its overflow
+   lift is needed. Keep the signature and navigation clearances intact. */
+@media (min-width: 721px) {
+  .j-manifesto .j-manifesto-panel { width: min(44rem, 58vw); }
+  body .j-manifesto.is-open {
+    --manifesto-reserve: 8rem;
+    align-items: flex-start;
+  }
+}
+@media (max-width: 720px) {
+  .j-manifesto { --mycelial-reading-top: 100px; }
+  /* The reading column now starts at the top. Keep its scrim behind the
+     words, releasing the scene below instead of darkening the empty footer. */
+  .j-manifesto::before {
+    inset: 0;
+    width: 100%;
+    background: linear-gradient(180deg,
+      rgba(8, 7, 5, .76) 0%,
+      rgba(8, 7, 5, .88) var(--mycelial-reading-top),
+      rgba(8, 7, 5, .72) calc(100% - var(--manifesto-reserve, 8.5rem)),
+      transparent 100%);
+  }
+  body .j-manifesto.is-open {
+    /* Clear the actual upper navigation circle, rather than reserving the
+       old always-visible label and the empty space above its hit target. */
+    --manifesto-reserve: calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
+      + var(--nav-major) * .95 + var(--nav-minor-ring-d) / 2 + 24px);
+    align-items: flex-start;
+  }
+}
+
+/* Inline reference, with its reading note above the clipped manifesto panel. */
+.manifesto-note-trigger {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--mycelial-amber, #f6b652);
+  padding: .15em .18em;
+  font: inherit;
+  font-size: .72em;
+  vertical-align: super;
+  cursor: help;
+  pointer-events: auto;
+}
+.manifesto-note-trigger:hover { color: #fff1d5; }
+.manifesto-note-trigger:focus-visible { outline: 1px solid #f6b652; outline-offset: 3px; }
+.j-manifesto-line:not(.shown) .manifesto-note-marker { visibility: hidden; }
+.manifesto-note-tooltip {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  width: 22rem;
+  max-width: calc(100vw - 24px);
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(246, 182, 82, .45);
+  border-radius: 5px;
+  background: #1a1006;
+  color: #f7ebd7;
+  box-shadow: 0 8px 30px #0009;
+  font: 400 .9rem/1.6 var(--mycelial-body, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.manifesto-note-tooltip[hidden] { display: none; }
+
+/* The gathered tree persists across sibling travel; labels answer deliberate hover. */
+body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
+.j-rail.j-rail-purpose-gathering .j-rail-purpose-child .j-rail-name {
+  opacity: 0 !important;
+}
+.j-rail:not(.j-rail-purpose-travelling) .j-rail-slot.j-rail-purpose-child .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
+  opacity: 1 !important;
+}
+.j-rail.j-rail-purpose-travelling .j-rail-slot.j-rail-purpose-child .j-rail-name {
+  opacity: 0 !important;
+}
+
+/* Related words share a colour, but each slow swell starts on its own reveal beat. */
+.manifesto-concept.concept-sun {
+  --concept-rest: #f0cd8d;
+  --concept-lit: #ffd078;
+  --concept-glow: 246, 194, 101;
+}
+.manifesto-concept.concept-soil {
+  --concept-rest: #e9b497;
+  --concept-lit: #f5ac7e;
+  --concept-glow: 218, 144, 99;
+}
+.manifesto-concept.concept-passage {
+  --concept-rest: #c6d4a8;
+  --concept-lit: #c2df9e;
+  --concept-glow: 169, 192, 139;
+}
+.manifesto-concept {
+  color: var(--concept-rest);
+  text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62);
+}
+.j-manifesto-line.shown .concept-organism,
+.j-manifesto-line.shown .concept-contribution {
+  animation: manifesto-concept-pair 6s ease-in-out forwards;
+  animation-delay: calc(var(--w) * var(--stagger));
+}
+@keyframes manifesto-concept-pair {
+  0%, 100% { color: var(--concept-rest); text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62); }
+  40% { color: var(--concept-lit); text-shadow: 0 0 10px rgba(var(--concept-glow), .42), 0 0 3px rgba(var(--concept-glow), .18), 0 1px 12px rgba(0, 0, 0, .62); }
+}
+/* The word spans still own reveal opacity. Phrase decoration lives outside
+   those spans, while colour and fine vibration stay inside their ink. */
+.manifesto-concept.concept-kinship {
+  --concept-rest: #efd09b;
+  --concept-lit: #ffdfa5;
+  --concept-glow: 239, 187, 111;
+}
+@property --thread-strength {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: .48;
+}
+.manifesto-phrase-thread {
+  background-image: linear-gradient(90deg,
+    rgb(219 173 112 / calc(var(--thread-strength) * .65)),
+    rgb(245 211 156 / var(--thread-strength)),
+    rgb(219 173 112 / calc(var(--thread-strength) * .75)));
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% 1px;
+  padding-bottom: .12em;
+  box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
+}
+.j-manifesto .manifesto-phrase-thread {
+  background-size: 0% 1px;
+  --thread-strength: 0;
+}
+.j-manifesto:not(.is-open) .manifesto-phrase-thread,
+.j-manifesto-line:not(.shown) .manifesto-phrase-thread {
+  background-image: none;
+  animation: none;
+}
+.j-manifesto.is-open .j-manifesto-line.shown .manifesto-phrase-thread {
+  animation: manifesto-thread 6s ease-in-out both;
+  animation-delay: calc(var(--phrase-beat) * var(--stagger) + 300ms);
+}
+.j-manifesto-line.shown .concept-kinship {
+  animation: manifesto-concept-pair 6s ease-in-out forwards;
+  animation-delay: calc(var(--w) * var(--stagger));
+}
+@keyframes manifesto-thread {
+  0% { background-size: 0% 1px; --thread-strength: 0; }
+  36% { background-size: 100% 1px; --thread-strength: .9; }
+  100% { background-size: 100% 1px; --thread-strength: .48; }
+}
+/* Each letter moves independently. Direct transform frames avoid making the
+   effect depend on an animated custom property or moving a whole word as a block. */
+.manifesto-concept.concept-vitality {
+  --concept-rest: #efd09b;
+  --concept-lit: #ffdb9a;
+  --concept-glow: 239, 177, 94;
+  white-space: nowrap;
+}
+.manifesto-vitality-glyph { display: inline-block; }
+.j-manifesto-line.shown .concept-vitality {
+  animation: manifesto-concept-pair 6s ease-in-out forwards;
+  animation-delay: calc(var(--w) * var(--stagger));
+}
+.j-manifesto-line.shown .manifesto-vitality-glyph {
+  animation: manifesto-vitality-burst 173ms steps(1, end) 30,
+    manifesto-vitality-rest 227ms steps(1, end) infinite;
+  animation-delay: calc(var(--w) * var(--stagger) + var(--jitter-phase)),
+    calc(var(--w) * var(--stagger) + var(--jitter-phase) + 5190ms);
+}
+/* A very fine letter quiver settles into a barely perceptible tremble.
+   Even the reveal peak stays below the former resting motion. Glyph transforms never alter line boxes or surrounding copy. */
+@keyframes manifesto-vitality-burst {
+  0%, 100% { transform: translate(-0.1px, 0.07px) rotate(-0.2deg); }
+  20% { transform: translate(0.22px, -0.32px) rotate(0.4deg); }
+  40% { transform: translate(-0.25px, 0.17px) rotate(-0.4deg); }
+  60% { transform: translate(0.14px, 0.29px) rotate(0.2deg); }
+  80% { transform: translate(-0.16px, -0.22px) rotate(-0.3deg); }
+}
+@keyframes manifesto-vitality-rest {
+  0%, 100% { transform: translate(-0.04px, 0.05px) rotate(-0.08deg); }
+  20% { transform: translate(0.09px, -0.13px) rotate(0.14deg); }
+  40% { transform: translate(-0.1px, 0.08px) rotate(-0.14deg); }
+  60% { transform: translate(0.05px, 0.14px) rotate(0.1deg); }
+  80% { transform: translate(-0.07px, -0.09px) rotate(-0.12deg); }
+}
+.manifesto-concept.concept-imagination {
+  color: #dccbd1;
+  text-shadow: none;
+}
+.manifesto-spectrum-glyph {
+  /* One restrained mineral spectrum sampled continuously across the phrase:
+     honey, terracotta rose, pearl and champagne; no full hue-wheel sweep. */
+  background-image: linear-gradient(90deg,
+    #f4c781 0%, #e8ab90 27%, #d7a4b5 49%, #f0ddd5 72%, #ecd09f 100%);
+  background-size: 4000% 100%;
+  background-position: calc(var(--spectrum-index) * 2.5641%) 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: saturate(.84) brightness(1.02);
+  text-shadow: 0 0 5px rgb(235 191 162 / .16);
+}
+.j-manifesto-line.shown .manifesto-spectrum-glyph {
+  animation: manifesto-iridescence 7s ease-in-out forwards;
+  animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
+}
+@keyframes manifesto-iridescence {
+  0%, 100% {
+    filter: saturate(.84) brightness(1.02);
+    text-shadow: 0 0 5px rgb(235 191 162 / .16);
+  }
+  40% {
+    filter: saturate(1.08) brightness(1.1);
+    text-shadow: 0 0 8px rgb(235 191 162 / .20);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-manifesto-line.shown .manifesto-concept,
+  .j-manifesto-line.shown .manifesto-phrase-thread,
+  .j-manifesto-line.shown .manifesto-spectrum-glyph,
+  .j-manifesto-line.shown .manifesto-vitality-glyph { animation: none; transform: none; }
+  .j-manifesto.is-open .j-manifesto-line.shown .manifesto-phrase-thread {
+    animation: none; background-size: 100% 1px; --thread-strength: .48;
+  }
+}
+
+
+/* A quiet colour emphasis keeps the final invitation upright. */
+.mycelial-renaissance-accent { color: #f3bd7c; }

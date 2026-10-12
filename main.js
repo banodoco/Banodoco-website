@@ -244,7 +244,7 @@ const skipIntro = matchMedia('(prefers-reduced-motion: reduce)').matches
   || captureQ !== null;
 if (skipIntro) {
   const st = document.createElement('style');
-  st.textContent = '#stage, .spill, nav, h1 .hl, .sub, .cta, .co, .co * { animation: none !important; }';
+  st.textContent = '#stage, .spill, nav, h1 .hl, .ui .hero h1::after, .sub, .cta, .co, .co * { animation: none !important; }';
   document.head.appendChild(st);
 }
 

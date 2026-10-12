@@ -359,8 +359,6 @@ function taaFrame() {
   // ±0.4px, not the full ±0.5: accumulated jitter is a blur kernel over the
   // whole image, and the last tenth of a pixel buys almost no extra moiré
   // suppression while visibly softening static detail
-  camera.projectionMatrix.elements[8] += j[0] * 1.6 / db.width;
-  camera.projectionMatrix.elements[9] += j[1] * 1.6 / db.height;
   // History weight backs off with CAMERA motion so orbit drags stay crisp
   // instead of smearing. The sway is object motion and keeps full weight —
   // its couple-px-per-frame drift reads as gentle motion blur, not ghosting.
@@ -370,6 +368,13 @@ function taaFrame() {
   // ~2.5 frames of history: the lightest touch that still holds the moiré
   // down, keeping the sway's motion trail well under a pixel
   taaPass.weight = 0.6 * Math.exp(-motion * 150);
+  // Jitter only as much as history can resolve. During the aerial orbit,
+  // motion rejects almost all history; a full Halton offset then becomes
+  // visible frame-to-frame shaking of the fine mushroom outlines. Restore
+  // the sampling spread smoothly as the camera settles, with no threshold.
+  const jitterGain = taaPass.enabled ? taaPass.weight / 0.6 : 0;
+  camera.projectionMatrix.elements[8] += j[0] * 1.6 * jitterGain / db.width;
+  camera.projectionMatrix.elements[9] += j[1] * 1.6 * jitterGain / db.height;
   _taaPrevPos.copy(camera.position);
   _taaPrevQuat.copy(camera.quaternion);
 }
@@ -2102,7 +2107,10 @@ const highlights = createHighlights(ctx);
 // Map's insertion order — behaviors that were in the original monolithic
 // animate() keep the same relative order they always ran in.
 const animationLifecycle = createAnimationLifecycle({
-  beforeRender: taaFrame,
+  beforeRender: () => {
+    taaFrame();
+    heroSpores.syncCamera(camera, _steadyProj);
+  },
   render: () => composer.render(),
 });
 const { animators, addAnimator } = animationLifecycle;

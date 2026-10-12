@@ -231,7 +231,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     if (!data || COPY_SURFACES[c.id].host !== 'block') continue;
     const b = el('div', `j-block ${CHAPTER_POSITION[c.id] || 'pos-left'}`);
     b.dataset.chapter = c.id;
-    b.appendChild(el('h2', 'j-h', data.heading));
+    const heading = el('h2', 'j-h');
+    const highlighted = /^(Inspire|Equip|Connect)\b/.exec(data.heading);
+    if (highlighted) {
+      heading.appendChild(el('em', 'mycelial-heading-accent', highlighted[0]));
+      heading.appendChild(document.createTextNode(data.heading.slice(highlighted[0].length)));
+    } else if (c.id === 'final' && data.heading.includes('accelerate a 2nd Renaissance')) {
+      const start = data.heading.indexOf('accelerate a 2nd Renaissance');
+      heading.appendChild(document.createTextNode(data.heading.slice(0, start)));
+      heading.appendChild(el('span', 'mycelial-renaissance-accent', data.heading.slice(start)));
+    } else {
+      heading.textContent = data.heading;
+    }
+    b.appendChild(heading);
     if (data.sub) b.appendChild(el('p', 'j-sub', data.sub));
     if (Array.isArray(data.actions) && data.actions.length) {
       // cached on the element: paintCopy reaches for it every frame, for every

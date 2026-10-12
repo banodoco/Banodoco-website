@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, lineSecondsFor, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
+import { CONTENT } from '../content/content.js';
+import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, lineSecondsFor, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
 
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 for (const t of [0, 0.2, 0.8, SPIRAL_START_SECONDS]) {
@@ -43,10 +44,10 @@ const words = [26, 27, 20, 25, 21];
 const LINE_SECONDS = lineSecondsFor(words);
 assert.equal(LINE_SECONDS[0], FIRST_LINE_SECONDS);
 const gaps = LINE_SECONDS.slice(1).map((t, i) => t - LINE_SECONDS[i]);
-gaps.forEach((g, i) => assert.ok(g >= 3.4 && g <= 5, `beat ${i + 2} follows a readable pause (${g.toFixed(2)} s)`));
+gaps.forEach((g, i) => assert.ok(Math.abs(g - (1.6 + .14 * words[i])) < .001, `beat ${i + 2} follows a readable pause (${g.toFixed(2)} s)`));
 assert.ok(gaps[2] < gaps[1], 'the shortest sentence hands on sooner');
-assert.ok(LINE_SECONDS.at(-1) <= CAMERA_SECONDS - 6, 'the last line lands well inside the flight, not at its end');
-console.log('Manifesto motion: vertical lift, monotone 100° CCW spiral, 28s expansion, responsive cap scale and aligned reading beats pass.');
+assert.ok(LINE_SECONDS.at(-1) <= CAMERA_SECONDS - 5, 'the last line lands well inside the flight, not at its end');
+console.log('Manifesto motion: vertical lift, monotone 100° CCW spiral, camera-clock expansion, responsive cap scale and aligned reading beats pass.');
 
 // Execute the actual branch against small DOM/scene doubles: camera ownership,
 // reading after landing, pause, reduced motion and exact reversible hand-back.
@@ -55,14 +56,17 @@ class Element {
   constructor() {
     this.hidden = false; this.isConnected = true; this.children = []; this.listeners = {};
     this.classes = new Set();
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.classList = {
       add: (...names) => names.forEach(n => this.classes.add(n)),
       remove: (...names) => names.forEach(n => this.classes.delete(n)),
       toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name),
     };
   }
+  getBoundingClientRect() { return this.rect || { top: 0, bottom: 0, height: 0 }; }
   setAttribute() {}
   appendChild(child) { this.children.push(child); }
+  append(...children) { this.children.push(...children); }
   querySelector(selector) { return this.parts[selector]; }
   querySelectorAll() { return this.children; }
   focus() { document.activeElement = this; }
@@ -81,9 +85,16 @@ const vec = (x, y, z) => ({ x, y, z,
   lerp(v, t) { this.x += (v.x - this.x) * t; this.y += (v.y - this.y) * t; this.z += (v.z - this.z) * t; return this; },
 });
 let reduced = false;
-globalThis.document = { body: new Element(), activeElement: new Element(), createElement: () => new Element() };
+globalThis.document = { addEventListener() {}, removeEventListener() {}, body: new Element(), activeElement: new Element(), createElement: () => new Element() };
 globalThis.window = new Element();
 globalThis.matchMedia = () => ({ matches: reduced });
+globalThis.getComputedStyle = () => ({ paddingTop: '3.2px' });
+const resizeObservers = [];
+globalThis.ResizeObserver = class {
+  constructor(callback) { this.callback = callback; resizeObservers.push(this); }
+  observe() {}
+  disconnect() {}
+};
 const camera = { position: vec(8, 3, 9), up: vec(0, 1, 0), fov: 46, far: 100, aspect: 390 / 844,
   updateProjectionMatrix() {}, lookAt() {} };
 const controls = { target: vec(0, 2, 0), enabled: true, update() {} };
@@ -92,7 +103,7 @@ const scroll = { enabled: true };
 let fieldFogFar = null, fieldSeconds = null, preparations = 0;
 const branch = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } },
   { scroll, field: { setManifesto(progress, seconds, departure) { if (progress !== null) { fieldFogFar = fog.far; fieldSeconds = seconds; } if (departure) preparations++; } } });
-const root = document.body.children[0];
+const root = document.body.children.find(el => el.className === 'j-manifesto');
 const tick = seconds => { for (let i = 0; i < seconds * 60; i++) branch.update(1 / 60); };
 const snapshot = () => [camera.position.x, camera.position.y, camera.position.z, camera.fov, camera.far,
   controls.target.x, controls.target.y, controls.target.z, fog.near, fog.far, controls.enabled, scroll.enabled];
@@ -103,9 +114,42 @@ assert.deepEqual(snapshot().slice(-2), [false, false], 'the live branch claims c
 tick(1);
 assert.equal(branch.shownLines, 0);
 assert.equal(document.activeElement, root.querySelector('.j-manifesto-panel'), 'focus rests on the reading region, not a control');
-tick(CAMERA_SECONDS);
-assert.equal(branch.shownLines, 5, 'every line is inked by the end of the flight');
+// Camera motion lasts through the last word's complete fade, not merely the
+// paragraph's entrance. Copy edits and changes to reveal speed stay in sync.
+const liveCounts = CONTENT.manifesto.lines.map(line => line.trim().split(/\s+/).length);
+const lastReadingBeat = lineSecondsFor(liveCounts).at(-1);
+const lastWordFinish = lastReadingBeat + (liveCounts.at(-1) - 1) * WORD_STAGGER_SECONDS + WORD_REVEAL_SECONDS;
+assert.equal(CAMERA_SECONDS, lastWordFinish);
+assert.equal(revealSecondsFor([10, 20]), lineSecondsFor([10, 20]).at(-1) + 19 * WORD_STAGGER_SECONDS + WORD_REVEAL_SECONDS);
+assert.equal(root.style['--stagger'], `${WORD_STAGGER_SECONDS}s`);
+assert.equal(root.style['--word-reveal-duration'], `${WORD_REVEAL_SECONDS}s`);
+tick(lastReadingBeat - 1);
+assert.ok(branch.progress < 1, 'camera still moves as the final paragraph starts');
+tick(lastWordFinish - lastReadingBeat - 0.1);
+assert.ok(branch.progress < 1, 'camera still moves during the final word fade');
+const finalRevealLateness = Number.parseFloat(root.querySelector('.j-manifesto-lines').children.at(-1).style['--reveal-lateness']);
+assert.ok(finalRevealLateness >= 0 && finalRevealLateness < 1 / 60 + 1e-9,
+  'CSS reveal catches up to its scheduled beat within the crossing frame');
+tick(0.2);
+assert.equal(branch.shownLines, CONTENT.manifesto.lines.length, 'every manifesto line is inked by the final reading beat');
 assert.equal(branch.progress, 1, 'the flight settles');
+// A fitting fractional-height column must never activate the 3.2rem top mask.
+const readingBox = root.querySelector('.j-manifesto-lines');
+readingBox.rect = { top: 132, bottom: 443.2926, height: 311.2926 };
+readingBox.children[0].rect = { top: 135.2, bottom: 200, height: 64.8 };
+readingBox.children.at(-1).rect = { top: 418, bottom: 443.2926, height: 25.2926 };
+resizeObservers[0].callback();
+assert.equal(readingBox.style['--lift'], '0px', 'fractional geometry that fits stays still');
+assert.equal(readingBox.classes.has('is-lifted'), false, 'no top fade when every line fits');
+// Changing only the reading box must refresh overflow, even after the camera
+// and paragraph count stop changing (font loading / responsive flex layout).
+readingBox.rect.height -= 40;
+resizeObservers[0].callback();
+assert.equal(readingBox.style['--lift'], '-40px', 'real overflow lifts exactly what is needed');
+assert.equal(readingBox.classes.has('is-lifted'), true);
+readingBox.rect.height += 40;
+resizeObservers[0].callback();
+assert.equal(readingBox.classes.has('is-lifted'), false, 'expanding the box clears the lift');
 assert.equal(fieldSeconds, CAMERA_SECONDS, 'every scheduled body settles on the shared frame');
 assert.equal(preparations, 1, 'schedule is prepared once per activation');
 assert.equal(fieldFogFar, fog.far, 'field shader handoff sees this frame’s expanded aerial fog');
@@ -155,7 +199,7 @@ const accessible = createManifestoBranch({ camera, controls, groups: { sway: { t
 const accessibleRoot = document.body.children.at(-1);
 accessible.begin();
 assert.equal(accessible.progress, 1);
-assert.equal(accessible.shownLines, 5);
+assert.equal(accessible.shownLines, CONTENT.manifesto.lines.length);
 assert.equal(document.activeElement, accessibleRoot.querySelector('.j-manifesto-panel'), 'reduced motion focuses the reading region');
 window.listeners.keydown({ key: 'Escape', preventDefault() {} });
 accessible.update(1 / 60);
@@ -196,20 +240,20 @@ for (const aspect of [1440/900,390/844]) {
   const again = planAerialReveals(scheduled, from, aspect, new Float32Array(scheduled.length*2));
   assert.deepEqual(first, again, 'same departure and placements must reproduce the reveal schedule');
   assert.equal(first.at(-2), -1, 'existing field bodies remain outside the arrival schedule');
-  const counts = [0,8,14,20,26,28].map(t => placements.filter((b,i) => aerialRevealAt(t,first[i*2],first[i*2+1]) > 0.1).length);
+  const counts = [0, .28, .5, .71, .93, 1].map(f => f * CAMERA_SECONDS).map(t => placements.filter((b,i) => aerialRevealAt(t,first[i*2],first[i*2+1]) > 0.1).length);
   assert.equal(counts[0], 0, 'new aerial bodies start absent');
   assert.ok(counts[2] > counts[1] && counts[3] > counts[2] && counts[4] > counts[3] && counts[5] > counts[4], 'arrivals continue through middle, late, and final expansion');
   assert.equal(counts.at(-1), placements.length, 'all arrivals settle with the camera');
   for (let i = 0; i < scheduled.length; i++) {
     let prior = 0;
-    for (let t = 0; t <= 28; t += 0.125) {
+    for (let t = 0; t <= CAMERA_SECONDS; t += 0.125) {
       const value = aerialRevealAt(t,first[i*2],first[i*2+1]);
       assert.ok(value >= prior && value >= 0 && value <= 1, 'fixed reveal windows are bounded and monotone');
       prior = value;
     }
   }
 }
-console.log('Manifesto arrivals: repeatable edge schedule, stable original field, monotone reveals and arrivals through 28s pass.');
+console.log('Manifesto arrivals: repeatable edge schedule, stable original field, monotone reveals and arrivals through the full camera clock pass.');
 
 // Exercise the real prepared field with Three's CPU-side geometry/material
 // classes. Only its world-import is replaced with a deterministic flat seat;
@@ -239,10 +283,10 @@ assert.equal(colony.group.children[0].geometry.attributes.position, tissue.attri
 // draws once per tier, still never once per mushroom.
 assert.equal(colony.group.children.length, 6, 'one draw per source layer per tier plus the ground and the spores, rather than per mushroom');
 assert.equal(colony.lod.near + colony.lod.far, colony.bodies.length, 'every body is in exactly one tier');
-for (let i = 0; i <= 1680; i++) colony.set(1,80,200,i/60);
+for (let i = 0; i <= CAMERA_SECONDS * 60; i++) colony.set(1,80,200,i/60);
 assert.deepEqual(resourceState(),resources,'frame ticks preserve all mesh, material and geometry identities');
 assert.deepEqual(attributes.map(a=>a.version),versions,'frame ticks do not upload or replace prepared reveal buffers');
-console.log('Manifesto prepared field: shared hero buffers, fixed draws and stable resources through 1680 reveal ticks pass.');
+console.log('Manifesto prepared field: shared hero buffers, fixed draws and stable resources through the full reveal clock pass.');
 
 // A curved strand has 20 segments (40 vertices). Both vertices of every
 // segment carry the same TWO endpoint windows, in vec4 order A.xy / B.zw.

@@ -481,6 +481,19 @@ function worldToFrame(view, B, x, y, z, out, at) {
   out[at + 2] = px * B.fx + py * B.fy + pz * B.fz;
 }
 
+/** Frozen prelude coordinates -> the scene camera's current view coordinates.
+ * Plain arrays keep the early-loading module independent of Three.js. */
+function cameraFrameMatrix(view, inverse) {
+  const b = basisOf(view);
+  const frame = [b.rx, b.ry, b.rz, 0, b.ux, b.uy, b.uz, 0,
+    b.fx, b.fy, b.fz, 0, view.camX, view.camY, view.camZ, 1];
+  const out = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    for (let k = 0; k < 4; k++) out[c * 4 + r] += inverse[k * 4 + r] * frame[c * 4 + k];
+  }
+  return out;
+}
+
 /** Seed (or re-seed) one STREAM particle — ambient or hero. `atEntry`
  *  places it on the inflow edge (the recycle case); otherwise it is
  *  scattered along the stream, which is what makes the composition
@@ -1165,15 +1178,15 @@ function gradedBgLinear(srgbHex) {
 }
 // The grade's vignette, evaluated per vertex on the NDC position: the same
 // smoothstep over the same centred-uv radius lens.js uses, as a light factor.
-const VIGNETTE_GLSL = `(1.0 - ${GRADE_VIGNETTE.toFixed(2)} * smoothstep(0.42, 0.95, length(gl_Position.xy * 0.5)))`;
+const VIGNETTE_GLSL = `(1.0 - ${GRADE_VIGNETTE.toFixed(2)} * smoothstep(0.42, 0.95, length(gl_Position.xy / gl_Position.w * 0.5)))`;
 
 const VERT = `
 precision highp float;
 attribute vec3 aFrame;   // (a, b, depth) in the hero camera's view plane
 attribute vec3 aColor;
 attribute vec2 aMeta;    // (size, seed)
-uniform float uTanHalfFov;
-uniform float uAspect;
+uniform mat4 uFrameToView;
+uniform mat4 uProjection;
 uniform float uTime;
 // This layer's device grid over the scene's — 1 when they agree. See
 // sizeCanvas(): it is applied AFTER the floor, so the sprite this layer draws
@@ -1190,8 +1203,8 @@ varying float vFog;
 varying float vBlur;
 varying float vShrink;
 void main() {
-  float depth = aFrame.z;
-  float halfH = depth * uTanHalfFov;
+  vec4 view = uFrameToView * vec4(aFrame, 1.0);
+  float depth = max(0.001, -view.z);
   vColor = aColor;
   vTw = 0.85 + 0.15 * sin(uTime * 1.4 + aMeta.y * 7.0);
   vFog = clamp((${FOG_FAR.toFixed(1)} - depth) / ${(FOG_FAR - FOG_NEAR).toFixed(1)}, 0.0, 1.0);
@@ -1204,10 +1217,10 @@ void main() {
   // unchanged: it occupies the inner 1/BLOOM_SPREAD of the quad, and the
   // fragment rescales gl_PointCoord back so the gradient is identical.
   gl_PointSize = sz * uPxScale * ${BLOOM_SPREAD.toFixed(1)};
-  gl_Position = vec4(aFrame.x / (halfH * uAspect), aFrame.y / halfH, 0.0, 1.0);
+  gl_Position = uProjection * view;
   // the copy-corridor dim rides vShrink — it is a light multiplier too
   float S = 0.16;
-  vec2 p = gl_Position.xy;
+  vec2 p = gl_Position.xy / gl_Position.w;
   float inQ = smoothstep(uQuiet.x - S, uQuiet.x + S, p.x)
             * (1.0 - smoothstep(uQuiet.z - S, uQuiet.z + S, p.x))
             * smoothstep(uQuiet.y - S, uQuiet.y + S, p.y)
@@ -1286,14 +1299,14 @@ const LINE_VERT = `
 precision highp float;
 attribute vec3 aFrame;
 attribute vec3 aColor;
-uniform float uTanHalfFov;
-uniform float uAspect;
+uniform mat4 uFrameToView;
+uniform mat4 uProjection;
 varying vec3 vColor;
 void main() {
-  float halfH = aFrame.z * uTanHalfFov;
-  float fog = clamp((${FOG_FAR.toFixed(1)} - aFrame.z) / ${(FOG_FAR - FOG_NEAR).toFixed(1)}, 0.0, 1.0);
+  vec4 view = uFrameToView * vec4(aFrame, 1.0);
+  float fog = clamp((${FOG_FAR.toFixed(1)} + view.z) / ${(FOG_FAR - FOG_NEAR).toFixed(1)}, 0.0, 1.0);
   vColor = aColor * fog;
-  gl_Position = vec4(aFrame.x / (halfH * uAspect), aFrame.y / halfH, 0.0, 1.0);
+  gl_Position = uProjection * view;
   vColor *= ${VIGNETTE_GLSL};
 }`;
 
@@ -1749,16 +1762,16 @@ function createPreludeCore(gl, F) {
   const glowPos = gl.getAttribLocation(progGlow, 'aPos');
   const uniforms = {
     time: gl.getUniformLocation(progPoints, 'uTime'),
-    tanHalfFov: gl.getUniformLocation(progPoints, 'uTanHalfFov'),
-    aspect: gl.getUniformLocation(progPoints, 'uAspect'),
+    frame: gl.getUniformLocation(progPoints, 'uFrameToView'),
+    projection: gl.getUniformLocation(progPoints, 'uProjection'),
     // Set from setPxScale() rather than per frame: it changes only when a
     // device grid does, which is a resize and nothing else.
     pxScale: gl.getUniformLocation(progPoints, 'uPxScale'),
     quiet: gl.getUniformLocation(progPoints, 'uQuiet'),
   };
   const lineUniforms = {
-    tanHalfFov: gl.getUniformLocation(progLines, 'uTanHalfFov'),
-    aspect: gl.getUniformLocation(progLines, 'uAspect'),
+    frame: gl.getUniformLocation(progLines, 'uFrameToView'),
+    projection: gl.getUniformLocation(progLines, 'uProjection'),
   };
   const glowUniforms = {
     size: gl.getUniformLocation(progGlow, 'uSize'),
@@ -1801,6 +1814,38 @@ function createPreludeCore(gl, F) {
 
   /** One frame: the stream at `gain`, the woken skeleton, the glows.
    *  `still` is the reduced-motion paint, which never relights. */
+  let camera = null;
+  const heroFrame = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1]);
+  function projectionUniforms(u) {
+    const projection = camera?.projection || [1 / (F.tanHalfFov * F.aspect), 0, 0, 0,
+      0, 1 / F.tanHalfFov, 0, 0, 0, 0, -1.0002, -1, 0, 0, -0.020002, 0];
+    gl.uniformMatrix4fv(u.frame, false, camera?.frame || heroFrame);
+    gl.uniformMatrix4fv(u.projection, false, projection);
+  }
+  const movedGlows = new Float32Array(16);
+  function glowEllipses() {
+    if (!camera) return ground.glowEll;
+    const project = (x, y, depth) => {
+      const a = (x * 2 - 1) * depth * F.tanHalfFov * F.aspect;
+      const b = (1 - y * 2) * depth * F.tanHalfFov;
+      const v = [0, 0, 0, 0], clip = [0, 0, 0, 0];
+      for (let r = 0; r < 4; r++) {
+        v[r] = camera.frame[r] * a + camera.frame[4 + r] * b + camera.frame[8 + r] * depth + camera.frame[12 + r];
+      }
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) clip[r] += camera.projection[c * 4 + r] * v[c];
+      return [(clip[0] / clip[3] + 1) / 2, (1 - clip[1] / clip[3]) / 2, clip[3]];
+    };
+    for (let k = 0; k < 4; k++) {
+      const j = k * 4, e = ground.glowEll;
+      const depth = F.sites[Math.max(0, k - 1) * 3 + 2];
+      const p = project(e[j], e[j + 1], depth);
+      const x = project(e[j] + e[j + 2], e[j + 1], depth);
+      const y = project(e[j], e[j + 1] + e[j + 3], depth);
+      movedGlows.set([p[0], p[1], p[2] > 0.01 ? Math.hypot(x[0] - p[0], x[1] - p[1]) : 0,
+        p[2] > 0.01 ? Math.hypot(y[0] - p[0], y[1] - p[1]) : 0], j);
+    }
+    return movedGlows;
+  }
   function draw(now, gain, nowMs, still) {
     const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
     gl.viewport(0, 0, W, H);
@@ -1833,8 +1878,7 @@ function createPreludeCore(gl, F) {
       }
       gl.vertexAttribPointer(attribs.meta, 2, gl.FLOAT, false, 0, 0);
       gl.uniform1f(uniforms.time, now);
-      gl.uniform1f(uniforms.tanHalfFov, F.tanHalfFov);
-      gl.uniform1f(uniforms.aspect, F.aspect);
+      projectionUniforms(uniforms);
       gl.drawArrays(gl.POINTS, 0, F.n);
     }
     if (!ground) return;
@@ -1850,18 +1894,18 @@ function createPreludeCore(gl, F) {
       gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.color);
       gl.bufferData(gl.ARRAY_BUFFER, ground.lit, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(lineAttribs.color, 3, gl.FLOAT, false, 0, 0);
-      gl.uniform1f(lineUniforms.tanHalfFov, F.tanHalfFov);
-      gl.uniform1f(lineUniforms.aspect, F.aspect);
+      projectionUniforms(lineUniforms);
       gl.drawArrays(gl.LINES, 0, ground.nV);
     }
     // the glows, after the layer's own exit has been applied
     const layer = ground.glowFrame(nowMs);
     if (layer <= 0) return;
     let first = true;
+    const ellipses = glowEllipses();
     for (let k = 0; k < 4; k++) {
       const o = ground.glowO[k] * layer;
       if (!(o > 0.001)) continue;
-      const e = ground.glowEll, k4 = k * 4, end = ground.glowStops[k * 2 + 1];
+      const e = ellipses, k4 = k * 4, end = ground.glowStops[k * 2 + 1];
       // the glow's extent, in device px (CSS y runs down, GL's up)
       const x0 = Math.floor((e[k4] - e[k4 + 2] * end) * W);
       const x1 = Math.ceil((e[k4] + e[k4 + 2] * end) * W);
@@ -1892,6 +1936,7 @@ function createPreludeCore(gl, F) {
 
   return {
     draw,
+    setCamera(value) { camera = value; },
     setPxScale(s) { gl.useProgram(progPoints); gl.uniform1f(uniforms.pxScale, s); },
     /** The hero copy's box in NDC (x0, y0, x1, y1) -> VERT's uQuiet. */
     setQuiet(q) { gl.useProgram(progPoints); gl.uniform4f(uniforms.quiet, q[0], q[1], q[2], q[3]); },
@@ -2070,6 +2115,7 @@ export function preludeWorker(scope) {
            scene frame, on the scene's 'tick' (from the first one on). */
         break;
       case 'tick':
+        if (m.camera) core.setCamera(m.camera);
         // the first tick hands the pace over (this thread keeps its own
         // until then, so the stream never waits on the snapshot's trip)
         if (!driven) {
@@ -2122,7 +2168,6 @@ function createPreload() {
   let adoptAsked = false;
   let adoptWanted = false;
   let retiredWorker = null;   // see stop(): kept, idle, never terminated
-  const TICK = { type: 'tick' };
   let releasedEarly = false;
   // See sizeCanvas(): the ratio between THIS layer's device grid and the one
   // the scene's renderer will draw the same particles on. 1 whenever they
@@ -2176,7 +2221,9 @@ function createPreload() {
     // pixel-identical for as long as both are on screen. Ownership
     // transfers when this layer stops, not when the scene arrives.
     advance(state.field, dt, preloadGust(now));
-    draw(now);
+    // After handoff the scene presents this layer with its final camera
+    // pose in syncCamera(); retain this loop only as the field integrator.
+    if (!state.handedOff) draw(now);
     // the stream may be long gone; the glows decide when the layer is done
     schedule();
   }
@@ -2680,6 +2727,23 @@ function createPreload() {
       adoptAsked = true;
       worker.postMessage({ type: 'adopt' });
     },
+    /** Run after the journey has positioned the camera, immediately before
+     * the scene renders. The retained overlay follows the same world, not
+     * the previous frame's camera or a separate CSS approximation. */
+    syncCamera(camera, projection) {
+      if (!state.live || !state.handedOff || !state.view) return;
+      camera.updateMatrixWorld();
+      const pose = {
+        frame: cameraFrameMatrix(state.view, camera.matrixWorldInverse.elements),
+        projection: Array.from(projection.elements),
+      };
+      if (state.mode === 'worker') {
+        if (worker && adoptAsked) worker.postMessage({ type: 'tick', camera: pose });
+      } else if (core) {
+        core.setCamera(pose);
+        draw((performance.now() - t0) / 1000);
+      }
+    },
     get failed() { return state.failed; },
     get field() { return state.field; },
     get view() { return state.view; },
@@ -2746,9 +2810,6 @@ function createPreload() {
           field, view: state.view, fadeDelay: 0, deferred: true,
           /** The scene side's door: `begin` is called once the worker's
            *  field has been copied into `field`. */
-          /** Called by the scene once per frame after adoption: paces the
-           *  worker's remaining frames to the scene's (see 'adopt'). */
-          tick() { if (worker && adoptAsked) worker.postMessage(TICK); },
           whenAdopted(begin) {
             adopter = { field, begin };
             if (!worker) workerFailed('worker gone before the scene arrived');
@@ -2979,7 +3040,6 @@ export function createHeroSporeField(ctx, carried, fadeSeconds = 0) {
   // copy of it, and the transitional stand-in above is out of the picture.
   addAnimator('hero-spore-drift', (t, dt) => {
     if (!adopted) return;
-    if (carried && carried.deferred) carried.tick();
     if (fading) {
       const p = Math.min(1, Math.max(0, (performance.now() - fadeFrom) / fadeLen));
       gain.value = OPACITY * p;

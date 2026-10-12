@@ -60,17 +60,18 @@
 
 export const CONTENT = {
   manifesto: {
-    title: 'True Union',
+    title: 'Mycelial',
     // One entry per line of the Manifesto page (journey/manifesto/branch.js):
     // a line may hold more than one sentence. `body` is the same text as one
     // paragraph, for the static page and screen readers.
     lines: [
-      'A True Union is a lasting bond rooted in shared purpose, whether between individuals, within a group, or between that group and other entities.',
-      'When individuals are willing to act on what they know in their hearts is right, they share a True Union with others who follow that same impulse.',
-      'Groups of those individuals, moving in the same direction, form a True Union. They’re bonded by something greater than incentives or even friendship.',
-      'When that group helps humanity unlock the creative potential of an immensely powerful technology, they help our species form a True Union with it.',
-      'When those individuals share ownership of a company built to pursue that goal, they give their True Union a lasting structure.',
+      "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals are woven together by what each has to offer: energy from the sun, nutrients from the soil, passage to new ground.",
+      "We want a future in which AI and humanity thrive similarly — one in which people collectively shape, share and reshape open models in pursuit of the most uniquely human impulse: the drive to create.",
+      "This is more than a technologically advanced or media-rich world. It’s one that bustles with creative life—with artists, technologists and a rich tapestry of AI models intertwining to make new forms of creation possible.",
+      "Tools we can shape around our own purposes; inspiration that moves us to create; art we have dreamed of making; stories only we can tell; work of a beauty we have not yet dared to imagine.",
+      "The goal of Mycelial is to provide the connective tissue that helps us grow this world together."
     ],
+    note: "Fungi form partnerships with more than four in five plant species and help underpin nearly all life on Earth.",
     get body() { return this.lines.join(' '); },
   },
   chapters: {
@@ -127,7 +128,7 @@ export const CONTENT = {
       // `<p class="sub">` — Mission's copy is the hero block, not a `.j-block`)
       // and in the Tier-3 twin (`static/index.html`, twice, plus its
       // `<meta name="description">`). All four moved together.
-      sub: 'True Union builds spaces, initiatives and tools for the open source AI art community.',
+      sub: 'Mycelial builds spaces, initiatives and tools for the open source AI art community.',
     },
     inspire: {
       nav: 'Inspire',
@@ -202,7 +203,7 @@ export const CONTENT = {
       // echo of the heading's "inspire" is hers and is deliberately kept.
       //
       // 171 characters -> 101. Rendered 4 / 4 / 6 lines -> 2 / 2 / 3.
-      sub: 'True Union launches and stewards initiatives that inspire more people to care about open-source AI art.',
+      sub: 'We launch and steward initiatives that aim to inspire more people to care about open-source AI art.',
     },
     equip: {
       nav: 'Equip',
@@ -215,7 +216,7 @@ export const CONTENT = {
       // now records that they have moved rather than claiming to still hold
       // them.
       heading: 'Equip the ecosystem.',
-      sub: 'True Union builds tools that help the community push open models further — expanding what is possible and what remains open.',
+      sub: 'We build extendable tools that help the community collectively push open models further.',
     },
     connect: {
       nav: 'Connect',
@@ -255,7 +256,7 @@ export const CONTENT = {
       // problem, not a copy one, and not a single character of the locked
       // string was spent on it. Held in journey/site.css by the CONNECT
       // MEASURE block; desktop-only, as the Final sub's is.
-      sub: 'True Union brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.',
+      sub: 'We bring together artists and builders who are passionate about this space, in the real world and online.',
     },
     owned: {
       nav: 'Ownership',
@@ -384,7 +385,7 @@ export const CONTENT = {
       // No line count was asked for here and none is promised; the sentence
       // grew by 23 characters and took a fourth line at desktop for them. Three
       // lines would need it under ~1248px of natural width and it sets 1290.6.
-      sub: 'True Union is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.',
+      sub: 'Mycelial is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.',
       // ACTIONS — the chapter's copy-level controls (Hannah, 2026-08-07;
       // reduced to one, 2026-08-13).
       //
@@ -787,7 +788,7 @@ export const CONTENT = {
         // Locked claim string, verbatim: "100% shared".
         claim: '100% shared',
         body: [
-          'Ownership of True Union is 100% shared with the people who build it.',
+          'Ownership of Mycelial is 100% shared with the people who build it.',
           // banodoco.ai's own Ownership section, verbatim. It is the sentence
           // that answers the obvious objection to the claim above — "100% of
           // what, exactly?" — and it answers it by naming the one carve-out
@@ -918,9 +919,9 @@ export const CONTENT = {
     { id: 'contributor-2', name: 'NebSH', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 19 },
     { id: 'contributor-3', name: 'Hannah Submarine', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 27 },
     { id: 'contributor-4', name: 'POM', role: 'Core', blurb: 'Core contributor, on the ledger every month since it opened.', consent: true, seed: 8 },
-    { id: 'contributor-5', name: 'lone_samurai', role: 'Core', blurb: 'Core contributor to True Union itself.', consent: true, seed: 16 },
-    { id: 'contributor-6', name: 'matt3o', role: 'Core', blurb: 'Core contributor to True Union itself.', consent: true, seed: 24 },
-    { id: 'contributor-7', name: 'Ian_G', role: 'Core', blurb: 'Core contributor to True Union itself.', consent: true, seed: 32 },
+    { id: 'contributor-5', name: 'lone_samurai', role: 'Core', blurb: 'Core contributor to Mycelial itself.', consent: true, seed: 16 },
+    { id: 'contributor-6', name: 'matt3o', role: 'Core', blurb: 'Core contributor to Mycelial itself.', consent: true, seed: 24 },
+    { id: 'contributor-7', name: 'Ian_G', role: 'Core', blurb: 'Core contributor to Mycelial itself.', consent: true, seed: 32 },
     { id: 'contributor-8', name: 'citizenplain', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 5 },
     { id: 'contributor-9', name: 'cyncratic', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 13 },
     { id: 'contributor-10', name: 'Klinter', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 21 },

@@ -304,8 +304,8 @@ export function setupIntro(ctx) {
      accelerate (intro skipped/frozen/finished, or < 200 ms left — "intro
      basically done anyway"), in which case the caller must not compress
      its CSS half either. */
-  function accelerate({ totalMs = intro * 1000, rampMs = 480 } = {}) {
-    return introClock.accelerate({ totalMs, rampMs });
+  function accelerate({ totalMs = intro * 1000, rampMs = 480, exactDuration = false } = {}) {
+    return introClock.accelerate({ totalMs, rampMs, exactDuration });
   }
 
   /** Retire the draw animator and the intro-local acceleration ramp.

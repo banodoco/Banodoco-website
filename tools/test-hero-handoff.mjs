@@ -10,15 +10,15 @@ const make = new Function('heroSpores', 'document', 'window', 'performance',
   '\nreturn createJourneyHandoff;');
 function harness({ landed = true, skipIntro = false, heroReady = true, pending = false } = {}) {
   let now = 0, nextTimer = 0, impact = landed, queued = null, requested;
-  let starts = 0, finishes = 0, strikes = 0, activations = 0, boots = 0;
+  let starts = 0, finishes = 0, strikes = 0, activations = 0, boots = 0, accelerations = 0;
   let resolveModule, resolveReady, resolveHero;
   const frames = [], timers = new Map(), listeners = new Set();
   const ready = new Promise(resolve => { resolveReady = resolve; });
   const module = new Promise(resolve => { resolveModule = resolve; });
   const hero = new Promise(resolve => { resolveHero = resolve; });
   if (heroReady) resolveHero(true);
-  const intro = { complete: false, start() { starts++; }, finish() { finishes++; }, accelerate: () => true };
-  const state = { ready, activate() { activations++; }, revealRail() {} };
+  const intro = { complete: false, start() { starts++; }, finish() { finishes++; }, accelerate() { accelerations++; return true; } };
+  const state = { ready, transitionSeconds: 4, activate() { activations++; }, revealRail() {} };
   const callback = make({ preludeStrike() { strikes++; }, preludeDismiss() {}, preludeFadeGround() {}, adopt() {},
     preludeLandingStatus: () => ({ firstImpact: impact, pending: pending && !impact }), preludeMsUntilStrike: () => 100 },
   { body: { classList: { add() {}, remove() {} } }, querySelector: () => null },
@@ -41,6 +41,8 @@ function harness({ landed = true, skipIntro = false, heroReady = true, pending =
   return { intro, tick, land() { impact = true; }, heroReady() { resolveHero(true); },
     load() { resolveModule({ prepareChapter: () => 0, boot: () => { boots++; return state; } }); },
     ready() { resolveReady(); }, navigate() { queued = 'inspire'; requested(); },
+    scroll() { for (const cb of listeners) cb({ type: 'wheel', deltaY: 140, deltaMode: 0, cancelable: true, preventDefault() {} }); },
+    get accelerations() { return accelerations; },
     get starts() { return starts; }, get finishes() { return finishes; }, get boots() { return boots; },
     get strikes() { return strikes; }, get activations() { return activations; } };
 }
@@ -60,6 +62,21 @@ prepared.intro.complete = true;
 await settle(prepared);
 assert.equal(prepared.starts, 1, 'readiness never replays growth');
 assert.equal(prepared.activations, 1);
+
+// Gestures leave the growth alone; an explicit click starts travel in the
+// same task as the growth acceleration, without waiting for its ramp timer.
+const interactive = harness();
+interactive.load(); interactive.ready();
+await settle(interactive); await interactive.tick(120);
+interactive.scroll();
+assert.equal(interactive.accelerations, 0, 'scroll cannot accelerate the intro');
+assert.equal(interactive.activations, 0, 'scroll cannot begin navigation');
+interactive.navigate();
+assert.equal(interactive.accelerations, 1, 'chapter click accelerates remaining growth');
+assert.equal(interactive.activations, 1, 'camera activation overlaps growth immediately');
+assert.equal(interactive.intro.complete, false, 'activation does not wait for completed growth');
+await interactive.tick(1000);
+assert.equal(interactive.activations, 1, 'handoff activates only once');
 
 const coldHero = harness({ heroReady: false });
 coldHero.load(); coldHero.ready();

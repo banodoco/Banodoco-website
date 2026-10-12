@@ -22,7 +22,7 @@ export function createIntroClock({
     return startedAt === null ? 0 : now() - startedAt + skew;
   }
 
-  function accelerate({ totalMs, rampMs = 480 }) {
+  function accelerate({ totalMs, rampMs = 480, exactDuration = false }) {
     if (accelerated || startedAt === null) return false;
     const rampT0 = now();
     const remaining = Math.max(0, totalMs - (rampT0 - startedAt));
@@ -43,12 +43,17 @@ export function createIntroClock({
        interaction timeout masks a per-frame render throw — so the guard has
        to be here, at the door. Requiring a finite number costs one call and
        closes the class. */
-    if (!Number.isFinite(remaining) || remaining < 200) return false;
+    if (!Number.isFinite(remaining) || remaining <= 0 || (!exactDuration && remaining < 200)
+        || !Number.isFinite(rampMs)) return false;
     accelerated = true;
     const duration = Math.max(80, rampMs);
     (function ramp() {
       const f = Math.min((now() - rampT0) / duration, 1);
-      skew = remaining * (f * f * (3 - 2 * f));
+      // Exact mode maps the remaining draw onto the requested wall-time
+      // window, subtracting natural clock advance rather than adding to it.
+      skew = exactDuration
+        ? remaining * f - Math.min(now() - rampT0, duration)
+        : remaining * (f * f * (3 - 2 * f));
       if (f < 1) requestFrame(ramp);
     })();
     return true;

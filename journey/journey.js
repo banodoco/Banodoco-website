@@ -987,16 +987,13 @@ export function boot(opts = {}) {
      eye actually sees. Re-measured: peak 38.6 u/s / 180 deg/s, opening
      176 u/s^2, motion from 0.18 s — inside the family on every axis.
 
-     ROUTE_PACE_FLOOR is the fraction of uniform-p pace a zero-motion stretch
-     of route retains. It exists because a floor of 0 would cross ARRIVAL_DEAD
-     in a single frame and snap the hero furniture (presence rides travelP) —
-     the exact one-frame-scrim class of a8d4518/2026-08-16. At 0.15 the
-     departure fade takes ~0.20 s and the return breathe ~0.14 s, matching the
-     0.23 s / 0.15 s the same furniture measures on a generic hero jump
-     (mission -> final), so the fade keeps its beat without stalling the
-     flight. */
+     Return flights retain a small pace floor so the hero furniture has time
+     to return across the route's stationary end. Departures no longer need
+     that floor: ordinaryDepartureOpacity already fades the furniture on the
+     flight's clock. Charging time for a stationary stretch here made Inspire
+     wait before moving even though the flight had started immediately. */
   const ROUTE_PACE_FLOOR = 0.15;
-  const ROUTE_PACE_N = 64;
+  const ROUTE_PACE_N = 256;
   const _pacePose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 };
   const _pacePrev = new THREE.Vector3();
   function buildRoutePace(fromP, toP) {
@@ -1011,7 +1008,8 @@ export function boot(opts = {}) {
       _pacePrev.copy(_pacePose.pos);
     }
     if (!(pathLen > 1e-6)) return null;    // degenerate leg: linear fallback
-    const floor = (ROUTE_PACE_FLOOR * pathLen) / ROUTE_PACE_N;
+    const departure = toP > fromP;
+    const floor = departure ? 0 : (ROUTE_PACE_FLOOR * pathLen) / ROUTE_PACE_N;
     let total = 0, prevRaw = 0;
     for (let i = 1; i <= ROUTE_PACE_N; i++) {
       total += Math.max(cum[i] - prevRaw, floor);
@@ -1706,7 +1704,14 @@ export function boot(opts = {}) {
       ui.rail.setManifestoArrive(manifestoBranch.active && !manifestoBranch.returning
         ? manifestoBranch.arrivePhase : null);
     }
-    logoMorph.update(blendThisFrame, Math.abs(p - restProgress('mission')) > 1e-4, dt);
+    const logoAway = Math.abs(p - restProgress('mission')) > 1e-4;
+    logoMorph.update(blendThisFrame, logoAway, dt,
+      manifestoBranch && manifestoBranch.active ? {
+        key: manifestoBranch.returning ? 'manifesto-return' : 'manifesto-open',
+        phase: manifestoBranch.returning ? manifestoBranch.returnPhase : manifestoBranch.openPhase,
+        away: manifestoBranch.returning && logoAway,
+        reading: !manifestoBranch.returning,
+      } : null);
 
     // Route state is parked at the destination throughout a direct click.
     // Reconstruct the coordinate actually being presented from the camera's
@@ -1973,6 +1978,7 @@ export function boot(opts = {}) {
     heroIntroMs: HERO_INTRO_MS,
     get p() { return journey.progress; },
     get travelP() { return presentedP; },
+    get transitionSeconds() { return transition.blend?.dur ?? 0; },
     get chapter() { return chapterAt(journey.progress).id; },
     get detail() { return detailNode; },
     /** The navigation can enter during the organism's final settle without

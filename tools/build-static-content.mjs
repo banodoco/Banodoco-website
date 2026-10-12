@@ -5,6 +5,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTENT } from '../content/content.js';
+import { manifestoConcepts } from '../content/manifesto-concepts.js';
 import { JOURNEY_CHAPTER_IDS } from '../journey/structure.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,7 +37,53 @@ const escapeAttribute = (value) => escapeText(value).replaceAll('"', '&quot;');
 function derive(source) {
   const bindings = [...source.matchAll(/<[a-z][^>]*\bdata-src="([^"]+)"[^>]*>/gi)];
   let textCount = 0;
+  // These three display headings accent their leading action word. Accept
+  // only our fixed emphasis element, then regenerate it from escaped content;
+  // every other binding retains the plain-text-only contract below.
   let output = source.replace(
+    /(<h2\b[^>]*\bdata-src="chapters\.(inspire|equip|connect)\.heading"[^>]*>)(?:[^<]*|<em class="mycelial-heading-accent">[^<]*<\/em>[^<]*)(<\/h2>)/gi,
+    (_match, open, chapter, close) => {
+      const heading = valueAt(`chapters.${chapter}.heading`);
+      const [word, rest] = /^(\S+)([\s\S]*)$/.exec(heading).slice(1);
+      textCount += 1;
+      return `${open}<em class="mycelial-heading-accent">${escapeText(word)}</em>${escapeText(rest)}${close}`;
+    },
+  );
+  output = output.replace(
+    /(<h2\b[^>]*\bdata-src="chapters\.final\.heading"[^>]*>)[\s\S]*?(<\/h2>)/gi,
+    (_match, open, close) => {
+      const heading = valueAt('chapters.final.heading');
+      const start = heading.indexOf('accelerate a 2nd Renaissance');
+      textCount += 1;
+      return `${open}${escapeText(heading.slice(0, start))}<span class="mycelial-renaissance-accent">${escapeText(heading.slice(start))}</span>${close}`;
+    },
+  );
+  // Manifesto keeps its five paragraphs and its inline note in the fallback.
+  output = output.replace(
+    /(<div\b[^>]*\bdata-src="manifesto\.body"[^>]*>)[\s\S]*?(<\/div>)/gi,
+    (_match, open, close) => {
+      textCount += 1;
+      const note = `<button type="button" class="manifesto-note-trigger" aria-label="Read note 1 about fungi" title="${escapeAttribute(CONTENT.manifesto.note)}" data-manifesto-note="${escapeAttribute(CONTENT.manifesto.note)}">[1]</button>`;
+      return `${open}${CONTENT.manifesto.lines.map((line, i) => {
+        const words = line.split(/\s+/);
+        const concepts = manifestoConcepts(words);
+        const body = words.map((word, index) => {
+          const concept = concepts.get(index);
+          if (!concept) return escapeText(word);
+          const ink = concept.id === 'imagination'
+            ? [...concept.ink].map((character, characterIndex) => `<span class="manifesto-spectrum-glyph" style="--spectrum-index:${concept.characterOffset + characterIndex}">${escapeText(character)}</span>`).join('')
+            : concept.id === 'vitality'
+              ? [...concept.ink].map(character => `<span class="manifesto-vitality-glyph">${escapeText(character)}</span>`).join('')
+              : escapeText(concept.ink || word);
+          const openThread = concept.id === 'kinship' && index === concept.start ? '<span class="manifesto-phrase-thread">' : '';
+          const closeThread = concept.id === 'kinship' && index === concept.end ? '</span>' : '';
+          return `${openThread}<span class="manifesto-concept concept-${concept.id}" style="--concept-index:${concept.offset || 0}">${ink}</span>${escapeText(concept.suffix || '')}${closeThread}`;
+        }).join(' ');
+        return `<p>${body}${i === 0 ? ` ${note}` : ''}</p>`;
+      }).join('')}${close}`;
+    },
+  );
+  output = output.replace(
     /(<([a-z][\w:-]*)\b[^>]*\bdata-src="([^"]+)"[^>]*>)([^<]*)(<\/\2>)/gi,
     (_match, open, _tag, path, _oldText, close) => {
       textCount += 1;
@@ -44,7 +91,7 @@ function derive(source) {
     },
   );
   if (textCount !== bindings.length) {
-    throw new Error(`updated ${textCount} text bindings but found ${bindings.length}; data-src elements must contain text only`);
+    throw new Error(`updated ${textCount} text bindings but found ${bindings.length}; data-src elements must contain text only, except the three approved accented chapter headings`);
   }
 
   // A content label inside an anchor owns that anchor's destination. This
