@@ -1,9 +1,10 @@
 import { claimInput, releaseInput } from '../ownership.js';
+import { createReturnFlight, sampleReturnFlight, returnVelocity } from './return-flight.js';
 import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
 import { manifestoConcepts } from '../../content/manifesto-concepts.js';
-import { manifestoPose, mobileFieldCenter, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
+import { manifestoPose, mobileFieldCenter, isMobileManifesto, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -168,6 +169,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   let lastWall = null;   // see update(): the flight keeps wall time
   let returnStart = 0;
   let returnK = 0;          // the descent's own clock, 0 -> 1
+  let returnFlight = null, flightStartK = 0;
+  let presentedPose = null, presentedVelocity = null;
   let returnRate = 1;       // per second; slowed by a late retarget
   // A destination pressed mid-descent bends the fall toward it rather than
   // landing first and flying on: `landPrev` is the landing being left and
@@ -247,7 +250,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     pose.fov += (there.fov - pose.fov) * w;
     pose.roll = (pose.roll || 0) + ((there.roll || 0) - (pose.roll || 0)) * w;
   }
-  function apply(value) {
+  function apply(value, frameSeconds = 0) {
     const pose = manifestoPose(from, value * CAMERA_SECONDS, camera.aspect);
     // the world's depth at the two ends of the flight, blended like the pose
     let fogNear0 = from.fogNear, fogFar0 = from.fogFar;
@@ -271,12 +274,26 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       fogNear0 += (depart.fogNear - fogNear0) * departW;
       fogFar0 += (depart.fogFar - fogFar0) * departW;
     }
+    if (returnFlight && direction < 0) {
+      const flight = sampleReturnFlight(returnFlight,
+        (returnK - flightStartK) / Math.max(1e-9, 1 - flightStartK));
+      for (const key of ['position', 'target', 'fov', 'roll', 'up', 'viewAngles']) pose[key] = flight[key];
+    }
+    if (presentedPose && frameSeconds > 0) presentedVelocity = returnVelocity(presentedPose, pose, frameSeconds);
+    presentedPose = pose;
     camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     controls.target.set(pose.target.x, pose.target.y, pose.target.z);
     camera.fov = pose.fov;
     camera.far = Math.max(from.far, pose.position.y * 3);
     camera.updateProjectionMatrix();
-    applyCameraRoll(camera, controls.target, pose.roll);
+    if (pose.up) {
+      // This flight owns its complete orientation, including through a
+      // vertical direction. World-up lookAt would flip its yaw at the pole.
+      camera.up.set(pose.up.x, pose.up.y, pose.up.z);
+      camera.userData ||= {};
+      camera.userData.journeyRoll = pose.roll;
+      camera.lookAt(controls.target);
+    } else applyCameraRoll(camera, controls.target, pose.roll);
     // Keep the outer field legible through the settled frame. The previous
     // range let the perimeter disappear into fog before its scheduled
     // arrivals could read as a continuous surround.
@@ -477,6 +494,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     depart = anchor && !reduceMotion.matches ? here : null;
     departW = depart ? 1 : 0;
     landing = null; landW = 0;
+    returnFlight = null; flightStartK = 0;
+    presentedPose = here; presentedVelocity = null;
     finish = null;
     previousFocus = document.activeElement;
     // The menu closes before this branch opens; its former link may still
@@ -554,6 +573,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         }
       }
     }
+    if (isMobileManifesto(camera.aspect)) {
+      flightStartK = returnK;
+      returnFlight = createReturnFlight(presentedPose || capture(), landing,
+        extendedRemaining, presentedVelocity);
+    }
     return true;
   }
   function returnTo(onFinish = null, { land = null } = {}) {
@@ -574,6 +598,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     returnStart = u;
     returnK = 0;
     returnRate = 1 / (land ? awaySecondsFrom(returnStart) : returnSecondsFrom(returnStart));
+    returnFlight = land && isMobileManifesto(camera.aspect)
+      ? createReturnFlight(presentedPose || capture(), landing, 1 / returnRate, presentedVelocity) : null;
+    flightStartK = 0;
     // the words take the whole fall to go (Hannah, 2026-10-06: "the fade out
     // should take the time of the transition") — site.css reads this
     root.style.setProperty('--manifesto-return-s', `${(1 / returnRate).toFixed(2)}s`);
@@ -597,6 +624,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     controls.target.set(rest.target.x, rest.target.y, rest.target.z);
     camera.fov = rest.fov;
     landing = null; landW = 0; landPrev = null; landRe = 0; stay0 = 1; stayTo = 1;
+    returnFlight = null; presentedPose = null; presentedVelocity = null;
     depart = null; departW = 0; departAtReturn = 0;
     camera.far = from.far;
     camera.updateProjectionMatrix();
@@ -633,6 +661,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   }
   function update(dt) {
     if (!active || !from) return;
+    let frameSeconds = 0;
     // The normal director still composes before this hook each frame. Reapply
     // the branch pose even while paused so the branch remains the sole camera
     // owner; reduced-motion uses the same path with u=1.
@@ -651,6 +680,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       let step = Math.max(0, Math.min(dt, 0.05));
       if (dt >= 0.0499 && lastWall !== null) step = Math.min(0.25, Math.max(step, now - lastWall));
       lastWall = now;
+      frameSeconds = step;
       if (direction >= 0) {
         elapsed += step;
         departW = depart ? 1 - smoother(elapsed / DEPART_SECONDS) : 0;
@@ -681,7 +711,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         if (u <= 0) { apply(0); exit(); return; }
       }
     }
-    apply(u);
+    apply(u, frameSeconds);
   }
   function handleKey(event) {
     if (!active || event.key !== 'Escape') return;

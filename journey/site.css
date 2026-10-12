@@ -3744,7 +3744,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 .j-rail:focus-within { opacity: 1; }
 .j-rail.on.dim { opacity: 0.1; }
 .j-rail-preboot {
-  animation: fade-on 0.9s ease 0.15s both;
+  animation: fade-on var(--hero-entry-duration) ease 0.15s both;
 }
 
 .j-rail .j-rail-inner,

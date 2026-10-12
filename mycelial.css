@@ -132,7 +132,7 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   height: 1px;
   margin-top: 1.6rem;
   background: #eeb665;
-  animation: fade-on 0.9s ease 0.15s both;
+  animation: fade-on var(--hero-entry-duration) ease 0.15s both;
 }
 @media (prefers-reduced-motion: no-preference) {
   body.hero-entry-pending .ui .hero h1::after {

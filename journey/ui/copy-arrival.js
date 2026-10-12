@@ -630,7 +630,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
       if (inAir.id === id) {
         const clock = ticketClock(inAir.ticket);
         const arrival = inAir.ticket.manifestoHeroReturn
-          ? smoothA((phase - 0.2) / 0.7)
+          ? smoothA((phase - 0.4) / 0.55)
           : clock ? navCopyArrival(clock.t, clock.dur)
             : smoothA((phase - (1 - NAV_COPY_FADE_PHASE)) / NAV_COPY_FADE_PHASE);
         const env = FLIGHT_ENVELOPES[COPY_SURFACES[id].flightLead];

@@ -6,6 +6,8 @@
    styles live in journey/site.css (linked AFTER this file; keep that order,
    the cascade was authored against it). */
   :root {
+    /* Cold page arrival only; independent of specimen growth and travel. */
+    --hero-entry-duration: 1.8s;
     --gold:        #d9a441;
     --gold-bright: #f0c877;
     --parchment:   #f2ebdd;
@@ -62,7 +64,7 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    animation: stage-bloom 0.9s ease both;
+    animation: stage-bloom var(--hero-entry-duration) ease both;
   }
   @keyframes stage-bloom {
     from { opacity: 0; }
@@ -191,7 +193,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 2.1rem 3.4rem;
-    animation: fade-on 0.9s ease 0.15s both;
+    animation: fade-on var(--hero-entry-duration) ease 0.15s both;
   }
   /* THE WORDMARK IS NOW THE MARK (2026-08-11, Hannah: "use it as the logo
      instead of the BANODOCO text ... you may need to change the colour and
@@ -546,7 +548,7 @@
     white-space: nowrap; /* each line is set deliberately — never rewrap */
     /* hero copy arrives with the page itself — the same quiet fade as the
        nav, no choreography; the specimen draws behind it */
-    animation: fade-on 0.9s ease 0.15s both;
+    animation: fade-on var(--hero-entry-duration) ease 0.15s both;
   }
   h1 em {
     font-style: italic;
@@ -560,7 +562,7 @@
     font-weight: 400;
     color: var(--muted);
     text-shadow: 0 1px 18px rgba(10, 6, 2, 0.9), 0 0 6px rgba(10, 6, 2, 0.7);
-    animation: fade-on 0.9s ease 0.15s both;
+    animation: fade-on var(--hero-entry-duration) ease 0.15s both;
   }
   /* serif body A/B — toggle with the B key or ?body=serif */
   body.body-serif .sub {
@@ -585,7 +587,7 @@
     border-radius: 999px;
     background: rgba(14, 9, 2, 0.4);
     transition: border-color 0.15s, outline-color 0.15s, background 0.15s, box-shadow 0.15s;
-    animation: fade-on 0.9s ease 0.15s both;
+    animation: fade-on var(--hero-entry-duration) ease 0.15s both;
   }
   .cta .arr {
     display: inline-block;

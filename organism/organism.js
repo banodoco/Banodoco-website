@@ -516,6 +516,7 @@ await yieldBuildFrame();
 // ember riding the stroke tip while it draws. Parked at 2, everything is
 // fully drawn and the ember term is switched off.
 const drawU = { value: 2 };
+const groundEntryLead = { value: 0 };
 function drawAttr(geo, n) {
   const a = new Float32Array(n);
   for (let i = 0; i < n; i++) a[i] = i / (n - 1);
@@ -560,6 +561,7 @@ function injectDraw(mat, navPocket = false) {
   mat.userData.uWin = uWin;
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uProg = drawU;
+    sh.uniforms.uGroundEntryLead = groundEntryLead;
     sh.uniforms.uWin = uWin;
     sh.uniforms.uPulseC = pulseC;
     sh.uniforms.uPulseT = pulseT;
@@ -572,7 +574,7 @@ function injectDraw(mat, navPocket = false) {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>',
         '#include <common>\n' +
-        'uniform float uProg;\nuniform vec2 uWin;\n' +
+        'uniform float uProg;\nuniform vec2 uWin;\nuniform float uGroundEntryLead;\n' +
         'uniform vec3 uGroundAdosDelta;\nattribute float aGroundAdosW;\n' +
         'attribute float aDraw;\nvarying float vDraw;\n' +
         PULSE_GLSL + 'varying float vPulse;')
@@ -583,6 +585,7 @@ function injectDraw(mat, navPocket = false) {
         '  float head = smoothstep(0.0, 0.012, dp - aDraw);\n' +
         '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
         '  vDraw = head + tip * 1.7;\n' +
+        (navPocket ? `  vDraw *= smoothstep(0.0, 3.0, uProg * ${(intro > 0 ? intro : 5.4).toFixed(3)} + uGroundEntryLead);\n` : '') +
         '  vPulse = pulseAt((modelMatrix * vec4(transformed, 1.0)).xyz); }');
     const pocketDecl = navPocket
       ? '\nuniform vec4 uGroundNavPocketPx;\nuniform float uGroundNavPocketAmount;'
@@ -595,7 +598,11 @@ function injectDraw(mat, navPocket = false) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vDraw;\nvarying float vPulse;' + pocketDecl)
       .replace('#include <color_fragment>',
-        '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;' + pocketPaint);
+        // Unrevealed additive geometry must not reach the later fog stage:
+        // fog would add its brown colour back even when RGB was zeroed.
+        'if (vDraw <= 0.0) discard;\n#include <color_fragment>\n' +
+        'diffuseColor.rgb *= max(1.0, vDraw) * vPulse;\n' +
+        'diffuseColor.a *= min(1.0, vDraw);' + pocketPaint);
   };
   mat.customProgramCacheKey = () => navPocket
     ? 'draw-injected-ground-ados-nav-pocket'
@@ -2460,6 +2467,7 @@ return {
   /* `heroField` is the preload stream after adoption (see the THROUGH-CURRENT
      block above) — a THREE.Points, like `spores`, not a Group. Its one reader
      is journey/hero-field.js. */
+  setGroundEntryLead(seconds) { groundEntryLead.value = Math.max(0, Number(seconds) || 0); },
   groups: {
     mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup,
     spores: sporePts, heroField: heroSporeField && heroSporeField.points,

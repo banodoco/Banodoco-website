@@ -16,7 +16,7 @@ function flightCopy(special) {
     copy.step({chapterId:'mission',dt:1/60,travelP:0,railFlight:ticket});}
   return Number(hero.style.opacity);
 }
-assert.ok(flightCopy(true)>.3,'Manifesto home copy is visibly arriving halfway through descent');
+assert.ok(flightCopy(true)>0 && flightCopy(true)<.3,'Manifesto home copy begins gently halfway through descent');
 assert.equal(flightCopy(false),0,'ordinary flight keeps its existing arrival timing');
 
 // Browser cascade regression: the real stylesheet must leave the hero's

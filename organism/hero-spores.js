@@ -1658,7 +1658,7 @@ function createGround(view, reduced) {
       }
       // Navigation retires the landing glow, while the earned network keeps
       // its outward geometry and natural light handoff.
-      k *= NET_ALPHA * exitK;
+      k *= NET_ALPHA * exitK * smooth01((t - w) / 3);
       lit[v * 3] = base[v * 3] * k;
       lit[v * 3 + 1] = base[v * 3 + 1] * k;
       lit[v * 3 + 2] = base[v * 3 + 2] * k;
@@ -2723,6 +2723,7 @@ function createPreload() {
       return {
         firstImpact: S.firstImpactAt >= 0,
         firstImpactAt: S.firstImpactAt,
+        impactAgeSeconds: S.firstImpactAt >= 0 ? Math.max(0, S.t - S.firstImpactAt) : 0,
         pending: S.landings.some((L) => L.state < 2),
         released: S.released,
       };

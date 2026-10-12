@@ -287,6 +287,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
     // prelude draws on this thread). Not earlier: until this frame the scene
     // has nothing to show, and while it holds its frame the GPU belongs to
     // the prelude. Every route into the growth passes through this call.
+    scene.setGroundEntryLead?.(heroSpores.preludeLandingStatus().impactAgeSeconds);
     heroSpores.adopt();
     document.body.classList.remove('scene-preparing');
     document.body.classList.add('scene-intro-live');
@@ -484,7 +485,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
           if (shell) {
             // Continue the hero's already-running fade across the DOM swap.
             // The live rail takes the shell's exact painted opacity, then
-            // completes only the unspent portion of the shared 0.9s beat.
+            // completes only the unspent portion of the shared CSS entry beat.
             const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
             earlyRail.root.style.transition = 'none';
             earlyRail.root.style.opacity = String(from);
