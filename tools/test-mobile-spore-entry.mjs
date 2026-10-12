@@ -18,8 +18,8 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
   const v=growthView(mode.viewFor(m),m,0);
   if(m==='mobile') {
     const middle=growthView(settled,m,.5);
-    assert.equal(v.fov,settled.fov*.8,'phone opening starts with a closer lens');
-    assert.ok(v.fov<middle.fov && middle.fov<settled.fov,'lens opens smoothly on growth progress');
+    assert.equal(v.fov,settled.fov,'phone opening keeps the established lens');
+    assert.equal(middle.fov,settled.fov,'lens stays fixed throughout growth');
   } else assert.deepEqual(v,settled,'desktop opening composition stays unchanged');
   const view={mode:m,camX:.15+v.panX,camY:v.camY,camZ:v.camZ,tgtX:v.panX,
     tgtY:v.targetY,tanHalfFov:Math.tan(v.fov*Math.PI/360),aspect:w/h};

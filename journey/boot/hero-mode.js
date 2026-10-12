@@ -342,17 +342,13 @@ export function growthView(view, mode, progress) {
   const heroCentreY = Math.min(row.centreY, innerHeight * (1 - 0.135));
   const landingPixelY = heroCentreY - row.majorRingD / 2 - 7.5;
   const ndcY = 1 - 2 * landingPixelY / innerHeight;
-  // Begin about 30% closer in apparent size, then open the lens on the
-  // existing growth clock. Solve the starting pitch with that same lens so
-  // zooming the opening cannot move its landing away from Equip.
-  const initialFov = view.fov * 0.8;
   // At panX=0 the landing and Equip share the viewport centre. The renderer
   // keeps its eye 0.15 units right of its target; include that in the pitch
   // solve so the prelude and real camera project the same world landing.
   const distance = Math.hypot(view.camZ, 0.15);
   const groundPitch = Math.atan2(LANDING_SITES[0][1] - view.camY, distance);
-  const pitch = groundPitch - Math.atan(ndcY * Math.tan(initialFov * Math.PI / 360));
+  const pitch = groundPitch - Math.atan(ndcY * Math.tan(view.fov * Math.PI / 360));
   const initialTargetY = view.camY + distance * Math.tan(pitch);
-  return { ...view, panX: view.panX * ease, fov: initialFov + (view.fov - initialFov) * ease,
+  return { ...view, panX: view.panX * ease,
     targetY: initialTargetY + (view.targetY - initialTargetY) * ease };
 }
