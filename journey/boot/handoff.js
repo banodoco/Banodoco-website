@@ -72,6 +72,7 @@
  * ==================================================================== */
 
 import { FREE_CAM } from '../../flags.js';
+import { ownerOf, modalLive, targetOwnsKey } from '../ownership.js';
 import { NOTE } from './scene-note.js';
 import { prepareHeroGpu } from './hero-gpu.js';
 // The preload atmosphere's singleton (ESM cache: same instance the page
@@ -555,6 +556,11 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   }
 
   onIntroInput = (e) => {
+    // The menu can open once navigation is ready, before intro activation
+    // removes this capture listener. Its native scroll owns the gesture
+    // throughout that overlap, exactly as in the active transport.
+    if (ownerOf(e.target)) return;
+    if (e.type === 'keydown' && (modalLive() || targetOwnsKey(e))) return;
     if (e.type === 'keydown') {
       if (!['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Spacebar',
         'Home', 'End'].includes(e.key)) return;

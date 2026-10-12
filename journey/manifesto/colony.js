@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BODY_DISSOLVE_GLSL } from '../lib/body-dissolve.js';
-import { aerialPlacements, planAerialReveals, manifestoPose, isMobileManifesto, CAMERA_SECONDS } from './pose.js';
+import { aerialPlacements, planAerialReveals, manifestoPose, CAMERA_SECONDS } from './pose.js';
 import { groundY, makeRng } from '../chapters/final/world.js';
 
 // Prepared once with Final. Every instance shares the hero's actual buffers;
@@ -132,15 +132,15 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   const layerBounds = new THREE.Sphere();
   const viewFrustum = new THREE.Frustum(), viewMatrix = new THREE.Matrix4();
   const viewProjection = new THREE.Matrix4(), worldBody = new THREE.Sphere();
-  let phoneView = false;
+  let cullView = false;
   // the welding grid, in hero units: FAR_CELL_PX of the tallest a far body
   // can be (NEAR_PX) — so a weld never spans more than ~1 px on screen
   const farCell = BODY_HEIGHT * FAR_CELL_PX / NEAR_PX;
   // ONLY ARRIVED BODIES ARE DRAWN. A body before its window is already dark
   // (colonyArrival() = 0 discards every fragment) but still paid its full
   // vertex cost. prepare() sorts the instances by arrival start, so the
-  // bodies that can be lit are always a prefix and set() just draws that
-  // prefix — the picture is identical, the early flight is much cheaper.
+  // bodies that can be lit form a prefix. set() then submits only the
+  // conservative in-view subset of that prefix, on phones and desktop.
   const header = `
     attribute vec4 aColonyPose;
     attribute vec2 aColonyTone;
@@ -272,7 +272,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     tier.tones.array[dst*2] = toneBase[src*2]; tier.tones.array[dst*2+1] = toneBase[src*2+1];
   }
 
-  function cullPhoneBodies(seconds) {
+  function updateViewFrustum() {
     const camera = sceneApi.camera;
     camera.updateMatrixWorld();
     group.updateWorldMatrix(true, false);
@@ -282,12 +282,15 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     viewProjection.elements[5] /= 1.12;
     viewMatrix.multiplyMatrices(viewProjection, camera.matrixWorldInverse);
     viewFrustum.setFromProjectionMatrix(viewMatrix);
+  }
+
+  function cullBodies(seconds) {
     for (const tier of tiers) {
       let count = 0, changed = false;
       for (let i = 0; i < tier.bodyIds.length && tier.starts[i] <= seconds; i++) {
         const src = tier.bodyIds[i];
-        // The opening lift leaves the existing field behind before any new
-        // colony body is submitted. Spores retain their independent paths.
+        // New tissue cannot contribute before its global arrival gate.
+        // Spores retain their independent, full-trajectory bounds.
         if (plan[src*2] >= 0 && gate.value <= .001) continue;
         worldBody.copy(bodyBounds[src]).applyMatrix4(group.matrixWorld);
         if (!viewFrustum.intersectsSphere(worldBody)) continue;
@@ -308,6 +311,34 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         for (const geometry of tier.layers) geometry.instanceCount = count;
       }
     }
+  }
+
+  // Ground strands and complete spore trajectories have their own bounds:
+  // a cap outside the frame can still send a visible runner or airborne spore
+  // into it. Keep source attributes immutable and compact only draw indices.
+  function indexedBatches(geometry, batches) {
+    const count = geometry.attributes.position.count;
+    const index = new THREE.BufferAttribute(Uint32Array.from({ length: count }, (_, i) => i), 1);
+    geometry.setIndex(index);
+    return { geometry, batches, index, active: new Int32Array(batches.length).fill(-1) };
+  }
+  function cullBatches(state, seconds, enabled) {
+    let count = 0, active = 0, changed = false;
+    if (enabled) for (let i = 0; i < state.batches.length; i++) {
+      const batch = state.batches[i];
+      if (seconds <= batch.start) continue;
+      worldBody.copy(batch.bounds).applyMatrix4(group.matrixWorld);
+      if (!viewFrustum.intersectsSphere(worldBody)) continue;
+      if (state.active[active] !== i) {
+        state.active[active] = i;
+        for (let k = 0; k < batch.count; k++) state.index.array[count+k] = batch.first+k;
+        changed = true;
+      }
+      count += batch.count; active++;
+    }
+    if (changed) state.index.needsUpdate = true;
+    state.geometry.setDrawRange(0, count);
+    state.object.visible = count > 0;
   }
 
   /* THE GROUND MAT GROWS BY PATCH, AND LIGHTS AS IT GROWS (2026-10-04 —
@@ -374,6 +405,18 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   const links = new THREE.BufferAttribute(new Float32Array(owners.length * 2), 4);
   ground.setAttribute('aColonyLink', links);
   ground.setAttribute('aColonyPath', new THREE.Float32BufferAttribute(paths, 2));
+  const groundBatches = [];
+  const batchBox = new THREE.Box3(), batchPoint = new THREE.Vector3();
+  for (let first = 0; first < points.length / 3; first += 40) {
+    batchBox.makeEmpty();
+    for (let k = first; k < first + 40; k++) {
+      batchBox.expandByPoint(batchPoint.fromArray(points, k * 3));
+    }
+    const bounds = batchBox.getBoundingSphere(new THREE.Sphere());
+    bounds.radius += .5;
+    groundBatches.push({ first, count: 40, bounds, start: 0 });
+  }
+  const groundDraw = indexedBatches(ground, groundBatches);
   const groundMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true,
     blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
   groundMat.onBeforeCompile = shader => {
@@ -396,7 +439,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
       .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb *= vColonyLink;');
   };
   groundMat.customProgramCacheKey = () => 'manifesto-links-v2';
-  group.add(new THREE.LineSegments(ground, groundMat));
+  groundDraw.object = new THREE.LineSegments(ground, groundMat);
+  group.add(groundDraw.object);
 
   /* THE PATCHES THAT ARE SHEDDING (2026-10-04 — Hannah: "some of the random
      ones should be giving off spores as well... the spores flying through
@@ -440,6 +484,16 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   sporeGeo.setAttribute('aSpore', new THREE.BufferAttribute(sporeData, 4));
   sporeGeo.setAttribute('aSporeBody', new THREE.BufferAttribute(sporeBody, 2));
   sporeGeo.setAttribute('aSporeGate', sporeGate);
+  const sporeBatches = shedders.map((owner, i) => {
+    const b = bodies[owner], radius = 2.35 * b.s;
+    // Full shader envelope, including updraft, 26-unit wind carry, lateral
+    // oscillation and settled spores. Never use the owner's cap bound here.
+    batchBox.min.set(b.x-radius-1.5, b.gy-.1, b.z-radius-1.5);
+    batchBox.max.set(b.x+26+radius+1.5, b.gy+6.12*b.s+3.8, b.z+4.5+radius+1.5);
+    return { first: i*(SPORE_FALL+SPORE_LOFT), count: SPORE_FALL+SPORE_LOFT,
+      bounds: batchBox.getBoundingSphere(new THREE.Sphere()), owner, start: 0 };
+  });
+  const sporeDraw = indexedBatches(sporeGeo, sporeBatches);
   const sporeMat = new THREE.ShaderMaterial({
     uniforms: { uTime: time, uColonySeconds: clock, uColonyGate: gate, fogNear, fogFar },
     vertexShader: /* glsl */ `
@@ -512,6 +566,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   });
   const sporePts = new THREE.Points(sporeGeo, sporeMat);
   sporePts.frustumCulled = false;
+  sporeDraw.object = sporePts;
   group.add(sporePts);
   // Its programs are warmed with the rest of Final's hidden subtree (this
   // group lives inside Final's) — see warmHiddenChapters in journey.js.
@@ -556,7 +611,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     // the placements, for layers that dress the same field (sky.js plumes)
     bodies,
     prepare(from, aspect) {
-      phoneView = isMobileManifesto(aspect) && !!sceneApi.camera;
+      cullView = !!sceneApi.camera;
       planAerialReveals(bodies, from, aspect, plan);
       for (let i = 0; i < owners.length; i++) {
         const owner = owners[i];
@@ -569,6 +624,14 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         sporeGate.array[k*2] = plan[owner*2]; sporeGate.array[k*2+1] = plan[owner*2+1];
       }
       sporeGate.needsUpdate = true;
+      for (const batch of groundBatches) {
+        const first = batch.first, ia = owners[first*2], ib = owners[first*2+1];
+        const sa = ia < 0 || plan[ia*2] < 0 ? -1e3 : plan[ia*2];
+        const sb = ib < 0 || plan[ib*2] < 0 ? -1e3 : plan[ib*2];
+        batch.start = Math.max(sa, sb) - .5 * (.9 + paths[first*2+1] * .07);
+      }
+      for (const batch of sporeBatches) batch.start = plan[batch.owner*2] + .6*plan[batch.owner*2+1];
+
       const order = bodies.map((_, i) => i).filter(i => plan[i*2] <= CAMERA_SECONDS)
         .sort((a, b) => plan[a*2] - plan[b*2]);
       // each body's tier, from the tallest it gets on screen on this flight
@@ -602,7 +665,12 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
       group.visible = progress > 0 || seatLight.value > 0.001;
       gate.value = progress;
       clock.value = seconds;
-      if (phoneView) cullPhoneBodies(seconds);
+      if (cullView) {
+        updateViewFrustum();
+        cullBodies(seconds);
+        cullBatches(groundDraw, seconds, progress > 0);
+        cullBatches(sporeDraw, seconds, progress > 0);
+      }
       else for (const tier of tiers) {
         let count = 0;
         while (count < tier.starts.length && tier.starts[count] <= seconds) count++;

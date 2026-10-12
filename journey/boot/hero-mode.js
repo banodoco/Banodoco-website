@@ -1,3 +1,6 @@
+import { rowLayout } from '../layout/rail-geometry.js';
+import { LANDING_SITES } from '../../organism/network-skeleton.js';
+
 /* ==================================================================== *
  * journey/boot/hero-mode.js — THE VIEWPORT MODE AND EVERYTHING KEYED BY
  * IT. Lifted out of main.js by B01; the tables below are byte-for-byte
@@ -324,12 +327,32 @@ export function createHeroMode() {
   };
 }
 
-/** A real pitch change around a fixed eye: the ground starts lower on phones,
- * then rises with the same smooth growth beat as the copy. The settled view
- * is unchanged, including its reviewed vertical truck. */
+/** Start the landing just above Equip, then pan and pitch with the growth
+ * beat to the exact established hero composition. Both the prelude and the
+ * real scene consume this solve, including before the rail DOM exists. */
 export function growthView(view, mode, progress) {
   if (mode !== 'mobile') return { ...view };
   const p = Math.max(0, Math.min(1, Number(progress) || 0));
   const ease = p * p * (3 - 2 * p);
-  return { ...view, targetY: view.targetY + 1.35 * (1 - ease) };
+  if (p === 1) return { ...view };
+  const row = rowLayout(innerWidth, innerHeight);
+  // site.css --nav-hero-lift raises the ordinary row to 13.5vh from the
+  // bottom while on the hero. Include that stable authored lift, not an
+  // animated DOM box (which is not mounted yet in the prelude).
+  const heroCentreY = Math.min(row.centreY, innerHeight * (1 - 0.135));
+  const landingPixelY = heroCentreY - row.majorRingD / 2 - 7.5;
+  const ndcY = 1 - 2 * landingPixelY / innerHeight;
+  // Begin about 30% closer in apparent size, then open the lens on the
+  // existing growth clock. Solve the starting pitch with that same lens so
+  // zooming the opening cannot move its landing away from Equip.
+  const initialFov = view.fov * 0.8;
+  // At panX=0 the landing and Equip share the viewport centre. The renderer
+  // keeps its eye 0.15 units right of its target; include that in the pitch
+  // solve so the prelude and real camera project the same world landing.
+  const distance = Math.hypot(view.camZ, 0.15);
+  const groundPitch = Math.atan2(LANDING_SITES[0][1] - view.camY, distance);
+  const pitch = groundPitch - Math.atan(ndcY * Math.tan(initialFov * Math.PI / 360));
+  const initialTargetY = view.camY + distance * Math.tan(pitch);
+  return { ...view, panX: view.panX * ease, fov: initialFov + (view.fov - initialFov) * ease,
+    targetY: initialTargetY + (view.targetY - initialTargetY) * ease };
 }

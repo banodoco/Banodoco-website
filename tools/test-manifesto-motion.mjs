@@ -493,7 +493,8 @@ const shader = new THREE.ShaderMaterial({uniforms:{uProg:{value:2},uOpacity:{val
 cap.add(new THREE.LineSegments(tissue,shader));
 stem.add(new THREE.Mesh(tissue,new THREE.MeshBasicMaterial()));
 const viewCamera = new THREE.PerspectiveCamera(from.fov, 390 / 844, .1, 1000);
-const colony = createAerialColony({groups:{stem,mushroom:cap}, camera: viewCamera},[]);
+const colonyScene = {groups:{stem,mushroom:cap}};
+const colony = createAerialColony(colonyScene,[]);
 window.innerWidth = 1440;
 colony.prepare(from,1440/900);
 const resourceState = () => colony.group.children.map(o => [o,o.geometry,o.material,o.geometry.attributes.position,o.geometry.attributes.aColonyReveal,o.geometry.attributes.aColonyLink]);
@@ -555,6 +556,7 @@ console.log('Manifesto away descent: longer than a Return from every height pass
 
 // The phone path excludes distant bodies from real instance submission,
 // rather than merely darkening the same full landscape in the fragment shader.
+colonyScene.camera = viewCamera;
 colony.prepare(from, 390 / 844);
 const paintPhone = seconds => {
   const pose = manifestoPose(from, seconds, viewCamera.aspect);
@@ -586,3 +588,35 @@ paintPhone(CAMERA_SECONDS * .5); const outward = drawnBodies();
 paintPhone(CAMERA_SECONDS); paintPhone(CAMERA_SECONDS * .5);
 assert.deepEqual(drawnBodies(), outward, 'returning through a pose restores the same visible bodies');
 console.log(`Mobile colony: ${phoneInstances}/${colony.bodies.length} bodies intersect the flight; ${endpointCount} submitted at the endpoint, zero when facing sky.`);
+
+// Desktop now uses the same conservative instance bounds. Ground and spores
+// retain independent footprints, and return/re-entry compacts identical data.
+for (const aspect of [390 / 844, 1.6]) {
+  viewCamera.aspect = aspect;
+  colony.prepare(from, aspect);
+  paintPhone(CAMERA_SECONDS);
+  const count = drawnCount();
+  assert.ok(count > 0 && count < colony.lod.near + colony.lod.far,
+    'both phone and desktop omit offscreen bodies from instance submission');
+  const groundCount = groundGeometry.drawRange.count, sporesCount = sporeGeometry.drawRange.count;
+  assert.ok(groundCount > 0 && groundCount < gp.count, 'offscreen ground strands do not reach the GPU');
+  assert.ok(sporesCount < sg.count, 'offscreen or unarrived spore cohorts do not reach the GPU');
+  assert.equal(groundCount % 40, 0, 'whole curved strands survive the guard band');
+  assert.equal(sporesCount % 54, 0, 'whole full-lifetime spore cohorts survive the guard band');
+  const indices = [groundGeometry, sporeGeometry].map(g => Array.from(g.index.array.slice(0, g.drawRange.count)));
+  const versions = [groundGeometry.index.version, sporeGeometry.index.version];
+  for (let i = 0; i < 60; i++) paintPhone(CAMERA_SECONDS);
+  assert.deepEqual([groundGeometry.index.version, sporeGeometry.index.version], versions,
+    'stationary camera does not upload batch indices');
+  viewCamera.lookAt(viewCamera.position.x, viewCamera.position.y + 20, viewCamera.position.z);
+  colony.set(1,80,200,CAMERA_SECONDS);
+  assert.equal(drawnCount(), 0);
+  assert.equal(groundGeometry.drawRange.count, 0, 'ground behind the camera submits no vertices');
+  assert.equal(sporeGeometry.drawRange.count, 0, 'spores behind the camera submit no vertices');
+  assert.ok(colony.group.children.filter(o => o.geometry === groundGeometry || o.geometry === sporeGeometry)
+    .every(o => !o.visible), 'empty ground and spore batches also skip their draw calls');
+  paintPhone(CAMERA_SECONDS);
+  assert.deepEqual([groundGeometry, sporeGeometry].map(g => Array.from(g.index.array.slice(0,g.drawRange.count))), indices,
+    'turning back restores exactly the same strand and spore identities');
+  console.log(`${aspect < 1 ? 'Mobile' : 'Desktop'} visible submissions: ${count} bodies, ${groundCount}/${gp.count} ground vertices, ${sporesCount}/${sg.count} spores.`);
+}

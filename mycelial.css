@@ -70,6 +70,9 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   transform: translateY(-50%);
   width: calc(var(--brand-width) - 44px);
   overflow: hidden;
+  /* Fade on the slide's frame clock, gently at first because its mask also
+     removes ink. Keep the lettering's font-ready fade independent. */
+  opacity: calc(1 - var(--brand-away) * var(--brand-away));
   pointer-events: none;
 }
 .ui .logo .wordmark {
