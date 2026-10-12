@@ -207,7 +207,11 @@ function viewFor(mode) {
     // of air under the copy AND a clean dark band between the flare and the
     // row. Horizontal composition is untouched — panX and the Equip stalk
     // alignment are a different axis and were not re-solved here.
-    v.targetY = 3.09 + 1.2 * t;
+    // Apply the downward composition shift after the responsive target is
+    // resolved, moving camera and target together to preserve the angle.
+    const lowerBy = 0.625;
+    v.camY += lowerBy;
+    v.targetY = 3.09 + 1.2 * t + lowerBy;
     v.camZ = 11.5 + 1.3 * t;
   }
   /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
@@ -318,4 +322,14 @@ export function createHeroMode() {
     mount,
     adopt,
   };
+}
+
+/** A real pitch change around a fixed eye: the ground starts lower on phones,
+ * then rises with the same smooth growth beat as the copy. The settled view
+ * is unchanged, including its reviewed vertical truck. */
+export function growthView(view, mode, progress) {
+  if (mode !== 'mobile') return { ...view };
+  const p = Math.max(0, Math.min(1, Number(progress) || 0));
+  const ease = p * p * (3 - 2 * p);
+  return { ...view, targetY: view.targetY + 1.35 * (1 - ease) };
 }

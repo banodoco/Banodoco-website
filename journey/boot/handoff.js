@@ -110,6 +110,18 @@ import { heroSpores } from '../../organism/hero-spores.js';
  */
 export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   bakedGeomReady, skipIntro, frozen, introSeconds, onNavigate = null }) {
+  // Read the specimen's clock rather than running a second CSS duration.
+  // This is a one-shot entrance: navigation back to Mission cannot restart it.
+  const heroCopy = document.querySelector('.ui .hero');
+  if (heroCopy && document.body.classList.contains('hero-growth-lift')) {
+    const followGrowth = () => {
+      const progress = skipIntro ? 1 : scene.intro.growthProgress;
+      const eased = progress * progress * (3 - 2 * progress);
+      heroCopy.style.setProperty('--hero-growth-progress', String(eased));
+      if (progress < 1 && !frozen) requestAnimationFrame(followGrowth);
+    };
+    followGrowth();
+  }
   // Once an accepted navigation leaves the hero, retire the preload ground's
   // earned lights before the camera flight. Keep this beside the handoff's
   // existing navigation callback so every activated route shares the same

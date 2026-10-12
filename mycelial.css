@@ -219,8 +219,8 @@ body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
   .ui .logo { --brand-width: 180px; }
   .ui .logo .wordmark { font-size: 32px; }
   .ui .hero { padding: 3.5vh 6vw 0; text-align: center; }
-  .ui .hero h1 { font-size: clamp(2.65rem, 10.8vw, 4rem); line-height: .97; margin: 0 0 1.3rem; }
-  .ui .hero h1 .hl { white-space: nowrap; }
+  .ui .hero h1 { font-size: clamp(2.65rem, 10.8vw, 4rem); line-height: .97; width: calc(100% + 6vw); margin: 0 -3vw 1.3rem; text-wrap: balance; }
+  .ui .hero h1 .hl { display: inline; white-space: normal; }
   .ui .hero h1::after { width: 32px; margin: 1.2rem auto 0; }
   .ui .hero .sub { max-width: 100%; font-size: 11px; line-height: 2; letter-spacing: .18em; margin: 0; }
   .j-h { font-size: clamp(2rem, 8vw, 2.8rem); }
@@ -541,3 +541,11 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 
 /* A quiet colour emphasis keeps the final invitation upright. */
 .mycelial-renaissance-accent { color: #f3bd7c; }
+
+/* Mobile copy begins in the clear space between the header and the rail.
+   Its measured offset yields to the actual mushroom growth, not a timer. */
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  body.hero-growth-lift .ui .hero {
+    translate: 0 calc(var(--hero-growth-offset, 0px) * (1 - var(--hero-growth-progress, 0)));
+  }
+}

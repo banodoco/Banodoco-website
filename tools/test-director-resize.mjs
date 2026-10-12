@@ -131,4 +131,44 @@ samePose(camera, poseFor(resizedAgain), 'Intro landing uses the latest resized c
 assert.equal(director.transitioning, false);
 assert.equal(director.owned, false);
 
+// Intro pitch has the same ownership contract: leave from its current
+// visible angle, then return to the settled composition, never mid-growth.
+const introFinal = { panX: -0.2, camY: 3.575, camZ: 11.5, targetY: 3.715, fov: 64 };
+const introMid = { ...introFinal, targetY: introFinal.targetY + 0.8 };
+sceneApi.setView(introMid);
+let releasedIntro = 0;
+sceneApi.releaseIntroCamera = () => {
+  releasedIntro++;
+  sceneApi.releaseIntroCamera = null;
+  return introFinal;
+};
+director.setTransitioning(true);
+assert.equal(releasedIntro, 1, 'navigation stops the intro camera writer immediately');
+director.setOwned(true);
+director.apply(0, 0);
+samePose(camera, poseFor(introMid), 'intro departure keeps the visible pitch');
+director.setTransitioning(false);
+director.setTransitioning(true);
+director.setOwned(false);
+samePose(camera, poseFor(introFinal), 'return restores the settled hero, not the intro pitch');
+director.setTransitioning(false);
+
+const { growthView } = await import(stage(join(REPO, 'journey/boot/hero-mode.js')));
+const ground = new THREE.Vector3(0, 0, 0);
+const projectedGround = (progress) => {
+  const view = growthView(introFinal, 'mobile', progress);
+  writePose(poseFor(view));
+  camera.lookAt(controls.target);
+  camera.updateMatrixWorld();
+  return ground.clone().project(camera).y;
+};
+assert.deepEqual(growthView(introFinal, 'mobile', 1), introFinal,
+  'growth preserves the final reviewed composition exactly');
+assert.deepEqual(growthView(introFinal, 'desktop', 0), introFinal,
+  'desktop has no intro pitch');
+assert.ok(projectedGround(0) < projectedGround(0.5)
+  && projectedGround(0.5) < projectedGround(1), 'ground rises continuously during growth');
+near(growthView(introFinal, 'mobile', 0).camY, introFinal.camY,
+  'the camera pitches rather than trucking its eye');
+
 console.log('test-director-resize: PASS — resize tween interruption and mid-flight Intro return');

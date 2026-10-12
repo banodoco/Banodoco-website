@@ -282,6 +282,40 @@
         window.__heroEntryRelease = () => {};
         return;
       }
+      // Resolve the mobile starting pose before the copy is allowed to paint.
+      // Only translate is ours: the entry/journey retains its transform fade.
+      const query = new URLSearchParams(location.search);
+      const skipLift = ['nointro', 'capture'].some(key => query.has(key))
+        || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!skipLift) {
+        body.classList.add('hero-growth-lift');
+        const measureLift = () => {
+          const heading = hero.querySelector('h1');
+          const sub = hero.querySelector('.sub');
+          const header = document.querySelector('#site-nav');
+          if (!heading || !sub || !header) return;
+          const heroStyle = getComputedStyle(hero);
+          const headingStyle = getComputedStyle(heading);
+          // A probe resolves the same responsive rail position without reading
+          // its entrance animation or its moving chapter layout.
+          const probe = document.createElement('span');
+          probe.style.cssText = 'position:fixed;visibility:hidden;bottom:calc(var(--nav-centre-bottom) + var(--nav-hero-lift) + var(--nav-major) / 2);height:0;';
+          body.append(probe);
+          const railTop = probe.getBoundingClientRect().top;
+          probe.remove();
+          const normalTop = hero.offsetTop + parseFloat(heroStyle.paddingTop);
+          const contentHeight = heading.offsetHeight + parseFloat(headingStyle.marginBottom) + sub.offsetHeight;
+          const centeredTop = (header.getBoundingClientRect().bottom + railTop - contentHeight) / 2;
+          hero.style.setProperty('--hero-growth-offset', `${Math.max(0, centeredTop - normalTop)}px`);
+        };
+        measureLift();
+        const layoutObserver = new ResizeObserver(measureLift);
+        layoutObserver.observe(hero);
+        layoutObserver.observe(hero.querySelector('h1'));
+        layoutObserver.observe(hero.querySelector('.sub'));
+        addEventListener('resize', measureLift);
+        document.fonts.ready.then(measureLift);
+      }
       const ENTRY_WAIT_CAP = 1800;
       let released = false;
       const release = (timestamp = performance.now()) => {

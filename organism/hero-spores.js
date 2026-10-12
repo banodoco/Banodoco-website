@@ -139,7 +139,7 @@
  * does not have.
  * ==================================================================== */
 
-import { createHeroMode } from '../journey/boot/hero-mode.js';
+import { createHeroMode, growthView } from '../journey/boot/hero-mode.js';
 // Both leaves, both import-free, and both here for ONE number: the pixel ratio
 // the scene's renderer will be built with. See sizeCanvas() for why this layer
 // has to know it. (PIN_PR is parsed once, in ../flags.js — THE flag registry.)
@@ -435,7 +435,9 @@ function makeRng(seed) {
  *  so nothing is published to <body> from this module. */
 function readView(heroMode) {
   const mode = heroMode.resolve();
-  const v = heroMode.viewFor(mode);
+  const lifted = typeof document !== 'undefined'
+    && document.body.classList.contains('hero-growth-lift');
+  const v = growthView(heroMode.viewFor(mode), mode, lifted ? 0 : 1);
   return {
     mode,
     // organism/renderer.js: position (0.15 + panX, camY, camZ), target

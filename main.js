@@ -75,7 +75,7 @@ const bakedGeomReady = bakedModuleP.then((m) => m.ready);
    cannot see it at all. It is also the page's own hero rather than the
    journey's. Moving it would have bought a shorter file and no proof. */
 import { createSceneNote, NOTE } from './journey/boot/scene-note.js';
-import { createHeroMode } from './journey/boot/hero-mode.js';
+import { createHeroMode, growthView } from './journey/boot/hero-mode.js';
 import { createEntryQueue } from './journey/boot/entry-queue.js';
 import { createJourneyHandoff } from './journey/boot/handoff.js';
 // Fetch/parse the full journey graph during the quiet preparation frame. The
@@ -356,7 +356,8 @@ let sceneApi = null;
 try {
   const { createScene } = await organismModuleP;
   sceneApi = await createScene({
-    ...heroMode.viewFor(heroMode.current()),
+    ...growthView(heroMode.viewFor(heroMode.current()), heroMode.current(),
+      skipIntro ? 1 : (introAt === null ? 0 : Number(introAt))),
     container: document.getElementById('stage'),
     tiltX: -0.14,
     bg: 0x1c160b,
@@ -369,6 +370,27 @@ try {
   document.body.classList.remove('scene-preparing');
   console.error('[glowshroom] scene failed to start', err);
   note.show(NOTE.sceneFailed);
+}
+
+if (sceneApi && !skipIntro && heroMode.current() === 'mobile') {
+  // The scene's own growth clock also drives the copy. Register before the
+  // journey director so navigation can relinquish this writer synchronously.
+  let releaseTilt;
+  const followGrowth = () => {
+    const mode = heroMode.resolve();
+    const progress = sceneApi.intro.growthProgress;
+    sceneApi.setView(growthView(heroMode.viewFor(mode), mode, progress));
+    if (progress >= 1) {
+      releaseTilt();
+      sceneApi.releaseIntroCamera = null;
+    }
+  };
+  releaseTilt = sceneApi.addAnimator('hero-growth-camera', followGrowth);
+  sceneApi.releaseIntroCamera = () => {
+    releaseTilt();
+    sceneApi.releaseIntroCamera = null;
+    return heroMode.viewFor(heroMode.resolve());
+  };
 }
 
 if (sceneApi) {

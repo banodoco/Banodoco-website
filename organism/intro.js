@@ -363,6 +363,13 @@ export function setupIntro(ctx) {
     accelerate,
     teardown,
     eachShellVariant,
+    // One progress source for composition that follows the visible growth,
+    // including an early navigation's exact-duration acceleration.
+    get growthProgress() {
+      if (completed || !(intro > 0)) return 1;
+      if (_introAt !== null) return Math.min(1, Math.max(0, parseFloat(_introAt) || 0));
+      return Math.min(1, Math.max(0, introClock.elapsedMs() / (intro * 1000)));
+    },
     get started() { return introClock.started; },
     get complete() { return completed; },
   };

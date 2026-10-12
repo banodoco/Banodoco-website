@@ -425,6 +425,15 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     on = !!on;
     if (on === transitioning) return;
     transitioning = on;
+    if (on && sceneApi.releaseIntroCamera) {
+      // Preserve the exact visible departure while banking the settled hero
+      // as the return destination. Intro growth can continue during flight,
+      // but its camera writer must not compete with this director.
+      pendingView = sceneApi.releaseIntroCamera();
+      captureHero(null);
+      preserveDepartureHero = true;
+      return;
+    }
     if (on && !owned && pendingView) {
       const interrupted = !!(sceneApi.cancelViewTransition
         && sceneApi.cancelViewTransition());
