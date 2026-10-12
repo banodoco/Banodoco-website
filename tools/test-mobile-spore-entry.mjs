@@ -7,8 +7,8 @@ import { rowLayout } from '../journey/layout/rail-geometry.js';
 const url = new URL('../organism/hero-spores.js', import.meta.url);
 const source = readFileSync(url, 'utf8').replace(/from\s+'(\.[^']+)'/g,
   (_, specifier) => `from '${new URL(specifier, url).href}'`);
-const { createField, advance } = await import('data:text/javascript;base64,' +
-  Buffer.from(source + '\nexport { createField, advance };').toString('base64'));
+const { createField, advance, reframe } = await import('data:text/javascript;base64,' +
+  Buffer.from(source + '\nexport { createField, advance, reframe };').toString('base64'));
 globalThis.document={getElementById(){return null}};
 for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
   globalThis.innerWidth=w; globalThis.innerHeight=h;
@@ -105,7 +105,7 @@ globalThis.innerWidth=390; globalThis.innerHeight=664;
 const mode=createHeroMode(), m=mode.resolve();
 // Freeze the reference camera too: changing the intro lens should not rewrite
 // a golden intended to guard the ordinary current's integration.
-const v={...mode.viewFor(m),panX:0,targetY:5.1084549711905325};
+const v={panX:0,camY:3.575,camZ:12.697213855421687,fov:64,targetY:5.1084549711905325};
 const originalStream=createField({mode:m,camX:.15+v.panX,camY:v.camY,camZ:v.camZ,
   tgtX:v.panX,tgtY:v.targetY,tanHalfFov:Math.tan(v.fov*Math.PI/360),aspect:390/664},0x5be1);
 originalStream.landings=[];
@@ -117,3 +117,27 @@ assert.deepEqual([0,17,118,301,619].map(i=>Array.from(originalStream.frame.slice
    [2.920044183731079,-0.5111774206161499,9.87977123260498],
    [-0.40327972173690796,2.473459005355835,9.219886779785156]],
   'ordinary mobile stream retains its exact pre-cde1743 positions after two seconds');
+
+// Toolbar-only resize changes the anchor while a spore is already falling.
+// Re-aim from its current visible position, never back from its old stream.
+const resizeView={mode:m,camX:.15+v.panX,camY:v.camY,camZ:v.camZ,
+  tgtX:v.panX,tgtY:v.targetY,tanHalfFov:Math.tan(v.fov*Math.PI/360),aspect:390/664};
+const falling=createField(resizeView,0x5be1);
+while(!falling.landings[0].aimed) advance(falling,1/60,.72);
+for(let i=0;i<30;i++) advance(falling,1/60,.72);
+const landing=falling.landings[0], before=Array.from(falling.frame.slice(landing.hi*3,landing.hi*3+3));
+reframe(falling,{...resizeView,tgtY:resizeView.tgtY+.5});
+assert.deepEqual(Array.from(falling.frame.slice(landing.hi*3,landing.hi*3+3)),before,
+  'toolbar re-aim preserves the in-flight particle position');
+assert.deepEqual(Array.from(landing.p0),before,'remaining descent begins at the displayed particle');
+const nextView={...resizeView,aspect:430/932,tanHalfFov:resizeView.tanHalfFov*.85};
+reframe(falling,nextView);
+const after=Array.from(falling.frame.slice(landing.hi*3,landing.hi*3+3));
+assert.ok(Math.abs(after[0]/(after[2]*nextView.tanHalfFov*nextView.aspect)
+  -before[0]/(before[2]*resizeView.tanHalfFov*resizeView.aspect))<1e-6);
+assert.ok(Math.abs(after[1]/(after[2]*nextView.tanHalfFov)
+  -before[1]/(before[2]*resizeView.tanHalfFov))<1e-6,
+  'aspect and FOV changes preserve the falling spore screen position');
+assert.deepEqual(Array.from(landing.p0),after);
+assert.deepEqual(Array.from(landing.p3),Array.from(falling.sites.slice(0,3)),
+  'remaining descent arrives at the newly projected ground anchor');

@@ -713,6 +713,13 @@ function reframe(F, view) {
     const d = F.frame[i3 + 2];
     const halfH = d * oldTanHalfFov;
     const xPrev = F.frame[i3] / (halfH * oldAspect);
+    if (F.landings.some(L => L.hi === i && L.state === 1 && L.aimed)) {
+      // A toolbar resize must not put a falling spore back on its former
+      // stream lane. Preserve its painted position before re-aiming below.
+      F.frame[i3] *= (F.aspect * F.tanHalfFov) / (oldAspect * oldTanHalfFov);
+      F.frame[i3 + 1] *= F.tanHalfFov / oldTanHalfFov;
+      continue;
+    }
     // hold each particle on its own streamline, re-derived in the new frame
     const e0 = Math.min(c.e[1], Math.max(c.e[0], F.q[i]));
     const x = Math.min(c.xOut, Math.max(c.xIn, xPrev));
@@ -2590,6 +2597,10 @@ function createPreload() {
       if (state.reduced) draw(0);
     };
     addEventListener('resize', onResize);
+    // iPhone browser chrome can resize the visible viewport without a window
+    // resize. Keep the worker's anchor on the same measured rail as the scene;
+    // reframe preserves the current spore and re-aims its remaining flight.
+    globalThis.visualViewport?.addEventListener('resize', onResize);
     // A hidden tab pays for nothing. rAF is already suspended by
     // every current engine when the document is hidden; parking the loop
     // explicitly also covers the cases where it is not (an occluded but
@@ -2631,7 +2642,11 @@ function createPreload() {
     state.live = false;
     // hand integration to whoever else holds this field
     if (state.field) state.field.preloadDriven = false;
-    if (onResize) { removeEventListener('resize', onResize); onResize = null; }
+    if (onResize) {
+      removeEventListener('resize', onResize);
+      globalThis.visualViewport?.removeEventListener('resize', onResize);
+      onResize = null;
+    }
     if (onVisibility) {
       document.removeEventListener('visibilitychange', onVisibility);
       onVisibility = null;

@@ -1,4 +1,4 @@
-import { rowLayout } from '../layout/rail-geometry.js';
+import { mobileLandingY } from '../layout/rail-geometry.js';
 import { LANDING_SITES } from '../../organism/network-skeleton.js';
 
 /* ==================================================================== *
@@ -216,6 +216,10 @@ function viewFor(mode) {
     v.camY += lowerBy;
     v.targetY = 3.09 + 1.2 * t + lowerBy;
     v.camZ = 11.5 + 1.3 * t;
+    // A modest lift toward the tighter cap/copy framing: about thirteen CSS
+    // pixels above the original rest. Only change the final pitch; the
+    // landing's independently solved starting view stays anchored to Equip.
+    v.targetY -= 13 * 2 * v.camZ * Math.tan(v.fov * Math.PI / 360) / innerHeight;
   }
   /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
      layout input: display scaling and window chrome give the same laptop many
@@ -335,12 +339,7 @@ export function growthView(view, mode, progress) {
   const p = Math.max(0, Math.min(1, Number(progress) || 0));
   const ease = p * p * (3 - 2 * p);
   if (p === 1) return { ...view };
-  const row = rowLayout(innerWidth, innerHeight);
-  // site.css --nav-hero-lift raises the ordinary row to 13.5vh from the
-  // bottom while on the hero. Include that stable authored lift, not an
-  // animated DOM box (which is not mounted yet in the prelude).
-  const heroCentreY = Math.min(row.centreY, innerHeight * (1 - 0.135));
-  const landingPixelY = heroCentreY - row.majorRingD / 2 - 10;
+  const landingPixelY = mobileLandingY(innerWidth, innerHeight);
   const ndcY = 1 - 2 * landingPixelY / innerHeight;
   // At panX=0 the landing and Equip share the viewport centre. The renderer
   // keeps its eye 0.15 units right of its target; include that in the pitch

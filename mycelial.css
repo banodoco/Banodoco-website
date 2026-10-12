@@ -324,7 +324,10 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
   }
 }
 @media (max-width: 720px) {
-  .j-manifesto { --mycelial-reading-top: 100px; }
+  .j-manifesto {
+    /* Header top padding + its 44px mark + a small clear gap. */
+    --mycelial-reading-top: calc(2.1rem + 44px + 8px);
+  }
   /* The reading column now starts at the top. Keep its scrim behind the
      words, releasing the scene below instead of darkening the empty footer. */
   .j-manifesto::before {
@@ -343,6 +346,13 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
       + var(--nav-major) * .95 + var(--nav-minor-ring-d) / 2 + 24px);
     align-items: flex-start;
   }
+}
+
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-manifesto { --mycelial-reading-top: calc(20.8px + 44px + 8px); }
+}
+@media (min-width: 621px) and (max-width: 720px) and (orientation: portrait) {
+  .j-manifesto { --mycelial-reading-top: calc(24px + 44px + 8px); }
 }
 
 /* Inline reference, with its reading note above the clipped manifesto panel. */
@@ -645,9 +655,9 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
     scroll-behavior: auto;
     --reading-mask-top: #000;
     --reading-mask-bottom: #000;
-    mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 2.5rem,
+    mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 1rem,
       #000 calc(100% - 2.5rem), var(--reading-mask-bottom));
-    -webkit-mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 2.5rem,
+    -webkit-mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 1rem,
       #000 calc(100% - 2.5rem), var(--reading-mask-bottom));
   }
   .j-manifesto.is-scroll-reading.has-reading-above .j-manifesto-lines { --reading-mask-top: transparent; }
@@ -668,6 +678,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   .j-manifesto.is-scroll-reading .j-manifesto-panel::before {
     content: '';
     top: 0;
+    height: 1rem;
     mask-image: linear-gradient(#000, transparent);
     -webkit-mask-image: linear-gradient(#000, transparent);
   }

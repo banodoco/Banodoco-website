@@ -117,9 +117,13 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   if (heroCopy && document.body.classList.contains('hero-growth-lift')) {
     const followGrowth = () => {
       const progress = skipIntro ? 1 : scene.intro.growthProgress;
-      const eased = progress * progress * (3 - 2 * progress);
+      // Finish between the cap's first stroke and the end of growth: a
+      // calmer rise that still clears the specimen before growth completes.
+      const liftEnd = (1 + scene.intro.capStartProgress) / 2;
+      const lift = Math.min(1, Math.max(0, progress / liftEnd));
+      const eased = lift * lift * (3 - 2 * lift);
       heroCopy.style.setProperty('--hero-growth-progress', String(eased));
-      if (progress < 1 && !frozen) requestAnimationFrame(followGrowth);
+      if (lift < 1 && !frozen) requestAnimationFrame(followGrowth);
     };
     followGrowth();
   }

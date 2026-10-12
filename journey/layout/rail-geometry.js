@@ -372,3 +372,31 @@ export function railBox(snap, pad, includeHalo = false) {
   const bottom = h ? Math.max(r.bottom, h.bottom) : r.bottom;
   return { left: left - pad, right: right + pad, top: top - pad, bottom: bottom + pad };
 }
+
+let landingFrame = null;
+
+/** The preboot rail is already in the HTML when the spore worker starts.
+ * Measure its painted circle, including ancestor scale and Safari's resolved
+ * viewport units. Cache the shared result so the worker and scene use one
+ * anchor without measuring layout on every growth frame. */
+export function mobileLandingY(width, height) {
+  const viewport = globalThis.visualViewport;
+  const key = `${width}/${height}/${viewport?.width}/${viewport?.height}`;
+  if (landingFrame?.key === key) return landingFrame.y;
+  const mark = globalThis.document?.querySelector?.('.j-rail [data-chapter="equip"] .j-rail-mark');
+  if (mark && typeof getComputedStyle === 'function') {
+    const rect = mark.getBoundingClientRect();
+    const boxHeight = parseFloat(getComputedStyle(mark).height);
+    const circleHeight = parseFloat(getComputedStyle(mark, '::after').height);
+    if (rect.height > 0 && boxHeight > 0 && circleHeight > 0) {
+      const scale = rect.height / boxHeight;
+      const y = rect.top + rect.height / 2 - circleHeight * scale / 2 - 10;
+      landingFrame = { key, y };
+      return y;
+    }
+  }
+  // Non-DOM callers and a missing shell retain a deterministic fallback.
+  // Do not cache it: the real preboot geometry can become available later.
+  const row = rowLayout(width, height);
+  return Math.min(row.centreY, height * .865) - row.majorRingD / 2 - 10;
+}

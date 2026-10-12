@@ -370,6 +370,7 @@ export function setupIntro(ctx) {
       if (_introAt !== null) return Math.min(1, Math.max(0, parseFloat(_introAt) || 0));
       return Math.min(1, Math.max(0, introClock.elapsedMs() / (intro * 1000)));
     },
+    get capStartProgress() { return GROWTH.gills[0]; },
     get started() { return introClock.started; },
     get complete() { return completed; },
   };
