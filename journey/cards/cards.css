@@ -1478,25 +1478,11 @@
   .j-pop-stage.j-pop-unbuilt { animation: none !important; }
 }
 
-/* The unbuilt Equip pair (Quark, Brötchen) carry a pictograph in their tab
-   in place of the ember (journey/cards/soon-icons.js). Same footprint as the
-   initiative tab's drawing: 13px inside the 22px tab, 4.5px in. */
-.j-hot--soon .j-hot-dot.j-hot-ico { box-sizing: border-box; width: 22px; height: 22px; padding: 4.5px; }
-.j-hot--soon .j-hot-dot.j-hot-ico::after { content: none; }
-.j-hot--soon .j-hot-dot.j-hot-ico svg {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 13px; height: 13px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform 0.3s ease;
-}
-.j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg { transform: scale(1.14); }
-@media (prefers-reduced-motion: reduce) {
-  .j-hot--soon .j-hot-dot.j-hot-ico svg,
-  .j-hot--soon:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg { transform: none; transition: none; }
+/* Withheld names keep the exact initiative marker housing and icon above.
+   Blur is intentional content treatment, including on touch devices and in
+   increased-contrast mode; neither setting should reveal the name's ink. */
+.j-hot--icon-tab.j-hot--soon .j-hot-label {
+  -webkit-filter: blur(2.6px);
+  filter: blur(2.6px);
+  user-select: none;
 }

@@ -22,6 +22,7 @@
 
 import * as THREE from 'three';
 import { VARY_GLSL } from './variation.js';
+import { BODY_DISSOLVE_GLSL } from '../../lib/body-dissolve.js';
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
 // material. The hero grafts uProg/uWin/pulse into the stock line shader at
@@ -197,19 +198,22 @@ export const rootFrame = () => {
 /** The opaque shells: a per-body clone of the hero's MeshBasicMaterial with
  *  the same map grafted into the stock shader. `transformed` is the stock
  *  local position — varyPt's frame hop is what puts it in the body frame. */
-export function cloneShellMat(src, own, frame) {
+export function cloneShellMat(src, own, frame, vary = true) {
   const m = src.clone();
   // intro.js's shellsRestore() state, pinned rather than inherited — see the
   // section header. A clone is never mid-grow-in.
   m.opacity = 1; m.transparent = false; m.clippingPlanes = null;
   m.onBeforeCompile = (sh) => {
-    bindVary(sh.uniforms, own, frame);
+    if (vary) bindVary(sh.uniforms, own, frame);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + VARY_GLSL)
+      .replace('#include <common>', '#include <common>\n' + (vary ? VARY_GLSL : '') + '\nvarying vec3 vBodyDissolvePosition;')
       .replace('#include <begin_vertex>',
-        '#include <begin_vertex>\n  transformed = varyPt(transformed);');
+        '#include <begin_vertex>\n' + (vary ? 'transformed = varyPt(transformed); ' : '') + 'vBodyDissolvePosition = transformed;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\n' + BODY_DISSOLVE_GLSL)
+      .replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n dissolveBody(diffuseColor.a);');
   };
-  m.customProgramCacheKey = () => 'clone-vary-shell';
+  m.customProgramCacheKey = () => `clone-shell-dissolve-v1-${vary ? 'varied' : 'plain'}`;
   return m;
 }
 

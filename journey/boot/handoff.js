@@ -522,6 +522,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         if (!state) throw new Error('Journey boot returned no state');
         await state.ready;
         readyState = state;
+        earlyRail?.setReady(true);
 
         if (skipIntro || frozen) {
           document.body.classList.remove('scene-preparing');

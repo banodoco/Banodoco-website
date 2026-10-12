@@ -119,11 +119,12 @@ export function breeze(t) {
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth01 = (x) => { const c = clamp01(x); return c * c * (3 - 2 * c); };
 
-/** intro.js `_shellFade`, for a clone's own shell materials. Solidity follows
- *  the ink: `k` is how far this region's stroking has got. At k = 1 the state
- *  is byte-identical to the shipped parked one (opaque, not transparent). */
+/** Region growth multiplied by chapter presence controls spatial coverage.
+ * At full coverage the shell is the original opaque, depth-writing body. */
 function shellFade(meshes, mats, k) {
-  for (const m of mats) { m.transparent = k < 1; m.opacity = k; }
+  // Discarded fragments write no depth. Alpha-blending a dark shell while
+  // still writing its full depth left a black husk over the network behind.
+  for (const m of mats) { m.transparent = false; m.opacity = k; }
   for (const sh of meshes) sh.visible = k > 0;
 }
 
@@ -582,11 +583,11 @@ export function createClones(sceneApi) {
       // material is now this body's own (one clone per distinct source
       // material per body — the §5 shells share one, the stem core has
       // another). Same meshes, same draw count, one extra program.
-      let sm = m;
-      if (varyOk) {
-        sm = own.shellMats.get(m);
-        if (!sm) { sm = cloneShellMat(m, own, fr); own.shellMats.set(m, sm); shellMats++; }
-      }
+      // Solidity is always body-owned, even if optional shape variation is
+      // unavailable after a hero shader change. Sharing the hero material in
+      // that fallback made independent dissolve impossible and left husks.
+      let sm = own.shellMats.get(m);
+      if (!sm) { sm = cloneShellMat(m, own, fr, varyOk); own.shellMats.set(m, sm); shellMats++; }
       c = new THREE.Mesh(o.geometry, sm);
       shells.push(c);
       shellMeshes++;
@@ -656,20 +657,11 @@ export function createClones(sceneApi) {
     capBendC.quaternion.identity();                   // strip the hero's live bend snapshot
     sway.add(stemC, capBendC);
     group.add(root);
-    // THE TWO SHELL MATERIAL SETS, and the test that says whether this body may
-    // fade them. Two things have to hold. (1) The materials must be OURS:
-    // without the variation graft cloneShellMat is never reached and the shells
-    // are the hero's own, shared outright — writing .opacity on one of those
-    // would reach into organism's graph, which is the one thing this file may
-    // never do. (2) The two groups must not share a material, or one region's
-    // fade would drive the other's. As built they cannot: organism §5's three
-    // cap shells share one MeshBasicMaterial on `mushroom` and the stem core
-    // has its own on `stemGroup`. Asserted rather than assumed, because a
-    // future organism that merged them would otherwise fade a body's cap with
-    // its stipe and nobody would know why.
+    // Shells are always privately owned. The cap and stem must also keep
+    // separate materials so their independently timed growth cannot fight.
     const stemShellMats = [...new Set(stemShells.map(m => m.material))];
     const capShellMats = [...new Set(capShells.map(m => m.material))];
-    const ownShells = varyOk && stemShellMats.length > 0 && capShellMats.length > 0
+    const ownShells = stemShellMats.length > 0 && capShellMats.length > 0
       && !stemShellMats.some(m => capShellMats.includes(m));
     const c = {
       root, sway, capBend: capBendC, mats,
@@ -810,8 +802,8 @@ export function createClones(sceneApi) {
       // add()) — the same behaviour, never a half-applied one.
       let ks, kc;
       if (c.ownShells) {
-        ks = lit ? clamp01((s - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
-        kc = lit ? clamp01((s - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
+        ks = lit ? clamp01(eff) * clamp01((s - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
+        kc = lit ? clamp01(eff) * clamp01((s - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
       } else {
         ks = lit && s >= (STEM_SHELL_LO + STEM_SHELL_HI) / 2 ? 1 : 0;
         kc = lit && s >= (CAP_SHELL_LO + CAP_SHELL_HI) / 2 ? 1 : 0;

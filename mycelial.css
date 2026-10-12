@@ -86,9 +86,10 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   opacity: 1;
   filter: none;
   transform: translateX(calc(var(--brand-away) * -100%));
-  /* The journey paints the eased transition each frame. */
-  transition: none;
+  /* Position tracks the journey; opacity only reveals the loaded font. */
+  transition: opacity .18s ease;
 }
+.wordmark-font-pending .ui .logo .wordmark { opacity: 0; }
 .ui .logo .mushroom-mark {
   width: 44px; height: 44px; left: 0;
   overflow: visible;
@@ -375,16 +376,36 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
 }
 .manifesto-note-tooltip[hidden] { display: none; }
 
+/* Purpose's child names share its arrival rather than snapping on when the
+   travel class clears. A return from a gathered child also gets a soft reveal. */
+.j-rail .j-rail-slot.j-rail-purpose-child .j-rail-name {
+  transition: opacity 1.25s cubic-bezier(.22, .6, .25, 1), color .35s ease;
+}
+.j-rail.j-rail-purpose-arriving:not(.j-rail-purpose-gathering)
+  .j-rail-slot.j-rail-purpose-child .j-rail-name {
+  opacity: var(--purpose-child-label-u, 0) !important;
+  transition: color .35s ease;
+}
+
 /* The gathered tree persists across sibling travel; labels answer deliberate hover. */
 body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 .j-rail.j-rail-purpose-gathering .j-rail-purpose-child .j-rail-name {
   opacity: 0 !important;
+  transition-duration: .35s;
 }
-.j-rail:not(.j-rail-purpose-travelling) .j-rail-slot.j-rail-purpose-child .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
+/* Touch browsers retain :hover after a tap. Only a real hover-capable
+   pointer may reopen these labels; keyboard focus remains explicit. */
+@media (hover: hover) and (pointer: fine) {
+  .j-rail:not(.j-rail-purpose-travelling) .j-rail-slot.j-rail-purpose-child .j-rail-item:hover .j-rail-name {
+    opacity: 1 !important;
+  }
+}
+.j-rail:not(.j-rail-purpose-travelling) .j-rail-slot.j-rail-purpose-child .j-rail-item:focus-visible .j-rail-name {
   opacity: 1 !important;
 }
-.j-rail.j-rail-purpose-travelling .j-rail-slot.j-rail-purpose-child .j-rail-name {
+.j-rail.j-rail-purpose-travelling:not(.j-rail-purpose-arriving) .j-rail-slot.j-rail-purpose-child .j-rail-name {
   opacity: 0 !important;
+  transition-duration: .35s;
 }
 
 /* Related words share a colour, but each slow swell starts on its own reveal beat. */
@@ -548,4 +569,127 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   body.hero-growth-lift .ui .hero {
     translate: 0 calc(var(--hero-growth-offset, 0px) * (1 - var(--hero-growth-progress, 0)));
   }
+}
+
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-block.pos-bottomleft[data-chapter="final"] {
+    left: 0;
+    width: 100%;
+    max-width: none;
+    text-align: center;
+    bottom: auto;
+    /* Centre the complete copy block between header bottom and the upper
+       edge of Purpose's navigation fork, retaining its independent fade. */
+    top: calc((4.2rem + 44px + 100% - var(--nav-centre-bottom)
+      - var(--purpose-rail-lift-max) - var(--purpose-up-branch)
+      - var(--nav-major) / 2) / 2);
+    translate: 0 -50%;
+  }
+  .j-block[data-chapter="final"] .j-sub { margin-inline: auto; }
+}
+
+/* Mobile keeps the desktop reveal rhythm in one continuous native scroll
+   surface. Reveal-driven following yields immediately to manual reading. */
+.j-manifesto.is-scroll-reading .j-manifesto-lines {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  pointer-events: auto;
+  mask-image: none;
+  -webkit-mask-image: none;
+  scrollbar-width: thin;
+  scrollbar-color: #b28a4b transparent;
+  padding-right: .35rem;
+}
+.j-manifesto.is-scroll-reading .j-manifesto-line {
+  transform: none;
+  transition: none;
+  pointer-events: auto;
+}
+@media (max-width: 720px) {
+  .j-manifesto.is-scroll-reading .j-manifesto-line {
+    font-size: clamp(14px, 3.9vw, 17px);
+    line-height: 1.65;
+    letter-spacing: .09em;
+  }
+  .j-manifesto.is-scroll-reading .j-manifesto-lines { gap: 1.2em; }
+}
+
+/* Soft edges indicate the continuation of a single flowing text column. */
+@media (max-width: 720px) {
+  .j-manifesto.is-scroll-reading .j-manifesto-panel {
+    position: relative;
+    height: calc(100dvh - var(--mycelial-reading-top) - var(--manifesto-reserve));
+    max-height: none;
+    padding-block: 0;
+  }
+  .j-manifesto.is-scroll-reading .j-manifesto-lines {
+    box-sizing: border-box;
+    height: 100%;
+    flex: 1 1 auto;
+    gap: 1.2em;
+    padding-top: var(--reading-pad-top, 1rem);
+    padding-bottom: var(--reading-pad-bottom, 1rem);
+    scroll-behavior: auto;
+    --reading-mask-top: #000;
+    --reading-mask-bottom: #000;
+    mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 2.5rem,
+      #000 calc(100% - 2.5rem), var(--reading-mask-bottom));
+    -webkit-mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 2.5rem,
+      #000 calc(100% - 2.5rem), var(--reading-mask-bottom));
+  }
+  .j-manifesto.is-scroll-reading.has-reading-above .j-manifesto-lines { --reading-mask-top: transparent; }
+  .j-manifesto.is-scroll-reading.has-reading-below .j-manifesto-lines { --reading-mask-bottom: transparent; }
+  .j-manifesto.is-scroll-reading .j-manifesto-panel::before,
+  .j-manifesto.is-scroll-reading .j-manifesto-panel::after {
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    right: 0;
+    height: 2rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s ease;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+  .j-manifesto.is-scroll-reading .j-manifesto-panel::before {
+    content: '';
+    top: 0;
+    mask-image: linear-gradient(#000, transparent);
+    -webkit-mask-image: linear-gradient(#000, transparent);
+  }
+  .j-manifesto.is-scroll-reading .j-manifesto-panel::after {
+    content: '';
+    bottom: 0;
+    mask-image: linear-gradient(transparent, #000);
+    -webkit-mask-image: linear-gradient(transparent, #000);
+  }
+  .j-manifesto.is-scroll-reading.has-reading-above .j-manifesto-panel::before,
+  .j-manifesto.is-scroll-reading.has-reading-below .j-manifesto-panel::after { opacity: 1; }
+}
+
+/* Readiness has its own inherited fade, leaving the rail's layout and
+   chapter-specific opacity choreography untouched. */
+@property --nav-readiness {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+.j-rail,
+.j-rail:not(.j-rail-column) {
+  --nav-readiness: 1;
+  transition: opacity .45s ease, --nav-readiness .9s ease;
+}
+.j-rail.is-loading { --nav-readiness: 0; }
+.j-rail .j-rail-item,
+.j-rail .j-rail-menu,
+.j-rail .j-rail-active-ring {
+  filter: opacity(calc(.35 + .65 * var(--nav-readiness)))
+    saturate(calc(.45 + .55 * var(--nav-readiness)));
+}
+.j-rail.is-loading .j-rail-item,
+.j-rail.is-loading .j-rail-menu { cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  .j-rail, .j-rail:not(.j-rail-column) { transition: none; }
 }

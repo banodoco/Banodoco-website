@@ -200,4 +200,45 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
     'a label behind the camera cannot linger at its last screen position');
 }
 
+// Mobile collision and edge offsets are banked from the last painted frame,
+// while the anchor continues moving. Recomputing the dodge during a fade used
+// to move a half-visible marker by a whole 26px in a single frame.
+globalThis.window = { innerWidth: 390, innerHeight: 844 };
+Object.assign(paintedMarker, { a: 1, sx: 300, sy: 300, pendX: 270,
+  dodgeY: 20, departureTicket: null, departureLayout: null });
+const mobileFrame = createHotspotFrame({ hotspots: [paintedMarker], blocks,
+  sheetQuery: { matches: true } });
+const mobileTicket = {};
+const mobilePaint = (ticket, x, chapterId = 'connect', copyGate = 0.8) => mobileFrame.place({
+  p: restProgress(chapterId), dt: 0.016, detail: false, chapterId,
+  railFlight: ticket, copyEase: () => copyGate, excluded: new Set(),
+  geom: { ...geom, project: () => ({ x, y: 0, z: 0 }) }, now: 2000,
+});
+mobilePaint(mobileTicket, 0.5);
+assert.equal(paintedMarker.pendX - paintedMarker.sx, -30, 'departure preserves the painted edge offset');
+assert.equal(paintedMarker.dodgeY, 20, 'departure preserves the painted collision offset');
+const firstMobileTransform = paintedButton.style.transform;
+mobilePaint(mobileTicket, -0.5);
+assert.notEqual(paintedButton.style.transform, firstMobileTransform, 'the held offset does not pin the marker to the screen');
+assert.equal(paintedMarker.pendX - paintedMarker.sx, -30);
+assert.equal(paintedMarker.dodgeY, 20);
+const beforeRetarget = paintedButton.style.transform;
+mobilePaint({}, -0.5, 'final');
+assert.equal(paintedButton.style.transform, beforeRetarget, 'retargeting banks the currently painted offset without a jump');
+mobilePaint(null, -0.5, 'inspire');
+assert.equal(paintedMarker.departureLayout, null, 'arrival restores responsive layout instead of retaining an old departure');
+Object.assign(paintedMarker, { a: 0.5, pendX: undefined, sx: undefined, dodgeY: undefined,
+  departureTicket: null, departureLayout: null });
+mobilePaint({}, 0);
+assert.equal(paintedMarker.departureLayout.xOffset, 0, 'an unpainted marker cannot inject a non-finite horizontal offset');
+assert.equal(paintedMarker.departureLayout.dodgeY, 0, 'an unpainted marker cannot inject a non-finite dodge');
+// The desktop branch keeps its ordinary collision solve, even when the same
+// record has just been used on a phone (e.g. after a resize).
+Object.assign(paintedMarker, { a: 1, dodgeY: 20, departureTicket: null });
+frame.place({ p: restProgress('connect'), dt: 0.016, detail: false,
+  chapterId: 'connect', railFlight: {}, copyEase: () => 0.8,
+  excluded: new Set(), geom, now: 2200 });
+assert.equal(paintedMarker.departureLayout, null, 'desktop does not inherit the mobile departure rule');
+assert.equal(paintedMarker.dodgeY, 0, 'desktop collision solving remains unchanged');
+
 console.log('hotspot direct-departure copy sync and world motion: ok');

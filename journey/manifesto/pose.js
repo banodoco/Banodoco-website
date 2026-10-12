@@ -4,6 +4,10 @@ import { CONTENT } from '../../content/content.js';
 // retain their own reading rhythm; the flight follows the finished last word.
 export const WORD_STAGGER_SECONDS = 0.11;
 export const WORD_REVEAL_SECONDS = 3;
+// j-manifesto-ink in journey/site.css reaches full opacity at its 30% key.
+// The remaining animation settles colour/glow; it must not delay reading.
+export const WORD_VISIBLE_FRACTION = 0.30;
+export const WORD_VISIBLE_SECONDS = WORD_REVEAL_SECONDS * WORD_VISIBLE_FRACTION;
 // THE DESCENT IS A FLIGHT TOO (2026-10-03 — Hannah: the way back "feels
 // weird and sudden and lacking in drama"). It used to rewind the whole 28s
 // ascent in 2.2s on a LINEAR clock — full speed on the first frame, a dead
@@ -59,15 +63,28 @@ export function revealSecondsFor(wordCounts) {
     starts[i] + Math.max(0, words - 1) * WORD_STAGGER_SECONDS + WORD_REVEAL_SECONDS));
 }
 export const CAMERA_SECONDS = revealSecondsFor(CONTENT.manifesto.lines.map(line => line.trim().split(/\s+/).length));
+// Lead the next ink by up to two seconds, once the preceding paragraph is
+// fully readable. Ink beats and the camera endpoint stay exactly as authored.
+export function mobileReadingSchedule(starts, lastWordBeats) {
+  const reveal = starts.slice(), admit = [];
+  for (let i = 0; i < starts.length; i++) {
+    const previousVisible = i > 0
+      ? starts[i - 1] + lastWordBeats[i - 1] * WORD_STAGGER_SECONDS + WORD_VISIBLE_SECONDS : 0;
+    admit[i] = i > 0 ? Math.max(previousVisible, starts[i] - 2) : starts[i];
+  }
+  return { reveal, admit, seconds: CAMERA_SECONDS };
+}
 export const AERIAL_BODY_COUNT = 560;
 export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 export const smoother = (v) => { v = clamp01(v); return v * v * v * (v * (v * 6 - 15) + 10); };
 const mix = (a, b, t) => a + (b - a) * t;
+export const isMobileManifesto = aspect => aspect < 0.9 ||
+  (typeof window !== 'undefined' && window.innerWidth > 0 && window.innerWidth <= 720);
 export function frameShiftAt(seconds, aspect = 1.6, from = { position: { x: -14.72, z: 2.7 } }) {
-  const portrait = aspect < 0.9;
+  const portrait = isMobileManifesto(aspect);
   const spiral = smoother((seconds - SPIRAL_START_SECONDS) / (CAMERA_SECONDS - SPIRAL_START_SECONDS));
-  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * 100 / 180;
-  const distance = (portrait ? 18 : 11) * spiral;
+  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * (portrait ? 30 : 100) / 180;
+  const distance = (portrait ? 5 : 11) * spiral;
   return { x: -Math.sin(az) * distance, z: Math.cos(az) * distance };
 }
 
@@ -77,7 +94,8 @@ export function frameShiftAt(seconds, aspect = 1.6, from = { position: { x: -14.
  *  dot reaches the Manifesto as the camera reaches the top (2026-10-04,
  *  Hannah: it should "not reach the end until we've reached the actual top
  *  of the manifesto journey"). */
-export function ascentAt(seconds) {
+export function ascentAt(seconds, aspect = 1.6) {
+  if (isMobileManifesto(aspect)) return smoother(seconds / CAMERA_SECONDS);
   return 0.60 * smoother(seconds / 10) + 0.40 * smoother(seconds / CAMERA_SECONDS);
 }
 
@@ -95,36 +113,53 @@ export function ascentAt(seconds) {
    whole descent; simulated, the peak zoom rate falls 2.0 -> 0.87 and the
    overshoot is gone. `k` is the descent's eased clock, 0..1; `startU` the
    climb fraction it began from. */
-export function descentU(startU, k) {
+export function descentU(startU, k, aspect = 1.6, fromY = 0) {
   if (!(k < 1)) return 0;
   const top = Math.max(0, Math.min(1, startU)) * CAMERA_SECONDS;
-  const a = ascentAt(top) * (1 - smoother(Math.max(0, k)));
+  // Phone ascent has a separate three-unit opening lift. Rewinding only
+  // ascentAt leaves that lift (and its target/lens/bank) until the last 9%
+  // of a full return, producing a second downward move after the main flight.
+  // Invert the actual authored height so every part of the descent shares
+  // the same eased clock. Desktop retains its existing coordinate exactly.
+  const heightAt = isMobileManifesto(aspect)
+    ? seconds => mobileHeightAbove(fromY, seconds)
+    : seconds => ascentAt(seconds, aspect);
+  const a = heightAt(top) * (1 - smoother(Math.max(0, k)));
   if (!(a > 0)) return 0;
   let lo = 0, hi = top;
   for (let i = 0; i < 30; i++) {
     const mid = (lo + hi) / 2;
-    if (ascentAt(mid) < a) lo = mid; else hi = mid;
+    if (heightAt(mid) < a) lo = mid; else hi = mid;
   }
   return (lo + hi) / 2 / CAMERA_SECONDS;
+}
+
+// Shared by the outward pose and the inverse return; one height law prevents
+// the return from omitting a component of the mobile lift again.
+function mobileHeightAbove(fromY, seconds) {
+  return 3 * smoother(seconds / 3) + (38 - fromY - 3) * ascentAt(seconds, 0.5);
 }
 
 /** The lift and orbit share one flight clock. The first second keeps the
  * authored departure pose stable, then the counter-clockwise orbit starts
  * while the camera is still climbing. Increasing atan2(z,x) is
  * counterclockwise in the field's authored x/z plan (the same convention as
- * Final arcOf). World up stays fixed: this orbit has no roll. */
+ * Final arcOf). The mobile Purpose bank eases upright during the opening lift. */
 export function manifestoPose(from, seconds, aspect = 1.6) {
   // The lift and orbit overlap. Keeping the old 2.2s phase boundary made the
   // camera visibly settle before the counter-clockwise expansion began.
+  const portrait = isMobileManifesto(aspect);
   const lift = smoother(seconds / 3.0);
   const spiral = smoother((seconds - SPIRAL_START_SECONDS) / (CAMERA_SECONDS - SPIRAL_START_SECONDS));
-  const ascent = ascentAt(seconds);
-  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * 100 / 180;
-  const r = mix(Math.hypot(from.position.x, from.position.z), aspect < 0.9 ? 115 : 60, spiral);
+  // Phones stay within a nearby patch. Keep the full reading clock instead
+  // of stopping the desktop flight early: even its last paragraph has motion.
+  const ascent = ascentAt(seconds, aspect);
+  const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * (portrait ? 30 : 100) / 180;
+  const r = mix(Math.hypot(from.position.x, from.position.z), portrait ? 34 : 60, spiral);
   const height = Math.max(70, 76 / Math.max(0.38, aspect));
-  const portrait = aspect < 0.9;
+  const liftHeight = 8;
   const side = portrait ? 0 : 21;
-  const ahead = portrait ? 42 : 0;
+  const ahead = portrait ? 12 : 0;
   // Keep the reading column clear by easing the dense field toward the
   // right-hand middle as the aerial view settles. Translating the camera and
   // target together preserves the authored orbit while changing only the
@@ -134,7 +169,8 @@ export function manifestoPose(from, seconds, aspect = 1.6) {
   return {
     position: {
       x: (seconds <= SPIRAL_START_SECONDS ? from.position.x : Math.cos(az) * r) + shiftX,
-      y: from.position.y + 8 * lift + (height - from.position.y - 8) * ascent,
+      y: portrait ? from.position.y + mobileHeightAbove(from.position.y, seconds)
+        : from.position.y + liftHeight * lift + (height - from.position.y - liftHeight) * ascent,
       z: (seconds <= SPIRAL_START_SECONDS ? from.position.z : Math.sin(az) * r) + shiftZ,
     },
     target: {
@@ -143,6 +179,7 @@ export function manifestoPose(from, seconds, aspect = 1.6) {
       z: mix(from.target.z, -1 + Math.cos(az) * side + Math.sin(az) * ahead, spiral) + shiftZ,
     },
     fov: mix(from.fov, 46, lift),
+    roll: (from.roll || 0) * (1 - lift),
     field: smoother((seconds - SPIRAL_START_SECONDS) / 4.5),
     atmosphere: smoother(seconds / 8),
   };
@@ -281,13 +318,23 @@ export function planAerialReveals(bodies, from, aspect, output) {
       ux: -fy*rz, uy: fx*rz-fz*rx, uz: fy*rx,
       tangent: Math.tan(pose.fov*Math.PI/360) });
   }
+  // The smaller phone flight never needs the full 560-body landscape.
+  // Keep the nearest patch plus the authored Purpose seats. A future arrival
+  // excludes other bodies from the instance draw prefix (not just opacity).
+  const phoneBodies = isMobileManifesto(aspect) ? new Set(bodies
+    .map((body, i) => ({ i, radius: Math.hypot(body.x, body.z), seat: body.tier >= 4 }))
+    .filter(body => !body.seat && body.radius <= 48)
+    .sort((a, b) => a.radius - b.radius).slice(0, 140).map(body => body.i)) : null;
   const edgeLoad = new Uint16Array(4 * 7);
   for (let i = 0; i < bodies.length; i++) {
     const b = bodies[i];
     if (b.tier >= 4) { output[i*2] = -1; output[i*2+1] = 1; continue; }
+    if (phoneBodies && !phoneBodies.has(i)) {
+      output[i*2] = CAMERA_SECONDS + 1; output[i*2+1] = 1; continue;
+    }
     const hash = Math.sin(b.x*12.9898 + b.z*78.233) * 43758.5453;
     const jitter = hash - Math.floor(hash);
-    const desired = Math.min(25.5, 1.8 + Math.hypot(b.x,b.z)*0.15 + jitter*4.8) * clockScale;
+    const desired = Math.min(25.5, 1.8 + Math.hypot(b.x,b.z)*(phoneBodies ? 0.45 : 0.15) + jitter*4.8) * clockScale;
     let best = Infinity, start = desired, chosen = -1;
     for (const f of frames) {
       const x = b.x-f.p.x, y = b.gy+b.s*3.2-f.p.y, z = b.z-f.p.z;

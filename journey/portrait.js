@@ -572,8 +572,10 @@ const TAB_KEYS = [
 const PHONE_KEYS = [
   { p: ORBIT_P0, ...TZERO },
   { p: restProgress('inspire'), back: -0.66, rise: -0.40, truck: 0, tgtUp: 0.46, tgtRight: -0.05, fov: 2 },
-  // Zero at the Equip rest — see the TAB_KEYS note above.
-  { p: restProgress('equip'), ...TZERO },
+  // Re-aim Equip rightward so the stalk moves left behind the centre of
+  // the left-aligned phone copy. Ease back to zero at Connect's own rest.
+  { p: restProgress('equip'), ...TZERO, tgtRight: 0.29 },
+  { p: restProgress('connect'), ...TZERO },
 ];
 
 const FIELDS = ['back', 'rise', 'truck', 'tgtUp', 'tgtRight', 'fov'];
@@ -687,6 +689,7 @@ function aerialNarrowBack(pose, p, aspect, w) {
  *  aspect >= 1, except across the Connect span of the aerial view below
  *  aspect 1.5 (aerialNarrowBack above). */
 export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
+  pose.roll = 0;
   const w = portraitWeight(aspect);
   aerialNarrowBack(pose, p, aspect, w);
   if (w <= 0) return pose;
@@ -716,10 +719,10 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     o.tgtRight += t2.tgtRight * tw;
     o.fov += t2.fov * tw;
   }
-  // phone Inspire close-up: same fold, gated by the phone width branch (the
+  // Phone framing: same fold, gated by the phone width branch (the
   // contract the Connect lift and Final truck below already use). Width is a
-  // hard branch and the field's own keys are zero outside the Inspire leg,
-  // so tablets, landscape and every other chapter are untouched by
+  // hard branch and the field's own keys return to zero at Connect,
+  // so tablets, landscape and the later chapters are untouched by
   // construction. See the PHONE_KEYS note above.
   if (viewportWidth <= 620 && aspect < 1) {
     const p2 = fieldAt(p, PHONE_KEYS, _poff);
@@ -787,6 +790,8 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
+    // A gentle clockwise scene tilt; the DOM copy remains upright.
+    pose.roll = -5 * Math.PI / 180 * finalW;
     const legacyTruck = 0.35 * finalW;
     pose.pos.y += legacyTruck;
     pose.target.y += legacyTruck;

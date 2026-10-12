@@ -223,50 +223,40 @@ const atAzimuth = degrees => {
     + 'difference between braking and coasting');
 }
 
-// A route owns its shared character, while explicitly reviewed one-way
-// refinements can adjust one direction without changing the return journey.
-// Non-adjacent flights never compound the legs they cross.
-for (const [from, to, speed] of [
-  ['mission', 'inspire', 0.60],       // Intro <-> Inspire remains symmetric
-]) {
-  assert.equal(navigationSpeed(from, to), speed, `${from} -> ${to} speed`);
-  assert.equal(navigationSpeed(to, from), speed, `${to} -> ${from} reverse speed`);
-  assert.equal(navigationDurationSeconds(1.2, from, to), 1.2 / speed,
-    `${from} -> ${to} converts speed to duration once`);
-  assert.equal(navigationDurationSeconds(1.2, to, from), 1.2 / speed,
-    `${to} -> ${from} converts reverse speed to duration once`);
+// Every directed ordinary journey gets enough time to read its movement,
+// including the shortest Ownership paths and reverse/menu navigation.
+assert.equal(DEFAULT_NAVIGATION_SPEED, 0.45);
+const timingIds = ['mission', 'inspire', 'equip', 'connect', 'owned', 'final'];
+for (const from of timingIds) for (const to of timingIds) {
+  if (from === to) continue;
+  let previous = 0;
+  for (const base of [0.1, 0.85, 1.2, 2, 4]) {
+    const duration = navigationDurationSeconds(base, from, to);
+    assert.ok(duration >= 2.6, `${from} -> ${to} cannot collapse into a brisk hop`);
+    assert.ok(duration >= previous, 'longer paths cannot produce shorter flights');
+    previous = duration;
+  }
+  const long = navigationDurationSeconds(4, from, to);
+  assert.equal(navigationDurationSeconds(8, from, to), 2 * long,
+    'above the minimum, path length retains its proportional duration');
 }
-
-for (const [from, to, speed, reverseSpeed] of [
-  ['inspire', 'connect', 0.80, 0.72], // Connect -> Inspire is 90% of prior speed
-  ['connect', 'final', 0.70, 0.49],   // Purpose -> Connect is 70% of prior speed
-  ['owned', 'final', 0.75, 0.45],     // Purpose -> Ownership is 60% of prior speed
-]) {
-  assert.equal(navigationSpeed(from, to), speed, `${from} -> ${to} retains its speed`);
-  assert.equal(navigationSpeed(to, from), reverseSpeed,
-    `${to} -> ${from} owns its directional refinement`);
-  assert.equal(navigationDurationSeconds(1.2, from, to), 1.2 / speed,
-    `${from} -> ${to} retains its duration`);
-  assert.equal(navigationDurationSeconds(1.2, to, from), 1.2 / reverseSpeed,
-    `${to} -> ${from} converts its refined speed once`);
-}
-
-assert.equal(DEFAULT_NAVIGATION_SPEED, 0.75);
-for (const [from, to] of [
-  ['mission', 'connect'],             // generic non-adjacent direct flight
-  ['inspire', 'final'],
-  ['mission', 'final'],               // special Intro <-> Purpose wrap orbit
-]) {
-  assert.equal(navigationSpeed(from, to), 0.75, `${from} -> ${to} fallback speed`);
-  assert.equal(navigationSpeed(to, from), 0.75, `${to} -> ${from} reverse fallback speed`);
-  assert.ok(Math.abs(navigationDurationSeconds(1.2, from, to) - 1.6) < 1e-12,
-    `${from} -> ${to} is one 25% speed reduction, not crossed-leg composition`);
-}
-const connectPurposeDuration = navigationDurationSeconds(1.2, 'connect', 'final');
-assert.equal(connectPurposeDuration, 1.2 / 0.70);
-assert.notEqual(connectPurposeDuration,
+// These paths already contain extra authored travel; preserve their measured
+// tempo rather than slowing a whole orbit or flyby for a second time.
+for (const [from, to, base, expected] of [
+  ['mission', 'final', 4, 4 / 0.75],
+  ['final', 'mission', 4, 4 / 0.75],
+  ['equip', 'connect', 1.9, 1.9 / 0.70],
+  ['connect', 'final', 2.1, 2.1 / 0.42],
+  ['final', 'connect', 1.6, 1.6 / 0.49],
+  ['inspire', 'connect', 1.76, 1.76 / 0.48],
+]) assert.equal(navigationDurationSeconds(base, from, to), expected,
+  `${from} -> ${to} preserves the reviewed long-route tempo`);
+assert.equal(navigationSpeed('final', 'inspire'), navigationSpeed('inspire', 'final'),
+  'Purpose returns no longer have a separate brisk default');
+assert.equal(navigationSpeed('final', 'equip'), navigationSpeed('equip', 'final'));
+assert.notEqual(navigationDurationSeconds(1.2, 'mission', 'owned'),
   1.2 / DEFAULT_NAVIGATION_SPEED / DEFAULT_NAVIGATION_SPEED,
-  'Connect -> Purpose must not compound its crossed adjacent fallback factors');
+  'a nonadjacent trip is priced once rather than compounding crossed legs');
 assert.throws(() => navigationDurationSeconds(0, 'mission', 'inspire'), /positive finite/);
 assert.throws(() => navigationDurationSeconds(Number.NaN, 'mission', 'inspire'), /positive finite/);
 assert.ok(Object.isFrozen(NAVIGATION_SPEED), 'the route policy must be immutable');
@@ -674,6 +664,13 @@ function assertBookendFade(label, sourceId, sourceP, destinationId, destinationP
   copy.armCopyEntry(destinationId, 4);
   assert.equal(copy.ease(sourceId), 1, `${label}: source is preserved on arm`);
   assert.equal(copy.ease(destinationId), 0, `${label}: destination starts hidden`);
+  // Publishing the measured flight's phase-zero camera also publishes a
+  // dt=0 copy frame. That is an active transition, not a deep-link snap.
+  copy.step({ chapterId: destinationId, dt: 0, travelP: destinationP,
+    railWrap: { dir, phase: 0 } });
+  assert.equal(copy.ease(sourceId), 1, `${label}: phase-zero publication preserves source`);
+  assert.equal(copy.ease(destinationId), 0,
+    `${label}: phase-zero publication cannot flash destination copy`);
   const ticket = { dir, phase: 0.025 };
   copy.step({
     chapterId: destinationId,

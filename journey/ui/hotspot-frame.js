@@ -611,6 +611,13 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
     placed.sort((a, b) => b.sy - a.sy);          // bottom of the frame first
     const resolved = [];
     for (const h of placed) {
+      // A fading mobile label keeps the layout offset it had at departure.
+      // Its world projection still moves; only collision re-seating is held.
+      if (h.departureLayout) {
+        h.dodgeY = h.departureLayout.dodgeY;
+        resolved.push(h);
+        continue;
+      }
       let dy = 0;
       const x0 = h.pendX - 11, x1 = x0 + h.pillW;
       for (const f of resolved) {
@@ -714,6 +721,16 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       const departureOpacity = hotspotDepartureOpacity(h, {
         currentChapterId: chapterId, railFlight, copyGate,
       });
+      if (sheetQuery.matches && departureOpacity !== null) {
+        if (h.departureLayout?.ticket !== railFlight) {
+          const xOffset = h.pendX - h.sx;
+          h.departureLayout = {
+            ticket: railFlight,
+            xOffset: Number.isFinite(xOffset) ? xOffset : 0,
+            dodgeY: Number.isFinite(h.dodgeY) ? h.dodgeY : 0,
+          };
+        }
+      } else h.departureLayout = null;
       // A carried marker keeps its last truthful world anchor until the copy
       // fade completes. Connect's normal 72% arrival floor must not truncate
       // this exit; departureOpacity itself is the visibility clock here.
@@ -737,7 +754,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       advanceReveal(h, { want, gate, departureOpacity, dt, now });
 
       if (h.layoutPlaceable) {
-        const tx = resolveX(h, sx);
+        const tx = h.departureLayout ? sx + h.departureLayout.xOffset : resolveX(h, sx);
         // The transform itself is written AFTER the loop, once every placed
         // pill's rect is known — see resolveDodge().
         h.pendX = tx;

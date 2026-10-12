@@ -1,3 +1,4 @@
+import { applyCameraRoll } from './camera-roll.js';
 // journey/director.js — the camera COMPOSER (M4).
 //
 // Chapters own their camera legs (chapters/<id>/camera.js — keys authored in
@@ -345,7 +346,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
 
   /** Apply the pose for progress p — the fixed composition order (see the
    *  file header): base leg (+ portrait, inside poseAt) -> handheld -> the
-   *  no-roll camera write -> fog. Runs after the hero's own 'controls'
+   *  camera orientation -> fog. Runs after the hero's own 'controls'
    *  animator, so a direct write wins; there is never a frame in which
    *  OrbitControls and the director disagree. */
   function apply(p, dt = 0) {
@@ -353,8 +354,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     applyHandheld(pose, p, dt);
     camera.position.copy(pose.pos);
     controls.target.copy(pose.target);
-    camera.up.set(0, 1, 0);          // NO ROLL, anywhere
-    camera.lookAt(pose.target);
+    applyCameraRoll(camera, pose.target, pose.roll);
     if (Math.abs(camera.fov - pose.fov) > 0.001) {
       camera.fov = pose.fov;
       camera.updateProjectionMatrix();
@@ -377,7 +377,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
       camera.fov = heroSnapshot.fov;
       camera.updateProjectionMatrix();
     }
-    camera.lookAt(heroSnapshot.target);
+    applyCameraRoll(camera, heroSnapshot.target);
   }
 
   /** THE WHOLE un-owned composition — the camera pose AND the world depth that

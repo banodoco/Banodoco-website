@@ -740,10 +740,11 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
       else endArrive();
     }
 
-    // Advance the jump entry before the loop reads it. It dies on a placement
-    // frame (a capture or deep link must still snap), and when the visitor has
-    // scrolled somewhere else entirely — the arrival it was timed against is
-    // then over in both cases.
+    // Advance the jump entry before the loop reads it. A live wrap owns even
+    // dt=0 publications: launch publishes the measured camera at phase zero
+    // without advancing time. Only a genuine placement without that ticket
+    // may snap the copy. Scrolling into another chapter also ends the entry,
+    // since the arrival it was timed against is then over.
     /* The cyclic entrance begins only after the camera ticket has retired.
        Mission remains the one DEFERRED surface: even after settlement, its
        clock holds at zero until the rail's own docking gate opens. The gate is
@@ -751,7 +752,7 @@ export function createCopyArrival({ blocks, actionRows, heroBlock, rail, reduceM
     const heroHeld = heroEnvelopeLive()
       && heroGatePrev !== null && heroGatePrev <= 0;
     if (arrive) {
-      if ((dt === 0 && !preparedEntry
+      if ((dt === 0 && !preparedEntry && !railWrap
             && !(arrive.phase === 'settling' && arrive.holdSnaps > 0))
           || (chapterId !== arrive.id && arrive.own)) endArrive();
       else if (arrive.phase !== 'flight') {

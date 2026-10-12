@@ -1,7 +1,9 @@
+import { claimInput, releaseInput } from '../ownership.js';
+import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
 import { manifestoConcepts } from '../../content/manifesto-concepts.js';
-import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
+import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -58,6 +60,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   const sentences = CONTENT.manifesto.lines
     || CONTENT.manifesto.body.match(/[^.!?]+[.!?]+/g) || [CONTENT.manifesto.body];
   const lineEls = [];
+  const lastWordBeats = [];
   let note = null;
   for (const sentence of sentences) {
     const line = document.createElement('p');
@@ -67,12 +70,14 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     // Highlight the brand name within the manifesto.
     const isName = (i) => /^Mycelial\b/.test(words[i] || '');
     let phraseThread = null;
+    let lastWordBeat = 0;
     words.forEach((word, i) => {
       const span = document.createElement('span');
       span.className = isName(i) ? 'j-manifesto-word is-name' : 'j-manifesto-word';
       // Multiword names share their first word’s warm reveal beat.
       const beat = isName(i) && i > 0 && isName(i - 1) ? i - 1 : i;
       span.setAttribute('style', `--w:${beat}`);
+      lastWordBeat = Math.max(lastWordBeat, beat);
       // The space rides inside an (inline) span, so wrapping is unchanged —
       // on the word BEFORE it normally, but after the name it opens the next
       // word instead, keeping the name grouped through its reveal.
@@ -122,6 +127,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       const marker = document.createElement('span');
       marker.className = 'j-manifesto-word manifesto-note-marker';
       marker.style.setProperty('--w', words.length);
+      lastWordBeat = words.length;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'manifesto-note-trigger';
@@ -133,6 +139,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     }
     lines.appendChild(line);
     lineEls.push(line);
+    lastWordBeats.push(lastWordBeat);
   }
   /* NO CONTROLS ON THE PAGE (2026-10-03/04 — Hannah: "remove pause in
      general", then "remove the return button and just leave a reveal all
@@ -141,7 +148,12 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
      it. Focus rests on the reading region itself. */
   const panel = root.querySelector('.j-manifesto-panel');
   document.body.appendChild(root);
-  const lineSeconds = lineSecondsFor(sentences.map(s => s.trim().split(/\s+/).length));
+  const wordCounts = sentences.map(s => s.trim().split(/\s+/).length);
+  const lineSeconds = lineSecondsFor(wordCounts);
+  const mobileSchedule = mobileReadingSchedule(lineSeconds, lastWordBeats);
+  let readingStarts = lineSeconds, readingAdmissions = lineSeconds;
+  let cameraSeconds = CAMERA_SECONDS;
+  let scrollReading = false;
 
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const camera = sceneApi.camera;
@@ -193,7 +205,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   let seatAtReturn = 0.999;
   let previousScrollEnabled = true;
   let previousControlsEnabled = true;
-  let shownLines = 0;
+  let shownLines = 0, admittedLines = 0;
   let previousFocus = null;
   let closingTimer = 0;
   let chromeReleased = false;
@@ -219,6 +231,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       position: camera.position.clone(),
       target: controls.target.clone(),
       up: camera.up.clone(),
+      roll: camera.userData?.journeyRoll || 0,
       fov: camera.fov,
       far: camera.far,
       fogNear: sceneApi.scene.fog?.near,
@@ -230,6 +243,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       for (const a of ['x', 'y', 'z']) pose[k][a] += (there[k][a] - pose[k][a]) * w;
     }
     pose.fov += (there.fov - pose.fov) * w;
+    pose.roll = (pose.roll || 0) + ((there.roll || 0) - (pose.roll || 0)) * w;
   }
   function apply(value) {
     const pose = manifestoPose(from, value * CAMERA_SECONDS, camera.aspect);
@@ -257,11 +271,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     }
     camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     controls.target.set(pose.target.x, pose.target.y, pose.target.z);
-    camera.up.copy(from.up);
     camera.fov = pose.fov;
     camera.far = Math.max(from.far, pose.position.y * 3);
     camera.updateProjectionMatrix();
-    camera.lookAt(controls.target);
+    applyCameraRoll(camera, controls.target, pose.roll);
     // Keep the outer field legible through the settled frame. The previous
     // range let the perimeter disappear into fog before its scheduled
     // arrivals could read as a continuous surround.
@@ -291,6 +304,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
      it is two number compares. */
   let liftKey = '';
   function liftColumn() {
+    if (scrollReading) {
+      lines.style.setProperty('--lift', '0px');
+      lines.classList.remove('is-lifted');
+      return;
+    }
     const key = `${shownLines}|${window.innerWidth}x${window.innerHeight}`;
     if (key === liftKey) return;
     liftKey = key;
@@ -309,28 +327,118 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (lines.style && lines.style.setProperty) lines.style.setProperty('--lift', `${-lift}px`);
     lines.classList.toggle('is-lifted', lift > 0);
   }
+  let followEnabled = false;
+  let followFrom = 0, followTo = 0, followStart = 0, followEnd = 0;
+  const FOLLOW_SECONDS = 2.8;
+  const FOLLOW_IDLE_SECONDS = 3;
+  let followResumeAt = Infinity;
+  let readingHeld = false;
+  function measureReadingPadding() {
+    if (!scrollReading || reduceMotion.matches || !(lines.clientHeight > 0)) return;
+    if (admittedLines <= 0) {
+      lines.style.setProperty('--reading-pad-top', '0px');
+      lines.style.setProperty('--reading-pad-bottom', '0px');
+      return;
+    }
+    const first = lineEls[0].getBoundingClientRect().height;
+    // Centre the opening paragraph. Later copy enters at the bottom,
+    // retaining the preceding text above without padding for future copy.
+    const last = lineEls[admittedLines - 1].getBoundingClientRect().height;
+    lines.style.setProperty('--reading-pad-top', `${Math.max(24, (lines.clientHeight - first) / 2)}px`);
+    lines.style.setProperty('--reading-pad-bottom', `${admittedLines === 1 ? Math.max(24, (lines.clientHeight - last) / 2) : 24}px`);
+  }
+  function followParagraph(mode = 'reveal') {
+    if (!followEnabled || admittedLines <= 0) return;
+    const box = lines.getBoundingClientRect();
+    const paragraph = lineEls[admittedLines - 1].getBoundingClientRect();
+    followFrom = lines.scrollTop;
+    const target = admittedLines === 1
+      ? followFrom + paragraph.top - box.top + paragraph.height / 2 - lines.clientHeight / 2
+      : followFrom + paragraph.bottom - box.top - lines.clientHeight + 24;
+    followTo = Math.max(0, Math.min(lines.scrollHeight - lines.clientHeight, target));
+    if (mode === 'reveal') {
+      const index = admittedLines - 1;
+      // Admit layout once the previous paragraph is visibly readable.
+      // Scroll leads the original incoming ink beat by up to two seconds.
+      followStart = elapsed;
+      followEnd = Math.max(readingAdmissions[index] + FOLLOW_SECONDS, followStart + 0.6);
+    } else if (mode === 'catchup') {
+      // A reader returning from manual scrolling gets a fresh gentle move,
+      // even when the scheduled reveal deadline is long past.
+      followStart = elapsed;
+      followEnd = elapsed + FOLLOW_SECONDS;
+    } else {
+      // Remeasure without postponing the existing deadline. Rebase on the
+      // visible position so font/layout changes cannot introduce a jump.
+      followStart = Math.max(followStart, elapsed);
+    }
+  }
+  function updateReadingFollow() {
+    if (!followEnabled && !readingHeld && elapsed >= followResumeAt) {
+      followEnabled = true;
+      followResumeAt = Infinity;
+      followParagraph('catchup');
+    }
+    if (!followEnabled || admittedLines <= 0 || !(lines.clientHeight > 0)) return;
+    lines.scrollTop = followFrom + (followTo - followFrom) * smoother(followEnd > followStart ? (elapsed - followStart) / (followEnd - followStart) : 1);
+    updateReadingEdges();
+  }
+  // Yield during a gesture and its momentum, then gently rejoin the current
+  // reveal after three quiet seconds. Never take over while a finger is held.
+  function stopReadingFollow(event) {
+    if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
+    if (!scrollReading || reduceMotion.matches) return;
+    followEnabled = false;
+    if (event.type === 'touchstart' || event.type === 'pointerdown') readingHeld = true;
+    followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
+  }
+  function releaseReadingHold(event) {
+    if (event.touches?.length) return;
+    readingHeld = false;
+    if (!followEnabled && Number.isFinite(followResumeAt)) followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
+  }
+  const readingEnds = ['touchend', 'touchcancel', 'pointerup', 'pointercancel'];
+  readingEnds.forEach(type => window.addEventListener(type, releaseReadingHold, { passive: true }));
+  const readingInputs = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+  readingInputs.forEach(type => panel.addEventListener(type, stopReadingFollow, { passive: true }));
+  function updateReadingEdges() {
+    root.classList.toggle('has-reading-above', scrollReading && lines.scrollTop > 2);
+    root.classList.toggle('has-reading-below', scrollReading && lines.scrollTop + lines.clientHeight < lines.scrollHeight - 2);
+  }
+  function onReadingScroll() {
+    if (!followEnabled && Number.isFinite(followResumeAt)) followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
+    updateReadingEdges();
+  }
+  lines.addEventListener('scroll', onReadingScroll, { passive: true });
   // Font loading and flex reflow can change the reading box without changing
   // either the viewport or the number of revealed paragraphs.
   const layoutObserver = new ResizeObserver(() => {
     liftKey = '';
-    if (active && !root.hidden) liftColumn();
+    if (active && !root.hidden) { liftColumn(); measureReadingPadding(); followParagraph('resize'); updateReadingEdges(); }
   });
   layoutObserver.observe(lines);
   lineEls.forEach(line => layoutObserver.observe(line));
-  function paintLines(count) {
+  function paintLines(count, admitted = count) {
     const next = Math.max(0, Math.min(sentences.length, count));
-    if (next === shownLines && lineEls.length) { liftColumn(); return; }
+    const nextAdmitted = Math.max(next, Math.min(sentences.length, admitted));
+    if (next === shownLines && nextAdmitted === admittedLines && lineEls.length) { liftColumn(); return; }
     const previous = shownLines;
+    const layoutChanged = nextAdmitted !== admittedLines;
     shownLines = next;
+    admittedLines = nextAdmitted;
     lineEls.forEach((line, i) => {
       if (i >= previous && i < shownLines) {
         // A frame may cross the scheduled beat by a few milliseconds. Catch
         // CSS up to that same clock so its final fade ends with the camera.
-        line.style.setProperty('--reveal-lateness', `${Math.max(0, elapsed - lineSeconds[i])}s`);
+        line.style.setProperty('--reveal-lateness', `${Math.max(0, elapsed - readingStarts[i])}s`);
       }
+      line.hidden = scrollReading && i >= admittedLines;
       line.classList.toggle('shown', i < shownLines);
     });
     liftColumn();
+    measureReadingPadding();
+    if (layoutChanged) followParagraph();
+    updateReadingEdges();
   }
   /** Open the branch. `anchor` (a pose plus its fog) is the rest the flight
    *  is authored from when the camera is not already standing on it;
@@ -338,6 +446,18 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   function begin({ anchor = null, departFrom = null } = {}) {
     if (active) return;
     active = true;
+    scrollReading = window.innerWidth <= 720 || reduceMotion.matches;
+    root.classList.toggle('is-scroll-reading', scrollReading);
+    const timedMobile = scrollReading && !reduceMotion.matches;
+    readingStarts = timedMobile ? mobileSchedule.reveal : lineSeconds;
+    readingAdmissions = timedMobile ? mobileSchedule.admit : lineSeconds;
+    cameraSeconds = timedMobile ? mobileSchedule.seconds : CAMERA_SECONDS;
+    followEnabled = window.innerWidth <= 720 && !reduceMotion.matches;
+    followFrom = followTo = followStart = followEnd = 0;
+    followResumeAt = Infinity;
+    readingHeld = false;
+    if (scrollReading) claimInput(panel, { modal: true });
+    lines.scrollTop = 0;
     paused = reduceMotion.matches;
     direction = reduceMotion.matches ? 0 : 1;
     u = 0;
@@ -350,7 +470,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     // (and let the director write its pose) in this same tick
     const here = departFrom ? { ...capture(), ...departFrom } : capture();
     from = anchor ? { ...here, position: anchor.position.clone(), target: anchor.target.clone(),
-      fov: anchor.fov, fogNear: anchor.fogNear, fogFar: anchor.fogFar } : here;
+      fov: anchor.fov, roll: anchor.roll || 0, fogNear: anchor.fogNear, fogFar: anchor.fogFar } : here;
     depart = anchor && !reduceMotion.matches ? here : null;
     departW = depart ? 1 : 0;
     landing = null; landW = 0;
@@ -379,6 +499,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     root.classList.add('is-open');
     liftKey = '';
     liftColumn();
+    measureReadingPadding();
+    followParagraph();
+    updateReadingEdges();
     panel.focus({ preventScroll: true });
     if (reduceMotion.matches) { u = 1; apply(1); }
   }
@@ -388,7 +511,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (landRe <= 0) return landW;
     return landRe >= 1 ? 1 : Math.max(0, Math.min(1, (landW - landRe) / (1 - landRe)));
   }
-  const landingOf = (land) => land ? { ...from, position: land.position, target: land.target, fov: land.fov,
+  const landingOf = (land) => land ? { ...from, position: land.position, target: land.target, fov: land.fov, roll: land.roll || 0,
     fogNear: land.fogNear ?? from.fogNear, fogFar: land.fogFar ?? from.fogFar } : { ...from };
   /** Bend a descent already under way toward a new landing (`home` = it is
    *  the branch's own anchor, Purpose, whose world stays lit). */
@@ -417,6 +540,17 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (remaining < RETARGET_SECONDS) returnRate = (1 - returnK) / RETARGET_SECONDS;
     // bent toward another section, the rest of the fall keeps that longer pace
     if (!home) returnRate = Math.min(returnRate, 1 / awaySecondsFrom(returnStart));
+    const extendedRemaining = (1 - returnK) / returnRate;
+    if (extendedRemaining > remaining) {
+      // Changing transition-duration does not retime an in-flight transition.
+      // Adjust its playback rate instead, preserving the exact painted frame.
+      for (const element of [panel, root]) {
+        for (const animation of element.getAnimations?.() || []) {
+          if (!['opacity', 'filter', 'transform'].includes(animation.transitionProperty)) continue;
+          animation.updatePlaybackRate(animation.playbackRate * remaining / extendedRemaining);
+        }
+      }
+    }
     return true;
   }
   function returnTo(onFinish = null, { land = null } = {}) {
@@ -444,6 +578,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     paused = false;
   }
   function exit() {
+    releaseInput(panel);
     note?.close();
     active = false;
     direction = 0;
@@ -457,13 +592,12 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (sceneApi.scene.fog) { sceneApi.scene.fog.near = rest.fogNear; sceneApi.scene.fog.far = rest.fogFar; }
     camera.position.set(rest.position.x, rest.position.y, rest.position.z);
     controls.target.set(rest.target.x, rest.target.y, rest.target.z);
-    camera.up.copy(from.up);
     camera.fov = rest.fov;
     landing = null; landW = 0; landPrev = null; landRe = 0; stay0 = 1; stayTo = 1;
     depart = null; departW = 0; departAtReturn = 0;
     camera.far = from.far;
     camera.updateProjectionMatrix();
-    camera.lookAt(controls.target);
+    applyCameraRoll(camera, controls.target, rest.roll);
     /* SYNC THE CONTROLS WITHOUT LETTING THEM MOVE THE CAMERA (2026-10-04 —
        Hannah: into Ownership from the Manifesto "the contents jumps forward
        and moves back"). OrbitControls.update() clamps the camera's distance
@@ -471,13 +605,21 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
        Ownership's rest stands 3.2 from its target. This frame is the last
        the branch owns, so nothing recomposed after it: the landing was shown
        pushed back 0.3 units, for one frame, and the director put it back on
-       the next. The limits are for a visitor's orbit, not for a handoff. */
-    const { minDistance, maxDistance } = controls;
+       the next. Equip's upward-looking pose also exceeds maxPolarAngle: restoring only
+       distance still moved its camera 2.2 units on the handoff frame. All
+       orbit limits are for a visitor's gesture, not an authored landing. */
+    const limits = {};
+    for (const key of ['minDistance', 'maxDistance', 'minPolarAngle', 'maxPolarAngle', 'minAzimuthAngle', 'maxAzimuthAngle']) {
+      limits[key] = controls[key];
+    }
     controls.minDistance = 0;
     controls.maxDistance = Infinity;
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
     controls.update();
-    controls.minDistance = minDistance;
-    controls.maxDistance = maxDistance;
+    Object.assign(controls, limits);
     controls.enabled = previousControlsEnabled;
     if (scroll) scroll.enabled = previousScrollEnabled;
     onTravelLock(false);
@@ -517,14 +659,16 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
            lift, on top of the originals, and only at full light does Final
            retire its own ring under them. */
         seatLight = smoother(elapsed / SEAT_IN_SECONDS);
-        u = Math.min(1, elapsed / CAMERA_SECONDS);
+        u = Math.min(1, elapsed / cameraSeconds);
         root.classList.toggle('title-shown', elapsed >= TITLE_SECONDS);
-        paintLines(lineSeconds.filter(s => elapsed >= s).length);
+        paintLines(readingStarts.filter(s => elapsed >= s).length,
+          readingAdmissions.filter(s => elapsed >= s).length);
+        updateReadingFollow();
         if (u >= 1) direction = 0;
       } else {
         returnK = Math.min(1, returnK + step * returnRate);
         const k = returnK;
-        u = reduceMotion.matches ? 0 : descentU(returnStart, k);
+        u = reduceMotion.matches ? 0 : descentU(returnStart, k, camera.aspect, from.position.y);
         landW = reduceMotion.matches ? 1 : smoother(k);
         // a flight that had not finished leaving its departure pose hands
         // that remainder back over the same descent
@@ -572,8 +716,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       if (!active) return 0;
       if (reduceMotion.matches) return 1;
       const beat = depart ? DEPART_SECONDS : RAIL_OPEN_SECONDS;
-      const a0 = ascentAt(beat);
-      return Math.max(0, Math.min(1, (ascentAt(elapsed) - a0) / (1 - a0)));
+      const a0 = ascentAt(beat * CAMERA_SECONDS / cameraSeconds, camera.aspect);
+      return Math.max(0, Math.min(1, (ascentAt(u * CAMERA_SECONDS, camera.aspect) - a0) / (1 - a0)));
     },
     /** ...and for the way OUT: the descent's own eased progress. */
     get returnPhase() {
@@ -597,6 +741,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     destroy() {
       layoutObserver.disconnect();
       note?.destroy();
+      releaseInput(panel);
+      lines.removeEventListener('scroll', onReadingScroll);
+      readingEnds.forEach(type => window.removeEventListener(type, releaseReadingHold));
+      readingInputs.forEach(type => panel.removeEventListener(type, stopReadingFollow));
       window.removeEventListener('keydown', handleKey);
       root.remove();
       if (active) exit();

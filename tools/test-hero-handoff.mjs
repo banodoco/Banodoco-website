@@ -11,6 +11,7 @@ const make = new Function('heroSpores', 'document', 'window', 'performance',
 function harness({ landed = true, skipIntro = false, heroReady = true, pending = false } = {}) {
   let now = 0, nextTimer = 0, impact = landed, queued = null, requested;
   let starts = 0, finishes = 0, strikes = 0, activations = 0, boots = 0, accelerations = 0;
+  let navigationReady = false;
   let resolveModule, resolveReady, resolveHero;
   const frames = [], timers = new Map(), listeners = new Set();
   const ready = new Promise(resolve => { resolveReady = resolve; });
@@ -39,10 +40,11 @@ function harness({ landed = true, skipIntro = false, heroReady = true, pending =
     for (let i = 0; i < 6; i++) await Promise.resolve();
   }
   return { intro, tick, land() { impact = true; }, heroReady() { resolveHero(true); },
-    load() { resolveModule({ prepareChapter: () => 0, boot: () => { boots++; return state; } }); },
+    load() { resolveModule({ prepareRail: () => ({ setReady(value) { navigationReady = value; } }), prepareChapter: () => 0, boot: () => { boots++; return state; } }); },
     ready() { resolveReady(); }, navigate() { queued = 'inspire'; requested(); },
     scroll() { for (const cb of listeners) cb({ type: 'wheel', deltaY: 140, deltaMode: 0, cancelable: true, preventDefault() {} }); },
     get accelerations() { return accelerations; },
+    get navigationReady() { return navigationReady; },
     get starts() { return starts; }, get finishes() { return finishes; }, get boots() { return boots; },
     get strikes() { return strikes; }, get activations() { return activations; } };
 }
@@ -138,3 +140,16 @@ skipped.load(); skipped.ready();
 await settle(skipped);
 assert.equal(skipped.finishes, 1); assert.equal(skipped.activations, 1);
 console.log('hero handoff: hero gate, journey grace, parked journey work, real landing, bounded fallbacks, early navigation and skipped intro passed');
+
+// Painting the early rail is not navigation readiness. The same gate opens
+// after preparation even when no visitor ever clicks a disabled control.
+const navigationGate = harness({ skipIntro: true });
+navigationGate.load();
+await settle(navigationGate);
+assert.equal(navigationGate.boots, 1);
+assert.equal(navigationGate.navigationReady, false, 'boot alone must not unlock navigation');
+assert.equal(navigationGate.activations, 0);
+navigationGate.ready();
+await settle(navigationGate);
+assert.equal(navigationGate.navigationReady, true, 'actual readiness unlocks navigation automatically');
+assert.equal(navigationGate.activations, 1);

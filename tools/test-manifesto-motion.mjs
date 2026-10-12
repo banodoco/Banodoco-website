@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { CONTENT } from '../content/content.js';
-import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, lineSecondsFor, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
+import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
 
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 for (const t of [0, 0.2, 0.8, SPIRAL_START_SECONDS]) {
@@ -35,7 +35,7 @@ for (const aspect of [1440 / 900, 390 / 844]) {
   const pose = manifestoPose(from, CAMERA_SECONDS, aspect);
   const distance = Math.hypot(pose.position.x, pose.position.y - 3.15, pose.position.z);
   const capFraction = 4.7 / (2 * distance * Math.tan(pose.fov * Math.PI / 360) * aspect);
-  assert.ok(capFraction >= (aspect < 1 ? 0.05 : 0.03) && capFraction <= (aspect < 1 ? 0.08 : 0.05), `${aspect}: cap scale ${capFraction}`);
+  assert.ok(capFraction >= (aspect < 1 ? 0.20 : 0.03) && capFraction <= (aspect < 1 ? 0.30 : 0.05), `${aspect}: cap scale ${capFraction}`);
 }
 assert.equal(TITLE_SECONDS, 0, 'the title is written on the press');
 // the reading rhythm follows the text: a shorter sentence hands on sooner,
@@ -63,6 +63,7 @@ class Element {
       toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name),
     };
   }
+  contains(node) { return this.children.includes(node); }
   getBoundingClientRect() { return this.rect || { top: 0, bottom: 0, height: 0 }; }
   setAttribute() {}
   appendChild(child) { this.children.push(child); }
@@ -97,7 +98,24 @@ globalThis.ResizeObserver = class {
 };
 const camera = { position: vec(8, 3, 9), up: vec(0, 1, 0), fov: 46, far: 100, aspect: 390 / 844,
   updateProjectionMatrix() {}, lookAt() {} };
-const controls = { target: vec(0, 2, 0), enabled: true, update() {} };
+const controls = { target: vec(0, 2, 0), enabled: true,
+  minDistance: 3.5, maxDistance: 18, minPolarAngle: 0, maxPolarAngle: Math.PI * 0.58,
+  minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity,
+  update() {
+    // OrbitControls clamps even when user input is disabled. Model the
+    // relevant constraint so the actual branch handoff must preserve its pose.
+    const x = camera.position.x - this.target.x;
+    const y = camera.position.y - this.target.y;
+    const z = camera.position.z - this.target.z;
+    const radius = Math.hypot(x, y, z);
+    const phi = Math.acos(y / radius);
+    const limited = Math.max(this.minPolarAngle, Math.min(this.maxPolarAngle, phi));
+    if (Math.abs(limited - phi) > 1e-12) {
+      const scale = Math.sin(limited) / Math.sin(phi);
+      camera.position.set(this.target.x + x * scale,
+        this.target.y + radius * Math.cos(limited), this.target.z + z * scale);
+    }
+  } };
 const fog = { near: 7, far: 20 };
 const scroll = { enabled: true };
 let fieldFogFar = null, fieldSeconds = null, preparations = 0;
@@ -163,6 +181,19 @@ assert.equal(branch.active, false);
 assert.deepEqual(snapshot(), original);
 assert.equal(document.activeElement, focus);
 
+// A mobile Equip landing looks above the orbit gesture's polar ceiling.
+// It must not be clamped on the single handoff frame before the director
+// resumes, and the visitor's original gesture constraints must be restored.
+const equipLanding = { position: vec(-1.024, 0.71, -2.616),
+  target: vec(0.049, 3.7, 0.226), fov: 60, fogNear: 7, fogFar: 20 };
+branch.begin(); tick(CAMERA_SECONDS + 1);
+branch.returnTo(null, { land: equipLanding }); tick(branch.awaySeconds + 0.1);
+assert.deepEqual([camera.position.x, camera.position.y, camera.position.z],
+  [equipLanding.position.x, equipLanding.position.y, equipLanding.position.z],
+  'first released frame is exactly the upward-looking destination pose');
+assert.equal(controls.maxPolarAngle, Math.PI * 0.58, 'handoff restores gesture polar limits');
+assert.equal(controls.maxDistance, 18, 'handoff restores gesture distance limits');
+
 // A destination pressed mid-descent bends the fall toward it: no jump on the
 // press, one continuous descent, and it lands exactly on the new rest.
 const landA = { position: vec(-14, 4, 3), target: vec(0, 3, 0), fov: 40, fogNear: 7, fogFar: 20 };
@@ -177,6 +208,18 @@ branch.update(0);
 beforeBend.forEach((v, i) => {
   if (typeof v === 'number') assert.ok(Math.abs(snapshot()[i] - v) < 1e-9, `no jump on the press (channel ${i})`);
 });
+// A late change of destination stretches the remaining fade without
+// restarting it or changing its already-painted progress.
+tick(branch.returnSeconds - 0.2);
+const fade = { transitionProperty: 'opacity', playbackRate: 1, currentTime: 1200,
+  updatePlaybackRate(rate) { this.playbackRate = rate; } };
+root.querySelector('.j-manifesto-panel').getAnimations = () => [fade];
+const remainingBefore = branch.returnSeconds;
+branch.retarget(() => { landedOn = 'B'; }, { land: landB });
+assert.ok(branch.returnSeconds > remainingBefore, 'late retarget extends the remaining flight');
+assert.ok(Math.abs(fade.playbackRate - remainingBefore / branch.returnSeconds) < 1e-9,
+  'return fade slows by exactly the flight extension');
+assert.equal(fade.currentTime, 1200, 'retiming leaves the painted fade progress untouched');
 let maxStep = 0, last = snapshot();
 for (let i = 0; i < 600 && branch.active; i++) {
   branch.update(1 / 60);
@@ -191,6 +234,119 @@ assert.deepEqual([camera.position.x, camera.position.y, camera.position.z, camer
   [2, -6, 11, 50, 4, 30], 'it lands exactly on the new rest, in its depth');
 assert.ok(maxStep < 3, `the bend is a glide, not a swing (largest step ${maxStep.toFixed(3)})`);
 branch.destroy();
+// Mobile retains the desktop reveal rhythm in a continuous native scroller,
+// gently following each reveal until native reader input takes ownership.
+window.innerWidth = 390;
+const mobile = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } }, { scroll });
+const mobileRoot = document.body.children.at(-1);
+const mobileBox = mobileRoot.querySelector('.j-manifesto-lines');
+const mobilePanel = mobileRoot.querySelector('.j-manifesto-panel');
+const { ownerOf } = await import('../journey/ownership.js');
+mobile.begin();
+assert.ok(mobileRoot.classes.has('is-scroll-reading'));
+assert.equal(mobile.shownLines, 0, 'mobile begins with the same quiet opening as desktop');
+assert.ok(mobileBox.children.every(line => line.hidden), 'unrevealed mobile paragraphs contribute no empty scroll extent');
+for (let i = 0; i < 114; i++) mobile.update(1 / 60);
+assert.equal(mobile.shownLines, 0, 'no immediate copy on mobile entry');
+for (let i = 0; i < 12; i++) mobile.update(1 / 60);
+assert.equal(mobile.shownLines, 1, 'first paragraph starts after the two-second opening');
+assert.equal(mobileBox.children.filter(line => !line.hidden).length, 1, 'only available copy participates in mobile layout');
+assert.ok(ownerOf(mobilePanel), 'reading surface owns touch, wheel and keys');
+mobileBox.clientHeight = 400;
+mobileBox.scrollHeight = 2000;
+mobilePanel.listeners.wheel({ type: 'wheel' });
+mobileBox.scrollTop = 180;
+mobileBox.listeners.scroll();
+assert.ok(mobileRoot.classes.has('has-reading-above'));
+assert.ok(mobileRoot.classes.has('has-reading-below'));
+mobileBox.scrollTop = 1600;
+mobileBox.listeners.scroll();
+assert.ok(!mobileRoot.classes.has('has-reading-below'), 'last paragraph removes the onward scroll hint');
+mobileBox.scrollTop = 180;
+for (let i = 0; i < 120; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 180, 'camera frames preserve the reader scroll position');
+assert.equal(mobileBox.style['--lift'], '0px');
+assert.ok(mobile.progress > 0 && mobile.progress < 1, 'camera still takes its full scenic flight');
+for (let i = 0; i < CAMERA_SECONDS * 60; i++) mobile.update(1 / 60);
+assert.equal(mobile.shownLines, CONTENT.manifesto.lines.length, 'all paragraphs accumulate by the end');
+assert.ok(mobileBox.children.every(line => !line.hidden), 'all copy is available after the reveal');
+assert.notEqual(mobileBox.scrollTop, 180, 'idle reader smoothly rejoins the reveal');
+mobile.returnTo();
+for (let i = 0; i < 600 && mobile.active; i++) mobile.update(1 / 60);
+assert.equal(ownerOf(mobilePanel), null, 'closing releases reading input ownership');
+mobile.begin();
+assert.equal(mobileBox.scrollTop, 0, 'reentry starts at the beginning');
+assert.ok(mobileBox.children.every(line => line.hidden), 'reentry removes future scroll space again');
+assert.equal(mobileBox.style['--reading-pad-bottom'], '0px', 'no future-centering padding before the first reveal');
+mobileBox.rect = { top: 100, bottom: 500, height: 400 };
+const mobileParagraphs = mobileBox.children;
+mobileParagraphs.forEach((line, i) => {
+  line.getBoundingClientRect = () => ({ top: 200 + i * 240 - mobileBox.scrollTop,
+    bottom: 400 + i * 240 - mobileBox.scrollTop, height: 200 });
+});
+for (let i = 0; i < 300; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 0, 'first paragraph remains centred');
+const mobileSchedule = mobileReadingSchedule(lineSecondsFor(liveCounts), liveCounts.map((n, i) => i === 0 ? n : n - 1));
+const secondStart = mobileSchedule.reveal[1];
+const advanceMobileTo = seconds => {
+  while (mobile.progress * mobileSchedule.seconds < seconds - 1e-8) mobile.update(1 / 60);
+};
+advanceMobileTo(mobileSchedule.admit[1] - 0.025);
+assert.equal(mobile.shownLines, 1, 'incoming ink retains its original reveal beat');
+assert.equal(mobileParagraphs[1].hidden, true, 'incoming paragraph creates no scroll space before the lead starts');
+assert.equal(mobileBox.scrollTop, 0, 'scroll stays still before its new earlier lead');
+advanceMobileTo(mobileSchedule.admit[1] + 0.2);
+assert.equal(mobile.shownLines, 1, 'scroll leads the incoming text instead of waiting for its reveal');
+assert.equal(mobileParagraphs[1].hidden, false, 'space is admitted exactly when the lead scroll needs it');
+assert.ok(!mobileParagraphs[1].classes.has('shown'), 'admitted incoming paragraph remains visually uninked');
+assert.ok(mobileBox.scrollTop > 0 && mobileBox.scrollTop < 25, 'the scroll is already moving before new text starts');
+advanceMobileTo(secondStart - 0.025);
+assert.ok(mobileBox.scrollTop > 70, 'the lead visibly advances before incoming ink starts');
+assert.equal(mobile.shownLines, 1);
+advanceMobileTo(secondStart + 0.05);
+assert.equal(mobile.shownLines, 2, 'new paragraph starts after a clear pre-ink scroll lead');
+advanceMobileTo(secondStart + 0.1);
+assert.ok(mobileBox.scrollTop > 70 && mobileBox.scrollTop < 164, 'next reveal gently moves into the bottom of the view');
+const beforeResizeFollow = mobileBox.scrollTop;
+resizeObservers.at(-1).callback();
+assert.equal(mobileBox.scrollTop, beforeResizeFollow, 'layout remeasure does not jump the visible position');
+advanceMobileTo(mobileSchedule.admit[1] + 2.8);
+assert.ok(Math.abs(mobileBox.scrollTop - 164) < .01, 'same bottom target is reached on its reveal deadline even after resize');
+mobilePanel.listeners.touchstart({ type: 'touchstart' });
+mobileBox.scrollTop = 75;
+for (let i = 0; i < 600; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 75, 'held touch prevents following even across later paragraph beats');
+window.listeners.touchend({ type: 'touchend', touches: [] });
+for (let i = 0; i < 120; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 75, 'release leaves three quiet seconds before resuming');
+mobileBox.listeners.scroll();
+for (let i = 0; i < 120; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 75, 'momentum scrolling restarts the idle delay');
+for (let i = 0; i < 120; i++) mobile.update(1 / 60);
+assert.ok(mobileBox.scrollTop > 75 && mobileBox.scrollTop < 960, 'idle return eases from the manual position');
+for (let i = 0; i < 300; i++) mobile.update(1 / 60);
+assert.ok(mobileBox.scrollTop >= 644, 'following rejoins the current revealing paragraph');
+// After every scheduled deadline has passed, manual release still gets a
+// full gentle catch-up rather than jumping onto an already-expired deadline.
+for (let i = 0; i < 600; i++) mobile.update(1 / 60);
+mobilePanel.listeners.wheel({ type: 'wheel' });
+mobileBox.scrollTop = 75;
+for (let i = 0; i < 174; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 75, 'idle delay remains three seconds');
+for (let i = 0; i < 18; i++) mobile.update(1 / 60);
+assert.ok(mobileBox.scrollTop > 75 && mobileBox.scrollTop < 100, 'expired reveal deadline cannot snap manual catch-up');
+for (let i = 0; i < 72; i++) mobile.update(1 / 60);
+assert.ok(mobileBox.scrollTop > 200 && mobileBox.scrollTop < 800, 'manual catch-up spends its own full duration');
+for (let i = 0; i < 90; i++) mobile.update(1 / 60);
+assert.ok(Math.abs(mobileBox.scrollTop - 884) < .01, 'manual catch-up reaches the last bottom target');
+mobile.destroy();
+const cadence = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } }, { scroll });
+cadence.begin();
+for (let i = 0; i < (CAMERA_SECONDS - 0.1) * 60; i++) cadence.update(1 / 60);
+assert.ok(cadence.progress < 1, 'mobile camera keeps moving through the original final word fade');
+for (let i = 0; i < 12; i++) cadence.update(1 / 60);
+assert.equal(cadence.progress, 1, 'camera and complete mobile text settle together');
+cadence.destroy();
 // hand the doubles back to the original rest for the reduced-motion pass
 camera.position.set(original[0], original[1], original[2]); camera.fov = original[3]; camera.far = original[4];
 controls.target.set(original[5], original[6], original[7]); fog.near = original[8]; fog.far = original[9];
@@ -200,6 +356,7 @@ const accessibleRoot = document.body.children.at(-1);
 accessible.begin();
 assert.equal(accessible.progress, 1);
 assert.equal(accessible.shownLines, CONTENT.manifesto.lines.length);
+assert.ok(accessibleRoot.classes.has('is-scroll-reading'), 'reduced motion keeps all paragraphs scrollable');
 assert.equal(document.activeElement, accessibleRoot.querySelector('.j-manifesto-panel'), 'reduced motion focuses the reading region');
 window.listeners.keydown({ key: 'Escape', preventDefault() {} });
 accessible.update(1 / 60);
@@ -243,7 +400,9 @@ for (const aspect of [1440/900,390/844]) {
   const counts = [0, .28, .5, .71, .93, 1].map(f => f * CAMERA_SECONDS).map(t => placements.filter((b,i) => aerialRevealAt(t,first[i*2],first[i*2+1]) > 0.1).length);
   assert.equal(counts[0], 0, 'new aerial bodies start absent');
   assert.ok(counts[2] > counts[1] && counts[3] > counts[2] && counts[4] > counts[3] && counts[5] > counts[4], 'arrivals continue through middle, late, and final expansion');
-  assert.equal(counts.at(-1), placements.length, 'all arrivals settle with the camera');
+  const scheduledCount = placements.filter((_, i) => first[i*2] <= CAMERA_SECONDS).length;
+  assert.equal(counts.at(-1), scheduledCount, 'admitted arrivals settle with the camera');
+  if (aspect < 0.9) assert.ok(scheduledCount <= 140, 'mobile only admits the near patch');
   for (let i = 0; i < scheduled.length; i++) {
     let prior = 0;
     for (let t = 0; t <= CAMERA_SECONDS; t += 0.125) {
@@ -262,8 +421,10 @@ const { readFileSync } = await import('node:fs');
 const threeURL = new URL('../vendor/three/three.module.js', import.meta.url).href;
 const THREE = await import(threeURL);
 const poseURL = new URL('../journey/manifesto/pose.js', import.meta.url).href;
+const dissolveURL = new URL('../journey/lib/body-dissolve.js', import.meta.url).href;
 let colonySource = readFileSync(new URL('../journey/manifesto/colony.js', import.meta.url),'utf8')
   .replace("'three'", JSON.stringify(threeURL)).replace("'./pose.js'", JSON.stringify(poseURL))
+  .replace("'../lib/body-dissolve.js'", JSON.stringify(dissolveURL))
   .replace("import { groundY, makeRng } from '../chapters/final/world.js';", 'const groundY = () => 0; const makeRng = () => { let n = 19; return () => ((n = (Math.imul(n,1664525)+1013904223)>>>0)/4294967296); };');
 const {createAerialColony} = await import('data:text/javascript;base64,'+Buffer.from(colonySource).toString('base64'));
 const stem = new THREE.Group(), cap = new THREE.Group(), bend = new THREE.Group(); bend.add(cap);
@@ -273,6 +434,7 @@ const shader = new THREE.ShaderMaterial({uniforms:{uProg:{value:2},uOpacity:{val
 cap.add(new THREE.LineSegments(tissue,shader));
 stem.add(new THREE.Mesh(tissue,new THREE.MeshBasicMaterial()));
 const colony = createAerialColony({groups:{stem,mushroom:cap}},[]);
+window.innerWidth = 1440;
 colony.prepare(from,1440/900);
 const resourceState = () => colony.group.children.map(o => [o,o.geometry,o.material,o.geometry.attributes.position,o.geometry.attributes.aColonyReveal,o.geometry.attributes.aColonyLink]);
 const resources = resourceState();
@@ -330,3 +492,12 @@ for (const u of [0, 0.5, 1]) {
 }
 assert.ok(awaySecondsFrom(1) > 7 && awaySecondsFrom(1) < 8, 'about 7.5 s from the settled view');
 console.log('Manifesto away descent: longer than a Return from every height pass.');
+
+// The phone path excludes distant bodies from real instance submission,
+// rather than merely darkening the same full landscape in the fragment shader.
+colony.prepare(from, 390 / 844);
+colony.set(1, 80, 200, CAMERA_SECONDS);
+const phoneInstances = colony.lod.near + colony.lod.far;
+assert.ok(phoneInstances > 0 && phoneInstances <= 140);
+assert.equal(colony.group.children[0].geometry.instanceCount + colony.group.children[1].geometry.instanceCount, phoneInstances);
+console.log(`Mobile colony submits ${phoneInstances}/${colony.bodies.length} bodies per source layer.`);

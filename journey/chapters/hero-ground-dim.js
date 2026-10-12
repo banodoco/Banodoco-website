@@ -93,3 +93,34 @@ export function createHeroGroundDimClaim(sceneApi, {
     get active() { return active; },
   };
 }
+
+
+/** Keep a departing chapter's ground treatment while its camera crosses the
+ * floor. This is a second ledger claim, so retiring the chapter cannot release
+ * it early or overwrite other chapters. Retargeting/landing releases smoothly
+ * from the value actually held, rather than restoring a full-bright frame. */
+export function createHeroGroundDepartureHold(sceneApi, options) {
+  const claim = createHeroGroundDimClaim(sceneApi, options);
+  let held = 0, releasing = false, releaseFrom = 0, elapsed = 0;
+  return {
+    setFlight(hold, reach) {
+      if (hold) {
+        held = Math.max(held, Math.max(0, Math.min(1, reach || 0)));
+        releasing = false;
+      } else if (!releasing && held > 0) {
+        releaseFrom = held;
+        elapsed = 0;
+        releasing = true;
+      }
+      claim.set(held);
+    },
+    step(dt) {
+      if (!releasing || !(dt > 0)) return;
+      elapsed = Math.min(1, elapsed + dt / 1.5);
+      const eased = elapsed * elapsed * (3 - 2 * elapsed);
+      held = releaseFrom * (1 - eased);
+      claim.set(held);
+      if (elapsed === 1) releasing = false;
+    },
+  };
+}

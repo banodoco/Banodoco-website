@@ -730,7 +730,10 @@ export function createConnect(sceneApi) {
     toScreen(_adosBase, _screen0);
 
     let tx = Math.max(ADOS_GLOW_RADIUS + RAIL_AIR, _screen0.x - ADOS_SCREEN_LEFT);
-    let ty = _screen0.y - ADOS_SCREEN_UP_MIN;
+    // On phones ADOS needs more air below the cap. Move its whole grounded
+    // hub (including the feathered route and label), not just the DOM chip.
+    const phoneDrop = innerWidth <= 620 && innerWidth < innerHeight ? 32 : 0;
+    let ty = _screen0.y - ADOS_SCREEN_UP_MIN + phoneDrop;
     const r = dock.rect;
     const left = r.left - RAIL_AIR, right = r.right + RAIL_AIR;
     const top = r.top - RAIL_AIR;

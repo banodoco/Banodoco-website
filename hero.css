@@ -623,6 +623,7 @@
      the same style recalculation. This is cold-load-only: later Mission returns
      are inline/p-driven and never see hero-entry-pending. */
   @media (prefers-reduced-motion: no-preference) {
+    body.hero-entry-pending #site-nav,
     body.hero-entry-pending h1 .hl,
     body.hero-entry-pending .sub,
     body.hero-entry-pending .cta,

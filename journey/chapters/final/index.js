@@ -44,7 +44,7 @@ import { createFinalSky } from './sky.js';
 import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
-import { createHeroGroundDimClaim } from '../hero-ground-dim.js';
+import { createHeroGroundDimClaim, createHeroGroundDepartureHold } from '../hero-ground-dim.js';
 import {
   PURPOSE_NAV_POCKET_STRENGTH,
   purposeNavPocket,
@@ -1026,10 +1026,15 @@ export function createFinal(sceneApi) {
      carriers fall to a whisper. The scene-level ambient mote cloud (the
      fake-DOF bokeh balloons in the near field) dims out entirely and is
      retired below 12% — Connect's raster lesson. */
-  const heroGroundDim = createHeroGroundDimClaim(sceneApi, {
+  const groundDimOptions = {
     keeps: [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25],
     pointThreshold: 0.12,
-  });
+  };
+  const heroGroundDim = createHeroGroundDimClaim(sceneApi, groundDimOptions);
+  // The field retires before the camera reaches Equip. Keep its borrowed
+  // ground dim until that camera flight is over, otherwise restoring the hero
+  // web lights a new carpet behind the specimen halfway through the move.
+  const groundDeparture = createHeroGroundDepartureHold(sceneApi, groundDimOptions);
   // Final also borrows the scene-level ambient mote cloud. It is not shared
   // with Connect, so it remains a local exact-restoration channel.
   const heroDim = [];
@@ -1239,6 +1244,7 @@ export function createFinal(sceneApi) {
   let manifesto = null;
 
   sceneApi.addAnimator('journey-final', (t, dt) => {
+    groundDeparture.step(dt);
     // THE EASE HOLDS WHILE THE STATE AND THE CAMERA DISAGREE (2026-08-13 —
     // the loop's seam). `amount` is state-derived: it starts falling on the
     // frame a jump snaps p to the destination, i.e. seconds before the camera
@@ -1351,17 +1357,23 @@ export function createFinal(sceneApi) {
       : amount > 0.003;
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
-      // Retired: the driver is the camera-pure value again, exactly. Nothing
-      // renders while this holds, so a lag can never be latched behind the
-      // gate and carried into the next entry — the guarantee is that whenever
-      // this chapter is off screen, its reveal state IS pullOf(camera.x).
-      // ONE carve-out (§43): while a ceremonial lap OWNS the driver — a
-      // fitted retire, or an arriving lap still inside its hold — the lap's
-      // path re-crosses this chapter's x-territory mid-move, so adopting the
-      // camera-pure value here is exactly the relight/early-flash the
-      // section exists to remove. The driver keeps the lap's own value (its
-      // dark rest, 0) and the guarantee resumes the frame the lap ends.
-      if (!(blending && (retiring ? retireScale < 1 : lapArrive && lapHoldS > 0))) {
+      // Visibility does not own an active flight's reveal. Keep its held
+      // growth through the dark interval and advance it after the arrival
+      // hold. A fitted departure likewise keeps its retired value so the
+      // lap cannot relight the field. Outside those transitions a hidden
+      // chapter remains camera-pure for scrubbing and explicit placements.
+      if (blending && !retiring) {
+        // An arriving field can still be hidden when its hold ends. Advance
+        // the same growth driver through that dark interval; adopting the
+        // camera's pull here skips the early mushrooms and exposes a grown
+        // cluster on the first visible frame. The normal gate opens once
+        // this driver has earned light, with no second reveal clock.
+        if (shownPull === null) shownPull = 0;
+        if (lapHoldS <= 0 && dt > 0) {
+          shownPull = slewPull(shownPull, blendPull, lastPull, dt);
+          lagging = shownPull !== lastPull;
+        }
+      } else if (!(blending && retiring && retireScale < 1)) {
         shownPull = lastPull;
         lagging = false;
         spreadTail = false;
@@ -1720,7 +1732,9 @@ export function createFinal(sceneApi) {
      *  the frame loop rather than on edges, so there is no state to get out of
      *  step with scroll.js. See the `gliding` branch in the animator. */
     setGliding(on) { gliding = !!on; },
-    setBlending(on, dstCamX, durS) {
+    setBlending(on, dstCamX, durS, destinationId) {
+      groundDeparture.setFlight(!!on && destinationId === 'equip',
+        heroDimActive ? lastReach : 0);
       const wasBlending = blending;
       blending = !!on;
       if (!blending) {
@@ -1738,6 +1752,13 @@ export function createFinal(sceneApi) {
         return;
       }
       if (typeof dstCamX === 'number') blendPull = pullOf(dstCamX);
+      // A hidden chapter owns no visible growth to carry from its prior
+      // camera coordinate. Seed an arriving flight at the dark end instead
+      // of letting an off-screen camera-only value pre-grow the field.
+      if (!wasBlending && !group.visible && amountTarget > 0 && blendPull > 0) {
+        shownPull = 0;
+        lagging = true;
+      }
       /* A DEPARTURE IS A MOVE WHOSE DESTINATION IS DARKER THAN THIS FRAME, and
          it is the only kind that needs the move's length: an arrival is
          clamped by the camera on the way up (slewPull's ceiling) and so is

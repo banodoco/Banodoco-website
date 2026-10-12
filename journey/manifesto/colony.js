@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BODY_DISSOLVE_GLSL } from '../lib/body-dissolve.js';
 import { aerialPlacements, planAerialReveals, manifestoPose, CAMERA_SECONDS } from './pose.js';
 import { groundY, makeRng } from '../chapters/final/world.js';
 
@@ -190,11 +191,12 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     const own = { uniforms: { uColonyFrame: { value: frame }, uColonyGate: gate, uColonySeconds: clock, uColonyPortrait: portrait,
       uColonyGain: { value: stride }, uColonySeatLight: seatLight } };
     function vertex(shader) {
-      return header + shader
+      return (src.isMeshBasicMaterial ? 'varying vec3 vBodyDissolvePosition;\n' : '') + header + shader
         .replace(/\bmodelViewMatrix\b/g, '(modelViewMatrix * colonyMatrix())')
         .replace(/\bmodelMatrix\b/g, '(modelMatrix * colonyMatrix())')
         .replace('#include <project_vertex>', 'vec4 mvPosition = modelViewMatrix * colonyMatrix() * vec4(transformed,1.); gl_Position = projectionMatrix * mvPosition;')
         .replace('void main() {', `void main() {
+          ${src.isMeshBasicMaterial ? 'vBodyDissolvePosition = (uColonyFrame * vec4(position, 1.0)).xyz + vec3(aColonyTone.x * 13.0);' : ''}
           vec4 centre = projectionMatrix * modelViewMatrix * vec4(aColonyPose.xyz,1.);
           vec2 screen = centre.xy / max(0.001, centre.w);
           float quiet = mix(smoothstep(-0.20,0.15,screen.x), smoothstep(0.05,0.4,screen.y), uColonyPortrait);
@@ -208,17 +210,12 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         .replace('float sz = psize', 'float sz = aColonyPose.w * psize')
         .replace('vFade = mix(1.0, 1.0 - exp(-gap), uFadeOn);', 'vFade = mix(1.0, max(0.20, 1.0 - exp(-gap)), uFadeOn);');
     }
-    /* THE SOLID BODIES DISSOLVE; THEY DO NOT DARKEN (2026-10-04). The cap
-       occluders are opaque, so scaling their colour toward zero left black
-       discs standing over the lit ground while a body arrived or a Return
-       retired the ring's seats ("weird mushrooms"). They now leave by a
-       screen-door: a per-pixel threshold against the fade, which the TAA
-       resolve integrates into an ordinary transparency without sorting. */
-    const dissolve = src.isMeshBasicMaterial
-      ? ' if (vColonyFade < 0.999 && vColonyFade <= fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;'
-      : '';
+    // Use the same stable body-space breakup as Purpose. Screen-coordinate
+    // noise slid over the bodies during camera movement; this pattern stays
+    // attached and reverses exactly on the existing arrival/return clock.
+    const dissolve = src.isMeshBasicMaterial ? ' dissolveBody(vColonyFade);' : '';
     function fragment(shader) {
-      return 'varying float vColonyLight;\nvarying float vColonyFade;\n' + shader.replace(/void main\(\)\s*\{/, `void main() { if(vColonyLight < 0.001) discard;${dissolve}`)
+      return (src.isMeshBasicMaterial ? BODY_DISSOLVE_GLSL : '') + 'varying float vColonyLight;\nvarying float vColonyFade;\n' + shader.replace(/void main\(\)\s*\{/, `void main() { if(vColonyLight < 0.001) discard;${dissolve}`)
         .replace(/gl_FragColor = vec4\(vColor/g, 'gl_FragColor = vec4(vColor * vColonyLight')
         .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb *= vColonyLight;');
     }
@@ -233,7 +230,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         shader.vertexShader = vertex(shader.vertexShader);
         shader.fragmentShader = fragment(shader.fragmentShader);
       };
-      material.customProgramCacheKey = () => 'manifesto-colony-v2';
+      material.customProgramCacheKey = () => 'manifesto-colony-body-dissolve-v3';
     }
     const object = source.isPoints ? new THREE.Points(geometry, material)
       : source.isMesh ? new THREE.Mesh(geometry, material) : new THREE.LineSegments(geometry, material);
@@ -509,7 +506,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         sporeGate.array[k*2] = plan[owner*2]; sporeGate.array[k*2+1] = plan[owner*2+1];
       }
       sporeGate.needsUpdate = true;
-      const order = bodies.map((_, i) => i).sort((a, b) => plan[a*2] - plan[b*2]);
+      const order = bodies.map((_, i) => i).filter(i => plan[i*2] <= CAMERA_SECONDS)
+        .sort((a, b) => plan[a*2] - plan[b*2]);
       // each body's tier, from the tallest it gets on screen on this flight
       const near = nearBodies(from, aspect);
       for (const tier of tiers) {

@@ -1,3 +1,4 @@
+import { applyCameraRoll } from './camera-roll.js';
 import { arcLerp } from './camera-path.js';
 
 /** The route-faithful flight's presented coordinate for eased phase `e`.
@@ -97,6 +98,7 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
     if (!director.owned) director.applyHeroPose();
     dstPos.copy(cam.position);
     dstTgt.copy(ctl.target);
+    const roll = (blend.roll0 || 0) * (1 - e) + (cam.userData?.journeyRoll || 0) * e;
     const fv = blend.fov0 * (1 - e) + cam.fov * e;
     /* THE AZIMUTH ALONE CARRIES THE INTERRUPT'S MOMENTUM (journey.js prices
        it). Every other channel — radius, height, fov, fog, the target and the
@@ -142,8 +144,7 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
         ctl.target.y * (1 - wG) + k.gy * wG,
         ctl.target.z * (1 - wG) + k.gz * wG);
     }
-    cam.up.set(0, 1, 0);
-    cam.lookAt(ctl.target);
+    applyCameraRoll(cam, ctl.target, roll);
     if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
     if (blend.fog) {
       blend.fog.near = blend.fogN0 + (blend.fogN1 - blend.fogN0) * e;

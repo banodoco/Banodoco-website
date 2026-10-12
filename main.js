@@ -88,9 +88,9 @@ const logoLink = document.querySelector('.logo');
 const setLogoAway = (away) => {
   if (logoLink) logoLink.classList.toggle('logo-away', away);
 };
-const entryQueue = createEntryQueue({
-  onRequest: (chapter) => setLogoAway(chapter !== 'mission'),
-});
+// A queued request is intent, not a camera transition. The live logo morph
+// owns departure once the journey can actually start moving.
+const entryQueue = createEntryQueue();
 
 /* ================================================================
    J05 — THE PAGE-LIFETIME REGISTER. Read this before adding a listener,
@@ -881,7 +881,6 @@ if (sceneApi) {
     const chapter = id.slice(3);
     el.querySelector('.tag').addEventListener('click', (e) => {
       e.preventDefault();
-      setLogoAway(chapter !== 'mission');
       if (window.journey) window.journey.flyTo(chapter);
       else entryQueue.request(chapter);
     });

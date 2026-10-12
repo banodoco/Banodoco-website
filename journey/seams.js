@@ -82,7 +82,7 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     return s.on;
   }
 
-  function update(p) {
+  function update(p, presentedP = p) {
     const now = performance.now();
     const { x, y, z } = camera.position;
     const az = Math.atan2(x, z);                     // same convention as the director
@@ -130,8 +130,11 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     // those ramps must re-derive this number from them again.
     {
       const d = Math.abs(((az - missionAz + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) / DEG;
-      const inside = d > 25 - HYS_DEG && p < T1_RELAX_IN;
-      const outside = d < 25 - HYS_DEG * 2 || p > T1_RELAX_OUT;
+      // A click parks p at its destination before the lens leaves. Inspire's
+      // live shared spores retire at the presented position, so their seam
+      // must use the same coordinate rather than releasing them on click.
+      const inside = d > 25 - HYS_DEG && presentedP < T1_RELAX_IN;
+      const outside = d < 25 - HYS_DEG * 2 || presentedP > T1_RELAX_OUT;
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }

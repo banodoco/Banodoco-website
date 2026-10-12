@@ -1833,7 +1833,12 @@ export function createInspire(sceneApi) {
      *  azimuth, exactly as Spike A reviewed it, so manual poses and QA
      *  jumps arm the same way a scroll does. Called by the journey's frame
      *  loop for every chapter that exposes drive(p). */
-    drive(p) {
+    drive(p, presentedP = p) {
+      // Click navigation parks logical p at the destination immediately.
+      // The live spore population is still at the departing camera, so its
+      // emphasis must retire with the presented move, just like under scroll.
+      // T1 uses this same coordinate; otherwise it can zero the reveal early.
+      p = presentedP;
       const azDeg = camAzDeg();
       const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
       const end = endOf('inspire');

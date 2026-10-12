@@ -359,17 +359,17 @@ const uiSurfaceSrc = code([readFileSync(join(ROOT, 'journey/ui.js'), 'utf8'),
 }
 
 {
-  // S5. The frame's single entry point: applyFrame is called from spineFrame
-  // and from placeAt (twice), and from nowhere else. A new caller is a new
-  // frame order and must not appear unnoticed.
-  // QA-02 T4: the first conjunct here used to be
-  // `(journeySrc.match(/[^n] applyFrame\(|^\s*applyFrame\(/gm) || []).length >= 0`
-  // — a `.length >= 0` is true for every integer, i.e. always true, and was
-  // dead weight next to the real (failable) `=== 3` conjunct below. Deleted;
-  // the second conjunct is unchanged.
-  L.check('S', 'S5 applyFrame has exactly three call sites',
-    (journeySrc.match(/(?<!function )applyFrame\(/g) || []).length === 3,
+  // S5. The regular animator, two placement passes, and the click's final
+  // phase-zero publication are the four deliberate frame entry points.
+  L.check('S', 'S5 applyFrame has exactly four call sites',
+    (journeySrc.match(/(?<!function )applyFrame\(/g) || []).length === 4,
     (journeySrc.match(/(?<!function )applyFrame\(/g) || []).length);
+  const launch = journeySrc.slice(journeySrc.indexOf('  function directJumpTo('),
+    journeySrc.indexOf('  function openDetail('));
+  L.check('S', 'S5 mobile growth pose is captured before the hero restore',
+    launch.indexOf('transition.beginFlight(') < launch.indexOf('director.applyHeroPose('));
+  L.check('S', 'S5 launch republishes the composed frame before yielding',
+    launch.indexOf('transition.beginBlend(') < launch.indexOf('applyFrame(targetP, 0)'));
   L.check('S', 'S5 scroll.update() is called from exactly one place',
     (journeySrc.match(/scroll\.update\(/g) || []).length === 1,
     (journeySrc.match(/scroll\.update\(/g) || []).length);

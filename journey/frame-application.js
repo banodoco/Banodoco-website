@@ -1,5 +1,8 @@
-/** Apply chapter entry/drive/glide state in the orchestrator's fixed order. */
-export function applyChapterFrame(chapters, chapterEntry, p, dt, gliding, guarded) {
+/** Apply chapter entry/drive/glide state in the orchestrator's fixed order.
+ * The optional presented coordinate follows the camera during direct flights;
+ * chapters that style existing visible geometry can use it instead of the
+ * destination parked in logical p. Entry clocks and other chapters keep p. */
+export function applyChapterFrame(chapters, chapterEntry, p, dt, gliding, guarded, presentedP = p) {
   let finishChapterEntry = false;
   if (chapterEntry) {
     const entryMod = chapters[chapterEntry.id];
@@ -19,7 +22,7 @@ export function applyChapterFrame(chapters, chapterEntry, p, dt, gliding, guarde
     const mod = chapters[id];
     if (chapterEntry && chapterEntry.id === id && mod.driveEntry) {
       guarded(`chapter:${id}.driveEntry`, () => mod.driveEntry(chapterEntry.f));
-    } else if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
+    } else if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p, presentedP));
     if (mod.setGliding) {
       guarded(`chapter:${id}.setGliding`, () => mod.setGliding(gliding));
     }

@@ -517,7 +517,8 @@ function reticle() {
   return wrap;
 }
 
-export function createRail({ onNav } = {}) {
+export function createRail({ onNav, ready = true } = {}) {
+  let navigationReady = ready;
   let navigate = typeof onNav === 'function' ? onNav : () => {};
   // Navigation iteration: make the rail the hero's persistent navigation
   // surface instead of revealing it only after the first chapter departure.
@@ -568,6 +569,35 @@ export function createRail({ onNav } = {}) {
   // (2RP left that row 2026-08-10; the Inspire node keeps it).
   const root = el('nav', 'j-rail');
   root.setAttribute('aria-label', 'Journey sections');
+  // Keep the early-painted rail honest: no queued gestures before the scene
+  // can navigate. Capture also guards synthetic activation of disabled links.
+  for (const type of ['click', 'pointerdown', 'keydown']) {
+    owner.listen(root, type, (event) => {
+      if (navigationReady) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, { capture: true });
+  }
+  function setReady(value) {
+    navigationReady = !!value;
+    root.classList.toggle('is-loading', !navigationReady);
+    root.setAttribute('aria-busy', String(!navigationReady));
+    for (const control of root.querySelectorAll('a, button')) {
+      control.setAttribute('aria-disabled', String(!navigationReady));
+      if (control.tagName === 'BUTTON') control.disabled = !navigationReady;
+      if (!navigationReady) {
+        if (!control.hasAttribute('data-ready-tabindex')) {
+          control.dataset.readyTabindex = control.getAttribute('tabindex') ?? '';
+        }
+        control.tabIndex = -1;
+      } else if (control.hasAttribute('data-ready-tabindex')) {
+        const previous = control.dataset.readyTabindex;
+        if (previous === '') control.removeAttribute('tabindex');
+        else control.setAttribute('tabindex', previous);
+        delete control.dataset.readyTabindex;
+      }
+    }
+  }
   root.dataset.layout = 'mission';
   root.dataset.handoff = RAIL_HANDOFF.JOURNEY;
   root.classList.add('j-rail-handoff-journey');
@@ -2631,6 +2661,9 @@ export function createRail({ onNav } = {}) {
 
     root.classList.toggle('j-rail-purpose-visible', treeU > 0.001);
     root.classList.toggle('j-rail-purpose-gathering', gatherU > 0.001);
+    // A child selection owns label silence immediately, even if a quick
+    // click interrupts Purpose before its geometric gather stage begins.
+    root.classList.toggle('j-rail-purpose-child-selected', manifestoOpen || selectedChapterId === 'owned');
     root.classList.toggle('j-rail-purpose-travelling', (!!ticket && cameraPhase < 0.9999) || crossing);
     /* A stationary pointer can cross a moving icon during a direct arrival.
        Do not let that incidental :hover expose Purpose's above-seat labels
@@ -2643,6 +2676,9 @@ export function createRail({ onNav } = {}) {
       root.classList.toggle(`j-rail-purpose-labels-${stage}`, labelStage === stage);
     }
     root.style.setProperty('--purpose-label-fade', labelFade.toFixed(5));
+    // Child labels emerge with the last half of the tree's camera-paced arrival.
+    const childLabelU = Math.max(0, Math.min(1, (treeU - 0.5) / 0.5));
+    root.style.setProperty('--purpose-child-label-u', (childLabelU * childLabelU * (3 - 2 * childLabelU)).toFixed(5));
     // Hairline and row packing share the indicator's horizontal front. CSS
     // consumes this open fraction directly; no wall clock chases the dot.
     root.style.setProperty('--purpose-gather-open-u', (1 - horizontalGatherU).toFixed(5));
@@ -3040,8 +3076,9 @@ export function createRail({ onNav } = {}) {
      `root.inert`. DEF-01 gave `root.inert` exactly four writers and
      tools/test-frame-order.mjs S4 pins that count. */
 
+  setReady(ready);
   return {
-    root, menu, update, releaseModal, reveal, setHeroEase,
+    root, menu, update, releaseModal, reveal, setHeroEase, setReady,
     cueNavigation, stopNavigationCue,
     setOnNav(fn) { navigate = typeof fn === 'function' ? fn : () => {}; },
     /** Whether the Manifesto is the open page, and the ticket (phase 0..1,

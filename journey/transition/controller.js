@@ -340,7 +340,7 @@ export function createTransitionController({
     for (const id in chapters) {
       const mod = chapters[id];
       if (mod.setBlending)
-        guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX, durS));
+        guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX, durS, railFlight ? chapterAt(railFlight.targetP).id : null));
     }
   }
 

@@ -2,11 +2,9 @@
 // (2026-10-05, Hannah: "for the equip one, I'd like for the bottom one to have
 // ... a robot icon, the top one to have like a toolset icon").
 //
-// Kept apart from icons.js on purpose: CARD_ICONS' presence is what turns a
-// chip into the initiative icon-tab (and lights its rail marker), and Quark and
-// Brötchen keep their own unbuilt housing. ui.js drops these into the soon
-// chip's tab in place of the ember. Same hand as icons.js: 12-unit grid,
-// single hairline, round joins, currentColor. Data only, no imports.
+// These use the shared initiative marker, with their names withheld by a
+// blur. Kept separate as the icons for the two unfinished tools. Same drawing
+// vocabulary as icons.js: 12-unit grid, single hairline, round joins.
 
 const I = (paths) =>
   `<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">${paths}</svg>`;

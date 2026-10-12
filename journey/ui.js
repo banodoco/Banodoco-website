@@ -439,66 +439,20 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     // exists from the first render, not only after the first open.
     btn.setAttribute('aria-expanded', 'false');
     const dotEl = el('i', 'j-hot-dot');
-    // Initiative chips carry their own pictograph in the dot's slot. Their
-    // joined tab moves with the capsule during a collision dodge; only the
-    // invisible hit pad keeps the generic --j-dot-dy node compensation.
-    // Everything else keeps the plain ember dot and its visual pin.
-    const iconTab = !!CARD_ICONS[id];
+    // Built and withheld initiatives share one marker, including its housing
+    // and arrival. Only the withheld label's blur distinguishes Equip.
+    const icon = CARD_ICONS[id] || SOON_ICONS[id];
+    const iconTab = !!icon;
     if (iconTab) {
-      // The pictograph is not a bullet beside the name: together they form a
-      // small node marker, with the icon centred in a raised tab and the name
-      // in the joined body below. An explicit class keeps this treatment
-      // scoped to the six initiative labels; plain ember dots and Owned's
-      // invisible contributor controls retain the shared hotspot geometry.
       btn.classList.add('j-hot--icon-tab');
       dotEl.classList.add('j-hot-ico');
-      dotEl.innerHTML = CARD_ICONS[id];
-    } else if (SOON_ICONS[id]) {
-      // The two unbuilt Equip chips get a pictograph in their tab in place of
-      // the ember (2026-10-05). They keep the soon housing and blurred name;
-      // only the mark changes (site.css .j-hot--soon .j-hot-ico).
-      dotEl.classList.add('j-hot-ico');
-      dotEl.innerHTML = SOON_ICONS[id];
+      dotEl.innerHTML = icon;
     }
     btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);
-    // THE THIRD-STATE CHIP (R3): a node whose interior is unbuilt wears the
-    // state on the chip itself — the NAME blurred to a shape (site.css,
-    // .j-hot--soon) and a strong housing so it reads clearly against the lit
-    // gill fan. The qualifier is the popover tier's own (content.js `preview:
-    // 'under-construction'`), so chip, preview and panel can never disagree.
-    //
-    // THE WORD IS GONE (owner, 2026-09-01: "remove 'Soon' from the visible
-    // Equip labels"). The chip used to carry a "Soon" pill beside the name,
-    // and — because a blurred name is a design statement to a sighted visitor
-    // and a garbled one to AT — an `aria-label` of "<name>, soon" that stated
-    // the same thing to a screen reader. Both are removed: the pill was the
-    // word, and the aria-label existed only to voice it, so leaving it would
-    // have kept the word for exactly the visitors who cannot see the blur.
-    // With neither, the accessible name falls back to the label element's own
-    // text, which is the name the sighted visitor sees the shape of. What the
-    // third state still says is WITHHELD, not "not yet": the blur, the housing
-    // and the unbuilt preview card ("IN DEVELOPMENT", cards.css j-pop-unbuilt).
-    // The class, the `soon` record flag and the ring-rise arrival stay — they
-    // dress and land the whole chip, name included, and are not the word.
     const soon = popover.unbuiltFor(id);
     if (soon) btn.classList.add('j-hot--soon');
-    /* MARKER ABOVE NAME (2026-08-31, the owner on the two soon chips: "those
-       labels seem different to the rest too — e.g. the icon isn't above the
-       text like on the others"). Every other NAMED chip on the site is an
-       initiative marker, and those stack: pictograph in a raised tab, name in
-       the joined body below (cards.css, .j-hot--icon-tab). The soon pair were
-       the only named chips left in the older dot-beside-name row, because the
-       stacking arrived attached to the pictograph and Quark and Brötchen have
-       no CARD_ICONS entry. So the geometry is stated on its own here rather
-       than inferred from the icon: `stacked` means THE MARKER SITS OVER THE
-       NAME, which is the one thing hotspot-frame's placement needs to know —
-       such a chip anchors on its own midpoint instead of 11 px in, and the
-       edge-flip that mirrors a side-set label has no job on a symmetric one.
-       It is deliberately NOT `iconTab`: the soon chips keep their own housing,
-       their blurred name and their rise-on-ring entrance, and only the
-       skeleton is shared. */
     const stacked = iconTab || soon;
     // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
     // thing the node draws, pinned to the node itself rather than to the pill

@@ -60,7 +60,7 @@ export function prepareChapter(sceneApi) { return journeyRegistry.prepare(sceneA
    page drops is not retained by this map. */
 const railPageNav = new WeakMap();
 export function prepareRail(onNav) {
-  const rail = createRail({ onNav });
+  const rail = createRail({ onNav, ready: false });
   railPageNav.set(rail, onNav);
   return rail;
 }
@@ -765,7 +765,7 @@ export function boot(opts = {}) {
     const pose = poseAt(p, { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 },
       director.heroPose, ASPECT ?? sceneApi.camera.aspect, innerWidth);
     const fog = director.fogAt(p);
-    return { position: pose.pos.clone(), target: pose.target.clone(), fov: pose.fov,
+    return { position: pose.pos.clone(), target: pose.target.clone(), fov: pose.fov, roll: pose.roll || 0,
       fogNear: fog.near, fogFar: fog.far };
   }
   function endManifestoPassage() {
@@ -838,7 +838,7 @@ export function boot(opts = {}) {
     // Purpose's pose, and the departure must start from what was on screen.
     const cam = sceneApi.camera, fog = sceneApi.scene.fog;
     const departFrom = {
-      position: cam.position.clone(), target: sceneApi.controls.target.clone(), fov: cam.fov,
+      position: cam.position.clone(), target: sceneApi.controls.target.clone(), fov: cam.fov, roll: cam.userData.journeyRoll || 0,
       fogNear: fog ? fog.near : undefined, fogFar: fog ? fog.far : undefined,
     };
     const anchor = restPoseOf('final');
@@ -1099,6 +1099,7 @@ export function boot(opts = {}) {
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
+    const roll0 = cam.userData.journeyRoll || 0;
     const fogN0 = fog ? fog.near : 0, fogF0 = fog ? fog.far : 0;
     // the LIVE grade, not lookOf(origin p) — a jump overtaking a jump starts
     // from a graded frame that is mid-blend and belongs to no p at all, which
@@ -1115,13 +1116,6 @@ export function boot(opts = {}) {
     // frame — the up-wrap flash (2026-08-16; see the departure term).
     if (wrap && chapterId !== 'mission') transition.armHeroExit(true);
     else if (!wrap) transition.clearHeroTerms(chapterId !== 'mission');
-    // pos0 is banked, so assert the un-owned invariant before placing: if the
-    // director is un-owned the camera may be MID-LAP (a nav click over a
-    // flying down-wrap — the blend just dropped without restoring), and
-    // placeAt is about to hand the director the camera, whose capture must
-    // see the hero pose (director.js captureHero). Idempotent when the
-    // camera already is the hero's, which is every ordinary un-owned jump.
-    if (!director.owned) guarded('director', () => director.applyHeroPose());
     // Place, arm, never replay — but WITHOUT the eased-state snap. A jump is
     // not a placement: the camera is about to travel, so the chapters' eased
     // arm states must not be thrown to their destination values while it does.
@@ -1188,6 +1182,11 @@ export function boot(opts = {}) {
           ? null
           : startChapterEntry(chapterId, chapters[chapterId], guarded),
       });
+      // beginFlight first relinquishes the mobile growth camera and captures
+      // its visible angle. Restoring the saved hero before that capture would
+      // replace the live departure with the older boot pose on an early click.
+      // Overtaken un-owned flights still need this invariant before placement.
+      if (!director.owned) guarded('director', () => director.applyHeroPose());
       placeAt(targetP, { snap: false });
       /* THE WAY HOME (2026-08-12 — the loop; re-judged twice on 2026-09-01,
          and the second reading is the owner-confirmed final form). A wrap is
@@ -1447,7 +1446,7 @@ export function boot(opts = {}) {
       // because it is what is on screen; look1 is read here, after placeAt has
       // let lens.update() write the destination's per-leg curve.
       const look1 = lens.lookOf(journey.progress);
-      transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
+      transition.beginBlend({ t: 0, dur, play: 1, pos0, tgt0, fov0, roll0, fog, fogN0, fogF0, fogN1, fogF1,
         az1, bow, rise, tgtDip, skim, look0, look1, look: { ...look1 },
         // THE INTERRUPT'S MOMENTUM (priced above): the azimuth ease's opening
         // slope and the decay that shapes it. Zero on every un-overtaken jump.
@@ -1497,6 +1496,10 @@ export function boot(opts = {}) {
       // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
       // the only one that had never been given a ticket.
       if (wrap) transition.armHeroEntry(chapterId, dur);
+      // A readiness promise can launch between animator callbacks and the
+      // compositor's draw. Publish phase zero now so that draw never sees the
+      // temporary destination camera used to measure the flight above.
+      applyFrame(targetP, 0);
     } catch (err) {
       console.error('[journey] the jump did not launch — it lands directly:', err);
     } finally {
@@ -1788,7 +1791,7 @@ export function boot(opts = {}) {
            directJumpTo; see D1's evidence note.
          * `transition.chapterEntry`, `transition.stepHeroEntry/Exit` — the
            controller's own per-frame steppers, called not read. */
-    guarded('seams', () => seams.update(frame.routeP));
+    guarded('seams', () => seams.update(frame.routeP, frame.presentedP));
     /* Advance a navigation-only entry against what is actually visible, not
        against the camera flight's fraction. Connect is camera-gated: spending
        this clock while the gaze still hid the ground made its fronts finish in
@@ -1802,7 +1805,7 @@ export function boot(opts = {}) {
     // dropped, the others keep driving.
     transition.chapterEntry =
       applyChapterFrame(chapters, transition.chapterEntry, frame.routeP, frame.dt,
-        frame.gliding, guarded);
+        frame.gliding, guarded, frame.presentedP);
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
