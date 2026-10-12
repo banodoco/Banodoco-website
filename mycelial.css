@@ -387,6 +387,16 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
   transition: color .35s ease;
 }
 
+/* Phone branches unstack over a short distance. Let their names resolve
+   gently as the circles settle instead of inheriting the fast geometric
+   reveal; keep this transition on child returns as gathering reaches zero. */
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-rail.j-rail-purpose-arriving:not(.j-rail-purpose-gathering)
+    .j-rail-slot.j-rail-purpose-child .j-rail-name {
+    transition: opacity 1.25s cubic-bezier(.22, .6, .25, 1), color .35s ease;
+  }
+}
+
 /* The gathered tree persists across sibling travel; labels answer deliberate hover. */
 body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 .j-rail.j-rail-purpose-gathering .j-rail-purpose-child .j-rail-name {
