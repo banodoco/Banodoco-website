@@ -65,7 +65,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   for (const sentence of sentences) {
     const line = document.createElement('p');
     line.className = 'j-manifesto-line';
-    const words = sentence.trim().split(/\s+/);
+    // Keep the inline citation before the first paragraph's closing punctuation.
+    const closingPunctuation = lineEls.length === 0 ? sentence.match(/[.!?]+$/)?.[0] || '' : '';
+    const words = (closingPunctuation ? sentence.slice(0, -closingPunctuation.length) : sentence).trim().split(/\s+/);
     const concepts = manifestoConcepts(words);
     // Highlight the brand name within the manifesto.
     const isName = (i) => /^Mycelial\b/.test(words[i] || '');
@@ -133,7 +135,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       button.className = 'manifesto-note-trigger';
       button.textContent = '[1]';
       button.setAttribute('aria-label', 'Read note 1 about fungi');
-      marker.append(' ', button);
+      marker.append('\u00a0', button, closingPunctuation);
       line.appendChild(marker);
       note = attachManifestoNote(button, CONTENT.manifesto.note);
     }
