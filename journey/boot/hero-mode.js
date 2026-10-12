@@ -340,7 +340,7 @@ export function growthView(view, mode, progress) {
   // bottom while on the hero. Include that stable authored lift, not an
   // animated DOM box (which is not mounted yet in the prelude).
   const heroCentreY = Math.min(row.centreY, innerHeight * (1 - 0.135));
-  const landingPixelY = heroCentreY - row.majorRingD / 2 - 7.5;
+  const landingPixelY = heroCentreY - row.majorRingD / 2 - 10;
   const ndcY = 1 - 2 * landingPixelY / innerHeight;
   // At panX=0 the landing and Equip share the viewport centre. The renderer
   // keeps its eye 0.15 units right of its target; include that in the pitch

@@ -66,8 +66,8 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
       assert.ok(f.t<2.5, 'selection does not delay the loading sequence');
       if(m==='mobile') {
         const row=rowLayout(w,h);
-        assert.ok(Math.abs((1-endY)*h/2-(Math.min(row.centreY,h*.865)-row.majorRingD/2-7.5))<.001,
-          'actual spore landing projects 7.5px above the Equip circle');
+        assert.ok(Math.abs((1-endY)*h/2-(Math.min(row.centreY,h*.865)-row.majorRingD/2-10))<.001,
+          'actual spore landing projects 10px above the Equip circle');
         assert.ok(Math.abs(end*w/2)<.001, 'actual landing is horizontally centred over Equip');
         assert.ok(Math.abs(start)<=.23, 'landing leaves the central original stream behind the heading');
         assert.ok(startY>endY+.08, 'landing falls from the original current to ground');
