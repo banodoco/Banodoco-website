@@ -2066,10 +2066,16 @@ export function createRail({ onNav, ready = true } = {}) {
      the stylesheet lays the circles out in exactly the frame JS paints in
      — one table, no drift. */
   let rowPx = null;
+  // Viewport reads can flush pending rail style writes even when the cached
+  // dimensions have not changed. Invalidate on resize rather than forcing
+  // layout on every return-flight frame. This rail is document-owned.
+  const invalidateRowFrame = () => { rowPx = null; };
+  window.addEventListener('resize', invalidateRowFrame);
+  window.visualViewport?.addEventListener('resize', invalidateRowFrame);
   function rowFrame() {
+    if (rowPx) return rowPx;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    if (rowPx && rowPx.w === w && rowPx.h === h) return rowPx;
     const L = rowLayout(w, h);
     // Chapter anchors: centre-x and diameter per chapter index.
     const chX = new Array(N);
