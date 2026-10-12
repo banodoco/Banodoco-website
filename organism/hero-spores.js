@@ -234,10 +234,10 @@ const COMPOSITION = {
   },
   // Phone portrait, 430x932. The steepest and sparsest — the current
   // crosses the copy column (few dots, dimmed by the corridor) and exits
-  // right at mid-height. Never snowfall.
+  // down through the lower centre. It remains a travelling current.
   mobile: {
     nA: 620, nH: 5, land: 1, landFromBottom: true, landDuration: 1.45, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
-    fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
+    fall: [0.50, 1.05], screenFall: [0.76, 1.16], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
 
@@ -338,9 +338,9 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * KINDLES while still riding the current: its light rises and its tone warms
  * toward white-hot, so the visitor has picked it out of the river before it
  * loses lift. It carries that light down, swells as it settles, and its
- * collapse starts from exactly the light it arrived with. Light and tone
- * only — size and motion stay the shed's own, so the handoff seam and the
- * "no bespoke cast member" rule both hold. */
+ * collapse starts from exactly the light it arrived with. Phone kindling
+ * also gently resolves a readable core on this existing member; its motion
+ * remains the same stream motion until it peels. */
 const KINDLE_S = 0.80;          // the chosen spore catches the light in the stream
 const KINDLE_FAST_S = 0.45;     // ...shorter when a ready scene compresses the settle
 const KINDLE_LIGHT = 2.4;       // the light it carries through its descent
@@ -553,8 +553,8 @@ function seedOne(F, i, c, rand, atEntry) {
   F.band[i] = ring ? 4 : band;
   F.fade[i] = ring ? 0 : 1;
   // Every stream slot uses the shed's own size, tone, and speed family. A
-  // landing becomes followable through its descent light, never by growing
-  // a bespoke cast member or changing its motion.
+  // landing is selected from this ordinary family. Kindling makes the
+  // selected member followable without moving it out of the stream.
   F.size[i] = ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
   F.tone[i] = ring ? 0.78 + rand() * 0.14 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
   F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel;
@@ -567,23 +567,6 @@ function seedOne(F, i, c, rand, atEntry) {
   // ordinary stream particle remains continuous until it peels away.
   const lg = ring ? 1 : lum * (c.lum || 1) * (core ? 1.25 : 1);
   F.color[i3] *= lg; F.color[i3 + 1] *= lg; F.color[i3 + 2] *= lg;
-  // Seed one existing stream member in the phone's lower centre from the
-  // very first frame. It keeps the ordinary drift, light and particle count;
-  // selection later claims it where it has actually travelled, with no jump.
-  if (c.landFromBottom && i === F.nA && !atEntry) {
-    const sourceX = -0.06;
-    const siteY = F.sites[1] / (F.sites[2] * F.tanHalfFov);
-    const sourceY = Math.max(-0.42, siteY + 0.28);
-    F.frame[i3] = sourceX * halfH * F.aspect;
-    F.frame[i3 + 1] = sourceY * halfH;
-    F.q[i] = sourceY + fallJ * F.aspect * (sourceX - c.xIn);
-    // This is the one spore the eye follows. Its original random size was
-    // subpixel on a dense phone display, then area-dimmed by the shader and
-    // lost behind the navigation scrim. Give it a small readable core and
-    // the current body's light from frame one; kindling still blooms gently.
-    F.size[i] = Math.max(F.size[i], 0.18);
-    F.color[i3] *= 2.8; F.color[i3 + 1] *= 2.8; F.color[i3 + 2] *= 2.8;
-  }
   F.attrsDirty = true;
 }
 
@@ -644,8 +627,16 @@ function frameAnchors(F, view) {
 }
 
 /** Build the field for the current composition. */
-function createField(view, seed) {
+// A phone's current bends down through the lower centre where the landing
+// begins. Author its screen slope so tall phones carry the same real stream
+// there; every member still uses the ordinary seed and wind integrator.
+function compositionFor(view) {
   const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
+  return c.screenFall ? { ...c, fall: c.screenFall.map(slope => slope / view.aspect) } : c;
+}
+
+function createField(view, seed) {
+  const c = compositionFor(view);
   const rand = makeRng(seed);
   const n = c.nA + c.nH + RING_BANKS * RING_N + TRAIL_BANKS * TRAIL_N;
   const F = {
@@ -715,7 +706,7 @@ function planLandings(F) {
  *  the particles keep their identity and their streamline, the aim is
  *  re-read for the new mode, and the composition follows the frame. */
 function reframe(F, view) {
-  const c = COMPOSITION[view.mode] || COMPOSITION.desktop;
+  const c = compositionFor(view);
   const oldAspect = F.aspect;
   const oldTanHalfFov = F.tanHalfFov;
   // Crossing a breakpoint re-aims the whole field: each particle's own
@@ -878,6 +869,8 @@ function flutterAt(F, L, u, out) {
  *  was riding low happens to lose its lift. */
 function advance(F, dt, gust) {
   const c = F.comp;
+  const kindleLight = c.landFromBottom ? 1.6 : KINDLE_LIGHT;
+  const landingLight = c.landFromBottom ? 2.2 : LAND_LIGHT;
   const step = Math.min(dt, 0.05);
   F.t += step;
   const rate = F.sceneReady ? RATE_FAST : 1;
@@ -979,7 +972,7 @@ function advance(F, dt, gust) {
       // KINDLING: the stream loop above has already moved it and written
       // its ordinary light; rise from that light, so the pick is seamless
       const k = smooth01((F.t - L.kAt) / (L.t0 - L.kAt));
-      F.fade[L.hi] += (KINDLE_LIGHT - F.fade[L.hi]) * k;
+      F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
       kindleTint(F, L, KINDLE_HEAT * k);
       continue;
     }
@@ -1004,9 +997,9 @@ function advance(F, dt, gust) {
       // swells AS it settles — ignition is a landing, not a strike
       const sb = u > BLOOM_IN_U ? (u - BLOOM_IN_U) / (1 - BLOOM_IN_U) : 0;
       const sw = sb * sb;
-      F.fade[L.hi] = KINDLE_LIGHT
+      F.fade[L.hi] = kindleLight
         + 0.22 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase)) * Math.sin(Math.PI * u)
-        + (LAND_LIGHT - KINDLE_LIGHT) * sw;
+        + (landingLight - kindleLight) * sw;
       kindleTint(F, L, KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw);
       if (u >= 1) {
         L.state = 2;
@@ -1114,6 +1107,7 @@ const KINDLE_SCRATCH = [0, 0, 0];
  *  after its landing and is never reseeded, so the tint never leaks. */
 function kindleBegin(F, L) {
   const i3 = L.hi * 3;
+  L.size0 = F.size[L.hi];
   L.c0 = [F.color[i3], F.color[i3 + 1], F.color[i3 + 2]];
   heatLinear(F.tone[L.hi], KINDLE_SCRATCH, 0);
   const lg = KINDLE_SCRATCH[1] > 0 ? L.c0[1] / KINDLE_SCRATCH[1] : 1;
@@ -1122,6 +1116,15 @@ function kindleBegin(F, L) {
 }
 function kindleTint(F, L, h) {
   const i3 = L.hi * 3;
+  if (F.comp.landFromBottom) {
+    // Recruit an ordinary member first, then gently resolve its small core
+    // during kindling. Nothing moves or changes size on the selection frame.
+    const k = smooth01(h / KINDLE_HEAT);
+    const size = L.size0 + (Math.max(L.size0, 0.10) - L.size0) * k;
+    if (Math.abs(F.size[L.hi] - size) > 1e-7) {
+      F.size[L.hi] = size; F.attrsDirty = true;
+    }
+  }
   for (let c = 0; c < 3; c++) F.color[i3 + c] = L.c0[c] + (L.cHot[c] - L.c0[c]) * h;
 }
 function smooth01(x) {

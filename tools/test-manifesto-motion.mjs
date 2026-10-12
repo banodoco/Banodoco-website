@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { CONTENT } from '../content/content.js';
-import { manifestoPose, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, MOBILE_LIFT_SECONDS, descentU, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
+import { manifestoPose, mobileFieldCenter, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, MOBILE_LIFT_SECONDS, descentU, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
 
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 for (const t of [0, 0.2, 0.8, SPIRAL_START_SECONDS]) {
@@ -38,13 +38,19 @@ for (const aspect of [1440 / 900, 390 / 844]) {
   const capFraction = 4.7 / (2 * distance * Math.tan(pose.fov * Math.PI / 360) * aspect);
   assert.ok(capFraction >= (aspect < 1 ? 0.20 : 0.03) && capFraction <= (aspect < 1 ? 0.36 : 0.05), `${aspect}: cap scale ${capFraction}`);
 }
-// Phones rise vertically while smoothly tilting down, then stay overhead.
-const phoneFrom = { ...from, roll: .2 };
+// Phones rise over the actual cluster while tilting down, then stay overhead.
+const phoneFrom = { ...from, roll: .2, fieldCenter: { x: -2, z: -1 } };
+assert.deepEqual(mobileFieldCenter([{x: 6, z: 3, s: 1, tier: 2},
+  {x: 500, z: 500, s: 100, tier: 4}], from.target), {x: 3, z: 1.5},
+  'near caps and hero determine framing; distant hints cannot move the centre');
 let lastPitch = Infinity;
 for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .02) {
   const pose = manifestoPose(phoneFrom, seconds, 390 / 844);
-  assert.equal(pose.position.x, from.position.x);
-  assert.equal(pose.position.z, from.position.z);
+  for (const axis of ['x', 'z']) {
+    const progress = (pose.position[axis] - from.position[axis]) / (phoneFrom.fieldCenter[axis] - from.position[axis]);
+    assert.ok(progress >= 0 && progress <= 1, 'rise moves smoothly toward the mushroom centre without overshoot');
+    if (seconds >= MOBILE_LIFT_SECONDS) assert.equal(pose.position[axis], phoneFrom.fieldCenter[axis]);
+  }
   const dx = pose.target.x - pose.position.x, dz = pose.target.z - pose.position.z;
   const pitch = Math.atan2(pose.target.y - pose.position.y, Math.hypot(dx, dz));
   assert.ok(pitch <= lastPitch + 1e-9, 'opening tilts continuously toward overhead');
@@ -149,9 +155,9 @@ const controls = { target: vec(0, 2, 0), enabled: true,
   } };
 const fog = { near: 7, far: 20 };
 const scroll = { enabled: true };
-let fieldFogFar = null, fieldSeconds = null, preparations = 0;
+let fieldFogFar = null, fieldSeconds = null, preparations = 0, preparedCenter = null;
 const branch = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } },
-  { scroll, field: { setManifesto(progress, seconds, departure) { if (progress !== null) { fieldFogFar = fog.far; fieldSeconds = seconds; } if (departure) preparations++; } } });
+  { scroll, field: { setManifesto(progress, seconds, departure) { if (progress !== null) { fieldFogFar = fog.far; fieldSeconds = seconds; } if (departure) { preparations++; preparedCenter = departure.fieldCenter; } } } });
 const root = document.body.children.find(el => el.className === 'j-manifesto');
 const tick = seconds => { for (let i = 0; i < seconds * 60; i++) branch.update(1 / 60); };
 const snapshot = () => [camera.position.x, camera.position.y, camera.position.z, camera.fov, camera.far,
@@ -182,6 +188,8 @@ assert.ok(finalRevealLateness >= 0 && finalRevealLateness < 1 / 60 + 1e-9,
 tick(0.2);
 assert.equal(branch.shownLines, CONTENT.manifesto.lines.length, 'every manifesto line is inked by the final reading beat');
 assert.equal(branch.progress, 1, 'the flight settles');
+assert.deepEqual({x: camera.position.x, z: camera.position.z}, preparedCenter,
+  'the live camera settles over the same centre used to prepare visible instances');
 // A fitting fractional-height column must never activate the 3.2rem top mask.
 const readingBox = root.querySelector('.j-manifesto-lines');
 readingBox.rect = { top: 132, bottom: 443.2926, height: 311.2926 };

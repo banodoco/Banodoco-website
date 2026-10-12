@@ -22,8 +22,8 @@ assert.equal(reading.seconds, reading.reveal.at(-1) + beats.at(-1) * WORD_STAGGE
   'mobile camera endpoint is the last complete word fade');
 const end = manifestoPose(from, CAMERA_SECONDS, aspect);
 assert.equal(end.position.y, 38);
-assert.equal(end.position.x, from.position.x, 'overhead zoom keeps its horizontal position');
-assert.equal(end.position.z, from.position.z, 'overhead zoom keeps its horizontal position');
+assert.equal(end.position.x, from.target.x, 'overhead zoom keeps its horizontal position');
+assert.equal(end.position.z, from.target.z, 'overhead zoom keeps its horizontal position');
 const down = end.position.y - end.target.y;
 assert.ok(Math.hypot(end.target.x - end.position.x, end.target.z - end.position.z) / down < 1.1e-5,
   'mobile endpoint looks straight down with a stable heading');

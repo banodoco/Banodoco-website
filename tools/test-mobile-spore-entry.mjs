@@ -17,10 +17,34 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
     tgtY:v.targetY,tanHalfFov:Math.tan(v.fov*Math.PI/360),aspect:w/h};
   for(const ready of [false,true]) {
     const f=createField(view,0x5be1); f.sceneReady=ready;
-    let found=false;
+    const streamOnly=createField(view,0x5be1);
+    streamOnly.sceneReady=ready; streamOnly.landings=[];
+    let found=false, recruitmentChecked=false;
     for(let i=0;i<240;i++) {
       advance(f,1/60,.72);
+      advance(streamOnly,1/60,.72);
       const l=f.landings[0];
+      if(m==='mobile' && l.state===1 && !l.aimed) {
+        const idx=l.hi*3;
+        assert.deepEqual(f.frame.slice(idx,idx+3),streamOnly.frame.slice(idx,idx+3),
+          'recruited spore rides exactly the real stream throughout kindling');
+        if(!recruitmentChecked) {
+          assert.ok(f.q[l.hi]>=f.comp.e[0] && f.q[l.hi]<=f.comp.e[1],
+            'source has an ordinary entry streamline, not a separately positioned seed');
+          assert.equal(f.size[l.hi],streamOnly.size[l.hi],
+            'selection starts with the ordinary particle size, without a bright pop');
+          const x=f.frame[idx]/(f.frame[idx+2]*f.tanHalfFov*f.aspect);
+          const y=f.frame[idx+1]/(f.frame[idx+2]*f.tanHalfFov);
+          let neighbours=0;
+          for(let j=0;j<f.nA+f.nH;j++) {
+            if(j===l.hi) continue;
+            const k=j*3, half=f.frame[k+2]*f.tanHalfFov;
+            if(Math.hypot(f.frame[k]/(half*f.aspect)-x,f.frame[k+1]/half-y)<.25) neighbours++;
+          }
+          assert.ok(neighbours>=3, 'landing is recruited from the visible body of the current');
+          recruitmentChecked=true;
+        }
+      }
       if(!l.aimed) continue;
       const start=l.p0[0]/(l.p0[2]*f.tanHalfFov*f.aspect);
       const startY=l.p0[1]/(l.p0[2]*f.tanHalfFov);
@@ -51,6 +75,7 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
       found=true; break;
     }
     assert.ok(found, 'a landing is found promptly');
+    if(m==='mobile') assert.ok(recruitmentChecked, 'recruitment continuity was observed');
   }
 
 }

@@ -3,7 +3,7 @@ import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
 import { manifestoConcepts } from '../../content/manifesto-concepts.js';
-import { manifestoPose, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
+import { manifestoPose, mobileFieldCenter, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -471,6 +471,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     const here = departFrom ? { ...capture(), ...departFrom } : capture();
     from = anchor ? { ...here, position: anchor.position.clone(), target: anchor.target.clone(),
       fov: anchor.fov, roll: anchor.roll || 0, fogNear: anchor.fogNear, fogFar: anchor.fogFar } : here;
+    from.fieldCenter = mobileFieldCenter(field?.seats, from.target);
     depart = anchor && !reduceMotion.matches ? here : null;
     departW = depart ? 1 : 0;
     landing = null; landW = 0;

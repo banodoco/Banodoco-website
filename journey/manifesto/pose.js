@@ -143,7 +143,22 @@ function mobileHeightAbove(fromY, seconds) {
     + (38 - fromY - MOBILE_LIFT_HEIGHT) * ascentAt(seconds, 0.5);
 }
 
-/** Phones rise and tilt into an overhead view, then keep climbing on the
+/** Frame the mushrooms themselves, not the observer's position outside the
+ * cutaway. Weight the nearby caps by projected plan area; distant hint tiers
+ * must not pull the shot away from the established Purpose cluster. The hero
+ * at the origin is one full-size cap. Compute once when the branch opens. */
+export function mobileFieldCenter(seats, fallback) {
+  const near = seats?.filter(body => body.tier <= 3);
+  if (!near?.length) return { x: fallback.x, z: fallback.z };
+  let weight = 1, x = 0, z = 0;
+  for (const body of near) {
+    const w = body.s * body.s;
+    x += body.x * w; z += body.z * w; weight += w;
+  }
+  return { x: x / weight, z: z / weight };
+}
+
+/** Phones rise above the mushroom cluster and tilt overhead, then keep climbing on the
  * reading clock. A tiny residual horizontal direction (0.00057 degrees from
  * vertical) preserves the departure heading through lookAt and return blends;
  * exact vertical would make the camera's world-up basis singular. */
@@ -154,16 +169,19 @@ function mobilePose(from, seconds) {
   const dy = from.target.y - from.position.y;
   const pitch = mix(Math.atan2(dy, horizontal), -Math.PI / 2 + 1e-5, tilt);
   const y = from.position.y + mobileHeightAbove(from.position.y, seconds);
+  const centre = from.fieldCenter || from.target;
+  const x = mix(from.position.x, centre.x, tilt);
+  const z = mix(from.position.z, centre.z, tilt);
   const distance = mix(Math.hypot(horizontal, dy), y - 0.4, tilt);
   const reach = Math.cos(pitch) * distance;
   const hx = horizontal > 1e-9 ? dx / horizontal : 0;
   const hz = horizontal > 1e-9 ? dz / horizontal : -1;
   return {
-    position: { x: from.position.x, y, z: from.position.z },
+    position: { x, y, z },
     target: seconds <= 0 ? { ...from.target } : {
-      x: from.position.x + hx * reach,
+      x: x + hx * reach,
       y: y + Math.sin(pitch) * distance,
-      z: from.position.z + hz * reach,
+      z: z + hz * reach,
     },
     fov: mix(from.fov, 46, tilt),
     roll: (from.roll || 0) * (1 - tilt),
