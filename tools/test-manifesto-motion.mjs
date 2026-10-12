@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { CONTENT } from '../content/content.js';
-import { manifestoPose, mobileFieldCenter, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, MOBILE_LIFT_SECONDS, descentU, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
+import { manifestoPose, mobileFieldCenter, frameShiftAt, aerialPlacements, planAerialReveals, aerialRevealAt, AERIAL_BODY_COUNT, AERIAL_SCALE_MIN, AERIAL_SCALE_MAX, CAMERA_SECONDS, SPIRAL_START_SECONDS, MOBILE_LIFT_SECONDS, MOBILE_OVERHEAD_TURN, descentU, lineSecondsFor, mobileReadingSchedule, revealSecondsFor, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, FIRST_LINE_SECONDS, TITLE_SECONDS, awaySecondsFrom, returnSecondsFrom } from '../journey/manifesto/pose.js';
 
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 for (const t of [0, 0.2, 0.8, SPIRAL_START_SECONDS]) {
@@ -43,7 +43,7 @@ const phoneFrom = { ...from, roll: .2, fieldCenter: { x: -2, z: -1 } };
 assert.deepEqual(mobileFieldCenter([{x: 6, z: 3, s: 1, tier: 2},
   {x: 500, z: 500, s: 100, tier: 4}], from.target), {x: 3, z: 1.5},
   'near caps and hero determine framing; distant hints cannot move the centre');
-let lastPitch = Infinity;
+let lastPitch = Infinity, lastHeading = 0;
 for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .02) {
   const pose = manifestoPose(phoneFrom, seconds, 390 / 844);
   for (const axis of ['x', 'z']) {
@@ -55,8 +55,14 @@ for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .02) {
   const pitch = Math.atan2(pose.target.y - pose.position.y, Math.hypot(dx, dz));
   assert.ok(pitch <= lastPitch + 1e-9, 'opening tilts continuously toward overhead');
   lastPitch = pitch;
-  assert.ok(Math.abs(Math.atan2(dz, dx) - Math.atan2(from.target.z - from.position.z,
-    from.target.x - from.position.x)) < 1e-8, 'heading never flips at the overhead handoff');
+  const delta = Math.atan2(dz, dx) - Math.atan2(from.target.z - from.position.z,
+    from.target.x - from.position.x);
+  const heading = Math.atan2(Math.sin(delta), Math.cos(delta));
+  assert.ok(heading >= lastHeading - 1e-8 && heading <= MOBILE_OVERHEAD_TURN + 1e-8,
+    'small heading turn is smooth and never overshoots or flips');
+  lastHeading = heading;
+  if (seconds >= MOBILE_LIFT_SECONDS) assert.ok(Math.abs(heading - MOBILE_OVERHEAD_TURN) < 1e-8,
+    'overhead zoom holds its finished framing');
   if (seconds >= MOBILE_LIFT_SECONDS) {
     assert.ok(Math.abs(pitch + Math.PI / 2) < 1.1e-5, 'remaining zoom stays straight down');
     assert.equal(pose.roll, 0);

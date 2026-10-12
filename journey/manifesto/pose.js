@@ -34,6 +34,7 @@ export const awaySecondsFrom = (u) => returnSecondsFrom(u) * AWAY_SCALE + AWAY_E
 export const SPIRAL_START_SECONDS = 1.0;
 export const MOBILE_LIFT_SECONDS = 5;
 const MOBILE_LIFT_HEIGHT = 16;
+export const MOBILE_OVERHEAD_TURN = 25 * Math.PI / 180;
 // The title is written the moment the page opens (2026-10-04 — Hannah: it
 // should "fade in as soon as I press manifesto ... and then the texts appear
 // afterwards").
@@ -174,8 +175,11 @@ function mobilePose(from, seconds) {
   const z = mix(from.position.z, centre.z, tilt);
   const distance = mix(Math.hypot(horizontal, dy), y - 0.4, tilt);
   const reach = Math.cos(pitch) * distance;
-  const hx = horizontal > 1e-9 ? dx / horizontal : 0;
-  const hz = horizontal > 1e-9 ? dz / horizontal : -1;
+  // A small heading turn brings the near ring into the lower-left quadrant
+  // as we tilt overhead. The vertical zoom then keeps this framing steady.
+  const heading = (horizontal > 1e-9 ? Math.atan2(dz, dx) : -Math.PI / 2)
+    + MOBILE_OVERHEAD_TURN * tilt;
+  const hx = Math.cos(heading), hz = Math.sin(heading);
   return {
     position: { x, y, z },
     target: seconds <= 0 ? { ...from.target } : {
