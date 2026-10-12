@@ -148,6 +148,18 @@ export function hotspotIconTabOpacity(u, departing = false) {
     : { icon, shell, label };
 }
 
+/** The copy owns its content area, not the invisible padding around it.
+ * Keep the existing safety margin outside this rectangle. Counting padding
+ * again hid the stalk marker on short phones after an incoming camera path
+ * touched the suppression latch, even when it had cleared every line of ink. */
+export function copyContentBounds(rect, style = {}) {
+  const px = name => Number.parseFloat(style[name]) || 0;
+  return {
+    left: rect.left + px('paddingLeft'), right: rect.right - px('paddingRight'),
+    top: rect.top + px('paddingTop'), bottom: rect.bottom - px('paddingBottom'),
+  };
+}
+
 /**
  *  @param {object}   io
  *  @param {Array}    io.hotspots       the registry array, BY IDENTITY.
@@ -155,6 +167,7 @@ export function hotspotIconTabOpacity(u, departing = false) {
  *  @param {object}   io.sheetQuery     the coarse-pointer media query.
  */
 export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
+  const copyBounds = new Map();
   /** Hold a hovered chip's anchor still, and glide it home on release.
    *
    *  IT CANNOT DRIFT OUT OF ALIGNMENT WITH A LONG HOVER. The anchor's motion
@@ -212,6 +225,12 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
    *  stylesheet and the webfont have settled, reads short, and a flip computed
    *  from a short width puts the DOT off the frame instead of the label. */
   function measure() {
+    copyBounds.clear();
+    for (const block of Object.values(blocks)) {
+      if (block.style.visibility !== 'visible') continue;
+      copyBounds.set(block, copyContentBounds(block.getBoundingClientRect(),
+        globalThis.getComputedStyle?.(block)));
+    }
     for (const h of hotspots) { h.pillW = h.btn.offsetWidth; h.pillH = h.btn.offsetHeight; }
   }
 
@@ -248,7 +267,8 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
     // tab order, so keyboard and pointer agree.
     const cb = blocks[h.chapter];
     if (!masked && cb && cb.style.visibility === 'visible') {
-      const r = cb.getBoundingClientRect();
+      const r = copyBounds.get(cb) || copyContentBounds(cb.getBoundingClientRect(),
+        globalThis.getComputedStyle?.(cb));
       const m = h.sup ? 26 : 8;
       h.sup = sx > r.left - m && sx < r.right + m && sy > r.top - m && sy < r.bottom + m;
       if (h.sup) return false;
