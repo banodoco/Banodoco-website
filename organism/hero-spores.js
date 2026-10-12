@@ -236,7 +236,7 @@ const COMPOSITION = {
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // right at mid-height. Never snowfall.
   mobile: {
-    nA: 620, nH: 5, land: 1, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 620, nH: 5, land: 1, landFromLeft: true, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
@@ -766,9 +766,15 @@ function pickPeeler(F, site) {
     // particle the visitor is meant to follow the hardest one to see.
     const bandCost = F.band[i] === 0 || F.band[i] === 2 ? 0.35 : 0;
     const lead = sxN - xN;
+    // The phone ground sits lower than the desktop landing. Its left-side
+    // stream is consequently higher above the site; the old short-drop cap
+    // rejected those spores and recruited a downwind one from the right.
+    // Keep the wind's direction and allow the longer, still-visible fall.
+    if (F.comp.landFromLeft && lead < UPWIND[0]) continue;
+    const upwindDrop = F.comp.landFromLeft ? 1.8 : 0.85;
     // the stream runs high on the left (it descends as it travels), so an
     // upwind settle is allowed a longer fall than an overhead one
-    if (lead >= UPWIND[0] && lead <= UPWIND[1] && drop >= 0.12 && drop <= 0.85) {
+    if (lead >= UPWIND[0] && lead <= UPWIND[1] && drop >= 0.12 && drop <= upwindDrop) {
       offer(0, i, Math.abs(lead - UPWIND_AIM) + 0.6 * Math.abs(drop - 0.45) + bandCost);
     } else if (lead >= -0.10 && lead < UPWIND[0] && drop <= 0.80) {
       offer(1, i, Math.hypot(lead, drop) + bandCost);

@@ -17,8 +17,10 @@ try {
   if (process.env.TEST_CSS) await page.route('**/mycelial.css', route => route.fulfill({
     path: process.env.TEST_CSS, contentType: 'text/css',
   }));
-  await page.goto(`${process.env.TEST_URL || 'http://localhost:8137'}/?nointro=1&pose=${process.env.TEST_FROM || 'inspire'}`);
-  await page.waitForFunction(() => !!window.journey);
+  // Default to the real cold startup: full intro, no placement/warmup query.
+  const entry = process.env.TEST_FROM ? `?nointro=1&pose=${process.env.TEST_FROM}` : '';
+  await page.goto(`${process.env.TEST_URL || 'http://localhost:8137'}/${entry}`);
+  await page.waitForFunction(() => !!window.journey, null, { timeout: 60000 });
   await page.waitForTimeout(1000);
   if (process.env.TEST_FPS) await page.evaluate(fps => {
     const original = window.requestAnimationFrame;
@@ -37,7 +39,10 @@ try {
           time: performance.now(),
           rail: document.querySelector('.j-rail').className,
           body: document.body.className,
-          opacity: [...document.querySelectorAll('.j-rail-purpose-child .j-rail-name')].map(name => {
+          // Do not resolve hidden descendant styles before their first paint:
+          // getComputedStyle here used to warm the very subtree under test.
+          opacity: !document.querySelector('.j-rail').classList.contains('j-rail-purpose-visible')
+            ? [0, 0] : [...document.querySelectorAll('.j-rail-purpose-child .j-rail-name')].map(name => {
             // Composed visibility includes the tree, item and rail, not just
             // the label and slot: a smooth label behind a snapping parent fails.
             let opacity = 1;
@@ -84,8 +89,15 @@ try {
       }
     }
     console.log(`${engine} ${label}: 10–90% composed fade ${durations.join('/')} ms.`);
+    return durations;
   }
-  await arrival('ordinary arrival');
+  const cold = await arrival('first arrival');
+  if (!process.env.TEST_FROM) {
+    await record(() => page.locator('.j-rail-list > [data-chapter="mission"] .j-rail-item').tap());
+    const warm = await arrival('repeat arrival');
+    cold.forEach((duration, i) => assert.ok(Math.abs(duration - warm[i]) < 350,
+      'first and repeat visits must have the same gentle arrival'));
+  }
   await record(() => page.locator('.j-rail-purpose-ownership .j-rail-item').tap());
   await arrival('Ownership return');
   await record(() => page.locator('.j-rail-purpose-manifesto .j-rail-item').tap());
@@ -94,6 +106,14 @@ try {
     'touch and sibling travel must not reopen either child name');
   await record(() => page.locator('.j-rail-purpose-manifesto .j-rail-item').tap());
   await arrival('Manifesto return');
+  // Check the cold invariant in a separate reload, after the unobserved
+  // first/repeat measurements, so this style read cannot prepare their fade.
+  await page.goto(`${process.env.TEST_URL || 'http://localhost:8137'}/`);
+  await page.locator('.j-rail-purpose-child .j-rail-name').first().waitFor({ state: 'attached' });
+  const initialOpacity = await page.locator('.j-rail-purpose-child .j-rail-name').evaluateAll(names =>
+    names.map(name => Number(getComputedStyle(name).opacity)));
+  assert.ok(initialOpacity.every(value => value === 0),
+    `unvisited names must begin transparent, not fade down from a visible default: ${initialOpacity}`);
 } finally {
   await browser.close();
 }

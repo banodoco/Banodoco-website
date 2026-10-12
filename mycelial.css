@@ -379,6 +379,10 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
 /* Purpose's child names share its arrival rather than snapping on when the
    travel class clears. A return from a gathered child also gets a soft reveal. */
 .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-name {
+  /* Start transparent while the tree is hidden, including its first mount.
+     A first visit must not fade down from the legacy opacity: 1 underneath
+     the opening branches before it can fade up like a warmed visit. */
+  opacity: var(--purpose-child-label-u, 0) !important;
   transition: opacity 1.25s cubic-bezier(.22, .6, .25, 1), color .35s ease;
 }
 .j-rail.j-rail-purpose-arriving:not(.j-rail-purpose-gathering)
