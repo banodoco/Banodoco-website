@@ -35,15 +35,18 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
             'selection starts with the ordinary particle size, without a bright pop');
           const x=f.frame[idx]/(f.frame[idx+2]*f.tanHalfFov*f.aspect);
           const y=f.frame[idx+1]/(f.frame[idx+2]*f.tanHalfFov);
-          let neighbours=0, lane=0, above=0;
+          let neighbours=0, lowestCentral=Infinity;
           for(let j=0;j<f.nA+f.nH;j++) {
             if(j===l.hi) continue;
             const k=j*3, half=f.frame[k+2]*f.tanHalfFov;
+            const px=f.frame[k]/(half*f.aspect), py=f.frame[k+1]/half;
+            if(Math.abs(px)<=.06 && py>=-.15 && py<=.4) lowestCentral=Math.min(lowestCentral,py);
             if(Math.hypot(f.frame[k]/(half*f.aspect)-x,f.frame[k+1]/half-y)<.25) neighbours++;
-            if(Math.abs(f.frame[k]/(half*f.aspect)-x)<=.18) {lane++; if(f.frame[k+1]/half>y) above++;}
           }
           assert.ok(neighbours>=3, 'landing is recruited from the visible body of the current');
-          assert.ok(lane>=8 && above/lane>=.8, 'source is in the bottom fifth of the actual stream');
+          assert.ok(Math.abs(x)<=.06 && y>=-.15 && y<=.4,
+            'source belongs to the central current behind the hero heading');
+          assert.ok(y<=lowestCentral+.07, 'recruitment picks the lower envelope of the central stream');
           recruitmentChecked=true;
         }
       }
@@ -54,7 +57,7 @@ for (const [w,h] of [[390,664],[390,844],[430,932],[1440,900]]) {
       const endY=l.p3[1]/(l.p3[2]*f.tanHalfFov);
       assert.ok(f.t<2.5, 'selection does not delay the loading sequence');
       if(m==='mobile') {
-        assert.ok(start>=-.65 && start<=.35, 'landing leaves the original stream above its ground site');
+        assert.ok(Math.abs(start)<=.23, 'landing leaves the central original stream behind the heading');
         assert.ok(startY>endY+.08, 'landing falls from the original current to ground');
         assert.ok(Math.abs(end)<.12 && endY<-.7, 'only the landing path reaches lower centre');
         assert.ok(l.dur>=1.85*1.45, 'mobile fall retains its slower duration in normal and ready paths');

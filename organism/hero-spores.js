@@ -767,23 +767,13 @@ function pickPeeler(F, site) {
     const bandCost = F.band[i] === 0 || F.band[i] === 2 ? 0.35 : 0;
     const lead = sxN - xN;
     if (F.comp.landFromBottom) {
-      // Recruit from the original current, above and slightly upwind of
-      // the ground. Only this member bends toward the lower-centre site
-      // once kindling ends; the rest of the stream keeps its composition.
-      if (xN >= -0.65 && xN <= 0.25 && drop >= 0.18 && drop <= 1.8) {
-        // The underside is relative to the current itself, not the screen:
-        // select its lowest fifth in this narrow horizontal neighbourhood.
-        let neighbours = 0, above = 0;
-        for (let j = 0; j < F.nA + F.nH; j++) {
-          if (j === i || F.retired[j]) continue;
-          const j3 = j * 3, hh = F.frame[j3 + 2] * F.tanHalfFov;
-          if (Math.abs(F.frame[j3] / (hh * F.aspect) - xN) > 0.18) continue;
-          neighbours++;
-          if (F.frame[j3 + 1] / hh > yN) above++;
-        }
-        if (neighbours >= 8 && above / neighbours >= 0.8) {
-          offer(0, i, Math.abs(xN + 0.2) + 0.35 * Math.abs(drop - 0.9) + bandCost);
-        }
+      // Peel from the central strand behind the phone's hero heading,
+      // choosing its lowest available member at the same horizontal position.
+      // The current itself is unchanged;
+      // this ordinary member bends toward the ground only after kindling.
+      if (Math.abs(xN) <= 0.06 && yN >= -0.15 && yN <= 0.4
+          && drop >= 0.18) {
+        offer(0, i, yN + 0.12 * Math.abs(xN) + bandCost * 0.15);
       }
       continue;
     }
