@@ -65,7 +65,16 @@ try {
     // Waiting for only the old 'not travelling' state races that publication.
     await page.waitForFunction(() => document.querySelector('.j-rail').classList.contains('j-rail-purpose-travelling'));
     await page.waitForFunction(() => !document.querySelector('.j-rail').classList.contains('j-rail-purpose-travelling'));
-    await page.waitForTimeout(1600);
+    await page.waitForFunction(() => {
+      const show = window.journey.chapter === 'final'
+        && !document.body.classList.contains('j-manifesto-open');
+      return [...document.querySelectorAll('.j-rail-purpose-child .j-rail-name')]
+        .every(name => show ? Number(name.style.opacity) >= .999 : Number(name.style.opacity) <= .001);
+    }, null, { timeout: 12000 });
+    // Hidden sibling destinations can finish their label clock before the
+    // branch handoff retires. Preserve the prior resting interaction delay.
+    if (await page.evaluate(() => window.journey.chapter !== 'final'
+      || document.body.classList.contains('j-manifesto-open'))) await page.waitForTimeout(1600);
     return page.evaluate(() => {
       window.sampleLabels = false;
       return window.labelSamples;
@@ -106,6 +115,12 @@ try {
     'touch and sibling travel must not reopen either child name');
   await record(() => page.locator('.j-rail-purpose-manifesto .j-rail-item').tap());
   await arrival('Manifesto return');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(100);
+  assert.ok(await page.locator('.j-rail-purpose-child .j-rail-name').evaluateAll(names =>
+    names.every(name => !name.style.opacity && !name.style.transition)),
+    'desktop regains CSS ownership after leaving the phone breakpoint');
+  await page.setViewportSize({ width: Number(process.env.TEST_WIDTH || 390), height: Number(process.env.TEST_HEIGHT || 664) });
   // Check the cold invariant in a separate reload, after the unobserved
   // first/repeat measurements, so this style read cannot prepare their fade.
   await page.goto(`${process.env.TEST_URL || 'http://localhost:8137'}/`);

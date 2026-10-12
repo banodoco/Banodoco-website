@@ -127,6 +127,7 @@ import { CARD_ICONS } from './cards/index.js';
 import { installBackdropDismiss } from './backdrop.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { createOwner } from './ui/owner.js';
+import { createPurposeLabelFade } from './ui/purpose-label-fade.js';
 import { mediaQuery, REDUCE_MOTION } from './ui/media.js';
 import {
   RAIL_HANDOFF,
@@ -554,6 +555,8 @@ export function createRail({ onNav, ready = true } = {}) {
   const globalOwner = owner.child('global');  // listeners on `document`
 
   const reduceMotion = mediaQuery(REDUCE_MOTION);
+  const phonePurposeLabels = mediaQuery('(max-width: 620px) and (orientation: portrait)');
+  const labelHover = mediaQuery('(hover: hover) and (pointer: fine)');
   /* The horizontal map is a desktop instrument. The previous mobile
      navigator remains the authored touch/portrait model: a fixed current
      mark, a separate Menu mark, and a deliberate first tap that unfolds the
@@ -808,7 +811,8 @@ export function createRail({ onNav, ready = true } = {}) {
   ownershipMark.appendChild(buildSymbol('owned'));
   ownershipMark.appendChild(reticle());
   ownershipLink.appendChild(ownershipMark);
-  ownershipLink.appendChild(el('span', 'j-rail-name', 'Ownership'));
+  const ownershipName = el('span', 'j-rail-name', 'Ownership');
+  ownershipLink.appendChild(ownershipName);
   itemsOwner.listen(ownershipLink, 'click', (e) => {
     e.preventDefault();
     navigate('owned');
@@ -837,7 +841,8 @@ export function createRail({ onNav, ready = true } = {}) {
   manifestoMark.appendChild(buildSymbol('mission'));
   manifestoMark.appendChild(reticle());
   manifestoItem.appendChild(manifestoMark);
-  manifestoItem.appendChild(el('span', 'j-rail-name', 'Manifesto'));
+  const manifestoName = el('span', 'j-rail-name', 'Manifesto');
+  manifestoItem.appendChild(manifestoName);
   itemsOwner.listen(manifestoItem, 'click', (e) => {
     e.preventDefault();
     navigate('manifesto');
@@ -849,6 +854,25 @@ export function createRail({ onNav, ready = true } = {}) {
   const purposeIndicator = el('span', 'j-rail-purpose-indicator');
   purposeIndicator.setAttribute('aria-hidden', 'true');
   purposeTree.appendChild(purposeIndicator);
+  const purposeNames = [
+    { name: ownershipName, item: ownershipLink, fade: createPurposeLabelFade() },
+    { name: manifestoName, item: manifestoItem, fade: createPurposeLabelFade() },
+  ];
+  // Initialize before this subtree enters the DOM: no legacy opacity:1 frame.
+  function ownPhoneNames() {
+    for (const { name, fade } of purposeNames) {
+      fade.reset();
+      if (phonePurposeLabels.matches) {
+        name.style.setProperty('opacity', '0', 'important');
+        name.style.setProperty('transition', 'color .35s ease', 'important');
+      } else {
+        name.style.removeProperty('opacity');
+        name.style.removeProperty('transition');
+      }
+    }
+  }
+  ownPhoneNames();
+  itemsOwner.listen(phonePurposeLabels, 'change', ownPhoneNames);
   inner.appendChild(purposeTree);
 
   /* ---- the menu control: the second resting symbol ---- */
@@ -2733,6 +2757,24 @@ export function createRail({ onNav, ready = true } = {}) {
     };
     root.style.setProperty('--purpose-ownership-reveal', childReveal(ownershipAt));
     root.style.setProperty('--purpose-manifesto-reveal', childReveal(manifestoAt));
+    if (phonePurposeLabels.matches) {
+      const now = performance.now();
+      const travelling = (!!ticket && cameraPhase < .9999) || crossing;
+      const geometryReady = treeU >= .9999 && childU >= .9999;
+      const purposeRest = selectedChapterId === 'final' && !manifestoOpen
+        && gatherU <= .0001 && !travelling;
+      for (const [i, entry] of purposeNames.entries()) {
+        const reveal = Number(childReveal(i === 0 ? ownershipAt : manifestoAt));
+        const asked = !travelling && (entry.item.matches(':focus-visible')
+          || (labelHover.matches && entry.item.matches(':hover')));
+        const opacity = entry.fade.step({ now,
+          show: geometryReady && reveal >= .9999 && (purposeRest || asked),
+          concealed: treeU <= .001 || childU <= .001 || reveal <= .001,
+        });
+        entry.name.style.setProperty('opacity', opacity.toFixed(5), 'important');
+      }
+    }
+
     const branchDot = manifestoOpen || !!manifestoTicket || manifestoU > 0.001;
     const dedicatedIndicator = selectedChapterId === 'owned'
       || (flight && chapterAt(flight.fromP).id === 'owned')

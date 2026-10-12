@@ -376,6 +376,9 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
 }
 .manifesto-note-tooltip[hidden] { display: none; }
 
+/* Desktop retains its camera-paced CSS labels. Phone names have one
+   displayed-frame controller in rail.js; no CSS opacity transitions. */
+@media (min-width: 621px), (orientation: landscape) {
 /* Purpose's child names share its arrival rather than snapping on when the
    travel class clears. A return from a gathered child also gets a soft reveal. */
 .j-rail .j-rail-slot.j-rail-purpose-child .j-rail-name {
@@ -389,16 +392,6 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
   .j-rail-slot.j-rail-purpose-child .j-rail-name {
   opacity: var(--purpose-child-label-u, 0) !important;
   transition: color .35s ease;
-}
-
-/* Phone branches unstack over a short distance. Let their names resolve
-   gently as the circles settle instead of inheriting the fast geometric
-   reveal; keep this transition on child returns as gathering reaches zero. */
-@media (max-width: 620px) and (orientation: portrait) {
-  .j-rail.j-rail-purpose-arriving:not(.j-rail-purpose-gathering)
-    .j-rail-slot.j-rail-purpose-child .j-rail-name {
-    transition: opacity 1.25s cubic-bezier(.22, .6, .25, 1), color .35s ease;
-  }
 }
 
 /* The gathered tree persists across sibling travel; labels answer deliberate hover. */
@@ -420,6 +413,8 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 .j-rail.j-rail-purpose-travelling:not(.j-rail-purpose-arriving) .j-rail-slot.j-rail-purpose-child .j-rail-name {
   opacity: 0 !important;
   transition-duration: .35s;
+}
+
 }
 
 /* Related words share a colour, but each slow swell starts on its own reveal beat. */
