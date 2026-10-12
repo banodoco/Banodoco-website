@@ -806,7 +806,10 @@ export function boot(opts = {}) {
     transition.clearHeroTerms(chapterId !== 'mission');
     // the same capture hygiene directJumpTo keeps before placing
     if (!director.owned) guarded('director', () => director.applyHeroPose());
-    const ticket = { fromP, targetP, phase: 0 };
+    const ticket = { fromP, targetP, phase: 0,
+      // The long descent should reveal home throughout its approach, not
+      // reserve all its words for an ordinary flight's final 1.3 seconds.
+      manifestoHeroReturn: kind === 'leave' && chapterId === 'mission' };
     transition.beginFlight({
       railWrap: null,
       railFlight: ticket,

@@ -4378,7 +4378,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 /* Manifesto rides the existing canvas and frame loop. A soft local scrim sits
    behind the reading measure while the sides and upper scene stay open. */
 .j-manifesto[hidden] { display: none; }
-body.j-manifesto-open .ui > :not(#site-nav, .j-rail),
+body.j-manifesto-open .ui > :not(#site-nav, .j-rail, .hero),
+body.j-manifesto-open:not(:has(.j-manifesto.is-returning)) .ui > .hero,
 body.j-manifesto-open #site-nav > :not(.logo),
 body.j-manifesto-open .j-copy,
 body.j-manifesto-open .j-hotspots,
@@ -4400,13 +4401,16 @@ body.j-manifesto-open .j-copy {
 @media (prefers-reduced-motion: reduce) {
   body.j-manifesto-open .j-copy { transition: none !important; }
 }
+/* Hero copy already follows the destination flight's opacity envelope.
+   During descent, release it to that writer instead of hiding its arrival
+   behind the chrome gate and then replaying a second fade after landing. */
 /* ...and fades back in on landing. The keyframes name only their FROM
    value, so each element rises to whatever opacity its own writer (the
    copy envelope, the hero furniture) is painting this frame, and hands back
    to that writer when the animation ends. (.spill is left out: it carries
    the intro's own fill-mode animation, which a second name would restart.) */
 @keyframes j-manifesto-reenter { from { opacity: 0; } }
-body.j-manifesto-closing .ui > :not(#site-nav, .j-rail),
+body.j-manifesto-closing .ui > :not(#site-nav, .j-rail, .hero),
 body.j-manifesto-closing #site-nav > :not(.logo),
 body.j-manifesto-closing .j-copy,
 body.j-manifesto-closing .j-hotspots,
