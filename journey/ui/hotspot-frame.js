@@ -258,7 +258,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
 
   /** Where one chip's world anchor lands on screen this frame, and whether it
    *  may be drawn there at all. Returns `{ want, w, sx, sy }`. */
-  function resolvePlacement(h, { geom, dt, gate, detail, reserveLayout, excluded }) {
+  function resolvePlacement(h, { geom, dt, gate, detail, reserveLayout, excluded, departing }) {
     let want = gate > (h.revealDirect ? 0 : 0.72) && !detail;
     let w = (want || reserveLayout) ? h.world() : null;
     w = want ? holdAnchor(h, w, dt) : w;
@@ -268,7 +268,15 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       const v = geom.project(w.clone());
       sx = (v.x * 0.5 + 0.5) * window.innerWidth;
       sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
-      if (!admits(h, v, sx, sy, excluded)) { w = null; sx = 0; sy = 0; }
+      // Admission protects readable, interactive labels at rest. An outgoing
+      // label is already noninteractive and owned by the copy fade: rejecting
+      // it at the copy rectangle or viewport margin used to stop transform
+      // updates while its opacity kept fading, pinning it to the screen.
+      // Keep projecting through those boundaries; the viewport clips it.
+      const visibleProjection = Number.isFinite(sx) && Number.isFinite(sy) && v.z <= 1;
+      if (!(departing ? visibleProjection : admits(h, v, sx, sy, excluded))) {
+        w = null; sx = 0; sy = 0;
+      }
     }
     want = want && !!w;
     return { want, w, sx, sy };
@@ -715,6 +723,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
       const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
       const { want, w, sx, sy } = resolvePlacement(h, {
         geom, dt, gate: placementGate, detail, reserveLayout, excluded,
+        departing: departureOpacity !== null,
       });
 
       // What the FRAME can place, cached for the index's reachability rule.
@@ -746,7 +755,7 @@ export function createHotspotFrame({ hotspots, blocks, sheetQuery }) {
         }
         h.sx = sx; h.sy = sy;
       }
-      const vis = departureOpacity !== null ? h.a > 0 : h.a > 0.015;
+      const vis = departureOpacity !== null ? h.a > 0 && !!w : h.a > 0.015;
       if (h.iconTab) paintIconTab(h, departureOpacity !== null);
       else if (h.soon) paintSoonRise(h, departureOpacity !== null);
       h.btn.style.opacity = h.a;

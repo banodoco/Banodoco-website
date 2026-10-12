@@ -218,10 +218,10 @@ body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
   .ui #site-nav { --header-left: 6vw; padding: 2.1rem var(--header-left); }
   .ui .logo { --brand-width: 180px; }
   .ui .logo .wordmark { font-size: 32px; }
-  .ui .hero { padding: 3.5vh 6vw 0; text-align: left; }
+  .ui .hero { padding: 3.5vh 6vw 0; text-align: center; }
   .ui .hero h1 { font-size: clamp(2.65rem, 10.8vw, 4rem); line-height: .97; margin: 0 0 1.3rem; }
   .ui .hero h1 .hl { white-space: nowrap; }
-  .ui .hero h1::after { width: 32px; margin-top: 1.2rem; }
+  .ui .hero h1::after { width: 32px; margin: 1.2rem auto 0; }
   .ui .hero .sub { max-width: 100%; font-size: 11px; line-height: 2; letter-spacing: .18em; margin: 0; }
   .j-h { font-size: clamp(2rem, 8vw, 2.8rem); }
   .j-sub { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }

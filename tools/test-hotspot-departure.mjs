@@ -161,4 +161,43 @@ for (const phase of [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32]) {
 assert.equal(sawReverseFormation, true,
   'the reverse shell formation has a visible intermediate state');
 
-console.log('hotspot direct-departure copy sync: ok');
+// Departure must keep following the camera even when its projected anchor
+// crosses the source copy or the resting admission margin. Desktop and phone
+// compositions cross these boundaries at different points in the flight.
+for (const [width, height] of [[1440, 900], [390, 844]]) {
+  window.innerWidth = width;
+  window.innerHeight = height;
+  const movingFlight = {};
+  paintedMarker.a = 1;
+  paintedMarker.departureTicket = null;
+  blocks.inspire.style.visibility = 'visible';
+  blocks.inspire.getBoundingClientRect = () => ({
+    left: width * 0.45, right: width * 0.8, top: 0, bottom: height,
+  });
+  let previousTransform;
+  for (const [x, y] of [[0, 0], [0.2, 0.1], [1.1, 0.25]]) {
+    frame.place({
+      p: flight.targetP, dt: 0.05, detail: false,
+      chapterId: 'connect', railFlight: movingFlight, copyEase: () => 0.7,
+      excluded: new Set(['arca']),
+      geom: { ...geom, project: () => ({ x, y, z: 0 }) }, now: 1000,
+    });
+    assert.equal(paintedMarker.placeable, true,
+      'outgoing labels continue projecting through copy, masks and screen edges');
+    assert.equal(paintedMarker.sx, (x * 0.5 + 0.5) * width);
+    assert.equal(paintedMarker.sy, (-y * 0.5 + 0.5) * height);
+    assert.notEqual(paintedButton.style.transform, previousTransform,
+      'the outgoing label moves with each camera projection');
+    previousTransform = paintedButton.style.transform;
+  }
+  frame.place({
+    p: flight.targetP, dt: 0.05, detail: false,
+    chapterId: 'connect', railFlight: movingFlight, copyEase: () => 0.7,
+    excluded: new Set(),
+    geom: { ...geom, project: () => ({ x: 0, y: 0, z: 2 }) }, now: 1100,
+  });
+  assert.equal(paintedButton.classList.contains('vis'), false,
+    'a label behind the camera cannot linger at its last screen position');
+}
+
+console.log('hotspot direct-departure copy sync and world motion: ok');
