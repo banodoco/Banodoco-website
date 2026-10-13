@@ -8,7 +8,6 @@ const PHRASES = [
   { id: 'synthesis', phrase: 'interactive experience' },
   { id: 'kinship', phrase: 'shaped and reshaped' },
   { id: 'vitality', phrase: 'bustles with this kind of creative life' },
-  { id: 'imagination', phrase: 'beauty and ambition we have yet to imagine' },
 ];
 // The authored em dash joins life—with; only 'life' carries the accent.
 const normalized = word => word.split('—')[0].toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, '');

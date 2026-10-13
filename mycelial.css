@@ -433,23 +433,23 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 /* Related words share a colour, but each slow swell starts on its own reveal beat. */
 .manifesto-concept.concept-sun {
   --concept-rest: var(--palette-sun);
-  --concept-lit: #ffd078;
-  --concept-glow: 246, 194, 101;
+  --concept-lit: #b4d99a;
+  --concept-glow: 157, 196, 135;
 }
 .manifesto-concept.concept-soil {
   --concept-rest: var(--palette-soil);
-  --concept-lit: #f5ac7e;
-  --concept-glow: 218, 144, 99;
+  --concept-lit: #f2a085;
+  --concept-glow: 223, 142, 117;
 }
 .manifesto-concept.concept-passage {
   --concept-rest: var(--palette-passage);
-  --concept-lit: #c2df9e;
-  --concept-glow: 169, 192, 139;
+  --concept-lit: #9acdea;
+  --concept-glow: 131, 182, 215;
 }
 .manifesto-concept {
-  --palette-sun: #f0cd8d;
-  --palette-soil: #e9b497;
-  --palette-passage: #c6d4a8;
+  --palette-sun: #9dc487;
+  --palette-soil: #df8e75;
+  --palette-passage: #83b6d7;
   color: var(--concept-rest);
   text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62);
 }
@@ -560,12 +560,11 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   filter: saturate(.84) brightness(1.02);
   text-shadow: 0 0 5px rgb(235 191 162 / .16);
 }
-.j-manifesto-line.shown .manifesto-spectrum-glyph,
-.j-manifesto-line.shown .manifesto-synthesis-glyph {
+.j-manifesto-line.shown .manifesto-spectrum-glyph {
   animation: manifesto-iridescence 7s ease-in-out forwards;
   animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
 }
-/* One continuous palette travels through both words: gold, terracotta, sage.
+/* One continuous palette travels through both words: sage, terracotta, blue.
    Each sampled glyph remains inside its word's original reveal envelope. */
 .manifesto-concept.concept-synthesis { color: transparent; text-shadow: none; }
 .manifesto-synthesis-glyph {
@@ -576,8 +575,18 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: saturate(.84) brightness(1.02);
-  text-shadow: 0 0 5px rgb(235 191 162 / .16);
+  filter: none;
+  text-shadow: none;
+  opacity: .92;
+}
+/* The pulse changes presence, never the palette's saturation or lightness. */
+.j-manifesto-line.shown .manifesto-synthesis-glyph {
+  animation: manifesto-synthesis-presence 6s ease-in-out forwards;
+  animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
+}
+@keyframes manifesto-synthesis-presence {
+  0%, 100% { opacity: .92; }
+  40% { opacity: 1; }
 }
 @keyframes manifesto-iridescence {
   0%, 100% {

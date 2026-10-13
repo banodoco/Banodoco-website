@@ -16,4 +16,6 @@ assert.equal(phrase[1][1].characterOffset + phrase[1][1].ink.length, phrase[0][1
 assert.equal(matches.get(words.indexOf('open')), undefined, 'only model, not open model, receives the fungi accent');
 assert.ok(![...manifestoConcepts(CONTENT.manifesto.lines[1].split(/\s+/)).values()].some(match => match.id === 'soil'),
   'ordinary model mentions in other paragraphs do not acquire this narrative accent');
+assert.ok(![...manifestoConcepts(CONTENT.manifesto.lines[3].split(/\s+/)).values()].some(match => match.id === 'imagination'),
+  'beauty and ambition stays ordinary body text');
 console.log('PASS manifesto partner nouns and continuous three-color synthesis mapping.');
