@@ -121,33 +121,23 @@ const stalkHigh = () => typeof innerWidth === 'number'
 // ring before the next one starts. Priced in gate units it would have run at
 // whatever rate the wheel happened to turn.
 const RIPPLE_GATE_ON = 0.30;    // arrival gate at which the stalk rings
-// Seconds from the stalk ring to the gills ring — ONE CHIP BEAT (R3). The two
-// chips rise in one beatGapMs apart (constants/copy.js HOTSPOT_ARRIVAL, 540 ms,
-// through hotspot-frame's beatEnvelope), and the owner's direction ties the
-// murmur to the appearance: "as each appears, a minor pulse through the thing
-// it points at". 0.55 seats each ring on its own chip's rise; the retired 0.75
-// was authored against reading rings alone, before the chips rose with them.
-const RIPPLE_GAP_S = 0.55;
+// Each marker forms with its own expanding welcome. Independent wave slots
+// let the stalk finish naturally while the gills begin their next beat.
+const RIPPLE_GAP_S = 0.80;
 // A POINTER ring may not be re-triggered faster than this. The wave itself
 // decays over about 8 s (organism.js's 'tap-pulse' parks pulseT there) and
-// there is exactly ONE wave in the shader, so a hover that re-armed on every
+// there is exactly ONE pointer wave, so a hover that re-armed on every
 // enter would let a wobbling pointer restart the same ring forever and it
 // would read as a strobe rather than as an answer. The AUTHORED ladder is
 // exempt (ring's `authored` flag): its two beats are the introduction itself,
 // spaced by RIPPLE_GAP_S above, and holding the second beat to a hover
 // throttle would detach it from the chip it answers.
 const RIPPLE_REARM_S = 1.10;
-// Wave profiles, in the shader's own three numbers: (speed, range falloff,
-// amplitude) — uPulseP, organism/shaders.js. The STALK borrows the hero's
-// BODY-hit profile verbatim (organism.js: "slow, short-range, gentle"), because
-// a hotspot on the stipe is the same event as a finger on the stipe and a
-// second dialect of the same answer is the thing this chapter exists not to
-// invent. The GILLS answer in the same family, one notch quieter: the same slow
-// speed, a shorter reach because the margin is thin flesh with no web under it,
-// and 0.85 of the amplitude — the second point of interest is deliberately the
-// softer of the two ("softly activated", the brief's own word).
-const RIPPLE_STALK = [1.4, 1.5, 1.2];
-const RIPPLE_GILLS = [1.5, 1.9, 0.85];
+// Authored welcomes reach farther through the anatomy than a pointer tap.
+// Speed stays gentle; lower spatial falloff makes the expanding front readable,
+// and the gill answer remains slightly softer. Hover keeps its original profile.
+const RIPPLE_STALK = [1.4, 0.65, 3.2];
+const RIPPLE_GILLS = [1.5, 0.75, 2.8];
 
 export function createEquip(sceneApi) {
   const group = new THREE.Group();
@@ -195,6 +185,7 @@ export function createEquip(sceneApi) {
   const NODES = FIXED_HOTSPOTS.equip;          // ['quark', 'brotchen']
   const LOCAL_OF = { quark: STALK_LOCAL, brotchen: GILL_LOCAL };
   const PROFILE_OF = { quark: RIPPLE_STALK, brotchen: RIPPLE_GILLS };
+  const HOVER_PROFILE_OF = { quark: [1.4, 1.5, 1.2], brotchen: [1.5, 1.9, 0.85] };
 
   let armed = false;
   // NOT `blending`. tools/render-report-lib.mjs's material-flag census greps
@@ -237,7 +228,11 @@ export function createEquip(sceneApi) {
     if (!local || typeof sceneApi.pulseFrom !== 'function') return false;
     lastRingAt = now;
     if (authored) revealAt[id] = now;
-    sceneApi.pulseFrom(worldOf(local), PROFILE_OF[id]);
+    const world = worldOf(local);
+    // Let the marker begin condensing before its light breathes through
+    // the anatomy; delaying only the wave preserves the label cadence.
+    if (authored && sceneApi.welcomeFrom) sceneApi.welcomeFrom(world, PROFILE_OF[id], id === 'quark' ? 0 : 1, 0.22);
+    else sceneApi.pulseFrom(world, (authored ? PROFILE_OF : HOVER_PROFILE_OF)[id]);
     return true;
   }
 

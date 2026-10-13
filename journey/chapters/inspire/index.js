@@ -996,42 +996,19 @@ export function createInspire(sceneApi) {
     }
   }
 
-  /* ================================================================
-     5d. THE ARRIVAL SHIMMER (2026-08-30, brief §2E). As each ember
-         kindles, one soft band of extra light climbs that exit's
-         already-lit spore lane — bottom to top through the dust the
-         item stands under — then falls back to ambient. It rides the
-         spore seat's surge channel: brightness-only, on dots the lane
-         already lights, so no dot moves, none is added, and a frame
-         whose band amplitude is 0 writes nothing at all (the quiet
-         path stays byte-exact; that is the seat's own contract).
-         AUTHORED IN SECONDS, advanced on the animator's dt. The
-         purpose is wall-clock — a charge crossing the column in under
-         a second — and seconds is the unit that survives a viewport
-         change. Only the TRIGGER rides the cascade envelope above: a
-         wave launches on the frame its ember's land envelope leaves
-         zero, so ordering, replay and reversal are inherited whole
-         from the copy gate. A fresh nav visit re-earns the cascade
-         (beginEntry zeroes the envelopes) and therefore re-earns the
-         waves; a launched wave always completes on its own clock and
-         re-arms only once spent AND its envelope has returned to
-         zero, so a rapid away/back inside one travel neither snaps a
-         band mid-column nor strands one lit. A settled dt = 0
-         placement trips the trigger but holds the wave at its first
-         instant, where the attack still reads 0 — frozen captures
-         stay ambient by construction.
-         The band's centre travels the seat's arc coordinate s (0..1
-         along each exit's chain). The braided rise — the visible
-         column — begins at s 0.22 (resident) / 0.42 (migrants) per
-         the seat's chain staging; each start sits under its rise so
-         the band's upper skirt meets the lip as the amplitude opens,
-         and the sweep ends past 1 so the bump leaves through the
-         lane's own tip fade instead of parking on it. */
-  const SURGE_TRAVEL_S = 1.05;   // launch -> the band clears the tip
-  const SURGE_ATTACK_S = 0.22;   // amplitude ease-in: a charge, never a pop
-  const SURGE_RELEASE_S = 0.45;  // amplitude ease-out, inside the travel
+  /* A welcome travels upward through each existing spore lane while its
+     marker forms. The effective marker reveal (including the physical rim)
+     starts the clock, not the copy gate alone. A longer warm breath remains
+     legible through the marker's 700 ms formation and settles to the exact
+     ambient stream. Nothing moves or gets added to the spore field.
+     Fresh entries reset explicitly; snap placements stay settled. Departure
+     scales the welcome by the same reveal as its rim so it cannot linger in
+     another section. The band exits beyond the lane tip with soft edges. */
+  const SURGE_TRAVEL_S = 2.15;   // launch -> the band clears the tip
+  const SURGE_ATTACK_S = 0.48;   // amplitude ease-in: a charge, never a pop
+  const SURGE_RELEASE_S = 0.85;  // amplitude ease-out, inside the travel
   const SURGE_AMP = 1.0;         // the seat's own shimmer ceiling carries taste
-  const SURGE_HALF_W = 0.24;     // arc half-width — soft, indistinct edges
+  const SURGE_HALF_W = 0.32;     // arc half-width — soft, indistinct edges
   const SURGE_ARC0 = [0.10, 0.30, 0.30]; // per EXIT_SLOT: under each rise base
   const surgeT = [-1, -1, -1];   // seconds since launch; < 0 = armed
   const surgePrev = [0, 0, 0];   // land envelope, previous frame (edge detect)
@@ -1040,18 +1017,16 @@ export function createInspire(sceneApi) {
   function driveSurge(dt) {
     let any = false;
     for (let i = 0; i < 3; i++) {
-      const a = land[i].a;
+      // The copy gate can open before this rim is visible. Trigger from
+      // the same effective signal as its marker, never from the copy alone.
+      const a = landingReveal(i);
       if (surgeT[i] >= 0) {
         surgeT[i] += dt;         // a launched wave completes on its own clock
         if (surgeT[i] >= SURGE_TRAVEL_S && a <= 0) surgeT[i] = -1; // spent + reset gate = re-armed
       } else if (a > 0 && surgePrev[i] <= 0) {
-        // The ember KINDLES -> launch. An envelope that arrives already
-        // complete (live placeAt / ?p=, the QA default gate, a settled
-        // dt = 0 frame) performed no entrance, so it earns no wave: mark
-        // it spent instead — the exact policy the cascade itself has on
-        // those paths, where every ember stands at its gate's own
-        // resolution with no clocks mid-flight.
-        surgeT[i] = a >= 0.999 ? SURGE_TRAVEL_S : 0;
+        // Only an explicit frozen placement is settled. A slow live frame
+        // can cross the entire reveal ramp and must still earn its welcome.
+        surgeT[i] = dt === 0 ? SURGE_TRAVEL_S : 0;
       }
       surgePrev[i] = a;
       const w = surgeT[i];
@@ -1062,7 +1037,7 @@ export function createInspire(sceneApi) {
       let dn = (SURGE_TRAVEL_S - w) / SURGE_RELEASE_S; dn = dn > 1 ? 1 : dn;
       const spec = surgeSpec[i];
       spec.front = SURGE_ARC0[i] + (1 + SURGE_HALF_W - SURGE_ARC0[i]) * u;
-      spec.amp = SURGE_AMP * (up * up * (3 - 2 * up)) * (dn * dn * (3 - 2 * dn));
+      spec.amp = SURGE_AMP * a * (up * up * (3 - 2 * up)) * (dn * dn * (3 - 2 * dn));
       _surge[i] = spec;
       any = true;
     }
@@ -1395,48 +1370,13 @@ export function createInspire(sceneApi) {
     if (i < 0) return null;
     const p = streaks[i].localPos.clone();
     if (i === EXIT_SLOT.RIGHT) { p.x *= 0.90; p.z *= 0.90; p.y += 0.10; }
-    // PHONE-PORTRAIT ANCHOR PULL (2026-08-27, the mobile close-up rest).
-    // The phone Inspire pose (portrait.js PHONE_KEYS) dollies toward the cap,
-    // which projects the two flanking lips against hotspot-frame's own
-    // |ndc| 0.92 admission band: at the shipped anchors Arca's chip either
-    // fell out of admission entirely (the owner's "the 3 items don't
-    // appear") or survived with 1-2 px of margin and a pill clipped by the
-    // left frame edge. Same cure as D22 above, same justification, larger
-    // dose, per orientation: pull the LABEL anchor (chip + dot only — ember,
-    // streak and plume keep the true lip) inward along the cap's own
-    // curvature. ~25-30 px on screen against the ember's ~90 px bloom still
-    // reads as "on the lit edge" (D22's numbers game). Gated by the phone
-    // width contract portrait.js's phone blocks use (<= 620, portrait), so
-    // desktop / tablet / landscape anchors are byte-identical.
+    // The wider phone view needs only a small inward label correction for
+    // pill width. Keep markers beside the real release lips instead of
+    // lifting them away from the spore region they introduce.
     if (typeof window !== 'undefined'
         && window.innerWidth <= 620 && window.innerHeight > window.innerWidth) {
-    // 2026-08-27, same day, second pass — ARCA 0.78 -> 0.67. The first pass
-    // cleared ADMISSION and stopped there, which is one bound short.
-    // hotspot-frame admits on the ANCHOR's ndc (|x| <= 0.92), but what a
-    // reader sees is the PILL, and resolveX then drags a pill that lands
-    // short of `lo` inward by up to 26 px. Measured on the rendered 430x932
-    // page at 0.78: Arca's anchor was admitted at ndc -0.77 and its pill sat
-    // at x 4.0 — inside the viewport, but ONLY via that nudge, which leaves
-    // the DOT 9.7 px off its own node and reads on screen as a chip cut by
-    // the bezel. (That is what the owner's "the 3 items don't appear" looks
-    // like once the anchor clears admission: present, but eaten by the edge.)
-    // So the bound this pull answers to is the pill's RECT with the nudge
-    // NOT firing — tx must clear `lo` on its own. 0.67 does that; the right
-    // slot uses its own pull once the aim stays at -0.05.
-    // Its vertical clearance is separate: Safari's 390x664 visible viewport
-    // seats the lower rim anchor inside the copy's 8px protection margin,
-    // suppressing the complete marker. Lift only this LABEL anchor by the
-    // ~31px needed to clear that protected block at the shortest supported
-    // phone viewport; ember, streak and plume remain at the true rim point.
-    // Measured, unclamped, dots true, at the shipped rest:
-    //     left slot   x  18.3..128.6   left margin  18.3
-    //     centre slot x 161.8..280.1
-    //     right slot  x 363.2..413.8   right margin 16.2
-    // Arca's total displacement from its true lip is ~40 px on screen,
-    // against the ember's ~90 px bloom — still inside D22's "reads as on the
-    // lit edge" tolerance, and confirmed by eye on the rendered frame.
-      if (EXITS[i].id === 'arca') { p.x *= 0.67; p.z *= 0.67; p.y += 0.06; }
-      if (i === EXIT_SLOT.RIGHT) { p.x *= 0.88; p.z *= 0.88; p.y += 0.50; }
+      if (EXITS[i].id === 'arca') { p.x *= 0.88; p.z *= 0.88; p.y += 0.06; }
+      if (i === EXIT_SLOT.RIGHT) { p.x *= 0.90; p.z *= 0.90; p.y += 0.10; }
     }
     return p.applyMatrix4(mushroomRestMatrix());
 }
@@ -1732,7 +1672,8 @@ export function createInspire(sceneApi) {
       // the marker holds one level; the shimmer stays with the braids and
       // streams around it. Animator and snap() compute the identical value.
       const lg = lipGlows[i];
-      const lo = 0.22 * landingReveal(i) * T;
+      const welcome = _surge[i]?.amp || 0;
+      const lo = (0.22 + 0.26 * welcome) * landingReveal(i) * T;
       lg.sprite.visible = lo > 0.01;
       lg.mat.opacity = lo;
     }
@@ -1780,6 +1721,7 @@ export function createInspire(sceneApi) {
       // ember stands at its gate's own resolution, no clocks mid-flight
       // (the animator's dt = 0 branch says the same thing).
       driveLand();
+      surgeT.fill(SURGE_TRAVEL_S); surgePrev.fill(1); _surge.fill(null);
       const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T);
@@ -1822,6 +1764,8 @@ export function createInspire(sceneApi) {
     beginEntry() {
       for (const ex of exits) { ex.target = 1; ex.fade = 1; }
       for (const L of land) L.a = 0;
+      // A fresh visit owns a fresh welcome, even if the previous one was interrupted.
+      surgeT.fill(-1); surgePrev.fill(0); _surge.fill(null);
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) setReveal(0, 0, 0, 0); },

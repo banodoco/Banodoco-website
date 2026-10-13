@@ -960,10 +960,10 @@ export function createSpores(ctx) {
 
   // SURGE (optional, per exit): a bump the driver may park anywhere on a
   // lane's arc to brighten the dots that lane already lit. Deliberately
-  // small — the chapter drives amp <= 1 and the peak has to read as a
-  // shimmer riding the knot cadence, never as a flare; the size term is a
-  // fifth of the brightness one so beads breathe instead of popping.
-  const SURGE_GAIN = 0.30, SURGE_SIZE = 0.06;
+  // visible during an introduction: warm light crosses existing dots,
+  // with a much smaller size lift so beads breathe instead of popping.
+  // A zero amplitude leaves the ambient stream completely unchanged.
+  const SURGE_GAIN = 1.65, SURGE_SIZE = 0.18;
 
   /** THE EMPHASIS — runs inside drive(), i.e. from the driver's own
    *  animator, AFTER 'spore-drift' integrated the buffer this frame.

@@ -21,6 +21,17 @@ export const PULSE_GLSL = `
       uniform vec3 uPulseC;
       uniform float uPulseT;
       uniform vec3 uPulseP; // x: wave speed, y: range falloff, z: amplitude
+      uniform vec3 uWelcomeC0, uWelcomeC1;
+      uniform vec3 uWelcomeP0, uWelcomeP1;
+      uniform vec2 uWelcomeT;
+      float welcomeAt(vec3 wp, vec3 center, vec3 profile, float age) {
+        if (age < 0.0 || age > 4.0) return 0.0;
+        float d = distance(wp, center);
+        float w = profile.x * (0.15 + 0.21 * age);
+        float rb = (d - profile.x * age) / w;
+        return profile.z * exp(-rb * rb) * exp(-1.15 * age)
+          * exp(-d * profile.y) * smoothstep(0.0, 0.22, age);
+      }
       float pulseAt(vec3 wp) {
         float d = distance(wp, uPulseC);
         float w = uPulseP.x * (0.15 + 0.21 * uPulseT);
@@ -31,6 +42,9 @@ export const PULSE_GLSL = `
         // which the TAA sanitise would then flush to black every frame.
         float rb = (d - uPulseP.x * uPulseT) / w;
         float ring = exp(-(rb * rb));
-        return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);
+        float tap = uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);
+        float welcome = max(welcomeAt(wp, uWelcomeC0, uWelcomeP0, uWelcomeT.x),
+                            welcomeAt(wp, uWelcomeC1, uWelcomeP1, uWelcomeT.y));
+        return 1.0 + max(tap, welcome);
       }
 `;

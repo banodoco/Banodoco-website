@@ -455,123 +455,13 @@ const TAB_KEYS = [
 // mid-leg key, exactly like the tablet band, so the Connect approach and its
 // REST-01 gaze contract inherit the shipped path.
 //
-// The same session then widened the brief twice ("the mushroom should be
-// higher up, pushed up on the page"; "consider deeply the overall feng shui
-// of the Inspire page on mobile — too much dead space above the mushroom"),
-// so the values below are a BALANCE solve for the whole 430x932 screen, not
-// a zoom knob. Measured on the shipped pose: the organism's ink did not
-// reach 30% of its peak until y 425 — 46% of a phone screen carrying faint
-// plume against black — while the copy block and the navigator share the
-// bottom 280 px. The rest below moves the subject up AND closer.
-//
-// Why these axes and not others (judged on rendered 430x932 / 375x812 pairs
-// each iteration — before/after and the iteration ladder are archived in
-// docs/code-health/evidence/2026-08-21-elegance-run-01/inspire-cam-mobile/):
-//   back  -0.66   1.50 -> 0.84: eye-to-cap distance 14.87 -> 9.43, the cap
-//                 ~58% larger on screen — the "zoom in significantly". This
-//                 is the CEILING the chips set, not a taste stop: the two
-//                 flanking release lips must project inside hotspot-frame's
-//                 |ndc| 0.92 admission band or their labels are culled
-//                 outright (measured: Arca's anchor at ndc -0.937 = hidden,
-//                 -0.87 = a pill clipped by the frame edge). Even this value
-//                 is only reachable together with the phone-portrait label-
-//                 anchor pull in inspire/index.js nodeWorld() — Arca lands
-//                 at ndc -0.66 and 2RP at 0.81, with 18.3 px and 16.2 px of
-//                 frame margin and no edge-nudge on either.
-//                 (First pass put Arca at -0.77; that cleared ADMISSION but
-//                 not the FRAME — the pill still landed 4 px from the left
-//                 edge and only got there through resolveX's +-26 px nudge,
-//                 i.e. with its dot pulled off its own node. See the pull's
-//                 own note in inspire/index.js.)
-//   rise  -0.40   eye y 2.0 -> 1.167 net of the dolly's geometric lift —
-//                 under every release lip (lips at 2.55/2.92/3.11, rim low
-//                 point 2.42), so the underside gills read. NOT lower: a
-//                 2026-08-27 iteration at eye 0.48 reproduced the exact trap
-//                 camera.js's D19 note records ("near ground is bright
-//                 ground") — the grazing root field became a lit band laid
-//                 straight across the body copy.
-//   tgtUp +0.46   net target y 2.024, gaze pitch +6.9 deg (shipped +1.2).
-//                 THIS IS D21's EQUAL-VOIDS RULE, RE-SOLVED FOR THE CLOSE-UP.
-//                 It was +0.70 when this block was first written (2026-08-27,
-//                 pitch +8.8), on the reasoning that more upward pitch is what
-//                 reads as "from below". That reasoning was WRONG and is
-//                 retracted here rather than deleted: "from below" is bought
-//                 by `rise` — the EYE below every release lip — not by the
-//                 aim. Ablated on rendered 430x932 frames the same day: the
-//                 underside gills read identically at pitch +5.5, +6.9, +8.8,
-//                 because eye y 1.167 never moved. All the aim decides is
-//                 where the head sits on the page, which is D21's question.
-//                 Measured on no-chrome frames, cap silhouette taken as the
-//                 rows carrying >= 80 lit strands, voids taken between the
-//                 top furniture's bottom edge (y 59.8) and the copy block's
-//                 top (y 650) — D21's "anchor to the furniture a viewer
-//                 actually sees":
-//                     tgtUp   cap rows    centre   void above / below
-//                     shipped 349..365      357        289 / 285
-//                     +0.70   312..462      387        252 / 188
-//                     +0.57   295..444      369        235 / 206
-//                     +0.46   281..453      367        221 / 197   <-
-//                     +0.28   257..408      332        197 / 242
-//                 +0.46 is the only value that closes D21's two voids (1 px
-//                 apart) and it lands the head within 2 px of where D21 put
-//                 it on the shipped pose — the same composition law, 58%
-//                 more cap, seen from underneath. +0.28 INVERTS the voids,
-//                 which is the shape D21 measured and rejected at +70 px.
-//                 It also repays D19's ground: the bright root ring rides UP
-//                 past the copy with the rest of the scene, so the field
-//                 behind the sub falls from mean 51.6 / p95 116 at +0.70 to
-//                 35.4 / 81 here (headline band flat at ~80 / 155). The
-//                 close-up still costs copy contrast against the shipped
-//                 pose's near-black 18.8 / 27 — that is this pose's real
-//                 price and it is recorded, not hidden.
-//   tgtRight -0.05  shares the admission margin between the two flanking
-//                 lips (Arca was the binding edge, 2RP had slack) and holds
-//                 D23's centring: measured on the rendered no-chrome frame,
-//                 the stalk's SILHOUETTE centre (half-max edges of the
-//                 stalk-only band, the stable form of this measurement) sits
-//                 at x 211.0 against a 215 midline — the same -4 px the
-//                 SHIPPED pose carries at 210.5, i.e. the close-up does not
-//                 spend D23 at all.
-//                 A -0.13 pan was tried on 2026-08-27 to buy Arca's frame
-//                 margin from the camera instead of the label, and REJECTED
-//                 on measurement: it moved the stalk to 221.0, from 4 px
-//                 left of the midline to 6 px right, which is spending a
-//                 recorded decision for a cosmetic gain. (An earlier read
-//                 of that pan claimed it IMPROVED the centring to 214.6.
-//                 That number came from a baseline-subtracted luminous
-//                 centroid over a fixed row band, which drifts by 13 px with
-//                 the band's choice because the band catches a varying slice
-//                 of root glow. It is retracted; the silhouette measure
-//                 above is band-stable and is the one to use.) The margin is
-//                 therefore bought where D22 buys it — in the label anchor,
-//                 inspire/index.js nodeWorld().
-//                 What the frame does keep is an uneven pair of cut edges —
-//                 in the cap band, column 0 / column 429 mean luminance
-//                 97.3 / 75.5. That is the CHAPTER's asymmetry, not a
-//                 framing error: D16/D18 put the spore stream on this side
-//                 deliberately, so the left edge is where the light is.
-//   fov   +2      53 -> 55: a touch of wide-angle steepens the from-below
-//                 perspective without pushing the rim lips off-frame.
-//
-// What it deliberately spends: the cap's rim tips and the plume tops spill
-// off the frame edges (they are context; the head is the subject — the same
-// argument as landscape D21), and the root field drops to a thin ground band
-// under the copy. Both are what makes the frame read as a different place
-// from Mission's full figure — which was the original complaint.
-//
-// Inspire's own reveal machinery is safe under this by construction-plus-
-// measurement: its reveal channels ride camera AZIMUTH alone
-// (inspire/index.js camAzDeg reads pos.x/z), the dolly slides pos along the
-// view line whose endpoints sit at az ~113.2/114.4 — far above the 78-deg
-// ramp ceiling and far from the -90 fold — and az(p) over the whole phone
-// arrival stays strictly monotone with max |delta| 1.30 deg vs the 621-wide
-// ablation (measured, 441-sample scrub over p 0.040..0.26, both phone
-// widths, 2026-08-27). The 2026-08-27 rebalance below moved only `tgtUp` and
-// `tgtRight`, both of which re-aim the TARGET and leave pose.pos alone, so
-// az(p) is bit-identical to that scrub rather than merely close to it.
+// Current phone composition gives the three plume welcomes room above their
+// release lips. The previous close-up intentionally cropped the plume tops
+// and needed large label-only offsets; the wider view keeps signs close to
+// their actual sources and leaves the lower copy band clear.
 const PHONE_KEYS = [
   { p: ORBIT_P0, ...TZERO },
-  { p: restProgress('inspire'), back: -0.66, rise: -0.40, truck: 0, tgtUp: 0.46, tgtRight: -0.05, fov: 2 },
+  { p: restProgress('inspire'), back: -0.30, rise: -0.25, truck: 0, tgtUp: 0.90, tgtRight: -0.05, fov: 2 },
   // Re-aim Equip rightward so the stalk moves left behind the centre of
   // the left-aligned phone copy. Ease back to zero at Connect's own rest.
   { p: restProgress('equip'), ...TZERO, tgtRight: 0.29 },

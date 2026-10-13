@@ -535,6 +535,13 @@ function drawAttr(geo, n) {
 const pulseC = { value: new THREE.Vector3(0, 0, 0) };
 const pulseT = { value: 1e3 };
 const pulseP = { value: new THREE.Vector3(2.6, 0.33, 1.4) };
+// Authored introductions have independent waves: the gill welcome must not
+// cut off the stalk's expanding light, nor replace an ordinary pointer tap.
+const welcomeUniforms = {
+  uWelcomeC0: { value: new THREE.Vector3() }, uWelcomeC1: { value: new THREE.Vector3() },
+  uWelcomeP0: { value: new THREE.Vector3() }, uWelcomeP1: { value: new THREE.Vector3() },
+  uWelcomeT: { value: new THREE.Vector2(1e3, 1e3) },
+};
 // Connect's ADOS destination is staged over a deterministic hero-ground
 // junction.  Keep the displacement in one shared uniform so every ground
 // layer (web, node glow, beads and ribbons) deforms around that junction in
@@ -566,6 +573,7 @@ function injectDraw(mat, navPocket = false) {
     sh.uniforms.uPulseC = pulseC;
     sh.uniforms.uPulseT = pulseT;
     sh.uniforms.uPulseP = pulseP;
+    Object.assign(sh.uniforms, welcomeUniforms);
     sh.uniforms.uGroundAdosDelta = groundAdosDelta;
     if (navPocket) {
       sh.uniforms.uGroundNavPocketPx = groundNavPocketPx;
@@ -631,6 +639,7 @@ function makePoints(positions, colors, sizes, opacity = 1.0, dists = null) {
       uPulseC: pulseC,
       uPulseT: pulseT,
       uPulseP: pulseP,
+      ...welcomeUniforms,
       uGroundAdosDelta: groundAdosDelta,
       fogNear: { value: FOG_NEAR },
       fogFar: { value: FOG_FAR },
@@ -749,6 +758,7 @@ function makeDenseLines(positions, colors, tangents, opacity = 1.0, tangents2 = 
       uPulseC: pulseC,
       uPulseT: pulseT,
       uPulseP: pulseP,
+      ...welcomeUniforms,
       fogNear: { value: FOG_NEAR },
       fogFar: { value: FOG_FAR },
     },
@@ -2230,7 +2240,12 @@ sporeSys.registerDrift();
 addAnimator('highlights', (t) => highlights.update(t));
 // the root-tap wave rides on elapsed time; parked well past its decay it
 // contributes nothing, so the counter just stops advancing there
-addAnimator('tap-pulse', (t, dt) => { if (pulseT.value < 8) pulseT.value += dt; });
+addAnimator('tap-pulse', (t, dt) => {
+  if (pulseT.value < 8) pulseT.value += dt;
+  const w = welcomeUniforms.uWelcomeT.value;
+  if (w.x < 8) w.x += dt;
+  if (w.y < 8) w.y += dt;
+});
 addAnimator('controls', () => controls.update());
 
 // trackers animator — moved to organism/furniture.js at M2; registered here
@@ -2507,14 +2522,21 @@ return {
    *  the pointer tap above plants, exposed so a caller outside this module can
    *  answer in the specimen's own language instead of inventing a second one.
    *  `profile` is uPulseP verbatim: [wave speed, range falloff, amplitude];
-   *  omit it to keep whatever the last trigger set. There is exactly ONE wave
-   *  in the shader, so this REPLACES any ring still travelling rather than
-   *  adding to it — callers that want two rings must space them in time. */
+   *  omit it to keep whatever the last trigger set. This single pointer wave
+   *  REPLACES the previous pointer ring. Authored chapter introductions
+   *  have independent slots via welcomeFrom below. */
   pulseFrom(world, profile) {
     if (!world) return;
     pulseC.value.copy(world);
     pulseT.value = 0;
     if (profile && profile.length === 3) pulseP.value.set(profile[0], profile[1], profile[2]);
+  },
+  /** Two independent authored introduction waves; taps remain on pulseFrom. */
+  welcomeFrom(world, profile, slot, delay = 0) {
+    if (!world || (slot !== 0 && slot !== 1)) return;
+    welcomeUniforms[`uWelcomeC${slot}`].value.copy(world);
+    welcomeUniforms[`uWelcomeP${slot}`].value.fromArray(profile);
+    welcomeUniforms.uWelcomeT.value.setComponent(slot, -Math.max(0, delay));
   },
   /** Recompose the camera (panX/camY/camZ/targetY/fov). seconds=0 snaps; seconds>0 eases via a
    *  cancellable 'view-tween' animator — see the setView JSDoc above for full behavior. */
