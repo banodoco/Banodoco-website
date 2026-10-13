@@ -5,7 +5,7 @@ const PAIRS = [
   { id: 'passage', organism: 'animals', contribution: 'passage to new ground' },
 ];
 const PHRASES = [
-  { id: 'synthesis', phrase: 'interactive experience' },
+  { id: 'synthesis', phrase: 'garden you can walk through' },
   { id: 'kinship', phrase: 'open models and open tools' },
   { id: 'vitality', phrase: 'bustles with this kind of creative life' },
 ];

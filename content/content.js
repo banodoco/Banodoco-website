@@ -63,11 +63,11 @@ export const CONTENT = {
     title: 'Mycelial Manifesto',
     // Paragraphs drive the same text in the animated and static experiences.
     lines: [
-      "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals are bound together, each giving what another needs: energy from the sun, nutrients from the soil, passage to new ground.",
-      "We want AI and humanity to grow together like this. We shape our tools, and our tools shape us, so we believe in open models and open tools, shaped and reshaped by many hands, all in pursuit of the most human of impulses: the drive to create.",
-      "A painter trains a LoRA on years of her work, building on an open model. Separately, an engineer builds a workshop for sculpting in 3D. A year later, a stranger brings their work together to craft an interactive experience that couldn't exist without all three.",
-      "We don't just dream of a world of endless content and ever smarter machines, we dream of one that bustles with this kind of creative life. Artists, technologists and models, tangled together, lifting one another toward works of ever greater beauty and ambition.",
-      "Mycelial aims to be the threads beneath it all, seeding, nourishing, and connecting all that grows."
+      "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals are bound together, each giving what another needs. Energy from the sun, nutrients from the soil, passage to new ground.",
+      "Our tools have always shaped how we think and what we create, so each of us, and all of us, should have a hand in making them. We therefore believe in open models and open tools, shaped and reshaped by thousands of hands. Together, those hands push what the technology can do and what we can do with it.",
+      "A painter wants to see her landscapes under snow, so she turns years of her work into a LoRA for an open model. Elsewhere, an engineer builds a workshop for sculpting in 3D. A year later, in that workshop, a stranger sculpts her paintings into a garden you can walk through.",
+      "Some dream of endless content and ever smarter machines. We dream of a world that bustles with this kind of creative life. Artists, technologists and models, tangled together, every finished work the start of someone else's.",
+      "Mycelial will be the threads beneath it all, seeding, nourishing, and connecting all that grows."
     ],
     get body() { return this.lines.join(' '); },
   },
