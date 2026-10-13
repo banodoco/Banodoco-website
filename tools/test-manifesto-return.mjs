@@ -73,7 +73,7 @@ for (const seconds of [.2, 1, 2, 3, 4, 4.5, 5, 15, CAMERA_SECONDS]) {
       const speed = camera.quaternion.angleTo(previous) / step;
       peak = Math.max(peak, speed);
       if (priorSpeed !== null) assert.ok(Math.abs(speed-priorSpeed) < .025,
-        'angular velocity changes continuously, including the straight-down pole');
+        `angular velocity changes continuously, including the straight-down pole (${seconds}s at ${time}s: ${priorSpeed} -> ${speed})`);
       priorSpeed = speed;
     }
     previous = camera.quaternion.clone();
@@ -131,3 +131,34 @@ for (const [aspect, width] of [[390/844, 390], [1.6, 1280]]) {
   }
 }
 console.log('PASS authored desktop/mobile Inspire returns: early/late heading continuity and exact landing');
+
+// A settled departure introduces its destination during the descent. Project
+// the actual authored landing aim through the sampled camera, rather than
+// checking only mathematical pose continuity or the final frame.
+for (const [aspect, width] of [[390/844, 390], [1.6, 1280]]) {
+  const rest = id => {
+    const p = poseAt(restProgress(id), { pos: new THREE.Vector3(), target: new THREE.Vector3() }, undefined, aspect, width);
+    return { position: { ...p.pos }, target: { ...p.target }, fov: p.fov, roll: p.roll || 0 };
+  };
+  const start = manifestoPose(rest('final'), CAMERA_SECONDS, aspect);
+  for (const id of ['mission', 'inspire', 'equip', 'connect', 'owned']) {
+    const landing = rest(id), flight = createReturnFlight(start, landing, awaySecondsFrom(1));
+    let previous = null;
+    for (let i = 0; i <= 1000; i++) {
+      const k = i / 1000, pose = sampleReturnFlight(flight, k);
+      camera.aspect = aspect; camera.fov = pose.fov; camera.updateProjectionMatrix();
+      camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+      camera.up.set(pose.up.x, pose.up.y, pose.up.z);
+      camera.lookAt(target.set(pose.target.x, pose.target.y, pose.target.z)); camera.updateMatrixWorld();
+      if (previous) assert.ok(camera.quaternion.angleTo(previous) / (flight.seconds / 1000) < 2.2,
+        `${id} approach remains continuous on ${width}px at ${k}: ${camera.quaternion.angleTo(previous) / (flight.seconds / 1000)}`);
+      previous = camera.quaternion.clone();
+      if (k >= .7 && k < 1) {
+        const projected = new THREE.Vector3(landing.target.x, landing.target.y, landing.target.z).project(camera);
+        assert.ok(Math.abs(projected.x) < .001 && Math.abs(projected.y) < .001,
+          `${id} remains framed through the final descent on ${width}px`);
+      }
+    }
+  }
+}
+console.log('PASS desktop/mobile destination framing through descent and continuous orientation for every landing');

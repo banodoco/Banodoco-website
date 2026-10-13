@@ -14,6 +14,7 @@ import { CARD_ICONS } from './cards/index.js';
 import { SOON_ICONS } from './cards/soon-icons.js';
 import { createRail } from './rail.js';
 import { createRailExclusion, railBox } from './layout/rail-geometry.js';
+import { createPurposeCopyFit } from './layout/purpose-copy-fit.js';
 import { createFrameProjection } from './ui/frame-projection.js';
 import { createHotspotFrame } from './ui/hotspot-frame.js';
 import { createHoverZones } from './ui/hover-zone.js';
@@ -268,6 +269,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     copyHost.appendChild(b);
     blocks[c.id] = b;
   }
+  const fitPurposeCopy = createPurposeCopyFit(blocks.final);
   const heroBlock = document.querySelector('.ui .hero');
 
   /* ==========================================================================
@@ -1004,6 +1006,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
       travelP = p,
       departureOpacity = null,
     } = {}) {
+    fitPurposeCopy();
     policies.resolve();
     /* TWO LINES, NOT ONE, AND THE SPELLING IS PINNED. U06 collapsed these
        into a single expression — same calls, same short-circuit, same value —

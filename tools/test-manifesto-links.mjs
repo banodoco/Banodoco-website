@@ -46,11 +46,10 @@ try {
   await phone.waitForTimeout(3500);
   await phone.evaluate(() => window.journey.flyTo('manifesto'));
   await phone.waitForTimeout(1200);
-  const community = phone.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^holding together/ });
+  const community = phone.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^connecting/ });
   await phone.waitForFunction(() => document.querySelector('.j-manifesto .manifesto-chapter-link[href="#/equip"]').getAttribute('aria-disabled') === 'false');
   const beats = await community.locator('.j-manifesto-word').evaluateAll(words => words.map(word => Number(word.style.getPropertyValue('--w'))));
-  assert.equal(beats.length, 2, 'holding together is one link with two separately revealed words');
-  assert.equal(beats[1], beats[0] + 1, 'the second linked word retains its own reveal beat');
+  assert.equal(beats.length, 1, 'connecting is a single linked reveal word');
   await community.scrollIntoViewIfNeeded();
   await phone.screenshot({ path: '/tmp/manifesto-links-mobile.png' });
   await community.tap();
@@ -61,7 +60,7 @@ try {
   const fallback = await browser.newPage({ javaScriptEnabled: false });
   await fallback.goto(`${url}/static/`);
   const links = await fallback.locator('.manifesto-chapter-link').evaluateAll(anchors => anchors.map(a => ({ word: a.textContent, href: a.getAttribute('href'), target: !!document.getElementById(a.getAttribute('href').slice(1)) })));
-  assert.deepEqual(links.map(a => [a.word, a.href]), [['seeding', '#/inspire'], ['nourishing', '#/equip'], ['holding together', '#/connect']]);
+  assert.deepEqual(links.map(a => [a.word, a.href]), [['seeding', '#/inspire'], ['nourishing', '#/equip'], ['connecting', '#/connect']]);
   assert.ok(links.every(a => a.target), 'native fallback links reach real section anchors with JavaScript disabled');
   assert.deepEqual(errors, []);
   console.log(`PASS manifesto ${settled ? 'settled links' : 'delayed-link reveal'}, desktop hover and Enter, mobile first-tap navigation, and no-JS fallback.`);

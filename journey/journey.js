@@ -1761,6 +1761,12 @@ export function boot(opts = {}) {
       stateP: p,
       routeP: frameP,
       presentedP: travelP,
+      // An aerial return does not traverse the ordinary route's retirement
+      // windows. Admit Inspire's destination now; its camera-azimuth reveal
+      // still controls what resolves as the descent approaches the specimen.
+      // Camera/UI travel keep their actual continuous presented coordinate.
+      scenePresentedP: manifestoPassage?.kind === 'leave' && manifestoPassage.target === 'inspire'
+        ? p : travelP,
       transition,
       gliding: scroll.gliding,
     });
@@ -1798,7 +1804,7 @@ export function boot(opts = {}) {
            directJumpTo; see D1's evidence note.
          * `transition.chapterEntry`, `transition.stepHeroEntry/Exit` — the
            controller's own per-frame steppers, called not read. */
-    guarded('seams', () => seams.update(frame.routeP, frame.presentedP));
+    guarded('seams', () => seams.update(frame.routeP, frame.scenePresentedP));
     /* Advance a navigation-only entry against what is actually visible, not
        against the camera flight's fraction. Connect is camera-gated: spending
        this clock while the gaze still hid the ground made its fronts finish in
@@ -1812,7 +1818,7 @@ export function boot(opts = {}) {
     // dropped, the others keep driving.
     transition.chapterEntry =
       applyChapterFrame(chapters, transition.chapterEntry, frame.routeP, frame.dt,
-        frame.gliding, guarded, frame.presentedP);
+        frame.gliding, guarded, frame.scenePresentedP);
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the

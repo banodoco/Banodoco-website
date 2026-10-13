@@ -180,6 +180,7 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   .j-block.pos-bottomleft[data-chapter="final"] {
     width: min(56rem, 89.6vw);
     max-width: 56rem;
+    translate: 0 calc(-1 * var(--purpose-copy-lift, 0px));
   }
   .j-block[data-chapter="final"] .j-sub { max-width: 36rem; }
 }

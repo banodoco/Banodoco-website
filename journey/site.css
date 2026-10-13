@@ -1457,20 +1457,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
                   calc(var(--nav-centre-bottom) + var(--nav-major) / 2 - 20px));
     }
   }
-  /* ...BUT NOT WHERE THE ROW REACHES UNDER IT (2026-10-04 — Hannah: check
-     how the extended navigation "falls relative to the text on mobile and
-     tablet"). The desktop seat above shares the row's band and relies on
-     the row being centred well clear of a left-hand column. Below 1280 wide
-     it is not: at 1024x768 the row's Intro mark sat under the last word of
-     the sub and the Manifesto fork stood beside it. There the block takes
-     the portrait tablet's contract instead — clear of the row AND of
-     Purpose's up-branch, by the same 30px of air. */
-  @media (min-width: 901px) and (max-width: 1279px) and (min-height: 521px) {
-    .j-block.pos-bottomleft[data-chapter="final"] {
-      bottom: calc(var(--nav-centre-bottom) + var(--nav-major) / 2 + 30px
-                   + var(--purpose-rail-lift-max) + 56px);
-    }
-  }
+  /* Desktop Purpose starts from this same low seat at every width.
+     purpose-copy-fit.js reserves only the settled circles that actually
+     intersect its ink; a second narrow-desktop reservation would count the
+     fork twice and lift the text far above its lower reading area. */
 
   /* ============================================================
      FINAL HEADING MEASURE (Hannah, 2026-08-05)

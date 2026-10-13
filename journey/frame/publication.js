@@ -128,10 +128,11 @@ export function createFramePublisher(sceneApi) {
    *  @param {number}  f.stateP      the journey's own progress
    *  @param {number}  f.routeP      the coordinate readers are driven at
    *  @param {number}  f.presentedP  the coordinate actually being presented
+   *  @param {number}  [f.scenePresentedP] chapter reveal coordinate for an aerial arrival
    *  @param {object}  f.transition  the transition controller, read only
    *  @param {boolean} f.gliding     the model's glide state for this frame
    */
-  function publish({ dt, stateP, routeP, presentedP, transition, gliding }) {
+  function publish({ dt, stateP, routeP, presentedP, scenePresentedP = presentedP, transition, gliding }) {
     const cam = sceneApi.camera;
     const tgt = sceneApi.controls.target;
     const fog = sceneApi.scene.fog;
@@ -168,6 +169,7 @@ export function createFramePublisher(sceneApi) {
       stateP,
       routeP,
       presentedP,
+      scenePresentedP,
       cameraPose,
       viewport: Object.freeze({ w: window.innerWidth, h: window.innerHeight }),
       // The responsive layout authority is not built yet. The key exists so

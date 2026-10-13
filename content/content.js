@@ -67,7 +67,7 @@ export const CONTENT = {
       "We want AI and humanity to grow together like this. We shape our tools, and our tools shape us, so we believe in open models and open tools, shaped and reshaped by many hands, all in pursuit of the most human of impulses: the drive to create.",
       "A painter trains a LoRA on years of her work, building on an open model. Separately, an engineer builds a workshop for sculpting in 3D. A year later, a stranger brings their work together to craft an interactive experience that couldn't exist without all three.",
       "We don't just dream of a world of endless content and ever smarter machines, we dream of one that bustles with this kind of creative life. Artists, technologists and models, tangled together, lifting one another toward works of ever greater beauty and ambition.",
-      "Mycelial aims to be the threads beneath it all, seeding, nourishing, and holding together all that grows."
+      "Mycelial aims to be the threads beneath it all, seeding, nourishing, and connecting all that grows."
     ],
     get body() { return this.lines.join(' '); },
   },

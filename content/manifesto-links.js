@@ -2,7 +2,7 @@
 export const MANIFESTO_LINKS = [
   { phrase: 'seeding', chapter: 'inspire', label: 'Jump to the Inspire section' },
   { phrase: 'nourishing', chapter: 'equip', label: 'Jump to the Equip section' },
-  { phrase: 'holding together', chapter: 'connect', label: 'Jump to the Connect section' },
+  { phrase: 'connecting', chapter: 'connect', label: 'Jump to the Connect section' },
 ];
 export function manifestoLinks(words) {
   const tokens = words.map(word => word.toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, ''));

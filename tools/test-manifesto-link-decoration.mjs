@@ -16,7 +16,7 @@ try {
   const alpha = color => color === 'rgba(0, 0, 0, 0)' ? 0 : Number(color.match(/\/\s*([\d.]+)\)/)?.[1] ?? 1);
   const initial = await state();
   assert.ok(initial.every(s => alpha(s.decoration) === .4 && s.style === 'dotted'));
-  assert.deepEqual(initial.map(s => s.text), ['seeding', 'nourishing', 'holding together'], 'punctuation and trailing spaces stay outside the native decoration');
+  assert.deepEqual(initial.map(s => s.text), ['seeding', 'nourishing', 'connecting'], 'punctuation and trailing spaces stay outside the native decoration');
   const paragraph = page.locator('[data-src="manifesto.body"] p').last();
   await links.evaluateAll(items => items.forEach(link => { link.style.textDecorationColor = 'currentColor'; }));
   await page.waitForTimeout(900);
