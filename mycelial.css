@@ -735,6 +735,13 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   text-decoration: underline dotted currentColor 1px;
   text-underline-offset: .22em;
 }
+/* Keep the interior space in its word's reveal, with dots across that space. */
+.manifesto-chapter-link.is-connected .manifesto-link-ink {
+  white-space: pre;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+  padding-bottom: .12em;
+}
 .manifesto-chapter-link:hover,
 .manifesto-chapter-link:focus-visible { color: #f6cb8b; }
 .manifesto-chapter-link:focus-visible { outline: 1px solid #d7ad6980; outline-offset: 4px; border-radius: 2px; }

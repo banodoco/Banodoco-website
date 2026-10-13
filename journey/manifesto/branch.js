@@ -117,7 +117,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       } else if (destination) {
         if (i === destination.start) {
           const link = document.createElement('a');
-          link.className = 'manifesto-chapter-link is-phrase';
+          link.className = 'manifesto-chapter-link is-phrase' + (destination.end > destination.start ? ' is-connected' : '');
           link.href = `#/${destination.chapter}`;
           link.setAttribute('aria-disabled', 'true');
           link.tabIndex = -1;
@@ -134,8 +134,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         const ink = document.createElement('span');
         ink.className = 'manifesto-link-ink';
         const text = word.match(/^[A-Za-z]+/)?.[0] || word;
-        ink.textContent = text;
-        span.append(lead, ink, word.slice(text.length), trail);
+        ink.textContent = (i > destination.start ? ' ' : '') + text;
+        span.append(lead, ink, word.slice(text.length), i < destination.end ? '' : trail);
       } else {
         span.textContent = `${lead}${word}${trail}`;
       }

@@ -69,13 +69,13 @@ function derive(source) {
         const words = line.split(/\s+/);
         const concepts = manifestoConcepts(words);
         const destinations = i === CONTENT.manifesto.lines.length - 1 ? manifestoLinks(words) : new Map();
-        const body = words.map((word, index) => {
+        const rendered = words.map((word, index) => {
           const destination = destinations.get(index);
           if (destination) {
             const text = word.match(/^[A-Za-z]+/)?.[0] || word;
-            const open = index === destination.start ? `<a class="manifesto-chapter-link is-phrase" href="#/${destination.chapter}" data-manifesto-link="${destination.label}">` : '';
+            const open = index === destination.start ? `<a class="manifesto-chapter-link is-phrase${destination.end > destination.start ? ' is-connected' : ''}" href="#/${destination.chapter}" data-manifesto-link="${destination.label}">` : '';
             const close = index === destination.end ? '</a>' : '';
-            return `${open}<span class="manifesto-link-ink">${escapeText(text)}</span>${close}${escapeText(word.slice(text.length))}`;
+            return `${open}<span class="manifesto-link-ink">${index > destination.start ? ' ' : ''}${escapeText(text)}</span>${close}${escapeText(word.slice(text.length))}`;
           }
           const concept = concepts.get(index);
           if (!concept) return escapeText(word);
@@ -87,7 +87,11 @@ function derive(source) {
           const openThread = concept.id === 'kinship' && index === concept.start ? '<span class="manifesto-phrase-thread">' : '';
           const closeThread = concept.id === 'kinship' && index === concept.end ? '</span>' : '';
           return `${openThread}<span class="manifesto-concept concept-${concept.id}" style="--concept-index:${concept.offset || 0}">${ink}</span>${escapeText(concept.suffix || '')}${closeThread}`;
-        }).join(' ');
+        });
+        const body = rendered.map((html, index) => {
+          const destination = destinations.get(index);
+          return `${index && !(destination && index > destination.start) ? ' ' : ''}${html}`;
+        }).join('');
         return `<p>${body}${i === 0 && note ? ` ${note}` : ''}</p>`;
       }).join('')}${close}`;
     },
