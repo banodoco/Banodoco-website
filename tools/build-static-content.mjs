@@ -5,6 +5,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTENT } from '../content/content.js';
+import { manifestoLinks } from '../content/manifesto-links.js';
 import { manifestoConcepts } from '../content/manifesto-concepts.js';
 import { JOURNEY_CHAPTER_IDS } from '../journey/structure.js';
 
@@ -67,7 +68,15 @@ function derive(source) {
       return `${open}${CONTENT.manifesto.lines.map((line, i) => {
         const words = line.split(/\s+/);
         const concepts = manifestoConcepts(words);
+        const destinations = i === CONTENT.manifesto.lines.length - 1 ? manifestoLinks(words) : new Map();
         const body = words.map((word, index) => {
+          const destination = destinations.get(index);
+          if (destination) {
+            const text = word.match(/^[A-Za-z]+/)?.[0] || word;
+            const open = index === destination.start ? `<a class="manifesto-chapter-link is-phrase" href="#/${destination.chapter}" data-manifesto-link="${destination.label}">` : '';
+            const close = index === destination.end ? '</a>' : '';
+            return `${open}<span class="manifesto-link-ink">${escapeText(text)}</span>${close}${escapeText(word.slice(text.length))}`;
+          }
           const concept = concepts.get(index);
           if (!concept) return escapeText(word);
           const ink = concept.id === 'imagination'

@@ -5,8 +5,8 @@ const PAIRS = [
   { id: 'passage', organism: 'animals', contribution: 'passage to new ground' },
 ];
 const PHRASES = [
-  { id: 'kinship', phrase: 'shaped shared and reshaped' },
-  { id: 'vitality', phrase: 'bustles with creative life' },
+  { id: 'kinship', phrase: 'shaped and reshaped' },
+  { id: 'vitality', phrase: 'bustles with this kind of creative life' },
   { id: 'imagination', phrase: 'beauty and ambition we have yet to imagine' },
 ];
 // The authored em dash joins life—with; only 'life' carries the accent.

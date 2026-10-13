@@ -1,3 +1,5 @@
+import { manifestoLinks } from '../../content/manifesto-links.js';
+import { attachManifestoLinkTooltip } from '../../manifesto-link-tooltip.js';
 import { createHeroBodyFogClaim } from '../chapters/hero-body-fog.js';
 import { claimInput, releaseInput } from '../ownership.js';
 import { createReturnFlight, sampleReturnFlight, returnVelocity } from './return-flight.js';
@@ -5,7 +7,7 @@ import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
 import { manifestoConcepts } from '../../content/manifesto-concepts.js';
-import { manifestoPose, mobileFieldCenter, isMobileManifesto, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS } from './pose.js';
+import { manifestoPose, mobileFieldCenter, isMobileManifesto, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, WORD_VISIBLE_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -27,7 +29,7 @@ const CHROME_FADE_MS = 1600;
  * value is stepped by journey.js inside the journey animator; this module owns
  * no timer, renderer, or animation loop.
  */
-export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onReturn = null, scroll = null, field = null } = {}) {
+export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onReturn = null, onNavigate = null, scroll = null, field = null } = {}) {
   const root = document.createElement('section');
   root.className = 'j-manifesto';
   root.style.setProperty('--stagger', `${WORD_STAGGER_SECONDS}s`);
@@ -63,6 +65,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     || CONTENT.manifesto.body.match(/[^.!?]+[.!?]+/g) || [CONTENT.manifesto.body];
   const lineEls = [];
   const lastWordBeats = [];
+  const chapterLinks = [];
   let note = null;
   for (const sentence of sentences) {
     const line = document.createElement('p');
@@ -71,9 +74,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     const closingPunctuation = lineEls.length === 0 && CONTENT.manifesto.note ? sentence.match(/[.!?]+$/)?.[0] || '' : '';
     const words = (closingPunctuation ? sentence.slice(0, -closingPunctuation.length) : sentence).trim().split(/\s+/);
     const concepts = manifestoConcepts(words);
+    const destinations = lineEls.length === sentences.length - 1 ? manifestoLinks(words) : new Map();
     // Highlight the brand name within the manifesto.
     const isName = (i) => /^Mycelial\b/.test(words[i] || '');
-    let phraseThread = null;
+    let phraseThread = null, chapterLink = null;
     let lastWordBeat = 0;
     words.forEach((word, i) => {
       const span = document.createElement('span');
@@ -87,6 +91,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       // word instead, keeping the name grouped through its reveal.
       const lead = i > 0 && isName(i - 1) && !isName(i) ? ' ' : '';
       const concept = concepts.get(i);
+      const destination = destinations.get(i);
       const endsThread = concept?.id === 'kinship' && i === concept.end;
       const trail = i < words.length - 1 && !(isName(i) && !isName(i + 1)) ? ' ' : '';
       if (concept) {
@@ -109,6 +114,28 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
           ink.textContent = concept.ink || word;
         }
         span.append(lead, ink, concept.suffix || '', endsThread ? '' : trail);
+      } else if (destination) {
+        if (i === destination.start) {
+          const link = document.createElement('a');
+          link.className = 'manifesto-chapter-link is-phrase';
+          link.href = `#/${destination.chapter}`;
+          link.setAttribute('aria-disabled', 'true');
+          link.tabIndex = -1;
+          const hint = attachManifestoLinkTooltip(link, destination.label);
+          link.addEventListener('click', event => {
+            if (!onNavigate || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            if (link.getAttribute('aria-disabled') !== 'true') onNavigate(destination.chapter);
+          });
+          chapterLinks.push({ link, hint, paragraph: lineEls.length, beat: destination.end });
+          chapterLink = link;
+          line.appendChild(link);
+        }
+        const ink = document.createElement('span');
+        ink.className = 'manifesto-link-ink';
+        const text = word.match(/^[A-Za-z]+/)?.[0] || word;
+        ink.textContent = text;
+        span.append(lead, ink, word.slice(text.length), trail);
       } else {
         span.textContent = `${lead}${word}${trail}`;
       }
@@ -120,7 +147,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         phraseThread.style.setProperty('--phrase-beat', concept.start);
         line.appendChild(phraseThread);
       }
-      (phraseThread || line).appendChild(span);
+      (phraseThread || chapterLink || line).appendChild(span);
+      if (destination && i === destination.end) chapterLink = null;
       if (endsThread) {
         phraseThread = null;
         // Keep the following separator outside the decorated phrase.
@@ -474,7 +502,20 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   // frame and makes automatic scrolling hesitate against its own motion.
   layoutObserver.observe(lines, { box: 'border-box' });
   lineEls.forEach(line => layoutObserver.observe(line));
+  function paintChapterLinks(on = true) {
+    for (const entry of chapterLinks) {
+      const { link, hint, paragraph, beat } = entry;
+      const available = on && active && direction >= 0 && (reduceMotion.matches ||
+        elapsed >= readingStarts[paragraph] + beat * WORD_STAGGER_SECONDS + WORD_VISIBLE_SECONDS);
+      if (entry.available === available) continue;
+      entry.available = available;
+      link.setAttribute('aria-disabled', String(!available));
+      link.tabIndex = available ? 0 : -1;
+      if (!available) hint.close();
+    }
+  }
   function paintLines(count, admitted = count) {
+    paintChapterLinks();
     const next = Math.max(0, Math.min(sentences.length, count));
     const nextAdmitted = Math.max(next, Math.min(sentences.length, admitted));
     if (next === shownLines && nextAdmitted === admittedLines && lineEls.length) { liftColumn(); return; }
@@ -621,6 +662,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   }
   function returnTo(onFinish = null, { land = null } = {}) {
     note?.close();
+    paintChapterLinks(false);
     if (!active) { if (onFinish) onFinish(); return; }
     if (direction < 0) { retarget(onFinish, { land }); return; }
     finish = onFinish;
@@ -649,6 +691,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   function exit() {
     releaseInput(panel);
     note?.close();
+    paintChapterLinks(false);
     active = false;
     direction = 0;
     u = 0;
@@ -816,6 +859,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     destroy() {
       layoutObserver.disconnect();
       note?.destroy();
+      chapterLinks.forEach(({ hint }) => hint.destroy());
       releaseInput(panel);
       lines.removeEventListener('scroll', onReadingScroll);
       readingEnds.forEach(type => window.removeEventListener(type, releaseReadingHold));

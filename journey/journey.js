@@ -704,6 +704,7 @@ export function boot(opts = {}) {
     scroll, field: Object.values(chapters).find(chapter => typeof chapter.setManifesto === 'function'),
     // Return (button or Escape) is a navigation to Manifesto's parent
     onReturn: () => navigateFromControl('final'),
+    onNavigate: navigateFromControl,
   });
 
 

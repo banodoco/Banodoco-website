@@ -716,3 +716,41 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 @media (prefers-reduced-motion: reduce) {
   .j-rail, .j-rail:not(.j-rail-column) { transition: none; }
 }
+
+/* Small chapter invitations remain part of the manifesto's word reveal. */
+.manifesto-chapter-link {
+  pointer-events: auto;
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .22em;
+  text-decoration-skip-ink: auto;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+.manifesto-chapter-link.is-phrase { text-decoration: none; }
+.manifesto-link-ink {
+  text-decoration: underline dotted currentColor 1px;
+  text-underline-offset: .22em;
+}
+.manifesto-chapter-link:hover,
+.manifesto-chapter-link:focus-visible { color: #f6cb8b; }
+.manifesto-chapter-link:focus-visible { outline: 1px solid #d7ad6980; outline-offset: 4px; border-radius: 2px; }
+.manifesto-chapter-link[aria-disabled="true"] { pointer-events: none; }
+.manifesto-link-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: calc(100vw - 24px);
+  padding: 8px 11px;
+  border: 1px solid #b88c454d;
+  border-radius: 5px;
+  background: #160f08f5;
+  color: #f1e2c6;
+  box-shadow: 0 4px 18px #0005;
+  font: 400 12px/1.4 'DM Sans', sans-serif;
+  letter-spacing: .025em;
+  pointer-events: none;
+}
+.manifesto-link-tooltip[hidden] { display: none; }
