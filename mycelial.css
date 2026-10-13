@@ -630,14 +630,18 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
     width: 100%;
     max-width: none;
     text-align: left;
-    /* Lower in the landscape, with the full block clear of the upper
-       Purpose branch even when phone browser chrome shortens the view. */
+    /* The explanation shares the upper branch's height, using its left
+       pocket. Only the main row reserves vertical space. */
     top: auto;
     bottom: calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
-      + var(--purpose-up-branch) + var(--nav-major) / 2 + 8px);
+      + var(--nav-ring-d) / 2);
     translate: none;
   }
-  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; max-width: 36ch; }
+  .j-block[data-chapter="final"] .j-sub {
+    margin-inline: 0;
+    max-width: var(--purpose-copy-measure, 36ch);
+    text-wrap: pretty;
+  }
   /* Names sit beside their branch rings; rail.js retains sole ownership
      of their arrival/hover opacity on touch devices. */
   .j-rail:not(.j-rail-column) .j-rail-slot.j-rail-purpose-child .j-rail-name,

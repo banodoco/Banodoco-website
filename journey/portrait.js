@@ -680,6 +680,14 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     pose.pos.y += (aerialY - pose.pos.y) * finalW;
     pose.fov += (58 - pose.fov) * finalW;
     pose.roll = -5 * Math.PI / 180 * finalW;
+    // Short phone viewports put Purpose's reading pocket beside the upper
+    // navigation branch. Raise the field above that pocket by translating
+    // eye and aim together; retain the existing angle, lens and reveal X.
+    // Full-height phones keep their composition exactly.
+    const viewportHeight = viewportWidth / aspect;
+    const readingClearance = 3.2 * smooth01((667 - viewportHeight) / 119) * finalW;
+    pose.pos.y -= readingClearance;
+    pose.target.y -= readingClearance;
   }
   return pose;
 }

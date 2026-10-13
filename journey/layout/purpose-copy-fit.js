@@ -11,6 +11,25 @@ export function createPurposeCopyFit(block) {
     if (!force && next === key) return;
     key = next;
     block.style.removeProperty('--purpose-copy-lift');
+    block.style.removeProperty('--purpose-copy-measure');
+    if (w <= 620 && h > w) {
+      const branch = settledPurposeRowMarks(w, h).find(mark => mark.chapter === 'manifesto');
+      const sub = block.querySelector('.j-sub'), style = getComputedStyle(block);
+      const left = parseFloat(style.paddingLeft);
+      // Only lines beside the branch need its narrow pocket. Earlier lines
+      // can use the full measure, keeping this invitation to four lines.
+      // Compare local ink against the settled bottom seat, never the entry
+      // animation's transient transform.
+      const range = document.createRange(); range.selectNodeContents(sub);
+      const rect = sub.getBoundingClientRect();
+      const top = h - parseFloat(style.bottom) - block.offsetHeight + sub.offsetTop;
+      const meetsBranch = [...range.getClientRects()].some(line =>
+        top + line.bottom - rect.top > branch.y - branch.radius - 8
+        && top + line.top - rect.top < branch.y + branch.radius + 8
+        && line.right > branch.x - branch.radius - 20);
+      if (meetsBranch) block.style.setProperty('--purpose-copy-measure', `${Math.floor(branch.x - branch.radius - left - 20)}px`);
+      return;
+    }
     if (w <= 900) return;
     const marks = settledPurposeRowMarks(w, h);
     const footprints = marks.map(mark => ({ left: mark.x - mark.radius,

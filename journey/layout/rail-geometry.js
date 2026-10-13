@@ -186,7 +186,8 @@ export function settledPurposeRowMarks(w, h) {
   const index = NAV_ROW_ITEMS.findIndex(item => item.chapter === 'final');
   if (index >= 0) {
     const pitch = index > 0 ? row.centres[index] - row.centres[index - 1] : row.major * 1.8;
-    const x = marks[index].x - pitch / 2;
+    // Match the phone name clearance in rail.js's settled REST_X.
+    const x = marks[index].x - pitch / 2 - (bandOf(w, h).phone ? 8 : 0);
     for (const side of [-1, 1]) marks.push({ x, y: y + side * row.major * 1.1,
       radius: row.minorRingD / 2, chapter: side < 0 ? 'manifesto' : 'ownership' });
   }
