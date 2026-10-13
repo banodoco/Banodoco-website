@@ -4489,6 +4489,14 @@ body.j-manifesto-open .j-manifesto {
 .j-manifesto.is-open::before {
   animation: j-manifesto-shade-in 2.4s cubic-bezier(0.45, 0, 0.3, 1) 0.15s backwards;
 }
+@media (max-width: 720px) {
+  /* Let the departure establish itself before the full-width reading shade
+     arrives. The first words and shade then grow together during ascent. */
+  .j-manifesto.is-open::before {
+    animation-delay: 1.4s;
+    animation-duration: 3.2s;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .j-manifesto.is-open::before { animation: none; }
 }
