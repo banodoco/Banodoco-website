@@ -433,23 +433,23 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 /* Related words share a colour, but each slow swell starts on its own reveal beat. */
 .manifesto-concept.concept-sun {
   --concept-rest: var(--palette-sun);
-  --concept-lit: #b4d99a;
-  --concept-glow: 157, 196, 135;
+  --concept-lit: #c1d0b4;
+  --concept-glow: 180, 197, 165;
 }
 .manifesto-concept.concept-soil {
   --concept-rest: var(--palette-soil);
-  --concept-lit: #f2a085;
-  --concept-glow: 223, 142, 117;
+  --concept-lit: #e2bbb2;
+  --concept-glow: 215, 170, 160;
 }
 .manifesto-concept.concept-passage {
   --concept-rest: var(--palette-passage);
-  --concept-lit: #9acdea;
-  --concept-glow: 131, 182, 215;
+  --concept-lit: #bcd0da;
+  --concept-glow: 169, 191, 206;
 }
 .manifesto-concept {
-  --palette-sun: #9dc487;
-  --palette-soil: #df8e75;
-  --palette-passage: #83b6d7;
+  --palette-sun: #b4c5a5;
+  --palette-soil: #d7aaa0;
+  --palette-passage: #a9bfce;
   color: var(--concept-rest);
   text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62);
 }
@@ -565,7 +565,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   animation: manifesto-iridescence 7s ease-in-out forwards;
   animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
 }
-/* One continuous palette travels through both words: sage, terracotta, blue.
+/* One continuous pastel palette travels through both words: sage, dusty rose, blue.
    Each sampled glyph remains inside its word's original reveal envelope. */
 .manifesto-concept.concept-synthesis { color: transparent; text-shadow: none; }
 .manifesto-synthesis-glyph {
