@@ -1,0 +1,883 @@
+// journey-v6 — FINAL epilogue: HERO CLONES (18-one-species.md, "Step back:
+// clones").
+//
+// Hannah, third round on the same complaint, after two approximations: the
+// D15 texture-system port matched the hero's SYSTEMS but not its density;
+// the doc-18 species.js rebuild matched the SILHOUETTE to double-precision
+// noise but its tissue is still ~10x sparser than the hero's — and the
+// hero's identity IS its tissue. A member standing beside the hero kept
+// reading as a different creature because it literally was different
+// geometry. The step-back decision: stop approximating. The near field
+// members are now LITERAL CLONES of the hero organism's own scene graph —
+// the same BufferGeometry objects, drawn again at another place and scale.
+// Only the real thing reads as the real thing.
+//
+// SHARING RULES (the whole file is these rules)
+// ---------------------------------------------
+//   geometry   shared, with ONE named exception (capfigure.js, 2026-08-14).
+//              The tissue — fine cap lattice, gills, rim, stem lattice and
+//              fibres, bead clouds, occlusion shells — is ALWAYS the hero's
+//              own buffers re-drawn under another matrix, which is the whole
+//              bargain: 24 bodies for one body's tissue. The two FIGURE
+//              layers are not tissue and are rebuilt per body: the cap's
+//              sparse overlay network and the node dots that are its
+//              vertices. A network's identity is its adjacency, and no
+//              deformation of shared vertices can change which node wires to
+//              which — so twenty-five caps wore one drawing. See
+//              capfigure.js for the split, the cost (+1.05 MB on 8.7) and
+//              the argument that a re-seeded figure is still one species.
+//   materials  cloned SHALLOWLY per clone, in three classes:
+//              - opaque occlusion shells + stem core (MeshBasicMaterial):
+//                shared outright — they carry no per-clone state. They are
+//                what makes a body solid instead of x-ray, and cloning them
+//                is what species.js could never afford (it mirrored them as
+//                build-time damping). Black-on-black they cost nothing
+//                visually until a bright stroke passes behind a body.
+//                Their per-clone state is not a material but a VISIBILITY:
+//                a body whose strokes have not kindled yet must not stand
+//                in the frame as an opaque hole punched through the mist,
+//                so each clone's shells are switched off below SHELL_ON of
+//                its own reveal value (and switched off again on a reverse
+//                retract). That also hands the frame back four draw calls
+//                per unlit body.
+//              - ShaderMaterials (dense lines, glow points): cloned, then
+//                the ANIMATED / GLOBAL uniform objects are re-pointed at the
+//                hero's own instances (time, uProg/uWin draw state, the tap
+//                pulse trio, uRes, fog) so every clone shimmers, resolves
+//                and answers floor taps in sync with the hero for free —
+//                one uniform tick, N bodies. Only uOpacity is owned per
+//                clone: it is the write-port for the chapter's reveal
+//                choreography (uAmount x uPull whisper/kindle, D16-pure) —
+//                and for nothing else, since the pointer glow was removed.
+//              - the cap overlay net (LineBasicMaterial + injected draw):
+//                rebuilt plain. The injection only matters mid-intro; parked
+//                it is identity, and a fresh material gives the clone an
+//                owned .opacity for the same write-port.
+//   points     the hero's point shaders size sprites in world units with no
+//              node-scale term (gl_PointSize = psize * 300/-mv.z), so a
+//              scaled clone would wear full-size sprites. Cloned point
+//              materials get one owned uniform, uScl = the clone's uniform
+//              scale, patched into the size expression. Every layer is kept
+//              — the beads and speckles ARE the tissue this step-back is
+//              about. (The patched source is identical across clones, so
+//              three's shader cache still compiles ONE extra program for
+//              the whole set, not one per body.)
+//
+// The clones live in the CHAPTER's group (never swayGroup — adr-d3: the
+// field does not ride the hero's wind). Stillness beside the swaying hero
+// read dead, so each clone carries its own gentle two-pivot sway (root +
+// capBend, the hero's own §10b/breeze motion language at reduced amplitude,
+// distinct seeded phases) driven by the chapter animator through update().
+//
+// organism/* stays READ-ONLY: everything here is reached through the public
+// createScene() API (groups.stem, groups.mushroom) and nothing is written
+// back into the hero's graph.
+
+import * as THREE from 'three';
+import { GROWTH } from '../../../organism/intro.js';
+import { heroPulse, PULL_MAX } from './world.js';
+import { varyUniforms, IDENTITY } from './variation.js';
+import { analyseHeroFigure, buildCapFigure } from './capfigure.js';
+import {
+  TAP_W, TAP_ZETA, stepTap, kickTap, isRinging, clearTap,
+} from './clones-tap.js';
+import {
+  injectCloneDraw, varyVertex, frameOf, rootFrame, cloneShellMat,
+  CLAMP_OFF, clonePointsMat, cloneDenseMat,
+} from './clones-materials.js';
+
+/* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
+   over the mushrooms at the bottom they still light up") -------------------
+   These bodies used to carry furniture.js's §11 highlight math — an eased hot
+   value with a breathing pulse, plus a one-shot click swell — driven by a
+   raycast against whatever was under the pointer. That was wrong, and it was
+   wrong on the only test that matters: the HERO DOES NOT DO IT. The hero's
+   body has no hover response at all. Its region glow is driven exclusively by
+   hovering the three HUD callout labels (main.js co-inspire / co-equip /
+   co-connect -> furniture.js setHighlight); raycasting the hero's own body
+   with a pointer does nothing whatsoever, and a tap is answered by §10c's
+   four-part poke — wobble, ripple, spores, haptic — with no brightness term
+   anywhere in it.
+
+   So there is no hover state here and no click brightness either. A field
+   body answers a POKE and nothing else, which is exactly what the hero does.
+   The glow uniforms (uHotId/uHotAmt/uTapId/uTapAmt), the hotAt() shader term
+   and the whole hover half of interact.js went with this comment's ancestors.
+   Do not reintroduce a pointer glow on a scenery body without a hero
+   counterpart to point at. ---- */
+
+// Mirror of organism.js §10b breeze() — chapter-owned copy (organism is
+// read-only and its instance is private to the closure). Same three modes
+// under the same ~48s gust swell; clones run it phase-shifted and damped.
+export function breeze(t) {
+  const gust = 0.55 + 0.45 * Math.sin(t * 0.13 + 0.6);
+  return gust * (0.62 * Math.sin(t * 1.20)
+               + 0.26 * Math.sin(t * 1.83 + 1.3)
+               + 0.07 * Math.sin(t * 2.60 + 2.7));
+}
+
+const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const smooth01 = (x) => { const c = clamp01(x); return c * c * (3 - 2 * c); };
+
+/** Region growth multiplied by chapter presence controls spatial coverage.
+ * At full coverage the shell is the original opaque, depth-writing body. */
+function shellFade(meshes, mats, k) {
+  // Discarded fragments write no depth. Alpha-blending a dark shell while
+  // still writing its full depth left a black husk over the network behind.
+  for (const m of mats) { m.transparent = false; m.opacity = k; }
+  for (const sh of meshes) sh.visible = k > 0;
+}
+
+/* ---- THE POKE, MECHANICAL HALF (organism/organism.js §10c) --------------
+   Moved WHOLE to ./clones-tap.js (H06 seam A) — organism §10c's damped
+   spring, its four constants and its four operations, with the argument for
+   copying rather than importing organism's numbers. It went out intact
+   because ring.js runs the SAME integrator for the batched species bodies
+   (ring.js:94-96), so it was never only this file's.
+
+   Re-exported here unchanged, in the module's own original export order, so
+   ring.js's and shed.js's imports are untouched by this order. ---- */
+export { TAP_W, TAP_ZETA, stepTap, kickTap, isRinging, clearTap };
+
+/* ---- THE ENTRY, AS THE FIELD'S REVEAL (organism/organism.js DRAW_GLSL) ---
+   Hannah: "what about the entry animation, too heavy to run on them?" It is
+   not heavy at all — it was IMPOSSIBLE, for a reason that had nothing to do
+   with cost. A clone shared the hero's single `uProg` draw-progress uniform,
+   so all twenty-four bodies were pinned to whatever the hero's entry was
+   doing — and the hero's entry finished back on the hero page, parked at
+   uProg = 2. One uniform, one state, nothing left to draw.
+
+   Each clone now owns its uProg (ONE float per body per frame) while still
+   sharing every per-layer uWin — so the hero's authored choreography (stalk
+   verticals, then the lattice, then gills, rim, cap surfaces, the overlay net
+   last) replays per body, in the hero's own order, at whatever moment the
+   chapter's reveal front reaches that body.
+
+   THE LAW IT HAS TO OBEY (D16): nothing may fade in over open view; a draw-on
+   tied to the camera-pure front is lawful, a time-based one is not. So the
+   draw parameter is a pure function of uPull exactly like the kindle — and
+   since 2026-08-06 it is the same front at the same width, so a body inks
+   itself in AS it lights up (see DRAW_W_HI/LO). Reverse scrubs un-draw it,
+   stroke by stroke, back into the dark.
+
+   The window span below is the union of the hero's own stem+cap windows
+   (intro.js WINDOWS: stemVerts opens at 0.296, overlayPts closes at 0.893) —
+   the clone carries no ground layers, so driving uProg across the full 0..1
+   would spend a third of the move on layers this body does not have. */
+// Read from the hero's own timeline since its re-choreography (2026-10-04):
+// the stalk now opens at GROWTH.stem[0] and the last cap layer (overlayPts)
+// closes at 0.86, and a stale 0.296 would start every dormant clone with
+// most of its stalk already drawn.
+const DRAW_LO = GROWTH.stem[0], DRAW_HI = 0.860;
+// THE DRAW RUNS ON THE KINDLE'S OWN FRONT — not ahead of it (Hannah,
+// 2026-08-06: "they have a different entry animation when they come in — they
+// kind of turn black... why can't we just make them one by one have the same
+// entry animation as the main one does, the hero of the page, so they kind of
+// pop up like that").
+//
+// This constant used to be DRAW_LEAD 0.20 against REVEAL_W 0.16 — the draw
+// ran a whole reveal-width AHEAD of the kindle, so that "the last stroke lands
+// before the first ember" and the shipped unlit-body-in-the-dark state
+// survived. That reasoning was sound about the state and wrong about the
+// ANIMATION, and the animation is what a visitor watches. What it produced was
+// a body that inked itself in at the 7% ember whisper — near-invisible ink —
+// then stood there fully drawn and unlit while its opaque shells came up, and
+// only THEN lit. Measured at p 0.885: fifteen of twenty-four bodies at once
+// with all four shells opaque and their own brightest layer at 3-8%, the worst
+// of them subtracting 66% of the light from its own footprint. A near-black
+// mushroom standing in the haze is precisely "they kind of turn black".
+//
+// The hero has no such phase, and cannot: on the landing page its strokes ink
+// in at FULL brightness with the tip ember riding the drawing front, and
+// intro.js fades each shell group in WHILE its own region is being stroked.
+// The hero's ink IS its light. So the draw is now the SAME front as the
+// kindle, at the same width — a body inks itself in as it lights up, one by
+// one along the arc, and there is no window in which it is drawn and dark.
+//
+// Everything the lead was protecting is still protected, and by construction:
+// at the arm uPull is 0 and every body's reveal is >= 0.45, so d = 0 and the
+// field is undrawn and unlit (dark at arm, STRICTER than before — a body can
+// no longer ink in ahead of its own light). The draw is still a pure function
+// of the camera-pure pullRaw, so a reverse scrub un-inks each body stroke by
+// stroke exactly as it inked (D16).
+//
+// 0.16 -> 0.28 (2026-08-07, "animate in slower one at a time"), then a single
+// constant -> the per-body taper below (2026-08-09, "one at a time — like a
+// town of Christmas trees lighting up"). The draw is still the SAME FRONT at
+// the same threshold, running wider than the light — the hero's relation: on
+// the landing page the hero's strokes ink in at FULL opacity with the tip
+// ember riding the drawing front; it is never a dim body being drawn, it is a
+// lit body still drawing. Every guarantee 070892c bought stays: the failure
+// it fixed was a body DRAWN AND DARK (draw ahead of light), and every width
+// in the taper keeps the draw at or behind the light's own pace.
+//
+// THE TAPER, RE-CUT ON THE WON ROAD (2026-08-09 second pass, Hannah:
+// "slower... one at a time... like something CHARGING UP, as opposed to the
+// way it flashes in"). The first cut of this taper ran 0.26 -> 0.12 and its
+// own comment admitted what the narrow end was: "quick pops read as events".
+// The pops are what Hannah is calling flashes — over half the field was
+// authored to have NO BUILD at all, because the road between the last
+// threshold and the rest could not fit one. That road problem is now solved
+// where it lived, in the route: the Final rest moved p 0.925 -> 0.97
+// (route.js / camera.js, this commit) and the camera crosses the closing
+// thresholds at a THIRD of its old rate — so a narrower-than-opening width
+// is still, in scroll terms, a LONGER build. 0.26 -> 0.15 across the ladder
+// gives every body in the chapter 140-235 px of wheel to arrive over
+// (the shipped tree gave the closers 40), and the closing rungs' 0.15
+// is what keeps the last starts inside the driver's range: the final rung
+// 0.9511 + 0.151 finishes at 1.102, under the 1.1200 the camera-pure
+// pullRaw delivers at the rest. The width is still a pure function of the
+// body's own threshold — computed once, nothing time-based, reverse scrubs
+// unchanged (D16).
+// 2026-08-10 (Hannah's brief item 3, with route.js's scrollVh 3.5 -> 6.0):
+// the kindling widens on top of the chapter's 1.71x wall-clock stretch, so
+// a single body's charge-and-take breathes instead of snapping. The width
+// goes to the openers and the mid-ladder; the LATE taper is bound by the
+// rest itself — the ring ladder's last rung (reveal 0.9511, a CLONE like
+// the rest of the ring) must sit past s = 1 at pullRaw 1.12, so
+// drawW(0.9511) must stay under 0.169. LO 0.16 gives s = 1.045 there
+// (margin 0.045) — every body byte-settled at the rest, final@* goldens
+// untouched. (A first cut at LO 0.19 put that body mid-bloom in the rest
+// frame — caught by the golden gate at MAE 0.28.)
+//
+// 2026-08-10 (later — Hannah's FIFTH pass on this arrival: "light up a lot
+// slower — both its individual light-up and its overall progression, maybe
+// a quarter the speed on both"). The overall axis is bought at the route:
+// scrollVh 6.0 -> 12.0 (route.js — no p-value, ladder rung, camera key or
+// golden moves). The individual axis is bought here, on top of it:
+// HI 0.32 -> 0.50, LO kept at 0.16 — and the two are NOT redundant,
+// because the scroll stretch is not uniform in p: the PCHIP knot at the
+// Owned boundary dilutes the gain under the OPENING rungs (p ~0.86-0.90)
+// while the terminal end concentrates it under the CLOSERS. Measured
+// against the live pull curve and the real spline (18-one-species.md §15):
+// route alone gave openers 1.76x and closers 2.6x; the width raise levels
+// the ladder at ~2.05-2.7x per body. The tail still CANNOT widen much:
+// the last rung's s = 1 must land under the pullRaw 1.12 the rest
+// delivers — at LO 0.16 the taper puts rung 0.9511 at width 0.1635,
+// finishing 1.1146 (margin 0.0054; every body byte-settled at the rest,
+// the golden gate is the proof). The explicit REST_MARGIN clamp makes the
+// bound structural rather than a property of today's ladder: if a future
+// ladder pushes a rung later, its width gives way before the rest frame
+// does. Honest shortfall, recorded in 18-one-species.md §15: the ask was
+// 4x on both axes; 4x overall via scroll alone would grow the page by
+// ~+18 vh more for this one chapter, and the per-body tail is pinned by
+// the frozen rest — this pass delivers ~1.9x overall and ~2.1-2.7x per
+// body, and says so rather than spending the page on it.
+// HI 0.50 -> 0.17, LO 0.16 -> 0.076 (2026-08-16, the even-ladder re-cut —
+// world.js RING_LADDER for the full story. Hannah's seventh pass, the first
+// asking for LESS: "uneven and lasts too long... slick and elegant" like the
+// landing page's own startup). The width is re-derived on the same measured
+// curve as the new rungs, for the same target at every rung: kindle = ~3.5
+// arrival beats in WHEEL px (≈660 ms at a deliberate read — charge ~410 ms,
+// take ~200 ms, the hero core-pop's own tempo), instead of the shipped
+// head-heavy spread where an opener charged for ~1.6 s while seven
+// neighbours were mid-charge with it and the field read murky. 2-3 bodies
+// are now mid-kindle at any instant — the landing intro's own overlap. The
+// taper direction survives because it was always the camera curve's shape:
+// pull-per-px falls ~2.2x across the re-shaped leg, so an even-time kindle
+// is wide at the head and narrow at the tail. The last body still finishes
+// at pull ~1.03, inside PULL_MAX 1.12 with room to spare (the REST_MARGIN
+// clamp stays structural).
+const DRAW_W_HI = 0.17;        // the opening singles' kindling width
+const DRAW_W_LO = 0.076;       // the closing fills' — narrower in uPull, even in wheel
+const REST_MARGIN = 0.004;     // s = 1 must land this far under PULL_MAX
+export const drawWOf = (reveal) => {
+  const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
+  const w = DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
+  return Math.min(w, PULL_MAX - REST_MARGIN - reveal);
+};
+
+/* ---- THE ARRIVAL CHARACTER: CHARGE, TAKE, SETTLE (2026-08-09 §14) --------
+   One body's whole arrival, as a pure function of its own clock
+   s = (pullRaw − reveal) / drawW:
+
+     CHARGE  s 0.00-0.62   The ember gathers. Brightness climbs the whisper
+                           floor to CHARGE_LVL on an accelerating curve
+                           (g², slow first, leaning forward), while the
+                           strokes ink themselves in and the breathing
+                           deepens (see the twinkle-depth term in update()).
+                           A thing charging is visibly DRAWING POWER before
+                           it lights: dim, assembling, breathing harder.
+     TAKE    s 0.58-0.88   The knee. Brightness accelerates through the
+                           charge level to full with the bloom overshoot
+                           riding it — hero.css core-pop's own move (scale
+                           0 -> 1.7 -> 1, the instrument powering on),
+                           translated to luminance: rise, overshoot, land.
+     SETTLE  s 0.88-1.00   The overshoot decays to the resting style; the
+                           breathing eases back to the house 0.12; at s = 1
+                           the body is byte-identical to a rest-frame body.
+
+   The shipped curve was a single smoothstep at fixed width — which at the
+   closing rungs' compressed widths concentrated the entire rise into a few
+   frames: a flash. The charge/take split is what "charging up" means here:
+   most of the window is a visible build at ember level, and the actual
+   lighting is one committed move near the end of it.
+
+   The ink now spans the whole window too (d completes at INK_SPAN of s, so
+   the last strokes land inside the take — the tip ember rides into the
+   flare, the hero's own relation: a lit body still drawing, never a drawn
+   body waiting dark). 070892c's guarantee holds by construction: the ink
+   still starts AT the light's own threshold and never ahead of it, and a
+   body under a fully-opaque cap shell (prog 0.714, s ≈ 0.60) sits at the
+   crest of its charge, ~0.35 of full — five times the ember whisper, one
+   beat before its take — never the near-black §11.5 outlawed. Everything
+   is pure in the pose; reverse scrubs run the charge and the take backwards
+   mirror-exact (D16). ---- */
+const INK_SPAN = 0.85;         // ink completes here — the take finishes the drawing
+const CHARGE_END = 0.62;       // the charge crests...
+const CHARGE_LVL = 0.30;       // ...at this fraction of full light
+const TAKE_LO = 0.58, TAKE_HI = 0.88;   // the knee: charge hands over to the take
+// Arrival-bloom strength: peak brightness over resting level as the take
+// lands (the bloom term in update()). The shape is hero.css core-pop —
+// overshoot, then settle to the resting style — timed to ride the take.
+const BLOOM_A = 0.35;
+// How much deeper the house twinkle breathes while a body charges (0.12 at
+// rest and before arrival — the shipped depth — up to 0.12 + FLICKER_A at
+// the crest of the charge). Depth is pure in the pose; only the carrier is
+// the shared clock, exactly as the shipped twinkle already was.
+const FLICKER_A = 0.10;
+
+// organism's own injectDraw(), re-expressed for a clone's plain overlay-net
+// material — moved to ./clones-materials.js (H06 seam B) with the rest of the
+// per-clone material construction.
+
+// Below this reveal value a clone's opaque shells are switched off: an unlit
+// body must read as a body in the dark, not as a silhouette cut out of the
+// haze behind it. 0.02 sits under the 7% ember whisper x the chapter's own
+// arm fade, so the shells arrive while the body is still underground behind
+// the dissolving soil slab (D16) and leave again on a reverse retract.
+const SHELL_ON = 0.02;
+
+// THE SECOND SHELL GATE — now the HERO'S OWN FADE, not a switch.
+//
+// SHELL_ON alone was sufficient while a body was always fully inked: dim the
+// strokes and you still had a dark body. Once a body spends part of uPull only
+// PARTLY drawn, its shells — opaque, and carrying no draw state of their own —
+// stand there the whole time, and a mid-draw member reads as a solid black
+// mushroom cut out of the haze.
+//
+// organism/intro.js solves exactly this for the hero by FADING each shell
+// group in while its own region is being stroked (_shellFade: stem shells over
+// uProg 0.30..0.54, cap shells over 0.574..0.714), so solidity follows the
+// ink. The first answer here could not do that: a clone SHARED the hero's
+// shell materials, so it could only switch its own copies on and off, and it
+// switched at the MIDPOINT of each of the hero's fades.
+//
+// THAT CONSTRAINT IS GONE, and has been since the variation round (66d1bed):
+// a deformed body needs its SOLID to move with its outline, so `cloneShellMat`
+// gives every body its own two shell materials (48 for the set). They are the
+// clone's to fade, and a hard switch on a material nobody else can see was the
+// last reason a field body's entry did not look like the hero's.
+//
+// RE-TIMED ONTO THE ARRIVAL CLOCK (2026-08-09 §14). The windows used to be
+// intro.js's own prog windows (stem 0.30..0.54, cap 0.574..0.714 of draw
+// progress) — solidity followed the INK. Under the charge/take law that
+// placed a fully opaque cap over a body still at its ember charge, and on a
+// far, fog-dimmed member the ember strokes vanish before the silhouette
+// does: measured on the §14 ladder at p 0.944, two mature far-lip members
+// stood as BLACK CAPS in an otherwise lit town — §11.5's "they kind of turn
+// black", resurfaced by the wider windows. So solidity now follows the
+// TAKE, on the same clock everything else here runs on: a charging body is
+// the hero's own wireframe breathing at ember level — visibly a thing
+// still forming — and it becomes FLESH as it lights, the stem leading, the
+// cap landing with the take itself. The brief x-ray state this admits is
+// the charge's own language (the strokes are already inked under it, so
+// nothing is ever a blank region wearing a shell), and the black-cap state
+// is impossible by construction: a cap is only ever solid while its light
+// is committed.
+const STEM_SHELL_LO = 0.40, STEM_SHELL_HI = 0.58;   // s-window: stem solidifies pre-take
+const CAP_SHELL_LO = 0.60, CAP_SHELL_HI = 0.80;     // s-window: cap lands WITH the take
+
+/* ---- PER-BODY VARIATION (variation.js, 2026-08-05) ----------------------
+   The deformation contract — varyVertex's patcher and its residue check,
+   bindVary, the geometry FRAMES (frameOf/rootFrame) and cloneShellMat — and
+   the material-cloning table below it (SHARE, FOG, CLAMP_OFF, shareUniforms,
+   clonePointsMat, cloneDenseMat) both moved to ./clones-materials.js (H06
+   seam B). The three consistency mechanisms the section header argues for are
+   unchanged and live there; what stayed here is the pair of GUARDS that
+   decide whether the set may deform at all (probeVary/framesInvertible),
+   because both read this closure's own scene roots. ---- */
+
+/* ------------------------------------------------------------------ */
+/* The clone set                                                       */
+/* ------------------------------------------------------------------ */
+const UP = new THREE.Vector3(0, 1, 0);
+
+export function createClones(sceneApi) {
+  const stemSrc = sceneApi.groups.stem;               // stemGroup
+  const capBendSrc = sceneApi.groups.mushroom.parent; // capBend (pivot at the throat)
+  const group = new THREE.Group();
+  const list = [];
+  const dropped = [];
+  // ONE fog pair for the whole clone set — see the FOG comment above.
+  const fogU = [{ value: 7 }, { value: 20 }];
+  // ONE lid-off uniform for the whole clone set — see CLAMP_OFF above.
+  const clampU = { value: CLAMP_OFF };
+  // the hero's tap-pulse trio, for the overlay-net graft (the ShaderMaterial
+  // layers pick it up through SHARE off their own source material)
+  const pulse = heroPulse(sceneApi);
+  let ownedMats = 0, shellMeshes = 0, shellMats = 0, drawsPerBody = 0, foreign = 0;
+
+  /* ---- WHAT IS AND IS NOT THE ORGANISM ------------------------------
+     The hero's groups are not private: chapters/inspire/index.js parents
+     its own decoration group onto `groups.mushroom`, and anything else may
+     do the same tomorrow. A clone must copy THE ORGANISM and nothing that
+     happens to be hanging off it, so the walk takes only the drawable
+     LEAVES that organism.js itself adds to stemGroup / mushroom (every one
+     of its own .add() calls is a leaf — there is no nested organism group),
+     and every leaf must also carry the organism's own build signature:
+     the §-draw injection (uProg / userData.uWin) for its lit materials, or
+     a MeshBasicMaterial for the §5 occlusion shells. A foreign subtree is
+     counted and skipped, never guessed at. ---- */
+  function isOrganismLeaf(o) {
+    const m = o.material;
+    if (!m) return false;
+    if (o.isMesh) return !!m.isMeshBasicMaterial;
+    if (o.isPoints || o.isLineSegments || o.isLine) {
+      if (m.isShaderMaterial) return !!(m.uniforms && m.uniforms.uProg && m.uniforms.uOpacity);
+      return !!(m.userData && m.userData.uWin);      // injectDraw()'d built-in
+    }
+    return false;
+  }
+
+  /* ---- THE VARIATION GUARD, taken once, before the first body ------------
+     Two things have to be true for a deformation to be applied consistently
+     to all fifteen of a body's layers, and neither is this file's to assume:
+
+       1. every shader the walk will meet must accept the varyPt() rewrite
+          (varyVertex's residue check is the real test — a source that still
+          reaches the raw `position` anywhere would draw part of the body
+          undeformed);
+       2. every layer's geometry FRAME must be invertible, because varyPt hops
+          into the body frame through it and back. This is where the first cut
+          of the guard was wrong and said so out loud, which is the argument
+          for having written it: the spine is NOT flat. `mushroom` carries the
+          authored cap tilt (~8 deg about x) and a residual offset, so the cap
+          leaves sit in a tilted frame while the stem leaves sit in the body
+          frame — and a map applied to raw local coordinates would have meant
+          two different things on the two halves of one mushroom. The frames
+          are now carried explicitly (frameOf) and only their invertibility is
+          assumed here.
+
+     If either fails, varyOk is false and NO body is deformed. The failure
+     mode is the shipped one-shape field, never a body whose outline and
+     interior disagree. ---- */
+  function framesInvertible(o, acc, root, bendRoot) {
+    // exactly cloneNode's own walk: foreign subtrees are not copied, so they
+    // are not ours to measure either (chapters/inspire hangs a group with its
+    // own transform off groups.mushroom — see isOrganismLeaf)
+    if (!root && !isOrganismLeaf(o)) return true;
+    const here = frameOf(acc, o, bendRoot);
+    if (Math.abs(here.m.determinant()) < 1e-9) return false;
+    for (const ch of o.children) {
+      if (!framesInvertible(ch, here, root && ch === sceneApi.groups.mushroom, false)) return false;
+    }
+    return true;
+  }
+  function probeVary() {
+    if (!framesInvertible(stemSrc, rootFrame(), true, false)) return false;
+    if (!framesInvertible(capBendSrc, rootFrame(), true, true)) return false;
+    const seen = new Set();
+    let ok = true;
+    const visit = (o, root) => {
+      if (!root && !isOrganismLeaf(o)) return;         // foreign: not ours to patch
+      const m = o.material;
+      if (m && m.isShaderMaterial && !seen.has(m.vertexShader)) {
+        seen.add(m.vertexShader);
+        if (!varyVertex(m.vertexShader)) ok = false;
+      }
+      for (const ch of o.children) visit(ch, root && ch === sceneApi.groups.mushroom);
+    };
+    visit(stemSrc, true);
+    visit(capBendSrc, true);
+    return ok && seen.size > 0;
+  }
+  const varyOk = probeVary();
+
+  /* ---- THE CAP FIGURE (capfigure.js) --------------------------------
+     ONE guard for the whole set, taken before the first body is built —
+     probeVary's discipline, for the same reason. `analyseHeroFigure`
+     identifies the overlay net and its node dots by construction signature
+     and refuses to name one without the other; the count check inside
+     `buildCapFigure` is a property of the SPEC rather than of a seed, so
+     taking it once here with a throwaway seed makes "every body or no body"
+     structural instead of a coincidence of 24 bodies each reaching the same
+     conclusion. If either refuses, `figSpec` is null and every clone shares
+     the hero's cap buffers exactly as it did before this module existed —
+     a field where some caps are re-figured and some are not is not a
+     degraded outcome, it is the original complaint with extra steps. */
+  let figSpec = analyseHeroFigure(sceneApi.groups.mushroom);
+  if (figSpec && !buildCapFigure(figSpec, 1)) figSpec = null;
+  let figures = 0;
+
+  /** This body's geometry for one source layer: its OWN cap figure for the
+   *  two figure layers, the hero's shared buffer for everything else. The
+   *  identity test is against the SOURCE geometry object, so it cannot be
+   *  fooled by child order or by a foreign layer that happens to look alike. */
+  function geoFor(g, own) {
+    if (!own.fig) return g;
+    if (g === figSpec.netGeo) return own.fig.net;
+    if (g === figSpec.ptsGeo) return own.fig.pts;
+    return g;
+  }
+
+  /** Walk one root of the hero's graph and build this clone's copy of it.
+   *  EVERY layer is kept — the beads and the speckles are the tissue this
+   *  whole step-back is about, and the measured budget (18-one-species.md's
+   *  draw-call table) says they fit. Two of them are DRAWN FROM the hero
+   *  rather than shared with it (geoFor, above): the overlay net and its node
+   *  dots are a figure, not tissue, and a figure that repeats is what §20 was
+   *  asked to fix. The only thing that is ever dropped is a layer this file
+   *  cannot copy FAITHFULLY: a
+   *  point shader whose size expression has drifted out from under the
+   *  uScl patch (see clonePointsMat). Better a missing layer than a body
+   *  wearing full-size sprites. */
+  // `base` below is read off the HERO's live material. That is only safe
+  // because the clone set is built once, at chapter construction, before any
+  // of the hero's own HUD CALLOUTS can be hovered — furniture.js's §11
+  // stem-region highlight MULTIPLIES stemGroup's uOpacity in place while
+  // `co-equip` is hot, and a clone built during one would bake the boosted
+  // value in as its resting brightness. (The callouts are the hero's only
+  // route to that highlight, and they are still live — it is the FIELD's
+  // pointer glow that is gone, not the hero's labels.) Do not move this
+  // build behind a lazy first-arm.
+  function cloneNode(o, mats, shells, s, count, root, own, frame) {
+    let c;
+    const m = o.material;
+    if (!root && !isOrganismLeaf(o)) { foreign++; return null; }
+    // this node's geometry frame — inherited unchanged unless the node itself
+    // adds a transform (see frameOf). Two distinct frames per body in practice.
+    const fr = frameOf(frame, o, o === capBendSrc);
+    if (o.isPoints) {
+      const pm = clonePointsMat(m, s, dropped, fogU, own, fr, varyOk);
+      if (!pm) return null;
+      mats.push({ u: pm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
+      ownedMats++;
+      c = new THREE.Points(geoFor(o.geometry, own), pm);
+      if (count) drawsPerBody++;
+    } else if (o.isLineSegments || o.isLine) {
+      if (m.isShaderMaterial) {
+        const dm = cloneDenseMat(m, fogU, own, fr, varyOk);
+        mats.push({ u: dm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
+        ownedMats++;
+        c = new THREE.LineSegments(geoFor(o.geometry, own), dm);
+      } else {
+        const bm = new THREE.LineBasicMaterial({
+          vertexColors: true, blending: THREE.AdditiveBlending,
+          transparent: true, opacity: m.opacity, depthWrite: false,
+        });
+        // the overlay net draws itself on and ripples with the rest of the
+        // body (injectCloneDraw) — the hero's graft, on this clone's uProg
+        // and the hero's own window for this layer
+        if (m.userData && m.userData.uWin) {
+          injectCloneDraw(bm, own.uProg, m.userData.uWin, pulse, own, fr, varyOk);
+        }
+        mats.push({ m: bm, base: m.opacity });
+        ownedMats++;
+        c = new THREE.LineSegments(geoFor(o.geometry, own), bm);
+      }
+      if (count) drawsPerBody++;
+    } else if (o.isMesh) {
+      // the opaque occluder. Shared outright until the variation round: a
+      // deformed body needs its SOLID to move with its outline, so the
+      // material is now this body's own (one clone per distinct source
+      // material per body — the §5 shells share one, the stem core has
+      // another). Same meshes, same draw count, one extra program.
+      // Solidity is always body-owned, even if optional shape variation is
+      // unavailable after a hero shader change. Sharing the hero material in
+      // that fallback made independent dissolve impossible and left husks.
+      let sm = own.shellMats.get(m);
+      if (!sm) { sm = cloneShellMat(m, own, fr, varyOk); own.shellMats.set(m, sm); shellMats++; }
+      c = new THREE.Mesh(o.geometry, sm);
+      shells.push(c);
+      shellMeshes++;
+      if (count) drawsPerBody++;
+    } else {
+      // only the spine (stemGroup, capBend, mushroom) is a Group here, and
+      // only because it was passed in as a root — see isOrganismLeaf
+      c = new THREE.Group();
+    }
+    c.position.copy(o.position);
+    c.quaternion.copy(o.quaternion);
+    c.scale.copy(o.scale);
+    // the spine is one group deep on the stem side and two on the cap side
+    // (capBend -> mushroom), so a root's group children are still spine
+    for (const ch of o.children) {
+      const cc = cloneNode(ch, mats, shells, s, count,
+        root && ch === sceneApi.groups.mushroom, own, fr);
+      if (cc) c.add(cc);
+    }
+    return c;
+  }
+
+  /** Stand one clone in the world. All pose inputs come from ring.js's
+   *  memberParams — the same seeded stream the species build drew from, so
+   *  a member keeps its shipped facing, lean and size. */
+  function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
+                 arc, reveal, revealIn, boost, tw0, phase, amp, lum, vary, seed, omitOnPhone = false }) {
+    const mats = [];
+    // two shell groups, because they arrive at two different moments of the
+    // draw (STEM_SHELL_LO..HI / CAP_SHELL_LO..HI). The split is free: cloneNode is
+    // already called once per spine root.
+    const stemShells = [];
+    const capShells = [];
+    const root = new THREE.Group();
+    root.position.set(x, gy, z);
+    const qYaw = new THREE.Quaternion().setFromAxisAngle(UP, azFacing);
+    const qLean = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(Math.sin(leanDir), 0, -Math.cos(leanDir)).normalize(), leanAmt);
+    root.quaternion.copy(qLean).multiply(qYaw);       // yaw first, then lean — a rigid pose
+    root.scale.setScalar(s);
+    const sway = new THREE.Group();                   // the animated pivot pair
+    root.add(sway);
+    const count = list.length === 0;                  // measure the first body only
+    // THIS BODY'S own entry-draw progress (part B). Parked at the hero's own
+    // "fully drawn" value so a body that is never reached by the front — and
+    // every body at boot, before the first update() — looks exactly as it
+    // always did.
+    // THIS BODY'S SHAPE (variation.js). Four uniform objects, created here and
+    // handed to every one of the fifteen materials below — see the variation
+    // section header: the sharing IS the consistency guarantee.
+    const own = {
+      uProg: { value: 2 }, uClampY: clampU,
+      shellMats: new Map(),
+      ...varyUniforms(varyOk ? (vary || IDENTITY) : IDENTITY),
+    };
+    // THIS BODY'S CAP FIGURE (capfigure.js). The one thing a clone owns
+    // geometry for: the sparse overlay network on the dome and the node dots
+    // that are its vertices, rebuilt from this body's own seed on the hero's
+    // own construction. Built BEFORE the walk, because cloneNode's geoFor()
+    // reads it. A body with no seed (or a set whose guard refused) shares the
+    // hero's buffers, and geoFor() is then the identity.
+    own.fig = (figSpec && seed !== undefined) ? buildCapFigure(figSpec, seed) : null;
+    if (own.fig) figures++;
+    const F0 = rootFrame();
+    const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own, F0);
+    const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own, F0);
+    capBendC.quaternion.identity();                   // strip the hero's live bend snapshot
+    sway.add(stemC, capBendC);
+    group.add(root);
+    // Shells are always privately owned. The cap and stem must also keep
+    // separate materials so their independently timed growth cannot fight.
+    const stemShellMats = [...new Set(stemShells.map(m => m.material))];
+    const capShellMats = [...new Set(capShells.map(m => m.material))];
+    const ownShells = stemShellMats.length > 0 && capShellMats.length > 0
+      && !stemShellMats.some(m => capShellMats.includes(m));
+    const c = {
+      root, sway, capBend: capBendC, mats, omitOnPhone,
+      stemShells, capShells, stemShellMats, capShellMats, ownShells,
+      shells: stemShells.concat(capShells),           // interact.js's narrow phase
+      x, z, gy, s,
+      arc, reveal, revealIn: revealIn ?? reveal, boost, tw0, phase, amp, lum: lum ?? 1,
+      drawW: drawWOf(reveal),                         // this body's own kindling width
+      // ...and the ARRIVAL pair (world.js uRevIn): the depth-dealt rung and
+      // the width derived for it, read while the field kindles out of the dark
+      drawWIn: drawWOf(revealIn ?? reveal),
+      tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
+      uProg: own.uProg, prog: -1,                     // entry draw (part B)
+      v: -1, ks: -1, kc: -1,
+    };
+    list.push(c);
+    return c;
+  }
+
+  /** Poke one clone. `point` is the WORLD-space hit point (interact.js's
+   *  narrow phase against this body's own opaque shells, so it is a point ON
+   *  the mushroom, not the axis of a collider) and `dir` is the view ray the
+   *  finger pushes along — organism §10c's own two inputs.
+   *
+   *  Both are carried into the body's frame through root.matrixWorld, which
+   *  undoes the clone's place, yaw, lean AND scale in one step. What comes out
+   *  is hero-unit local coordinates: r.y ~ 4 at the cap, ~1 low on the stem,
+   *  exactly the numbers §10c's lever arm was tuned against. (The sway pivot
+   *  under root is deliberately NOT undone: the hero measures its own hit
+   *  point in the swayed world too, so leaving it in keeps the parity exact.)
+   *
+   *  Returns the local hit point, so the caller can apply the hero's own
+   *  cap-tap test (y > 2.8) in the units the hero applies it in. */
+  const _mi = new THREE.Matrix4();
+  const _rp = new THREE.Vector3();
+  const _rd = new THREE.Vector3();
+  function poke(c, point, dir) {
+    c.root.updateWorldMatrix(true, false);
+    _mi.copy(c.root.matrixWorld).invert();
+    _rp.copy(point).applyMatrix4(_mi);
+    _rd.copy(dir).transformDirection(_mi).normalize();
+    kickTap(c, _rp, _rd);
+    return _rp;
+  }
+
+  /** Per-frame drive: the chapter's reveal choreography (the exact shader
+   *  law from world.js STRAND_VERT, evaluated per body on the CPU — one
+   *  scalar per clone instead of per vertex) and the gentle sway. Reads the
+   *  chapter's shared uniforms — pure in the pose
+   *  (uAmount/uPull) exactly like the batches, so reverse scrubs retract
+   *  clones and nothing self-ignites (D16). */
+  function update(t, dt, uniforms) {
+    const eff = uniforms.uAmount.value;
+    // The draw front runs on the UNCLAMPED pull. pullOf() floors at 0 from
+    // camera x −8 back, which is the surface pierce — a body keyed to draw
+    // before then would arrive at the pierce already 80% inked and finish the
+    // rest in open view. On the raw value the near bodies do their whole
+    // drawing underground, behind the soil slab the chapter is dissolving,
+    // and only the far ones ink in over the opening field, which is the point.
+    const pullRaw = uniforms.uPullRaw.value;
+    // the chapter's fog ramp, not the hero's fixed pair (see FOG above)
+    fogU[0].value = uniforms.uFogNear.value;
+    fogU[1].value = uniforms.uFogFar.value;
+    const fr = uniforms.uFront.value, frOn = uniforms.uFrontOn.value;
+    const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
+    // Which deal is live (world.js uRevIn): the depth-dealt arrival rungs
+    // while kindling out of the dark, the authored rungs on every departure.
+    const revIn = uniforms.uRevIn.value > 0.5;
+    for (const c of list) {
+      c.root.visible = !(c.omitOnPhone && typeof window !== 'undefined'
+        && window.innerWidth <= 620 && window.innerHeight > window.innerWidth);
+      // ---- this body's own arrival clock (§14: charge, take, settle) ----
+      // s is pure in the pose: the camera-pure front, on this body's own
+      // window. Everything below is a function of s (plus the shared
+      // twinkle carrier the resting field already runs on), so a reverse
+      // scrub runs the whole arrival backwards mirror-exact (D16).
+      const s = revIn ? (pullRaw - c.revealIn) / c.drawWIn
+                      : (pullRaw - c.reveal) / c.drawW;
+      // ---- part B: this body draws ITSELF on as the front reaches it ----
+      // The ink spans the window and completes at INK_SPAN — the last
+      // strokes land inside the take, the tip ember riding into the flare
+      // (a lit body still drawing, the hero's relation). At d = 1 the
+      // uniform is parked at the hero's own 2 — BYTE-IDENTICAL to holding
+      // it at DRAW_HI (dp saturates at 1 either way, the tip term is
+      // switched off by the same step(), and the lid is inert at
+      // CLAMP_OFF), so the rest frame is the shipped rest frame.
+      const d = smooth01(s / INK_SPAN);
+      if (d !== c.prog) {
+        c.prog = d;
+        c.uProg.value = d >= 1 ? 2 : DRAW_LO + d * (DRAW_HI - DRAW_LO);
+      }
+      // ---- the light: charge -> take -> settle (see the §14 block) ----
+      // g² is the charge: slow first, leaning forward — gathering. The
+      // take is one committed smoothstep through the knee; the charge
+      // hands over linearly so the curve never dips. At s >= 1 this is
+      // exactly 1 and at s <= 0 exactly 0: the rest frame and the dark
+      // frame are both the shipped states.
+      const g = smooth01(s / CHARGE_END);
+      const take = smooth01((s - TAKE_LO) / (TAKE_HI - TAKE_LO));
+      const lum01 = CHARGE_LVL * g * g * (1 - take) + take;
+      // The arrival bloom — the house's own onset (hero.css core-pop: the
+      // callout node overshoots and settles, the instrument powering on).
+      // The flare now rides the TAKE itself — it peaks as the body commits
+      // and is fully decayed by s = 1, so every frozen rest frame, where
+      // every drawn body sits past s = 1, is untouched.
+      const bloom = 1 + BLOOM_A
+        * smooth01((s - 0.60) / 0.22) * (1 - smooth01((s - 0.86) / 0.14));
+      let b = (0.07 + 0.93 * lum01) * bloom;          // the 7% ember whisper
+      const df = c.arc - fr;
+      b += c.boost * frOn * Math.exp(-df * df * 260) * (0.30 + 0.60 * lum01);
+      const dc = c.arc - ct;
+      b += c.boost * ctOn * Math.exp(-dc * dc * 200) * 1.1;
+      // The house twinkle, breathing DEEPER through the charge (0.12 at
+      // rest and in the dark — the shipped depth exactly — up to 0.22 at
+      // the charge's crest, easing home through the take). A charging thing
+      // visibly draws power; a settled thing holds its light steady. The
+      // depth is pure in the pose; the carrier is the same shared clock
+      // the resting twinkle has always run on, so the frozen mirror is
+      // untouched and the rest frame is byte-identical.
+      const dep = 0.12 + FLICKER_A * g * (1 - take);
+      b *= (1 - dep) + dep * Math.sin(t * 0.9 + c.tw0);   // strand twinkle
+      const v = eff * b * c.lum;
+      if (Math.abs(v - c.v) > 1e-4) {
+        c.v = v;
+        for (const e of c.mats) {
+          if (e.u) e.u.value = e.base * v;
+          else e.m.opacity = Math.min(1, e.base * v);
+        }
+      }
+      // BOTH shell gates, every frame (they answer to two different drivers —
+      // the reveal AND the draw — and the reveal's own early-out above would
+      // otherwise strand the draw's half of the test). SHELL_ON stays the outer
+      // gate: a body the reveal has retracted drops its shells outright rather
+      // than easing them, so a reverse scrub leaves nothing standing.
+      const lit = v > SHELL_ON;
+      // The §14 shell windows, on THIS body's arrival clock (see the
+      // STEM/CAP_SHELL comment: solidity follows the take, so a charging
+      // body can never stand as a black cap). Falls back to the midpoint
+      // switch when the shells are not ours to write (see ownShells in
+      // add()) — the same behaviour, never a half-applied one.
+      let ks, kc;
+      if (c.ownShells) {
+        ks = lit ? clamp01(eff) * clamp01((s - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
+        kc = lit ? clamp01(eff) * clamp01((s - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
+      } else {
+        ks = lit && s >= (STEM_SHELL_LO + STEM_SHELL_HI) / 2 ? 1 : 0;
+        kc = lit && s >= (CAP_SHELL_LO + CAP_SHELL_HI) / 2 ? 1 : 0;
+      }
+      if (ks !== c.ks) {
+        c.ks = ks;
+        if (c.ownShells) shellFade(c.stemShells, c.stemShellMats, ks);
+        else for (const sh of c.stemShells) sh.visible = ks > 0;
+      }
+      if (kc !== c.kc) {
+        c.kc = kc;
+        if (c.ownShells) shellFade(c.capShells, c.capShellMats, kc);
+        else for (const sh of c.capShells) sh.visible = kc > 0;
+      }
+      // the two-pivot sway, phase-scattered so no two bodies nod together —
+      // with the tap ring-down integrated ON TOP, exactly as organism §10c's
+      // 'breeze' animator does it, so a poked clone keeps swaying while it
+      // recovers instead of freezing into a rigid wobble. The sway is damped
+      // per body (c.amp — adr-d3, "the field does not ride the hero's wind");
+      // the TAP is not. A poke is the visitor's own force, not the weather,
+      // and it answers at full strength on every body.
+      stepTap(c, dt);
+      const w = breeze(t + c.phase);
+      c.sway.rotation.z = -w * 0.034 * c.amp + c.tz;
+      c.sway.rotation.x = breeze(t * 0.93 + c.phase + 2.0) * 0.007 * c.amp + c.tx;
+      // the head trails the stalk: the hero's own first-order Taylor step back
+      // along the tap's motion, at the hero's own 0.38 gain
+      c.capBend.rotation.z = -breeze(t + c.phase - 0.30) * 0.013 * c.amp
+                           + (c.tz - 0.30 * c.tvz) * 0.38;
+    }
+  }
+
+  /** Drop every body's poke state on the floor. Called when the chapter
+   *  retires: a body left mid-wobble would re-enter the next ride still
+   *  swinging from a poke nobody in that ride gave it, and the ring-down
+   *  alone would need a dozen frames it is not going to get. */
+  function cool() {
+    for (const c of list) {
+      clearTap(c);
+      c.sway.rotation.z = 0; c.sway.rotation.x = 0;
+    }
+  }
+
+  /** LIVE QA: which bodies are still ringing from a poke, and by how many
+   *  degrees. The wobble is a few pixels at field scale by design (the hero's
+   *  ANGLE, not the hero's pixel throw), so a number is a better witness than
+   *  a screenshot when tuning it. */
+  function ringing() {
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      if (isRinging(c)) out.push({ i, deg: +(Math.hypot(c.tx, c.tz) * 57.3).toFixed(4) });
+    }
+    return out;
+  }
+
+  return {
+    group, add, update, cool, poke, ringing,
+    /** Whether per-body variation survived the guard. ring.js reads it so the
+     *  species band varies exactly when the clone band does — one field, one
+     *  answer, never a near half that varies and a far half that does not. */
+    varyOk,
+    get counts() {
+      return {
+        bodies: list.length, ownedMats, shellMeshes, shellMats,
+        drawsPerBody, dropped: dropped.length, foreign, varyOk,
+        // the cap-figure exception: how many bodies own one, and the two
+        // counts the rebuild was sized from (read off the hero, not authored)
+        figures, figOk: !!figSpec,
+        figNodes: figSpec ? figSpec.nodes : 0,
+        figSpeckles: figSpec ? figSpec.speckles : 0,
+      };
+    },
+  };
+}

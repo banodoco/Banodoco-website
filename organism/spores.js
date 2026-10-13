@@ -3,6 +3,7 @@
 // createScene closure at merge step M2 with zero behaviour change; all
 // formerly-closure state arrives through `ctx` (built in organism.js).
 import * as THREE from 'three';
+import { createCapFlow } from './spore-cap-flow.js';
 import { TKDBG } from '../flags.js';
 import { sporeBoundaryDistance, sporeLifetimeOpacity } from './spore-lifetime.js';
 import { EXITS as INSPIRE_EXITS, EXIT_SLOT } from '../inspire-exits.js';
@@ -20,6 +21,12 @@ export function createSpores(ctx) {
   // cap form language for the driven modes (the lit routes are authored
   // against the organism's own rim, not a mirror)
   const { rimRad, rimYoff } = ctx;
+  const capFlow = createCapFlow(capUnderPt, rimRad);
+  const capInverse = new THREE.Matrix4(), capFrom = new THREE.Vector3(), capTo = new THREE.Vector3();
+  const emitter = new THREE.Vector3(), previousCapInverse = new THREE.Matrix4();
+  ctx.mushroom.updateWorldMatrix(true, false);
+  capInverse.copy(ctx.mushroom.matrixWorld).invert();
+  previousCapInverse.copy(capInverse);
 
   // The one wind. The lit route spines below rise along THIS vector's own
   // ratios (D17 locus law: organization happens IN PLACE, inside the drift's
@@ -120,7 +127,7 @@ export function createSpores(ctx) {
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
   let dispDir;                             // D29 per-dot decoherence directions
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
-  let sporePts, sporeVel = [], sporeOrigin, sporeAge, sporeFade;
+  let sporePts, sporeVel = [], sporeLocalOrigin, sporeAge, sporeFade;
   {
     const pp = [], pc = [], ps = [], org = [];
     const N = 4200;
@@ -351,9 +358,22 @@ export function createSpores(ctx) {
         const o = tAb * DISP_RATE, k3 = k * 3;
         px += dispDir[k3] * o; py += dispDir[k3 + 1] * o; pz += dispDir[k3 + 2] * o;
       }
+      capTo.set(px, py, pz).applyMatrix4(capInverse);
+      capFrom.copy(e).applyMatrix4(capInverse);
+      const birthSurface = capFlow.surface(capFrom.x, capFrom.z);
+      const birthClearance = birthSurface === null ? .16 : Math.max(.16, birthSurface - capFrom.y);
+      if (capFlow.seed(capTo, birthClearance)) {
+        capTo.applyMatrix4(ctx.mushroom.matrixWorld);
+        px = capTo.x; py = capTo.y; pz = capTo.z;
+      }
       pp.push(px, py, pz);
     }
-    sporeOrigin = new Float32Array(org); // each spore recycles to its own gill spot
+    sporeLocalOrigin = new Float32Array(org.length);
+    for (let i = 0; i < org.length; i += 3) {
+      emitter.fromArray(org, i).applyMatrix4(capInverse);
+      capFlow.seed(emitter);
+      emitter.toArray(sporeLocalOrigin, i);
+    } // each spore recycles to its own spot in the moving cap's full frame
     // release progress, 0 = just shed and still dropping, 1 = fully carried
     sporeAge = new Float32Array(N).fill(1);
     sporePts = makePoints(pp, pc, ps, 2.4);
@@ -377,11 +397,11 @@ export function createSpores(ctx) {
   // (called by the tap handler in organism.js §10c)
   function shedSpores(n) {
     const pos = sporePts.geometry.attributes.position, arr = pos.array;
+    ctx.mushroom.updateWorldMatrix(true, false);
     for (let k = 0; k < n; k++) {
       const i = (rand() * sporeAge.length) | 0, i3 = i * 3;
-      arr[i3]     = sporeOrigin[i3] * ctx.swayCos - sporeOrigin[i3 + 1] * ctx.swaySin;
-      arr[i3 + 1] = sporeOrigin[i3] * ctx.swaySin + sporeOrigin[i3 + 1] * ctx.swayCos;
-      arr[i3 + 2] = sporeOrigin[i3 + 2];
+      emitter.fromArray(sporeLocalOrigin, i3).applyMatrix4(ctx.mushroom.matrixWorld);
+      emitter.toArray(arr, i3);
       sporeAge[i] = 0;
       sporeFade[i] = 0;
     }
@@ -462,7 +482,6 @@ export function createSpores(ctx) {
       frameNo++;
       if (lastDriveFrame >= 0 && lastDriveFrame < frameNo - 1) releaseSeat();
       // sway state for this frame, written by 'breeze' earlier in the frame
-      const swayCos = ctx.swayCos, swaySin = ctx.swaySin;
       const gust = 0.72 + 0.28 * breeze(t);   // gusts surge the drift as the body leans
       const k = Math.min(dt, 0.033) * 60;     // advance per 60fps-equivalent frame
       // cursor wind for this frame (see the mouse-wind comment above)
@@ -504,16 +523,17 @@ export function createSpores(ctx) {
       // the standing floor — all machinery for reconciling a steered buffer
       // with an ambient one — are deleted with the steering itself, not
       // disabled: there is no second arrangement left to reconcile.
+      ctx.mushroom.updateWorldMatrix(true, false);
+      capInverse.copy(ctx.mushroom.matrixWorld).invert();
       for (let i = 0; i < pos.count; i++) {
         const i3 = i * 3;
         // the gills that release this spore are swaying, so its origin swings too
-        const gx = sporeOrigin[i3] * swayCos - sporeOrigin[i3 + 1] * swaySin;
-        const gy = sporeOrigin[i3] * swaySin + sporeOrigin[i3 + 1] * swayCos;
+        emitter.fromArray(sporeLocalOrigin, i3).applyMatrix4(ctx.mushroom.matrixWorld);
+        const gx = emitter.x, gy = emitter.y, gz = emitter.z;
         let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
-        // Under the cap the air is still, so a fresh spore drops clear of the gills
-        // before the wind takes hold. That handover is measured in TIME, not in
-        // distance travelled: the drift is slow enough (~0.06 units/s) that a
-        // distance gate would keep a spore falling for a quarter of a minute.
+        // Age recruits the ambient weather gradually after release. Physical
+        // cap clearance below independently redirects its upward component;
+        // aging alone must never carry a spore back into its own gills.
         let w = sporeAge[i];
         if (w < 1) w = sporeAge[i] = Math.min(1, w + (k / 60) / 1.6);
         // The cursor's slipstream: find how deep this spore sits in it BEFORE
@@ -580,15 +600,26 @@ export function createSpores(ctx) {
           y += wdy * tp * g + spy * inv;
           z += wdz * tp * g + spz * inv;
         }
+        if (dts > 0) {
+          // Include the moving shell's own velocity: the old position is
+          // measured in the previous cap frame, the proposal in this one.
+          capFrom.set(arr[i3], arr[i3 + 1], arr[i3 + 2]).applyMatrix4(previousCapInverse);
+          capTo.set(x, y, z).applyMatrix4(capInverse);
+          if (capFlow.advance(capFrom, capTo, dts)) {
+            capTo.applyMatrix4(ctx.mushroom.matrixWorld);
+            x = capTo.x; y = capTo.y; z = capTo.z;
+          }
+        }
         // spent — release again from its own gill spot. The bounds are closed on
         // every side so nothing can wander off and never come back.
         const remaining = sporeBoundaryDistance(x, y, gx);
         if (remaining < 0) {
-          x = gx; y = gy; z = sporeOrigin[i3 + 2]; sporeAge[i] = 0;
+          x = gx; y = gy; z = gz; sporeAge[i] = 0;
           sporeFade[i] = 0;
         } else sporeFade[i] = sporeLifetimeOpacity(remaining, sporeAge[i]);
         arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
       }
+      previousCapInverse.copy(capInverse);
       pos.needsUpdate = true;
       sporePts.geometry.attributes.aSporeFade.needsUpdate = true;
     });

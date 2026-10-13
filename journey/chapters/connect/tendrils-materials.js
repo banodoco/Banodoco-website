@@ -104,6 +104,7 @@ export function makeStrandMat(U) {
       uPulseAmp: U.uPulseAmp,     // vec3: pulse strengths
       uExit: U.uExit,             // x: exit convergence amount (camera-driven)
       uWell: U.uWell,             // xy: world-xz centre of the copy brightness well, z: strength, w: radius
+      uHivemindWelcome: U.uHivemindWelcome, // hub XZ, full-light radius, outer radius
       uBase: { value: 1.05 },
       uNear: { value: 0.9 },
       uFar: { value: 0.055 },     // soft distance dim (own, gentler than scene fog)
@@ -124,7 +125,7 @@ export function makeStrandMat(U) {
       uniform vec3 uLit, uHead, uLitMax;
       uniform vec3 uRouteAmp, uPulseHead, uPulseAmp, uAdosShift;
       uniform float uExit;
-      uniform vec4 uWell;
+      uniform vec4 uWell, uHivemindWelcome;
       uniform vec3 uColDeep, uColGold, uColHot;
       varying vec3 vCol;
       void main() {
@@ -162,6 +163,13 @@ export function makeStrandMat(U) {
         // the arriving head glows a touch brighter, fading once the light lands
         float dTip = (along - head) / uTipW;
         float tip = exp(-dTip * dTip) * headAmp;
+        // The arrival front also owns Hivemind's distant background web.
+        // Keep that web's ordinary reveal, but spend the welcome flash near
+        // its marker rather than across the whole far-field lighting region.
+        if (litRoute > 0.5 && litRoute < 1.5) {
+          tip *= 1.0 - smoothstep(uHivemindWelcome.z, uHivemindWelcome.w,
+            distance(placed.xz, uHivemindWelcome.xy));
+        }
 
         /* ---- ambient shimmer (tw idiom, slow: 0.1–0.4 Hz) ---- */
         float tw = 0.5 + 0.5 * sin(uTime * (0.63 + fract(seed * 7.31) * 1.88) + seed * 41.0);

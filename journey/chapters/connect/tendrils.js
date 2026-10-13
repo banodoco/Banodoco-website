@@ -854,6 +854,8 @@ export function buildTendrils(group, U) {
   }
 
   /* ---- build the strand mesh ---- */
+  const hivemind = hubMeta.find(hub => hub.id === 'hivemind');
+  U.uHivemindWelcome = { value: new THREE.Vector4(hivemind.pos.x, hivemind.pos.z, 1.2, 3.2) };
   const strandMat = makeStrandMat(U);
   let strandsGeo;
   if (baked) {
