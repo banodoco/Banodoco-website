@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { connectedLineIndex } from './connected-lines.js';
 import { COLONY_RETIREMENT_GLSL } from './retirement.js';
 import { BODY_DISSOLVE_GLSL } from '../lib/body-dissolve.js';
 import { aerialPlacements, planAerialReveals, manifestoPose, CAMERA_SECONDS } from './pose.js';
@@ -167,6 +168,7 @@ ${seatRetirementGLSL}
       return mat4(vec4(c*k,0.,-s*k,0.),vec4(0.,k,0.,0.),vec4(s*k,0.,c*k,0.),vec4(aColonyPose.xyz,1.)) * uColonyFrame;
     }
   `;
+  const connectedCaps = new WeakMap();
   function addLayer(source, frame) {
     for (const tier of tiers) addTierLayer(source, frame, tier);
   }
@@ -181,7 +183,21 @@ ${seatRetirementGLSL}
     for (const [key, attribute] of Object.entries(source.geometry.attributes)) geometry.setAttribute(key, attribute);
     const [unit, stride] = source.isLineSegments ? [2, LOD_STRIDE.lines * tier.thin]
       : source.isPoints ? [1, LOD_STRIDE.points] : [3, LOD_STRIDE.mesh];
-    if (unit === 3 && tier.name === 'far') {
+    // Only the cap surface has two independent neighbouring directions.
+    // Its graph must remain connected; striding its short edges made a
+    // field of dotted caps during the desktop ascent.
+    const tang = source.geometry.attributes.tang?.array;
+    const tang2 = source.geometry.attributes.tang2?.array;
+    const connectedCap = unit === 2 && tang && tang2 && tang.some((v, i) => v !== tang2[i]);
+    let capIndex = null;
+    if (connectedCap) {
+      let indices = connectedCaps.get(source.geometry);
+      if (!indices) connectedCaps.set(source.geometry, indices = new Map());
+      if (!indices.has(stride)) indices.set(stride, connectedLineIndex(source.geometry, stride));
+      capIndex = indices.get(stride);
+    }
+    if (capIndex) geometry.setIndex(capIndex.index);
+    else if (unit === 3 && tier.name === 'far') {
       // the frame's scale carries hero units into this geometry's own
       geometry.setIndex(clusteredIndex(source.geometry, farCell / Math.max(1e-6, frame.getMaxScaleOnAxis())));
     } else {
@@ -204,7 +220,7 @@ ${seatRetirementGLSL}
     if (src.isMeshBasicMaterial) { material.opacity = 1; material.transparent = false; material.clippingPlanes = null; }
     // light compensation for the thinning (1 for the unthinned opaque bodies)
     const own = { uniforms: { uColonyFrame: { value: frame }, uColonyGate: gate, uColonyRetiring: retiring, uColonyRetirementStart: retirementStart, uColonySeconds: clock, uColonyPortrait: portrait,
-      uColonyGain: { value: stride }, uColonySeatLight: seatLight, uColonySeatRetiring: seatRetiring, uColonySeatRetirementStart: seatRetirementStart } };
+      uColonyGain: { value: capIndex ? capIndex.gain : stride }, uColonySeatLight: seatLight, uColonySeatRetiring: seatRetiring, uColonySeatRetirementStart: seatRetirementStart } };
     function vertex(shader) {
       return (src.isMeshBasicMaterial ? 'varying vec3 vBodyDissolvePosition;\n' : '') + header + shader
         .replace(/\bmodelViewMatrix\b/g, '(modelViewMatrix * colonyMatrix())')

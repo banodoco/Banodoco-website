@@ -963,7 +963,7 @@
     },
     "final": {
       "file": "final.bin",
-      "sha256": "c9ababa77505a974d6c641462da5f4ad32d08618e9c6e1ffada910828aba454f",
+      "sha256": "ea6d53c4a829d080b65afd378bc6e23688f93264edfe108c52002848bd8f9598",
       "keys": [
         {
           "key": "final/ringLines",
@@ -972,63 +972,63 @@
               "name": "position",
               "itemSize": 3,
               "byteOffset": 0,
-              "byteLength": 202416,
+              "byteLength": 509328,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 202416,
-              "byteLength": 202416,
+              "byteOffset": 509328,
+              "byteLength": 509328,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 404832,
-              "byteLength": 67472,
+              "byteOffset": 1018656,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 472304,
-              "byteLength": 67472,
+              "byteOffset": 1188432,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 539776,
-              "byteLength": 67472,
+              "byteOffset": 1358208,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 607248,
-              "byteLength": 67472,
+              "byteOffset": 1527984,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 674720,
-              "byteLength": 67472,
+              "byteOffset": 1697760,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 742192,
-              "byteLength": 67472,
+              "byteOffset": 1867536,
+              "byteLength": 169776,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 809664,
-              "byteLength": 67472,
+              "byteOffset": 2037312,
+              "byteLength": 169776,
               "kind": "f32"
             }
           ]
@@ -1039,71 +1039,71 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 877136,
-              "byteLength": 5004,
+              "byteOffset": 2207088,
+              "byteLength": 5784,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 882140,
-              "byteLength": 5004,
+              "byteOffset": 2212872,
+              "byteLength": 5784,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 887144,
-              "byteLength": 1668,
+              "byteOffset": 2218656,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 888812,
-              "byteLength": 1668,
+              "byteOffset": 2220584,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 890480,
-              "byteLength": 1668,
+              "byteOffset": 2222512,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 892148,
-              "byteLength": 1668,
+              "byteOffset": 2224440,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 893816,
-              "byteLength": 1668,
+              "byteOffset": 2226368,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 895484,
-              "byteLength": 1668,
+              "byteOffset": 2228296,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 897152,
-              "byteLength": 1668,
+              "byteOffset": 2230224,
+              "byteLength": 1928,
               "kind": "f32"
             },
             {
               "name": "psize",
               "itemSize": 1,
-              "byteOffset": 898820,
-              "byteLength": 1668,
+              "byteOffset": 2232152,
+              "byteLength": 1928,
               "kind": "f32"
             }
           ]
@@ -1114,35 +1114,35 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 900488,
+              "byteOffset": 2234080,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 900536,
+              "byteOffset": 2234128,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aDelay",
               "itemSize": 1,
-              "byteOffset": 900584,
+              "byteOffset": 2234176,
               "byteLength": 16,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 900600,
+              "byteOffset": 2234192,
               "byteLength": 16,
               "kind": "f32"
             },
             {
               "name": "psize",
               "itemSize": 1,
-              "byteOffset": 900616,
+              "byteOffset": 2234208,
               "byteLength": 16,
               "kind": "f32"
             }
@@ -1154,14 +1154,14 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 900632,
+              "byteOffset": 2234224,
               "byteLength": 9060,
               "kind": "f32"
             },
             {
               "name": "index",
               "itemSize": 1,
-              "byteOffset": 909692,
+              "byteOffset": 2243284,
               "byteLength": 15264,
               "kind": "u32"
             }
@@ -1173,63 +1173,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 924956,
+              "byteOffset": 2258548,
               "byteLength": 5040,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 929996,
+              "byteOffset": 2263588,
               "byteLength": 5040,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 935036,
+              "byteOffset": 2268628,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 936716,
+              "byteOffset": 2270308,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 938396,
+              "byteOffset": 2271988,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 940076,
+              "byteOffset": 2273668,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 941756,
+              "byteOffset": 2275348,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 943436,
+              "byteOffset": 2277028,
               "byteLength": 1680,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 945116,
+              "byteOffset": 2278708,
               "byteLength": 1680,
               "kind": "f32"
             }
@@ -1241,63 +1241,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 946796,
+              "byteOffset": 2280388,
               "byteLength": 9264,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 956060,
+              "byteOffset": 2289652,
               "byteLength": 9264,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 965324,
+              "byteOffset": 2298916,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 968412,
+              "byteOffset": 2302004,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 971500,
+              "byteOffset": 2305092,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 974588,
+              "byteOffset": 2308180,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 977676,
+              "byteOffset": 2311268,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 980764,
+              "byteOffset": 2314356,
               "byteLength": 3088,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 983852,
+              "byteOffset": 2317444,
               "byteLength": 3088,
               "kind": "f32"
             }
@@ -1309,70 +1309,70 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 986940,
+              "byteOffset": 2320532,
               "byteLength": 3336,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 990276,
+              "byteOffset": 2323868,
               "byteLength": 3336,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 993612,
+              "byteOffset": 2327204,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 994724,
+              "byteOffset": 2328316,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 995836,
+              "byteOffset": 2329428,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 996948,
+              "byteOffset": 2330540,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 998060,
+              "byteOffset": 2331652,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 999172,
+              "byteOffset": 2332764,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1000284,
+              "byteOffset": 2333876,
               "byteLength": 1112,
               "kind": "f32"
             },
             {
               "name": "psize",
               "itemSize": 1,
-              "byteOffset": 1001396,
+              "byteOffset": 2334988,
               "byteLength": 1112,
               "kind": "f32"
             }
@@ -1384,63 +1384,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1002508,
+              "byteOffset": 2336100,
               "byteLength": 5280,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1007788,
+              "byteOffset": 2341380,
               "byteLength": 5280,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1013068,
+              "byteOffset": 2346660,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1014828,
+              "byteOffset": 2348420,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1016588,
+              "byteOffset": 2350180,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1018348,
+              "byteOffset": 2351940,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1020108,
+              "byteOffset": 2353700,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1021868,
+              "byteOffset": 2355460,
               "byteLength": 1760,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1023628,
+              "byteOffset": 2357220,
               "byteLength": 1760,
               "kind": "f32"
             }
@@ -1452,63 +1452,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1025388,
+              "byteOffset": 2358980,
               "byteLength": 57768,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1083156,
+              "byteOffset": 2416748,
               "byteLength": 57768,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1140924,
+              "byteOffset": 2474516,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1160180,
+              "byteOffset": 2493772,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1179436,
+              "byteOffset": 2513028,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1198692,
+              "byteOffset": 2532284,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1217948,
+              "byteOffset": 2551540,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1237204,
+              "byteOffset": 2570796,
               "byteLength": 19256,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1256460,
+              "byteOffset": 2590052,
               "byteLength": 19256,
               "kind": "f32"
             }
@@ -1520,70 +1520,70 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1275716,
+              "byteOffset": 2609308,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1275860,
+              "byteOffset": 2609452,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1276004,
+              "byteOffset": 2609596,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1276052,
+              "byteOffset": 2609644,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1276100,
+              "byteOffset": 2609692,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1276148,
+              "byteOffset": 2609740,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1276196,
+              "byteOffset": 2609788,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1276244,
+              "byteOffset": 2609836,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1276292,
+              "byteOffset": 2609884,
               "byteLength": 48,
               "kind": "f32"
             },
             {
               "name": "psize",
               "itemSize": 1,
-              "byteOffset": 1276340,
+              "byteOffset": 2609932,
               "byteLength": 48,
               "kind": "f32"
             }
@@ -1595,63 +1595,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1276388,
+              "byteOffset": 2609980,
               "byteLength": 3456,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1279844,
+              "byteOffset": 2613436,
               "byteLength": 3456,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1283300,
+              "byteOffset": 2616892,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1284452,
+              "byteOffset": 2618044,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1285604,
+              "byteOffset": 2619196,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1286756,
+              "byteOffset": 2620348,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1287908,
+              "byteOffset": 2621500,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1289060,
+              "byteOffset": 2622652,
               "byteLength": 1152,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1290212,
+              "byteOffset": 2623804,
               "byteLength": 1152,
               "kind": "f32"
             }
@@ -1663,63 +1663,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1291364,
+              "byteOffset": 2624956,
               "byteLength": 432,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1291796,
+              "byteOffset": 2625388,
               "byteLength": 432,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1292228,
+              "byteOffset": 2625820,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1292372,
+              "byteOffset": 2625964,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1292516,
+              "byteOffset": 2626108,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1292660,
+              "byteOffset": 2626252,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1292804,
+              "byteOffset": 2626396,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1292948,
+              "byteOffset": 2626540,
               "byteLength": 144,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1293092,
+              "byteOffset": 2626684,
               "byteLength": 144,
               "kind": "f32"
             }
@@ -1731,42 +1731,42 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1293236,
+              "byteOffset": 2626828,
               "byteLength": 93600,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1386836,
+              "byteOffset": 2720428,
               "byteLength": 93600,
               "kind": "f32"
             },
             {
               "name": "aSeed",
               "itemSize": 1,
-              "byteOffset": 1480436,
+              "byteOffset": 2814028,
               "byteLength": 31200,
               "kind": "f32"
             },
             {
               "name": "aCycle",
               "itemSize": 4,
-              "byteOffset": 1511636,
+              "byteOffset": 2845228,
               "byteLength": 124800,
               "kind": "f32"
             },
             {
               "name": "aClump",
               "itemSize": 2,
-              "byteOffset": 1636436,
+              "byteOffset": 2970028,
               "byteLength": 62400,
               "kind": "f32"
             },
             {
               "name": "aGate",
               "itemSize": 3,
-              "byteOffset": 1698836,
+              "byteOffset": 3032428,
               "byteLength": 93600,
               "kind": "f32"
             }
@@ -1778,63 +1778,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1792436,
+              "byteOffset": 3126028,
               "byteLength": 5184,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1797620,
+              "byteOffset": 3131212,
               "byteLength": 5184,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1802804,
+              "byteOffset": 3136396,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 1804532,
+              "byteOffset": 3138124,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 1806260,
+              "byteOffset": 3139852,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 1807988,
+              "byteOffset": 3141580,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 1809716,
+              "byteOffset": 3143308,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 1811444,
+              "byteOffset": 3145036,
               "byteLength": 1728,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 1813172,
+              "byteOffset": 3146764,
               "byteLength": 1728,
               "kind": "f32"
             }
@@ -1846,63 +1846,63 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 1814900,
+              "byteOffset": 3148492,
               "byteLength": 90192,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 1905092,
+              "byteOffset": 3238684,
               "byteLength": 90192,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 1995284,
+              "byteOffset": 3328876,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 2025348,
+              "byteOffset": 3358940,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 2055412,
+              "byteOffset": 3389004,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 2085476,
+              "byteOffset": 3419068,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 2115540,
+              "byteOffset": 3449132,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 2145604,
+              "byteOffset": 3479196,
               "byteLength": 30064,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 2175668,
+              "byteOffset": 3509260,
               "byteLength": 30064,
               "kind": "f32"
             }
@@ -1914,70 +1914,70 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2205732,
+              "byteOffset": 3539324,
               "byteLength": 3912,
               "kind": "f32"
             },
             {
               "name": "color",
               "itemSize": 3,
-              "byteOffset": 2209644,
+              "byteOffset": 3543236,
               "byteLength": 3912,
               "kind": "f32"
             },
             {
               "name": "aArc",
               "itemSize": 1,
-              "byteOffset": 2213556,
+              "byteOffset": 3547148,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aReveal",
               "itemSize": 1,
-              "byteOffset": 2214860,
+              "byteOffset": 3548452,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aRevealIn",
               "itemSize": 1,
-              "byteOffset": 2216164,
+              "byteOffset": 3549756,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aTw",
               "itemSize": 1,
-              "byteOffset": 2217468,
+              "byteOffset": 3551060,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aBoost",
               "itemSize": 1,
-              "byteOffset": 2218772,
+              "byteOffset": 3552364,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aWave",
               "itemSize": 1,
-              "byteOffset": 2220076,
+              "byteOffset": 3553668,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "aBody",
               "itemSize": 1,
-              "byteOffset": 2221380,
+              "byteOffset": 3554972,
               "byteLength": 1304,
               "kind": "f32"
             },
             {
               "name": "psize",
               "itemSize": 1,
-              "byteOffset": 2222684,
+              "byteOffset": 3556276,
               "byteLength": 1304,
               "kind": "f32"
             }
@@ -1986,8 +1986,8 @@
       ],
       "payload": {
         "ring": {
-          "ringSegs": 8434,
-          "glowPts": 417,
+          "ringSegs": 21222,
+          "glowPts": 482,
           "primordia": 4,
           "memberSegsPts": [
             {
@@ -2037,8 +2037,8 @@
             },
             {
               "i": 100,
-              "segs": 151,
-              "pts": 4
+              "segs": 397,
+              "pts": 7
             },
             {
               "i": 101,
@@ -2047,13 +2047,13 @@
             },
             {
               "i": 102,
-              "segs": 152,
-              "pts": 4
+              "segs": 415,
+              "pts": 7
             },
             {
               "i": 103,
-              "segs": 148,
-              "pts": 4
+              "segs": 390,
+              "pts": 5
             },
             {
               "i": 104,
@@ -2067,28 +2067,28 @@
             },
             {
               "i": 106,
-              "segs": 138,
+              "segs": 381,
               "pts": 4
             },
             {
               "i": 107,
-              "segs": 159,
+              "segs": 456,
               "pts": 5
             },
             {
               "i": 108,
-              "segs": 132,
-              "pts": 4
+              "segs": 402,
+              "pts": 6
             },
             {
               "i": 109,
-              "segs": 144,
+              "segs": 418,
               "pts": 5
             },
             {
               "i": 110,
-              "segs": 176,
-              "pts": 6
+              "segs": 518,
+              "pts": 5
             },
             {
               "i": 111,
@@ -2097,33 +2097,33 @@
             },
             {
               "i": 112,
-              "segs": 155,
+              "segs": 426,
               "pts": 5
             },
             {
               "i": 113,
-              "segs": 142,
-              "pts": 5
+              "segs": 381,
+              "pts": 7
             },
             {
               "i": 114,
-              "segs": 149,
+              "segs": 373,
               "pts": 5
             },
             {
               "i": 115,
-              "segs": 149,
+              "segs": 358,
               "pts": 4
             },
             {
               "i": 116,
-              "segs": 159,
-              "pts": 6
+              "segs": 424,
+              "pts": 7
             },
             {
               "i": 117,
-              "segs": 147,
-              "pts": 6
+              "segs": 361,
+              "pts": 4
             },
             {
               "i": 118,
@@ -2137,13 +2137,13 @@
             },
             {
               "i": 120,
-              "segs": 143,
-              "pts": 4
+              "segs": 377,
+              "pts": 12
             },
             {
               "i": 121,
-              "segs": 146,
-              "pts": 6
+              "segs": 373,
+              "pts": 8
             },
             {
               "i": 122,
@@ -2152,38 +2152,38 @@
             },
             {
               "i": 123,
-              "segs": 183,
-              "pts": 6
+              "segs": 484,
+              "pts": 8
             },
             {
               "i": 124,
-              "segs": 151,
-              "pts": 6
+              "segs": 392,
+              "pts": 8
             },
             {
               "i": 125,
-              "segs": 147,
-              "pts": 6
+              "segs": 385,
+              "pts": 7
             },
             {
               "i": 126,
-              "segs": 139,
-              "pts": 5
+              "segs": 374,
+              "pts": 7
             },
             {
               "i": 127,
-              "segs": 149,
+              "segs": 395,
               "pts": 5
             },
             {
               "i": 128,
-              "segs": 146,
-              "pts": 5
+              "segs": 362,
+              "pts": 6
             },
             {
               "i": 129,
-              "segs": 170,
-              "pts": 5
+              "segs": 425,
+              "pts": 9
             },
             {
               "i": 130,
@@ -2192,17 +2192,17 @@
             },
             {
               "i": 131,
-              "segs": 172,
-              "pts": 5
+              "segs": 452,
+              "pts": 7
             },
             {
               "i": 132,
-              "segs": 163,
-              "pts": 5
+              "segs": 441,
+              "pts": 6
             },
             {
               "i": 133,
-              "segs": 152,
+              "segs": 428,
               "pts": 5
             },
             {
@@ -2212,13 +2212,13 @@
             },
             {
               "i": 135,
-              "segs": 175,
+              "segs": 484,
               "pts": 6
             },
             {
               "i": 136,
-              "segs": 162,
-              "pts": 4
+              "segs": 424,
+              "pts": 7
             },
             {
               "i": 137,
@@ -2352,113 +2352,113 @@
             },
             {
               "i": 706,
-              "segs": 154,
-              "pts": 4
-            },
-            {
-              "i": 702,
-              "segs": 148,
+              "segs": 374,
               "pts": 7
             },
             {
+              "i": 702,
+              "segs": 405,
+              "pts": 4
+            },
+            {
               "i": 712,
-              "segs": 160,
-              "pts": 5
+              "segs": 419,
+              "pts": 9
             },
             {
               "i": 705,
-              "segs": 157,
+              "segs": 417,
               "pts": 5
             },
             {
               "i": 719,
-              "segs": 153,
-              "pts": 7
+              "segs": 379,
+              "pts": 4
             },
             {
               "i": 701,
-              "segs": 137,
-              "pts": 4
-            },
-            {
-              "i": 720,
-              "segs": 182,
-              "pts": 7
-            },
-            {
-              "i": 703,
-              "segs": 174,
-              "pts": 4
-            },
-            {
-              "i": 710,
-              "segs": 153,
+              "segs": 364,
               "pts": 6
             },
             {
+              "i": 720,
+              "segs": 489,
+              "pts": 9
+            },
+            {
+              "i": 703,
+              "segs": 503,
+              "pts": 6
+            },
+            {
+              "i": 710,
+              "segs": 409,
+              "pts": 7
+            },
+            {
               "i": 714,
-              "segs": 134,
-              "pts": 5
+              "segs": 376,
+              "pts": 6
             },
             {
               "i": 700,
-              "segs": 145,
+              "segs": 363,
               "pts": 6
             },
             {
               "i": 717,
-              "segs": 138,
+              "segs": 366,
               "pts": 7
             },
             {
               "i": 713,
-              "segs": 143,
-              "pts": 4
+              "segs": 367,
+              "pts": 7
             },
             {
               "i": 716,
-              "segs": 152,
-              "pts": 4
+              "segs": 400,
+              "pts": 9
             },
             {
               "i": 721,
-              "segs": 146,
+              "segs": 417,
               "pts": 5
             },
             {
               "i": 709,
-              "segs": 155,
-              "pts": 4
+              "segs": 404,
+              "pts": 7
             },
             {
               "i": 708,
-              "segs": 149,
-              "pts": 4
+              "segs": 371,
+              "pts": 7
             },
             {
               "i": 704,
-              "segs": 173,
-              "pts": 4
+              "segs": 514,
+              "pts": 5
             },
             {
               "i": 711,
-              "segs": 178,
+              "segs": 435,
               "pts": 5
             },
             {
               "i": 715,
-              "segs": 156,
-              "pts": 4
+              "segs": 413,
+              "pts": 6
             },
             {
               "i": 707,
-              "segs": 154,
-              "pts": 5
+              "segs": 380,
+              "pts": 4
             },
             {
               "i": 718,
-              "segs": 140,
-              "pts": 4
+              "segs": 407,
+              "pts": 7
             },
             {
               "i": 960,

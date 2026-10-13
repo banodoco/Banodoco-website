@@ -553,8 +553,12 @@ for (let seconds = 0; seconds <= CAMERA_SECONDS; seconds += .01) {
 
 const poseURL = new URL('../journey/manifesto/pose.js', import.meta.url).href;
 const dissolveURL = new URL('../journey/lib/body-dissolve.js', import.meta.url).href;
+const connectedSource = readFileSync(new URL('../journey/manifesto/connected-lines.js', import.meta.url), 'utf8')
+  .replace("'three'", JSON.stringify(threeURL));
+const connectedURL = 'data:text/javascript;base64,' + Buffer.from(connectedSource).toString('base64');
 let colonySource = readFileSync(new URL('../journey/manifesto/colony.js', import.meta.url),'utf8')
   .replace("'three'", JSON.stringify(threeURL)).replace("'./pose.js'", JSON.stringify(poseURL))
+  .replace("'./connected-lines.js'", JSON.stringify(connectedURL))
   .replace("'../lib/body-dissolve.js'", JSON.stringify(dissolveURL))
   .replace("'./retirement.js'", JSON.stringify(new URL("../journey/manifesto/retirement.js", import.meta.url).href))
   .replace("import { groundY, makeRng } from '../chapters/final/world.js';", 'const groundY = () => 0; const makeRng = () => { let n = 19; return () => ((n = (Math.imul(n,1664525)+1013904223)>>>0)/4294967296); };');

@@ -91,7 +91,13 @@ export function frameShiftAt(seconds, aspect = 1.6, from = { position: { x: -14.
   if (isMobileManifesto(aspect)) return { x: 0, z: 0 };
   const spiral = smoother((seconds - SPIRAL_START_SECONDS) / (CAMERA_SECONDS - SPIRAL_START_SECONDS));
   const az = Math.atan2(from.position.z, from.position.x) + spiral * Math.PI * 100 / 180;
-  const distance = 11 * spiral;
+  // Keep the growing colony on the image's right while the reading column
+  // occupies the left. The middle lift otherwise exposes a broad empty
+  // strip beyond the colony. Translate eye and target together, preserving
+  // the orbit's heading, and relinquish this framing at the settled view.
+  const middle = smoother((seconds - 8.5) / 5)
+    * (1 - smoother((seconds - 19) / (CAMERA_SECONDS - 19)));
+  const distance = 11 * spiral + 8 * middle;
   return { x: -Math.sin(az) * distance, z: Math.cos(az) * distance };
 }
 

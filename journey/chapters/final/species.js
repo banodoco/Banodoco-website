@@ -156,13 +156,16 @@ export const DETAIL = [
     roots: 0, rootSteps: 0,
     glints: 2,
     baseFlareWarmth: false, cavityCore: true, pool2: true, shed: 0 },
-  { // 4 — field, far (dist ~24-36): silhouette + rim light + a few fibres
+  { // 4 — field, far (dist ~24-36): connected tissue, rim light and fibres
     name: 'field-far',
-    capRings: 3, capSegs: 14, capNodes: 0, capBeadP: 0, capSpkPts: 0,
-    gillN: 0, gillSub: 0, gillCorePts: 0,
-    rimStack: 2, rimSeg: 24, frontArc: false,
+    // The cap builder reserves its first three rings for the loose apex.
+    // Three total rings left only a rim and spokes during the desktop lift.
+    // Six preserve connected interior bands without hero-buffer instances.
+    capRings: 6, capSegs: 24, capNodes: 0, capBeadP: 0, capSpkPts: 0,
+    gillN: 8, gillSub: 3, gillCorePts: 0,
+    rimStack: 2, rimSeg: 32, frontArc: false,
     ticks: 0, tickBeadP: 0, rimPts: 1,   // 2 -> 1: see fibSeg note below
-    stemRings: 3, stemSegs: 5, stemPtP: 0,
+    stemRings: 5, stemSegs: 8, stemPtP: 0,
     // fibSeg 4 -> 3: at 24-36 units, lum-damped to 0.52, a fibre's third
     // subdivision is below a pixel. Buys back the ~50 segments the restored
     // form language costs on the near bodies (wider caps = a longer rim ring
