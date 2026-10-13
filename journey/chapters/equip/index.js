@@ -349,15 +349,17 @@ export function createEquip(sceneApi) {
     /** CAMERA-PURE, and it has to be: the entry clock must not start while the
      *  flight is still out at Inspire's radius, or the stalk would ring into a
      *  frame the stipe is barely in. "Under the cap" is a place, and the two
-     *  numbers below say so without naming a chapter or reading p — the eye is
+     *  bounds below say so without naming a chapter or reading p — the eye is
      *  inside 8.0 of the stipe axis (the Inspire rest stands at 11.0 and the
      *  Connect rest at 9.01, so neither neighbour's rest can satisfy it) and
-     *  below 2.6, under the lowest cap geometry at 2.47. Both hold across the
+     *  above the ground and below 2.6, under the lowest cap geometry at 2.47.
+     *  The lower bound keeps Ownership departures from spending both welcomes
+     *  underground before the stalk is visible. These bounds hold across the
      *  portrait fold at 744x1133 and 430x932 — checked, because journey/
      *  portrait.js's dolly is what could have lifted the eye back out. */
     entryReady() {
       const p = camera.position;
-      return Math.hypot(p.x, p.z) < 8.0 && p.y < 2.6;
+      return Math.hypot(p.x, p.z) < 8.0 && p.y > 0 && p.y < 2.6;
     },
     /** Seconds. Long enough to carry both rings and the gap between them with
      *  room after the second, so the entry does not finish mid-answer. */

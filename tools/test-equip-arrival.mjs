@@ -10,7 +10,7 @@ try {
   await page.goto(`${process.env.TEST_URL || 'http://localhost:8137'}/?nointro=1`);
   await page.waitForFunction(() => window.journey, null, { timeout: 60000 });
   await page.waitForTimeout(3500);
-  for (const source of ['mission', 'inspire', 'final']) {
+  for (const source of ['mission', 'inspire', 'final', 'owned']) {
     if (source !== 'mission') {
       await page.evaluate(id => window.journey.flyTo(id), source);
       await page.waitForTimeout(6500);
@@ -21,7 +21,7 @@ try {
       let ready = null, visible = null;
       const original = api.welcomeFrom;
       api.welcomeFrom = (...args) => {
-        pulses.push({ at: performance.now() - start, slot: args[2], delay: args[3] });
+        pulses.push({ at: performance.now() - start, slot: args[2], delay: args[3], cameraY: api.camera.position.y });
         return original(...args);
       };
       try {
@@ -39,6 +39,7 @@ try {
     assert.ok(lead >= 100 && lead < 600, `${source}: camera-safe arrival without a second long wait: ${JSON.stringify(timing)}`);
     assert.ok(timing.visible >= timing.ready && timing.visible < timing.pulses[0].at + 220,
       `${source}: icon becomes visible before its pulse starts: ${JSON.stringify(timing)}`);
+    assert.ok(timing.pulses.every(p => p.cameraY > 0), `${source}: welcomes cannot spend underground`);
     assert.ok(timing.pulses.every(p => p.delay === .22), 'retain the requested icon-before-pulse offset');
     assert.ok(timing.pulses[1].at - timing.pulses[0].at >= 790, 'retain the readable two-beat cadence');
     console.log(`PASS ${source} → Equip`, timing);

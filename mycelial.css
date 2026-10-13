@@ -79,11 +79,12 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   /* Translate by the lettering plus its icon gap, not the wider window.
      Otherwise the visible name is clipped before the camera arrives. */
   width: max-content;
-  font-family: var(--mycelial-display);
-  font-size: 42px;
-  font-weight: 500;
+  font-family: var(--mycelial-body);
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: -.045em;
+  letter-spacing: .2em;
+  text-transform: uppercase;
   padding-left: 12px;
   color: var(--parchment);
   opacity: 1;
@@ -194,25 +195,25 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
 .j-manifesto-panel h1 { color: var(--parchment); font-size: clamp(3rem, 5vw, 5rem); }
 .j-manifesto .j-manifesto-line {
   font-family: var(--mycelial-body);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 400;
   line-height: 2;
-  letter-spacing: .2em;
-  text-transform: uppercase;
+  letter-spacing: .015em;
+  text-transform: none;
 }
 .j-menu-panel { background-color: #100b06; }
 /* The crawler/reduced-motion page shares the identity without inheriting
    the live scene's fixed composition. */
 body:has(.manifesto-static) h1,
 body:has(.manifesto-static) h2 { font-family: var(--mycelial-display); font-weight: 400; letter-spacing: -.025em; }
-body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
+body:has(.manifesto-static) .manifesto-static .sub { font-size: 18px; line-height: 1.9; text-transform: none; letter-spacing: .015em; }
 @media (min-width: 1800px) {
   .ui .hero { max-width: 60rem; }
 }
 @media (max-width: 1024px) {
   .ui #site-nav { --header-left: 5vw; padding: 2.1rem var(--header-left); }
   .ui .logo { --brand-width: 210px; }
-  .ui .logo .wordmark { font-size: 36px; }
+  .ui .logo .wordmark { font-size: 18px; }
   .ui .hero { max-width: 100%; padding: 4.5vh 6vw 0; justify-content: flex-start; }
   .ui .hero h1 { font-size: clamp(2.9rem, 6.4vw, 4.5rem); line-height: 1; }
   .ui .hero .sub { max-width: 32rem; font-size: 12px; line-height: 2; }
@@ -221,7 +222,7 @@ body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
 @media (max-width: 600px) {
   .ui #site-nav { --header-left: 6vw; padding: 2.1rem var(--header-left); }
   .ui .logo { --brand-width: 180px; }
-  .ui .logo .wordmark { font-size: 32px; }
+  .ui .logo .wordmark { font-size: 16px; }
   .ui .hero { padding: 3.5vh 6vw 0; text-align: center; }
   .ui .hero h1 { font-size: clamp(2.65rem, 10.8vw, 4rem); line-height: .97; width: calc(100% + 6vw); margin: 0 -3vw 1.3rem; text-wrap: balance; }
   .ui .hero h1 .hl { display: inline; white-space: normal; }
@@ -230,7 +231,7 @@ body:has(.manifesto-static) .manifesto-static .sub { line-height: 1.9; }
   .j-h { font-size: clamp(2rem, 8vw, 2.8rem); }
   .j-sub { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }
   .j-manifesto-panel h1 { font-size: 2.8rem; }
-  .j-manifesto .j-manifesto-line { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }
+  .j-manifesto .j-manifesto-line { font-size: 17px; line-height: 1.9; letter-spacing: .015em; }
 }
 @media (max-height: 700px) and (min-width: 1025px) {
   .ui .hero h1 { font-size: clamp(3rem, 5vw, 4.5rem); }
@@ -658,9 +659,9 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 }
 @media (max-width: 720px) {
   .j-manifesto.is-scroll-reading .j-manifesto-line {
-    font-size: clamp(14px, 3.9vw, 17px);
+    font-size: clamp(17px, 4.5vw, 19px);
     line-height: 1.65;
-    letter-spacing: .09em;
+    letter-spacing: .015em;
   }
   .j-manifesto.is-scroll-reading .j-manifesto-lines { gap: 1.2em; }
 }

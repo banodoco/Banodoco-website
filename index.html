@@ -52,13 +52,13 @@
 <link rel="stylesheet" href="./hero.css">
 <link rel="stylesheet" href="./journey/site.css">
 <link rel="stylesheet" href="./journey/cards/cards.css">
-<link rel="preload" href="./assets/fonts/mycelial/cormorant-medium.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="./assets/fonts/mycelial/dm-sans-regular.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="./mycelial.css">
 <script>
   // Reveal the signature in its final font, never a wider fallback first.
   document.documentElement.classList.add('wordmark-font-pending');
   const revealWordmark = () => document.documentElement.classList.remove('wordmark-font-pending');
-  document.fonts.load('500 32px "Cormorant Garamond"').then(revealWordmark, revealWordmark);
+  document.fonts.load('400 16px "DM Sans"').then(revealWordmark, revealWordmark);
 </script>
 <!-- HERO DECORATION EXPLORATION (2026-10-05): inert unless ?deco=filigree|
      hairline|mycelium. Sets html[data-deco] before first paint and links the

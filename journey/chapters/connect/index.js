@@ -1462,7 +1462,8 @@ export function createConnect(sceneApi) {
       updateAdosExclusion();
     },
     entryReady() {
-      return resolveNow() >= ENTRY_CAMERA_READY;
+      // A downward gaze below the soil cannot see this ground-level welcome.
+      return sceneApi.camera.position.y > 0 && resolveNow() >= ENTRY_CAMERA_READY;
     },
     driveEntry(f) {
       entryReveal = sm(0, 0.12, f);
