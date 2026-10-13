@@ -1269,7 +1269,17 @@ export function createFinalRing(sceneApi, uniforms) {
      *  construction — members never move (world.js is deterministic and the
      *  field is scene-parented), so this is a build product, not state. */
     seats,
-    setAerial(on) { ringLines.visible = !on; ringGlows.visible = !on; },
+    // The aerial seats rise over the same clock that retires these batches.
+    // Previously both representations were fully lit just before a single
+    // frame hid this entire ring. Fade its own materials, not the shared
+    // chapter amount that also owns the near clones and their spores.
+    setAerial(amount) {
+      const presence = 1 - Math.max(0, Math.min(1, Number(amount)));
+      strandMat.uniforms.uOpacity.value = 1.15 * presence;
+      glowMat.uniforms.uOpacity.value = 1.5 * presence;
+      ringLines.visible = presence > 0;
+      ringGlows.visible = presence > 0;
+    },
     setDwell(s) { primUniforms.uDwell.value = s; },
     counts: {
       ringSegs: baked ? baked.counts.ringSegs : lines.segCount,

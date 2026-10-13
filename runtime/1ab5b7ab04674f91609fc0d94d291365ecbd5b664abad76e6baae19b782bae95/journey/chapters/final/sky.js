@@ -1,0 +1,978 @@
+// journey-v6 — FINAL epilogue: spore sky + forest-mist horizon (W4-D).
+//
+// SPORES (FN-2.3): a staged GPU phase shader in the Spike A family — zero
+// per-frame CPU, every particle a pure function of (uTime, attributes).
+// Two cohorts in one draw:
+//   mode 0 — plume-born: released UNDER the caps of the mature ring members
+//            (multiple sources, never the hero), rising and merging into the
+//            drift band. Gated by the member's reveal, so no body sheds
+//            before it has kindled.
+//   mode 1 — the broad drift band: born low and wide across the ring, long
+//            periods, forming as the sky opens (gated on uPull) — the "broad
+//            broken" mass the plumes merge into.
+// One wind carries both (BREEZE below), cluster-coherent eddies (particles
+// sharing aClump move together), and a peel-away cohort that diverges after
+// mid-life. Alpha windows + cluster gaps keep the cloud BROKEN, not a
+// uniform haze.
+//
+// ===========================================================================
+// 2026-08-06 — ONE SUBSTANCE (17-final-field.md's dated section)
+// ===========================================================================
+// Hannah: "the spores coming from the mushroom at the end feel different in
+// character to the ones from the main one at the beginning; make them match,
+// make the colours work, and make them react to the wind."
+//
+// Measured at the rest, this layer supplied ~82% of the particulate light in
+// frame (mean per-particle output 0.500 against the hero shed's 0.109) — so
+// "the spores at the end" ARE these, and every way they differed from
+// organism/spores.js was a way the substance differed. Four mechanisms, all
+// of them here, all now on the hero's own laws:
+//
+//   SIZE — the tell, and the biggest one. The hero's shed is mostly
+//     SUB-PIXEL: `psize` runs 0.019-0.091 world units, which at its own
+//     camera is 0.5-2.4 px, and the point shader's MIN_PT floor holds those
+//     at 1.7 px while `vShrink` dims them by the area they lost. The result
+//     is a sea of faint dust with a scattering of bright sparks. This layer
+//     ran `szBase * 1.9`, which put most of its particles ABOVE the floor at
+//     vShrink = 1 — every dot rendering at full brightness, evenly sized.
+//     That is a starfield, and it is what the frame looked like. The size law
+//     is now the hero's own; depth is handled by the hero's own DOF (below).
+//
+//   COLOUR — this layer lerped between two ramp SAMPLES, heat(0.52) and
+//     heat(0.9), over a tone of 0.5-1.0. A straight lerp cuts the corners off
+//     a piecewise ramp, so the mid went pale and the whole population landed
+//     in a narrow cream band — cold, even, and (now that a field of warm
+//     bodies stands behind it) reading as a separate layer of stars rather
+//     than embers in the same air. Colours are now baked per particle through
+//     heat() itself on the hero shed's own tone law, so the majority sits
+//     amber in the house look and only the top few percent reach white.
+//
+//   WIND — there was none. The drift ran at a fixed rate along a FLAT
+//     (0.975, 0, 0.16); the only time-varying motion was a 63-94 s eddy. The
+//     hero's shed is carried by BREEZE_DIR — which lifts — at a speed the
+//     gust surges (`carry *= 0.72 + 0.28*breeze(t)`). Both are now shared:
+//     one wind vector for the whole field, and the gust surge in closed form
+//     (breezeInt below).
+//
+//   LIFETIME — mode 1's alpha was a slow sinusoid unrelated to its drift
+//     phase, so a particle teleported back to its birth point mid-cycle while
+//     visible. With the wind now lifting it, that wrap would be a fall. Both
+//     cohorts run one life window on their own phase.
+//
+// ===========================================================================
+// 2026-08-17 — ONE RELEASE (Hannah: the ring members "look different to the
+// main one — both appearance and spores... They should be the same but with
+// different sizes, shapes, and decorations, but at core the same.")
+// ===========================================================================
+// The 2026-08-06 pass above unified the SUBSTANCE — size, tone, wind, DOF —
+// and left the RELEASE and the CLOCK unaligned. Measured against
+// organism/spores.js at the rest:
+//
+//   SEAT — plume births came from a flat full-circle disc at
+//     `gy + h − 0.12 − rand·0.3` against the AUTHORED height. The real gill
+//     plane of a rendered body sits at 0.72 x apex height (CAP_Y / HERO_H),
+//     so that seat stood inside the upper cap dome — spores rising off the
+//     TOP of a solid cap — and the full-circle disc is exactly the halo
+//     shed.js §THE SEAT already outlawed for the poke's puff: the hero lets
+//     go of a downwind CRESCENT from the real underside, and has never shed
+//     a ring. The seat is now the hero's own release law through the shared
+//     cap law (capUnderPt), at each body's true scale, shape map, yaw and
+//     lean (see THE SEAT + THE BODY UNDER THE PLUME in the builder).
+//   SPEED — the plume period ran its 4.4-7.4 u carry in 11-21 s: 0.30-0.50
+//     u/s, eight to ten times the hero's measured drift (0.023-0.07 u/s). A
+//     frozen frame could never see it; in motion the hero's dust CREEPS and
+//     a member's STREAMED (see THE PLUME'S CLOCK in the builder).
+//   SHAPE — plume travel is now bottom-weighted like the hero's standing
+//     cloud (age^1.3), inside the hero's own widening cone; the 0.55-1.0
+//     per-particle dimmer stays the band's broken-haze texture and no
+//     longer thins the plumes (the hero's shed has no such term).
+//   DENSITY — the plume cohort gains a 2,600-dot extension drawn from its
+//     own rng stream (N_PLUME_X), so every one of the shipped 5,200 dots —
+//     and the horizon trees and mist fed by the same `rand` after the loop —
+//     keeps its exact draws.
+//
+// The mode-0 gate also reads the ARRIVAL deal now (uRevIn / aGate.z, the
+// same switch the bodies' shaders read), so a plume kindles with its body
+// under either deal and can never stand over a dark one. final@* goldens
+// reshot with this pass (manifest note, 2026-08-17).
+//
+// WHY ONE GLOBAL WIND AND NOT 72 LOCAL ONES. The field's bodies each carry a
+// seeded sway (clones.js), so a spore could in principle answer the body it
+// came from. It should not. A wind is one air current and the bodies' sways
+// are RESPONSES to it, not sources — organism.js §10b says exactly this
+// ("Sharing one signal is what makes the motion read as air rather than as
+// two unrelated animations"), and it is why the hero's stalk and the hero's
+// spores ride the same `breeze(t)`. Measured against the alternative: at the
+// rest camera a field body's cap rim moves ~1 px through its whole sway, so a
+// release point pinned to it buys nothing visible — while a MIS-phased one
+// (this shader has no per-body state; it would have to re-seed the phase) is
+// a real error at the same scale. One wind, and the bodies lean in it.
+//
+// HORIZON (FN-1.3): conifer-silhouette line strokes + mist sprites at
+// 26-46 world units from the Final rest camera — a far plane for the frame
+// now that the fog opens to ~60. Fog does most of the dimming.
+
+import * as THREE from 'three';
+import {
+  TAU, RING_C, SPORE_SOURCES,
+  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, REVEAL_W,
+  BATCH_LINE,
+} from './world.js';
+import { makeGlowTexture, capUnderPt, CAP_Y, CAP_R } from '../../anatomy.js';
+import { scaleFor } from './species.js';
+import { bodyVariation, varyPoint } from './variation.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
+import { CAMERA } from './camera.js';
+
+// Final rest camera (build-time composition anchor). Read from the chapter's
+// own camera leg — the 'final-rest' hold key — so it mirrors the director's
+// pose BY CONSTRUCTION and can never drift from it (2026-08-16; the declutter
+// round's stale -13.9/2.55 mirror of these numbers was exactly this bug class,
+// the one ring.js and canopy.js already named when they stopped mirroring it).
+const REST = (() => {
+  const k = CAMERA.keys.find(k => k.note === 'final-rest');
+  return {
+    x: k.pos.x, y: k.pos.y, z: k.pos.z,
+    headingDeg: Math.atan2(k.tgt.z - k.pos.z, k.tgt.x - k.pos.x) * 180 / Math.PI,
+  };
+})();
+
+// THE ONE WIND — organism/spores.js §10's own BZX/BZY/BZZ, normalized here
+// (the same three numbers final/shed.js already mirrors for the poke's puff).
+// It LIFTS: y/x = 0.62 is the diagonal the hero's plume climbs, and the
+// separate `rise` term this file used to carry is gone into it.
+const BREEZE = new THREE.Vector3(1.0, 0.62, 0.17).normalize();
+
+// Sprite size: the hero shed's own law, pow(rand,1.8)*0.072 + 0.019 world
+// units (organism/spores.js §10). Absolute, per final/shed.js's own note — a
+// spore is a spore, it does not resize with the body or the framing.
+const SZ_MIN = 0.019, SZ_SPAN = 0.072, SZ_POW = 1.8;
+// DEPTH, and the one number this chapter has to choose for itself.
+//
+// The hero's point shader carries a fake depth-of-field: outside a focal band
+// a sprite GROWS and dims — vBlur = clamp(|depth − 9.5| / 8), size
+// *= 1 + 1.35*vBlur, light *= 1 − 0.55*vBlur (organism.js makePoints). It is
+// not decoration: it is the reason the hero's far spores stay legible instead
+// of falling under MIN_PT and being crushed to nothing by vShrink.
+//
+// Measured, that crush is the whole problem at this distance. A hero-sized
+// spore 24 units out is 0.23 px, which vShrink dims to 1.8% — so with the
+// hero's sizes and no DOF the far half of this cloud simply is not there, and
+// the frame goes top-heavy and thin (the first cut did exactly that).
+//
+// So the chapter takes the hero's LAW and re-centres its band on its own
+// composition: the ring and near field carry the frame at 6-14 units, the
+// species tiers walk out to ~36, the horizon sits at 46. FOCAL 10.5 with a
+// 14-unit range puts vBlur at 1 by ~24.5 units, where the 2.35x growth almost
+// exactly cancels the 1/d shrink — a 24-unit spore ends up the same size on
+// screen as an 11-unit one and 45% as bright. That is what makes the whole
+// cloud read as one substance seen at many depths instead of two populations,
+// and the depth cue moves into brightness and fog, which is where the rest of
+// this chapter already keeps it (clones.js's cloneLum, ring.js's tier lum).
+const FOCAL_D = 10.5, FOCAL_R = 14.0;
+// Tone: the hero shed's own draw, `0.64 + pow(rand,1.9)*0.36`, through heat().
+// (1.4 → 1.9 on 2026-08-09 with the hero's own draw — the white top-tail
+// thinned across the one substance; see organism/spores.js.)
+const TONE_MIN = 0.64, TONE_SPAN = 0.36, TONE_POW = 1.9;
+// The hero's point material carries uOpacity 2.4 on the shed. Same number.
+const SPORE_GAIN = 2.4;
+
+export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount) {
+  const aerialSeatAmount = { value: 0 };
+  const purposeAerial = { value: 0 };
+  const rand = makeRng(88417);
+  const gauss = () => gaussOf(rand);
+  const group = new THREE.Group();
+  const glowTex = makeGlowTexture();
+  const counts = {};
+
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips the spore-cloud particle loop and the tree
+  // emission and rebuilds both BufferGeometries from static/geom bytes.
+  // The two materials, the one wind uniform, and the mist sprites stay live
+  // either way — the cloud's motion is a pure GPU function of the baked
+  // birth attributes + uTime/uWind. ONE try/catch wraps the WHOLE read:
+  // any missing key or shape mismatch throws and the chapter falls back to
+  // the live builders in full, never a half-baked mix.
+  const baked = (() => {
+    if (!isBaked('final')) return null;
+    try {
+      const S = payload('final')?.sky;
+      if (!S || typeof S.spores !== 'number' || typeof S.treeSegs !== 'number'
+          || !Array.isArray(S.sprites)) {
+        throw new Error('final sky payload mismatch');
+      }
+      return {
+        g: {
+          spores: geometry('final/spores',
+            [['position', 3], ['color', 3], ['aSeed', 1], ['aCycle', 4], ['aClump', 2], ['aGate', 3]]),
+          trees: geometry('final/trees', BATCH_LINE),
+        },
+        counts: { spores: S.spores, treeSegs: S.treeSegs },
+        sprites: S.sprites,
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  /* ================================================================
+     1. The spore cloud — one Points draw, GPU phase
+     ================================================================ */
+  // Declutter round: 3,600 -> 5,200 with the growth all in the standing
+  // broad cloud (mode 1), per the grade pass's honest gap ("the still's
+  // spore sky is far denser") — density in the SKY is atmosphere, and it
+  // buys back the richness the floor's culled strokes gave up.
+  const N_SPORE = 5200;
+  /* THE PLUME EXTENSION (2026-08-17, same pass as the seat law below). With
+     the seat corrected, the members' plumes were finally REAL — and visibly
+     thin: ~2,800 plume dots split across seven bodies against the hero's
+     4,200 on one. A member's plume read as sky dust, not as the body
+     exhaling, and density is the one thing the hero's shed has that cannot
+     be faked (this file's own words, below). The extension appends
+     plume-born particles ONLY, drawn from the seat's own rng stream, so all
+     5,200 shipped particles — and every horizon tree and mist sprite fed by
+     the shared `rand` after the loop — keep their exact draws. Cost: one
+     Points draw either way, +2,600 vertices, zero per-frame CPU. */
+  const N_PLUME_X = 2600;
+  counts.spores = N_SPORE + N_PLUME_X;
+  // world.js's shed-weighted source list, re-sorted by distance from the rest
+  // camera. WHICH bodies read is a framing question, so it is decided here,
+  // where the rest camera is already known, and not in world.js.
+  const SRC_NEAR = SPORE_SOURCES.slice().sort((a, b) =>
+    Math.hypot(a.x - REST.x, a.gy + a.h - REST.y, a.z - REST.z) -
+    Math.hypot(b.x - REST.x, b.gy + b.h - REST.y, b.z - REST.z));
+
+  /* ---- THE BODY UNDER THE PLUME (2026-08-17, Hannah: the ring members
+     "look different to the main one — both appearance and spores... at core
+     the same"). The plume cohort used to be born on APPROXIMATE geometry:
+     `y = gy + h − 0.12 − rand·0.3` against the authored height, on a uniform
+     disc of `rand · capR · 0.8` over the full 360°. Measured against the
+     bodies actually rendered (ring.js places clones at scaleFor(h, seed)
+     with bodyVariation + azFacing + lean), that seat lands 0.3-0.6 hero
+     units ABOVE the real gill plane (CAP_Y/HERO_H = 0.72 of apex height) —
+     inside the opaque cap dome — and its full-circle disc is exactly the
+     halo shed.js §THE SEAT already outlawed for the poke's puff: the hero
+     has never shed a ring, it lets go of a downwind CRESCENT from the real
+     underside. So each source's plume is now seated through THE SHARED CAP
+     LAW (capUnderPt) at that body's own scale, shape map, yaw and lean —
+     the same derivation ring.js's memberParams makes, reproduced from the
+     same seeds so this file stays decoupled from ring build order. (If
+     clones.varyOk ever refuses the deformation, the bodies stand undeformed
+     while these seats keep the map — a rim offset of a few percent at 8+
+     units, the acceptable side of that guard's failure.) */
+  const bodyCache = new Map();
+  function bodyOf(m) {
+    let b = bodyCache.get(m.i);
+    if (b) return b;
+    const seed = 0x5eed + m.i * 7919;
+    const V = bodyVariation(seed);
+    // memberParams' own stream, draw for draw (ring.js): azFacing, leanDir,
+    // then the one draw inside leanAmt. Reproduced, not imported — the
+    // derivation is three lines and pure in the seed.
+    const r = makeRng(seed);
+    const azFacing = r() * TAU;
+    const leanDir = r() * TAU;
+    const leanAmt = (0.03 + r() * 0.06) * (0.6 + 0.6 * m.m) * V.leanK;
+    b = {
+      s: scaleFor(m.h, seed), V,
+      azFacing, ca: Math.cos(azFacing), sa: Math.sin(azFacing),
+      cd: Math.cos(leanDir), sd: Math.sin(leanDir),
+      cF: Math.cos(leanAmt), sF: Math.sin(leanAmt),
+    };
+    bodyCache.set(m.i, b);
+    return b;
+  }
+  const _vp = [0, 0, 0];
+  // The seat's own jitter stream: the loop's shared `rand` also feeds the
+  // horizon trees and the mist below, so the rewritten birth block consumes
+  // EXACTLY the four draws the old one did (source, azimuth, band, drop) and
+  // takes its extra draws here — every tree and sprite stays byte-identical.
+  const prand = makeRng(0x91370);
+  const pgauss = () => gaussOf(prand);
+  let sporeGeo;
+  if (baked) {
+    sporeGeo = baked.g.spores;
+  } else {
+    sporeGeo = (() => {
+    const N_ALL = N_SPORE + N_PLUME_X;
+    const position = new Float32Array(N_ALL * 3);
+    const color = new Float32Array(N_ALL * 3);    // baked heat(), see header
+    const aSeed = new Float32Array(N_ALL);
+    const aCycle = new Float32Array(N_ALL * 4);  // period, phase, size, carry
+    const aClump = new Float32Array(N_ALL * 2);  // clump phase, peel flag
+    const aGate = new Float32Array(N_ALL * 3);   // reveal, mode, arrival reveal
+    const c = new THREE.Color();
+    for (let i = 0; i < N_ALL; i++) {
+      // The extension rides the seat's own stream (see N_PLUME_X): the first
+      // N_SPORE particles draw from `rand` in the shipped order, always.
+      const ext = i >= N_SPORE;
+      const R = ext ? prand : rand;
+      const G = ext ? pgauss : gauss;
+      // Rebalanced 0.60 -> 0.46 toward the plumes. Two reasons, both
+      // measured: the standing band WAS the starfield, and — the one that
+      // decides it — density. The hero's shed puts 4,200 particles into a
+      // cone about four units across, and that concentration is most of why
+      // it reads as a substance. Spread the same order of particles over a
+      // 26-unit-wide sky and each cubic unit holds a twentieth as many, which
+      // is a haze, not a shed. There are only SEVEN shedding bodies in the
+      // frame, so pushing the majority into their plumes is what buys back a
+      // hero-like packing anywhere at all. 0.38 emptied the upper-left sky
+      // further than the composition wants — doc 17's declutter round grew
+      // this cohort deliberately, because density in the sky IS atmosphere —
+      // so 0.46 is where the plumes still pack and the far air still breathes.
+      // Total count unchanged: no cost.
+      const highBand = ext ? false : R() < 0.46;   // mode 1: the drift band
+      let x, y, z, revealT, revealInT;
+      if (highBand) {
+        // Spread across the ring interior. Declutter round: biased downwind
+        // (+x) but not hard, and a third of the mass over the frame-LEFT arc
+        // (world −z) — the old all-right bias fed the left-of-frame
+        // imbalance. Kept clear of the copy block so legibility is untouched.
+        const a = R() * TAU, r = Math.pow(R(), 0.6) * 13;
+        const leftHalf = R() < 0.34;
+        x = RING_C.x + Math.cos(a) * r + (leftHalf ? 0.5 + R() * 4.0 : 2.0 + R() * 6.5);
+        z = RING_C.z + Math.sin(a) * r * 0.9
+          + (leftHalf ? -4.5 + R() * 3.5 : 0.5 + R() * 4.5);
+        // Born LOWER than before (was 2.6/3.2 + up to 4.6/8.5): the one wind
+        // now lifts this cohort too, ~0.52 units of rise per unit carried, so
+        // the band climbs into the sky it used to simply occupy. The left
+        // cohort still stays low, keeping dark ground under the copy block.
+        y = leftHalf ? 1.9 + Math.pow(R(), 0.85) * 3.4
+                     : 2.2 + Math.pow(R(), 0.85) * 6.2;
+        revealT = -1;
+        revealInT = -1;
+      } else {
+        // Source pick, biased NEAR. world.js weights this list by each body's
+        // own shed strength, which is the right physical weighting and the
+        // wrong compositional one: there are seven shedding bodies between 7.3
+        // and 16.2 units of the rest camera, and spreading the plume cohort
+        // evenly over all seven gives every one of them a plume too thin to
+        // read as anything but haze — which is what the frame had. A plume is
+        // a DENSITY, and density is the one thing the hero's shed has that
+        // cannot be faked: 4,200 particles in a cone four units across. The
+        // squared draw over the distance-sorted list puts roughly half the
+        // cohort on the nearest two bodies, where a plume can actually be
+        // seen, and leaves the far ones a whisper — which is also what a real
+        // frame does, since the far ones' plumes are 16 units of fog away.
+        const src = SRC_NEAR[Math.min(SRC_NEAR.length - 1,
+          Math.floor(Math.pow(R(), 2) * SRC_NEAR.length))];
+        /* THE SEAT — the hero's own release law, on the one band this
+           camera can see into (shed.js §THE SEAT is the reference
+           adaptation, argued and measured there):
+             azimuth  the downwind crescent, in WORLD axes — the wind is one
+                      world vector for every body, and this half also faces
+                      away from the rest camera, exactly as the hero's shed
+                      faces away from its own lens;
+             u        0.92..1.12 straddling the margin (the rest camera
+                      stands ~11° above every member's rim plane, so the
+                      hero's own 0.55..1.00 gill band is behind the opaque
+                      cap shell), outward-weighted like the hero's skirt;
+             height   the REAL underside at that (u, a) — capUnderPt through
+                      this body's own shape map — then the hero's own drop
+                      out of the gill skirt, verbatim.
+           The whole seat multiplies by the body's true scale (a position ON
+           a body scales with the body; the sprite sizes above do not — a
+           spore is a spore). */
+        const B = bodyOf(src);
+        const aW = Math.PI * (1.0 + 0.98 * Math.pow(R(), 0.45));
+        const uu = 0.92 + Math.pow(R(), 0.6) * 0.20;
+        const e = capUnderPt(uu, aW - B.azFacing);   // body-frame azimuth
+        varyPoint(B.V, e.x, e.y, e.z, _vp);          // this body's own shape
+        // yaw back to world (the crescent stays downwind), jitter, drop, scale
+        let lx = _vp[0] * B.ca - _vp[2] * B.sa;
+        let ly = _vp[1] - (0.06 + Math.pow(R(), 1.5) * 0.62);
+        let lz = _vp[0] * B.sa + _vp[2] * B.ca;
+        lx += pgauss() * 0.06; lz += pgauss() * 0.06;
+        lx *= B.s; ly *= B.s; lz *= B.s;
+        // the member's whole-body lean — ring.js w()'s own funnel — then place
+        const l = lx * B.cd + lz * B.sd, tt = -lx * B.sd + lz * B.cd;
+        const l2 = l * B.cF + ly * B.sF, y2 = -l * B.sF + ly * B.cF;
+        x = src.x + (l2 * B.cd - tt * B.sd);
+        y = src.gy + y2;
+        z = src.z + (l2 * B.sd + tt * B.cd);
+        revealT = src.reveal;
+        // ...and the ARRIVAL deal's rung (ring.js assigns it before this
+        // module builds — index.js order), so while uRevIn holds the field
+        // on the depth deal a plume can never stand over a body that has
+        // not kindled yet. Departures keep the authored rung, like the body.
+        revealInT = src.revealIn ?? src.reveal;
+      }
+      position[i * 3] = x; position[i * 3 + 1] = y; position[i * 3 + 2] = z;
+      aSeed[i] = R() * 1000;
+      // THE PLUME'S CLOCK IS THE HERO'S DRIFT (2026-08-17). The plume period
+      // was 11-21 s over a 4.4-7.4 u carry — 0.30-0.50 u/s, EIGHT TO TEN
+      // TIMES the hero's own drift (organism/spores.js: vel 0.028..0.083 *
+      // 0.016 * 60 * gust ≈ 0.023-0.07 u/s, measured). A frozen frame could
+      // never see it; in motion it was half of "different spores": the hero's
+      // dust CREEPS and a member's dust STREAMED. The phase-uniform draw
+      // means the standing plume shape is identical at any period — only the
+      // per-dot speed (and the recycle cadence) changes, so this lands the
+      // members' spores in the hero's own band: 4.4/165..7.4/95 ≈
+      // 0.027-0.078 u/s. The band keeps its shipped weather clock.
+      aCycle[i * 4] = highBand ? 26 + R() * 22 : 95 + R() * 70;
+      aCycle[i * 4 + 1] = R();
+      // the hero shed's own size law (header, SIZE) — a heavy small tail, so
+      // most of the cloud sits under the point shader's MIN_PT floor and gets
+      // vShrink'd to dust, with a scattering of full-brightness sparks
+      aCycle[i * 4 + 2] = SZ_MIN + Math.pow(R(), SZ_POW) * SZ_SPAN;
+      // How far the wind carries this one over its life, in world units.
+      // The plume length is the hero's: its shed scatters over age*5.2 units
+      // along BREEZE_DIR and then recycles, so a plume off a field cap runs
+      // the same distance — a spore is a spore in the same air, and a plume
+      // stretched to 16 units (the first cut) is the same particles over
+      // three times the volume, i.e. diffuse by construction. The band drifts
+      // further because it has been travelling since before the frame opened.
+      aCycle[i * 4 + 3] = highBand ? 7.0 + R() * 7.0 : 4.4 + R() * 3.0;
+      // the hero shed's own tone draw, through the real heat() ramp
+      heat(TONE_MIN + Math.pow(R(), TONE_POW) * TONE_SPAN, c);
+      color[i * 3] = c.r; color[i * 3 + 1] = c.g; color[i * 3 + 2] = c.b;
+      // 14 eddy clusters; a cluster id quantises the eddy phase so whole
+      // groups wheel together — eddies, clusters, isolated points
+      const clump = Math.floor(R() * 14);
+      aClump[i * 2] = clump * 2.399 + G() * 0.15;
+      aClump[i * 2 + 1] = R() < 0.18 ? 1 : 0;    // peel-away cohort
+      aGate[i * 3] = revealT;
+      aGate[i * 3 + 1] = highBand ? 1 : 0;
+      aGate[i * 3 + 2] = revealInT;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(color, 3));
+    g.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1));
+    g.setAttribute('aCycle', new THREE.BufferAttribute(aCycle, 4));
+    g.setAttribute('aClump', new THREE.BufferAttribute(aClump, 2));
+    g.setAttribute('aGate', new THREE.BufferAttribute(aGate, 3));
+    return g;
+  })();
+  }
+
+  const sporeMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: uniforms.uTime,
+      uPull: uniforms.uPull,
+      uRevIn: uniforms.uRevIn,
+      uAmount: uniforms.uAmount,
+      uBodyAmount: bodyAmount,
+      uFogNear: uniforms.uFogNear,
+      uFogFar: uniforms.uFogFar,
+      uMap: { value: glowTex },
+      uWind: { value: BREEZE.clone() },
+    },
+    vertexShader: /* glsl */ `
+      #define MIN_PT 1.7
+      attribute float aSeed;
+      attribute vec4 aCycle;   // period, phase, size, carry
+      attribute vec2 aClump;   // clump phase, peel flag
+      attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
+      uniform float uTime, uPull, uRevIn, uAmount, uBodyAmount;
+      uniform vec3 uWind;
+      varying vec3 vColor;
+      varying float vAlpha, vFog, vShrink, vBlur, vTw;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
+
+      // Mirror of organism.js §10b breeze() — a chapter-owned copy, the same
+      // one clones.js keeps in JS for the bodies' sway (organism is read-only
+      // and its instance is private to that closure). Three modes under one
+      // ~48 s gust swell. If the hero's wind ever changes, both mirrors move.
+      float breeze(float t) {
+        float g = 0.55 + 0.45 * sin(t * 0.13 + 0.6);
+        return g * (0.62 * sin(t * 1.20)
+                  + 0.26 * sin(t * 1.83 + 1.3)
+                  + 0.07 * sin(t * 2.60 + 2.7));
+      }
+      // ...and its antiderivative, which is what a stateless shader needs.
+      // organism/spores.js applies the gust to the drift as a SPEED law
+      // (carry *= 0.72 + 0.28*breeze(t)) and integrates it one frame at a
+      // time. Here there are no frames — position must be a closed form in
+      // uTime — so the speed law is integrated once, analytically. The gust
+      // swell G is ~40x slower than the three sway modes, so carrying it as a
+      // factor and integrating only the modes (amplitude/omega each) is exact
+      // to a few percent, which is well inside the amplitude's own taste
+      // band. Peak |breezeInt| ~= 0.686 s; d/dt of this IS breeze(t), so the
+      // SPEED modulation a viewer sees is the hero's, to the digit.
+      float breezeInt(float t) {
+        float g = 0.55 + 0.45 * sin(t * 0.13 + 0.6);
+        return -g * (0.516667 * cos(t * 1.20)
+                   + 0.142077 * cos(t * 1.83 + 1.3)
+                   + 0.026923 * cos(t * 2.60 + 2.7));
+      }
+
+      void main() {
+        float mode = aGate.y;
+        // the same threshold set the body's own strokes read (world.js
+        // uRevIn): the depth-dealt arrival rung while the field kindles out
+        // of the dark, the authored rung on every departure — so a plume
+        // kindles WITH its body under either deal, never over a dark one.
+        float th = uRevIn > 0.5 ? aGate.z : aGate.x;
+        float reveal = aGate.x < -0.5 ? 1.0
+                     : smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
+        // the broad band forms as the sky opens
+        // band window 0.30-0.72 -> 0.34-0.96 (2026-08-10, Hannah's brief
+        // item 3): the broad band used to be fully formed by uPull 0.72 —
+        // well before the town had half-kindled — which front-loaded the
+        // sky and made the whole arrival read abrupt. It now forms across
+        // the entire kindle ladder and finishes with the last bodies
+        // (REV_HI 0.90), still saturated well before the rest's 1.12, so
+        // the rest frame (and final@* goldens) are untouched.
+        float bandGate = mode > 0.5 ? smoothstep(0.34, 0.96, uPull) : 1.0;
+        float t = fract(uTime / aCycle.x + aCycle.y);
+        float h1 = hash(aSeed * 12.9898), h2 = hash(aSeed * 78.233 + 1.0);
+        vec3 p = position;
+        // THE CARRY. One wind, one vector, for both cohorts — the separate
+        // rise term is gone into uWind's own 0.62 y/x lean, which is the
+        // diagonal the hero's plume climbs.
+        //
+        // The gust: the hero's 0.72 + 0.28*breeze speed law, integrated.
+        // The 1/0.72 renormalises the MEAN back to the shipped drift rate, so
+        // this adds a surge (+-38% of speed, coherent across the whole field)
+        // and does not quietly slow the cloud down.
+        float spd = aCycle.w / aCycle.x;                 // world units / second
+        // The plume's travel is BOTTOM-WEIGHTED like the hero's standing
+        // cloud (organism/spores.js seeds travel = age^1.3 * 5.2 — half its
+        // dots sit within ~2 u of the gills, which is why the hero's plume
+        // reads as a body exhaling and not as sky dust). Warping the carry
+        // rather than the phase keeps the recycle cadence and the alpha
+        // window untouched: the dot spends most of its LIFE near the seat
+        // and commits to the climb late, so the time-average density is the
+        // hero's own bottom-heavy cone. The band keeps its linear drift.
+        float tc = mix(pow(t, 1.35), t, mode);
+        float carry = (aCycle.w * tc + 0.28 * spd * breezeInt(uTime)) / 0.72;
+        // Cluster-coherent eddies: whole clumps wheel together. Halved from
+        // (1.5, 0.75, 1.35) — they used to be the ONLY motion in this layer
+        // with any character and had grown into a slow lava-lamp swirl; now
+        // the wind carries the cloud and these are its texture. The PLUMES
+        // get a quarter of even that: the hero's shed spreads by
+        // 0.07 + age*0.8 around its drift and stays a legible stream for
+        // its whole length, and a plume is only a plume while it is tighter
+        // than the air it is crossing.
+        float tight = mix(0.25, 1.0, mode);
+        float e = aClump.x;
+        vec3 eddy = vec3(
+          sin(uTime * 0.10 + e) * 0.75,
+          cos(uTime * 0.083 + e * 1.3) * 0.38,
+          sin(uTime * 0.067 + e * 2.1) * 0.68
+        ) * (0.35 + 0.65 * t) * tight;
+        // peel-away cohort: diverges after mid-life
+        float peel = aClump.y * smoothstep(0.45, 0.9, t);
+        vec3 peelV = vec3(-1.2 - h1 * 1.6, 0.9, (h2 - 0.5) * 4.0) * peel * tight;
+        p += uWind * carry + eddy + peelV;
+        // scatter across the drift. The PLUME cohort takes the hero's own
+        // widening-with-age cone (organism/spores.js: spread = 0.07 + age*0.8,
+        // gaussian on x, x0.72 on y, x0.6 on z — approximated at +-1 sigma by
+        // the uniform hashes): with the seat now a tight margin crescent, the
+        // cone is what makes a member's plume the hero's slow diffuse fan
+        // rather than a thin fast stream. The band keeps its shipped scatter.
+        float h3 = hash(aSeed * 45.164 + 2.0);
+        float spread = 0.07 + 0.80 * tc;   // the hero's cone widens with TRAVEL
+        vec3 cone = vec3((h1 - 0.5) * 2.0 * spread,
+                         (h3 - 0.5) * 2.0 * spread * 0.72,
+                         (h2 - 0.5) * 2.0 * spread * 0.6);
+        vec3 bandSc = vec3((h1 - 0.5) * 1.2 * t, 0.0, (h2 - 0.5) * 1.6 * t);
+        p += mix(cone, bandSc, mode);
+        // ONE life window, both cohorts, on the particle's own phase. The
+        // band used to fade on a sinusoid unrelated to its drift phase, which
+        // teleported it back to its birth point mid-cycle while visible —
+        // survivable while it drifted flat, a visible FALL now that the wind
+        // lifts it. The band's window is wider (it is the long-lived mass).
+        float life = mode > 0.5
+          ? smoothstep(0.0, 0.10, t) * (1.0 - smoothstep(0.80, 1.0, t))
+          : smoothstep(0.0, 0.07, t) * (1.0 - smoothstep(0.72, 1.0, t));
+        // The 0.55-1.0 per-particle dimmer is the BAND's (broken-haze texture);
+        // the hero's shed has no such term, so the plume cohort runs at full
+        // alpha like the hero's own dots — the twinkle is the only shimmer.
+        // Body-born plumes retire with their owners. Only the independent
+        // drift band belongs to the sky's deliberately longer fade.
+        vAlpha = life * reveal * bandGate * mix(1.0, 0.55 + 0.45 * h2, mode)
+          * mix(uBodyAmount, uAmount, mode);
+        vColor = color;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vFog = -mv.z;
+        // near-camera fade: receding through the cloud must not blow out
+        vAlpha *= smoothstep(1.6, 3.4, length(mv.xyz));
+        // The hero's own twinkle (organism.js makePoints: vTw). It rides BOTH
+        // gl_PointSize and the fragment's brightness there, so it is carried to
+        // both here too: on the size it pumps the MIN_PT floor's vShrink, on
+        // the light it is the shimmer itself. The faint half of the cloud
+        // sparkles; the sparks hold steady.
+        vTw = 0.85 + 0.15 * sin(uTime * 1.4 + aSeed * 7.0);
+        float tw = vTw;
+        // ...and its depth-of-field, on this chapter's own focal band (see
+        // FOCAL_D). Outside the band a sprite grows and dims by the hero's
+        // exact coefficients, which is what keeps the far field's spores the
+        // same APPARENT size as the near ones instead of vanishing under
+        // MIN_PT. vBlur goes to the fragment as the matching dim.
+        vBlur = clamp(abs(vFog - ${FOCAL_D.toFixed(1)}) / ${FOCAL_R.toFixed(1)}, 0.0, 1.0);
+        float sz = aCycle.z * tw * (300.0 / -mv.z) * (1.0 + 1.35 * vBlur);
+        vShrink = 1.0;
+        if (sz < MIN_PT) { vShrink = (sz * sz) / (MIN_PT * MIN_PT); sz = MIN_PT; }
+        gl_PointSize = sz;
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uMap;
+      uniform float uFogNear, uFogFar;
+      varying vec3 vColor;
+      varying float vAlpha, vFog, vShrink, vBlur, vTw;
+      void main() {
+        vec4 t = texture2D(uMap, gl_PointCoord);
+        float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
+        gl_FragColor = vec4(vColor * t.a * vTw * vAlpha * fogF * vShrink
+                            * (1.0 - 0.55 * vBlur) * ${SPORE_GAIN.toFixed(1)}, 1.0);
+      }
+    `,
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+  });
+  const sporePts = new THREE.Points(sporeGeo, sporeMat);
+  sporePts.frustumCulled = false;
+  group.add(sporePts);
+
+  /* ================================================================
+     2. Forest horizon: conifer silhouettes in two fogged distance bands
+     ================================================================ */
+  // Declutter round: 48 trees -> 26, tones nearly halved, fewer boughs, and
+  // a GAP behind the hero's cap sector. Additive line trees can never be
+  // the still's dark silhouettes — at the old brightness they read as
+  // scratchy "sticks" all over the sky (Hannah, both rounds). Now they are
+  // whispers behind the mist, which carries the horizon instead.
+  const trees = makeBatch();
+  if (!baked) {
+    const head = (REST.headingDeg * Math.PI) / 180;
+    for (const [band, distLo, distHi, n, toneB] of [
+      [0, 26, 34, 11, 0.17], [1, 36, 46, 15, 0.125],
+    ]) {
+      for (let i = 0; i < n; i++) {
+        // spread across the frame; thinner on the far left where the copy
+        // block owns the upper-left negative space
+        const rel = (-0.62 + (i / (n - 1)) * 1.5 + gauss() * 0.05);   // radians off gaze
+        if (rel > 0.08 && rel < 0.32) continue;   // keep the hero's sky clean
+        /* THE FRAME-LEFT THIN (2026-08-14). Hannah, with a screenshot of the
+           leftmost mushroom: "the background behind this leftmost mushroom on
+           the final section also still feels quite busy — clean that up until
+           it feels populated but not crowded."
+
+           Measured on the frame rather than assumed: cropping the rest still
+           to that mushroom and its sky, the busiest thing in the crop is not
+           ground detail at all — it is THIS. Eight or nine trunks with four
+           chevron pairs each stand in a regular picket directly behind and
+           between the frame-left caps, at a tone the caps have to compete
+           with. The declutter round already took this population 48 -> 26 and
+           called what was left "whispers behind the mist"; frame-left it is
+           not whispering, because that is where the trees are nearest the
+           gaze axis AND where the two big caps leave the most sky showing.
+
+           "POPULATED BUT NOT CROWDED" IS TWO KNOBS, and it needs both. Cutting
+           the count alone empties a horizon she has separately asked twice to
+           keep filled (d39b35b, 6ba7b3f); dimming alone leaves the same
+           regular picket, just greyer. So every third tree in the left sector
+           goes — a deterministic stride, no rng, so nothing else moves — and
+           the survivors there take a tone taper that eases in across the
+           sector rather than switching at its edge. The horizon keeps its
+           depth; the lattice stops reading as a lattice.
+
+           This `continue` is placed with the hero-sky one, BEFORE any rand()
+           of the loop body, so a skipped tree consumes nothing and every
+           surviving tree in both bands is byte-identical to the shipped one. */
+        if (rel < -0.24 && i % 3 === 1) continue;
+        const leftDim = 0.60 + 0.40 * Math.min(1, Math.max(0, (rel + 0.46) / 0.30));
+        const th = head + rel;
+        const dist = distLo + rand() * (distHi - distLo);
+        const x = REST.x + Math.cos(th) * dist;
+        const z = REST.z + Math.sin(th) * dist;
+        const gy = groundY(x, z);
+        const h = (rel < -0.30 ? 2.6 : 4.0) + rand() * (band ? 4.5 : 3.0);
+        const tw = rand() * TAU;
+        const meta = { tw, reveal: -1 };
+        const tone = toneB * leftDim;
+        // trunk
+        trees.seg(x, gy, z, x + gauss() * 0.1, gy + h, z + gauss() * 0.1, tone, tone * 1.3, meta);
+        // conifer chevrons: symmetric drooping bough PAIRS, wide at the base
+        // narrowing to the crown — the silhouette, not a streak
+        const NB = 4 + Math.floor(rand() * 2);
+        // bough plane roughly facing the rest camera
+        const face = Math.atan2(REST.z - z, REST.x - x) + Math.PI / 2;
+        for (let b = 0; b < NB; b++) {
+          const u = b / NB;
+          const by = gy + h * (0.18 + 0.78 * u);
+          const bw = (1 - u * 0.85) * (1.3 + rand() * 1.2);
+          for (const sgn of [-1, 1]) {
+            trees.seg(x, by, z,
+              x + Math.cos(face) * bw * sgn, by - bw * 0.55, z + Math.sin(face) * bw * sgn,
+              tone * 1.25, tone * 0.55, meta);
+          }
+        }
+        // crown tip
+        trees.seg(x, gy + h, z, x + gauss() * 0.05, gy + h + 0.5 + rand() * 0.4, z + gauss() * 0.05,
+          tone * 1.3, tone * 0.6, meta);
+      }
+    }
+  }
+  const treeMat = makeStrandMat(uniforms, 0.7);
+  const treeLines = new THREE.LineSegments(baked ? baked.g.trees : trees.geo(), treeMat);
+  treeLines.frustumCulled = false;
+  /* THE TREES ARE RETIRED (2026-10-04 — Hannah: from the orbital view they
+     "look like toy trees... mess up the whole proportion relative to the
+     mushrooms", and a forest contradicts a picture of one mycelial network).
+     Their job — a far plane that makes the epilogue feel alive and full —
+     passes to the horizon plumes below. The geometry is still BUILT, so
+     every draw the shared `rand` makes after it (the mist) and the bake
+     payload's `trees` key are untouched; it is only never drawn. */
+  counts.treeSegs = trees.segCount;
+
+  /* ================================================================
+     3. Mist + horizon glow sprites (fade driven by the orchestrator)
+     ================================================================ */
+  const sprites = [];
+  const addSprite = (x, y, z, sx, sy, tone, base, drift) => {
+    const mat = new THREE.SpriteMaterial({
+      map: glowTex, color: heat(tone, new THREE.Color()).clone(),
+      transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const s = new THREE.Sprite(mat);
+    s.position.set(x, y, z);
+    s.scale.set(sx, sy, 1);
+    group.add(s);
+    sprites.push({ mat, base, drift, spr: s, x0: x });
+    return s;
+  };
+  {
+    const head = (REST.headingDeg * Math.PI) / 180;
+    // Baked read path: the drift (and the mist banks' y jitter) are the LAST
+    // draws off this function's `rand`; skipping the spore + tree loops would
+    // shift them, so they round-trip via the payload (2026-08-17). Every
+    const bakedSprites = baked ? baked.sprites : null;
+    let si = 0;
+    // low mist banks among the trees (bases raised: mist carries the
+    // horizon now that the trees are whispers)
+    for (const [rel, dist, sx, sy, tone, base] of [
+      [-0.30, 30, 16, 5, 0.34, 0.065],
+      [0.05, 33, 22, 6, 0.36, 0.07],
+      [0.42, 28, 18, 5.5, 0.34, 0.065],
+      [0.75, 36, 20, 6, 0.32, 0.055],
+    ]) {
+      const x = REST.x + Math.cos(head + rel) * dist;
+      const z = REST.z + Math.sin(head + rel) * dist;
+      const y = bakedSprites ? bakedSprites[si].y : (1.6 + rand() * 1.2);
+      const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
+      si++;
+      addSprite(x, y, z, sx, sy, tone, base, drift);
+    }
+    // Declutter round: two MID-distance mist bands drifting across the ring
+    // itself — the approved still's layered haze between the mushrooms.
+    // One sits over the frame-left arc (rebalance), one grazes centre-right.
+    const m1x = REST.x + Math.cos(head - 0.34) * 15;
+    const m1z = REST.z + Math.sin(head - 0.34) * 15;
+    {
+      const y = bakedSprites ? bakedSprites[si].y : 1.9;
+      const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
+      si++;
+      addSprite(m1x, y, m1z, 15, 3.6, 0.36, 0.052, drift);
+    }
+    const m2x = REST.x + Math.cos(head + 0.30) * 19;
+    const m2z = REST.z + Math.sin(head + 0.30) * 19;
+    {
+      const y = bakedSprites ? bakedSprites[si].y : 2.3;
+      const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
+      si++;
+      addSprite(m2x, y, m2z, 18, 4.2, 0.34, 0.045, drift);
+    }
+    // broad warm horizon glow, re-centred (the old +0.28 bias put a bright
+    // smear on the right frame edge) + a fainter answer over the left arc
+    const gx = REST.x + Math.cos(head + 0.10) * 40;
+    const gz = REST.z + Math.sin(head + 0.10) * 40;
+    {
+      const y = bakedSprites ? bakedSprites[si].y : 4.5;
+      const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
+      si++;
+      addSprite(gx, y, gz, 42, 11, 0.5, 0.06, drift);
+    }
+    const lx = REST.x + Math.cos(head - 0.46) * 38;
+    const lz = REST.z + Math.sin(head - 0.46) * 38;
+    {
+      const y = bakedSprites ? bakedSprites[si].y : 3.6;
+      const drift = bakedSprites ? bakedSprites[si].drift : (rand() * TAU);
+      addSprite(lx, y, lz, 26, 8, 0.44, 0.042, drift);
+    }
+  }
+  /* ================================================================
+     4. Far plumes — the field breathing on the skyline
+     ================================================================
+     Columns of spores rising off the epilogue's FARTHEST field bodies, above
+     the field's skyline, where the trees used to stand. They are real
+     mushrooms in both views — the Purpose rest sees them on the horizon,
+     and the Manifesto's colony draws the same seats from above — and every
+     column is GATED ON ITS OWN BODY'S REVEAL, the same threshold pair (both
+     deals, uRevIn) the ring members' plumes read. A column can therefore
+     never stand over a mushroom that has not arrived, nor outlive one that
+     has gone (2026-10-04 — Hannah: spores showing "before or after that
+     mushroom has come or gone... feels deeply wrong").
+     Same substance, same shaders, same live uniforms; only the air differs
+     (below), and the dots are larger because they are read from 20-40
+     units away. Own rng stream, so nothing above moves. */
+  function addHorizonPlumes(bodies) {
+    const hr = makeRng(0x9107e);
+    const head = (REST.headingDeg * Math.PI) / 180;
+    const relOf = (b) => {
+      const a = Math.atan2(b.z - REST.z, b.x - REST.x) - head;
+      return Math.atan2(Math.sin(a), Math.cos(a));
+    };
+    const distOf = (b) => Math.hypot(b.x - REST.x, b.z - REST.z);
+    // the field's own bodies (seats), farthest first, across the frame but
+    // never in the hero's sky sector or over the copy's frame-left
+    const sources = bodies
+      .filter(b => b.tier >= 4 && Number.isFinite(b.reveal))
+      .filter(b => { const rel = relOf(b); return rel > -0.22 && rel < 0.85 && !(rel > 0.06 && rel < 0.34); })
+      .sort((a, b) => distOf(b) - distOf(a))
+      .slice(0, 12);
+    /* SHED THE WAY A GILLED MUSHROOM SHEDS (2026-10-04 — Hannah: "is that
+       realistic now? In terms of how they actually spread?", then "keep
+       going"). These far bodies used to send up 300-dot columns, which no
+       mushroom does: spores DROP from the gills at their terminal speed,
+       drift a little downwind and settle — the faint print at a body's
+       foot — and only a minority, caught in the cap's own small updraft,
+       are taken by the wind across the field. The same law as the Manifesto
+       colony's shedders (manifesto/colony.js), so the field and the colony
+       around it breathe alike from any height. Each dot is gated on its
+       body's own kindle thresholds, as before: it can neither precede nor
+       outlive its mushroom. */
+    const FALL = 70, LOFT = 40;
+    const N = sources.length * (FALL + LOFT);
+    const position = new Float32Array(N * 3), aShed = new Float32Array(N * 4);
+    const aGate = new Float32Array(N * 3), aBody = new Float32Array(N);
+    let i = 0;
+    sources.forEach((b) => {
+      for (let k = 0; k < FALL + LOFT; k++, i++) {
+        position[i * 3] = b.x; position[i * 3 + 1] = b.gy; position[i * 3 + 2] = b.z;
+        const loft = k >= FALL;
+        aShed[i * 4] = hr() * 1000;                                   // seed
+        aShed[i * 4 + 1] = loft ? 60 + hr() * 50 : 20 + hr() * 14;   // period
+        aShed[i * 4 + 2] = hr();                                      // phase
+        aShed[i * 4 + 3] = loft ? 1 : 0;                              // cohort
+        aBody[i] = b.s;
+        // the body's own kindle thresholds (authored deal, arrival deal)
+        aGate[i * 3] = b.reveal; aGate[i * 3 + 1] = 0; aGate[i * 3 + 2] = b.revealIn ?? b.reveal;
+      }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+    g.setAttribute('aShed', new THREE.BufferAttribute(aShed, 4));
+    g.setAttribute('aBody', new THREE.BufferAttribute(aBody, 1));
+    g.setAttribute('aGate', new THREE.BufferAttribute(aGate, 3));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: uniforms.uTime, uPull: uniforms.uPull, uRevIn: uniforms.uRevIn,
+        uBodyAmount: bodyAmount, uAerialSeatAmount: aerialSeatAmount,
+        uPurposeAerial: purposeAerial, uPullRaw: uniforms.uPullRaw,
+        uFogNear: uniforms.uFogNear, uFogFar: uniforms.uFogFar,
+      },
+      vertexShader: /* glsl */ `
+        attribute vec4 aShed;    // seed, period, phase, cohort (0 drop, 1 lofted)
+        attribute float aBody;   // the owner's scale
+        attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
+        uniform float uTime, uPull, uPullRaw, uRevIn, uFogNear, uFogFar, uBodyAmount, uAerialSeatAmount, uPurposeAerial;
+        varying float vAlpha;
+        varying vec3 vColor;
+        float hash(float n) { return fract(sin(n) * 43758.5453); }
+        void main() {
+          float th = uRevIn > 0.5 ? aGate.z : aGate.x;
+          float reveal = smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
+          // Mobile Purpose uses the detailed aerial seats with their authored
+          // .14-wide raw-pull reveal, rather than the ring's alternate deal.
+          reveal = mix(reveal, smoothstep(aGate.x, aGate.x + 0.14, uPullRaw), uPurposeAerial);
+          float t = fract(uTime / aShed.y + aShed.z);
+          float h1 = hash(aShed.x * 12.9898), h2 = hash(aShed.x * 78.233 + 1.), h3 = hash(aShed.x * 45.164 + 2.);
+          float s = aBody;
+          vec3 wind = normalize(vec3(${BREEZE.x.toFixed(4)}, 0.0, ${BREEZE.z.toFixed(4)}));
+          vec3 side = vec3(-wind.z, 0., wind.x);
+          float ang = h2 * 6.2832, rr = ${CAP_R.toFixed(2)} * s * (0.18 + 0.72 * sqrt(h1));
+          vec3 p = position + vec3(cos(ang) * rr, ${CAP_Y.toFixed(2)} * s * 0.80, sin(ang) * rr);
+          float fall = p.y - position.y;
+          float life, glow;
+          if (aShed.w < 0.5) {
+            float tf = 0.30;
+            float k = clamp(t / tf, 0., 1.);
+            p.y -= fall * k;
+            p += wind * (0.25 + 1.6 * h3) * s * 3.0 * k + side * (h1 - 0.5) * 1.2 * s * k;
+            p.y = max(p.y, position.y + 0.03);
+            glow = mix(1.0, 0.45, step(tf, t));
+            life = smoothstep(0., 0.04, t) * (1. - smoothstep(0.55, 1., t));
+          } else {
+            float lift = smoothstep(0., 0.12, t);
+            p.y += (0.4 + 0.8 * h1) * s * 3.0 * lift;
+            float carry = smoothstep(0.06, 1., t);
+            p += wind * (8. + 10. * h3) * carry + vec3(0., (1.0 + 1.8 * h2) * carry, 0.);
+            p += (side * sin(uTime * 0.07 + aShed.x) + vec3(0., 0.4 * cos(uTime * 0.05 + aShed.x * 1.7), 0.)) * 1.2 * carry;
+            life = smoothstep(0., 0.06, t) * (1. - smoothstep(0.65, 1., t));
+            glow = 0.75;
+          }
+          vec4 mv = modelViewMatrix * vec4(p, 1.);
+          float depth = -mv.z;
+          float fogF = clamp((uFogFar - depth) / max(1., uFogFar - uFogNear), 0., 1.);
+          float tw = 0.8 + 0.2 * sin(uTime * 1.4 + aShed.x * 7.);
+          // These seats can be drawn by the original ring or its aerial
+          // replacement during their crossfade. Either living parent can
+          // carry the plume; the ambient sky cannot keep an orphan alight.
+          float owner = max(reveal * uBodyAmount, uAerialSeatAmount);
+          vAlpha = life * glow * owner * fogF * tw;
+          vColor = mix(vec3(1.0, 0.70, 0.36), vec3(1.0, 0.86, 0.60), h2);
+          // one apparent size at any depth: the colony's pixel band
+          gl_PointSize = clamp(0.22 * 300. / max(depth, 1.), 1.6, 2.8) * mix(1., 0.8, 1. - glow);
+          gl_Position = projectionMatrix * mv;
+          if (vAlpha < 0.002) gl_Position = vec4(2., 2., 2., 1.);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.;
+          float a = pow(max(0., 1. - d * d), 1.5);
+          gl_FragColor = vec4(vColor * a * vAlpha, 1.);
+        }
+      `,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+    });
+    const pts = new THREE.Points(g, mat);
+    pts.frustumCulled = false;
+    group.add(pts);
+    counts.horizonPlumes = sources.length;
+    return pts;
+  }
+
+  // Baked: the spore loop and tree emission never ran, so the counts
+  // (and the sprite drift/y round-trip) come from the payload (2026-08-17).
+  if (baked) Object.assign(counts, baked.counts);
+
+  return {
+    group,
+    counts,
+    // The bake recording site (final/index.js) reads these AFTER every
+    // cross-module write is final. Keys match baked.js geometry() keys.
+    geometries: {
+      spores: sporePts.geometry,
+      trees: treeLines.geometry,
+    },
+    bakePayload: {
+      spores: counts.spores,
+      treeSegs: counts.treeSegs,
+      sprites: sprites.map(s => ({ y: s.spr.position.y, drift: s.drift })),
+    },
+    addHorizonPlumes,
+    setAerialSeatAmount(amount) { aerialSeatAmount.value = Math.max(0, Math.min(1, amount)); },
+    setPurposeAerial(on) { purposeAerial.value = on ? 1 : 0; },
+    /** sprite fade + slow lateral mist drift (sprites sit outside the
+     *  shared shader uniforms) */
+    update(t, amount) {
+      for (const s of sprites) {
+        s.mat.opacity = s.base * amount * (0.8 + 0.2 * Math.sin(t * 0.05 + s.drift));
+        s.spr.position.x = s.x0 + Math.sin(t * 0.03 + s.drift) * 0.6;
+      }
+    },
+  };
+}

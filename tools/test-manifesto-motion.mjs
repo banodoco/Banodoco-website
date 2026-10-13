@@ -161,9 +161,9 @@ const controls = { target: vec(0, 2, 0), enabled: true,
   } };
 const fog = { near: 7, far: 20 };
 const scroll = { enabled: true };
-let fieldFogFar = null, fieldSeconds = null, preparations = 0, preparedCenter = null;
+let fieldFogFar = null, fieldSeconds = null, preparations = 0, preparedCenter = null, fieldPresence = 1, fieldStay = 1;
 const branch = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } },
-  { scroll, field: { setManifesto(progress, seconds, departure) { if (progress !== null) { fieldFogFar = fog.far; fieldSeconds = seconds; } if (departure) { preparations++; preparedCenter = departure.fieldCenter; } } } });
+  { scroll, field: { setManifesto(progress, seconds, departure, aspect, seats, stay = 1) { if (progress !== null) { fieldPresence = progress; fieldStay = stay; fieldFogFar = fog.far; fieldSeconds = seconds; } if (departure) { preparations++; preparedCenter = departure.fieldCenter; } } } });
 const root = document.body.children.find(el => el.className === 'j-manifesto');
 const tick = seconds => { for (let i = 0; i < seconds * 60; i++) branch.update(1 / 60); };
 const snapshot = () => [camera.position.x, camera.position.y, camera.position.z, camera.fov, camera.far,
@@ -221,6 +221,8 @@ assert.deepEqual(snapshot(), settled, 'the settled camera holds still');
 assert.ok(camera.far > camera.position.y, 'portrait aerial cannot be clipped by the hero far plane');
 window.listeners.keydown({ key: 'Escape', preventDefault() {} }); tick(2.3);
 assert.equal(branch.active, true, 'the descent from the settled view is a flight, not a 2 s rewind');
+assert.ok(fieldPresence < .01, 'extra aerial mushrooms and their spores retire while the camera is still descending');
+assert.equal(fieldStay, 1, 'return to Purpose retains its destination world');
 tick(2.6);
 assert.equal(branch.active, false);
 assert.deepEqual(snapshot(), original);
@@ -232,7 +234,10 @@ assert.equal(document.activeElement, focus);
 const equipLanding = { position: vec(-1.024, 0.71, -2.616),
   target: vec(0.049, 3.7, 0.226), fov: 60, fogNear: 7, fogFar: 20 };
 branch.begin(); tick(CAMERA_SECONDS + 1);
-branch.returnTo(null, { land: equipLanding }); tick(branch.awaySeconds + 0.1);
+branch.returnTo(null, { land: equipLanding }); tick(branch.awaySeconds * .6);
+assert.equal(fieldPresence, 0, 'extra field has gone before a close destination approach');
+assert.equal(fieldStay, 0, 'outgoing Purpose proxies have also gone before a close approach');
+tick(branch.awaySeconds + 0.1);
 assert.deepEqual([camera.position.x, camera.position.y, camera.position.z],
   [equipLanding.position.x, equipLanding.position.y, equipLanding.position.z],
   'first released frame is exactly the upward-looking destination pose');
@@ -247,9 +252,13 @@ let landedOn = null;
 branch.begin(); tick(12);
 branch.returnTo(() => { landedOn = 'A'; }, { land: landA }); tick(1.2);
 const beforeBend = snapshot();
+const beforeBendPresence = fieldPresence;
+const beforeBendStay = fieldStay;
 assert.ok(branch.retarget(() => { landedOn = 'B'; }, { land: landB }), 'a descent accepts a new aim');
 assert.equal(branch.returnPhase, 0, 'the new aim starts from the pose on screen');
 branch.update(0);
+assert.equal(fieldPresence, beforeBendPresence, 'retarget cannot resurrect the surrounding field');
+assert.equal(fieldStay, beforeBendStay, 'retarget preserves the displayed Purpose presence');
 beforeBend.forEach((v, i) => {
   if (typeof v === 'number') assert.ok(Math.abs(snapshot()[i] - v) < 1e-9, `no jump on the press (channel ${i})`);
 });

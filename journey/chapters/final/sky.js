@@ -177,7 +177,9 @@ const TONE_MIN = 0.64, TONE_SPAN = 0.36, TONE_POW = 1.9;
 // The hero's point material carries uOpacity 2.4 on the shed. Same number.
 const SPORE_GAIN = 2.4;
 
-export function createFinalSky(sceneApi, uniforms) {
+export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount) {
+  const aerialSeatAmount = { value: 0 };
+  const purposeAerial = { value: 0 };
   const rand = makeRng(88417);
   const gauss = () => gaussOf(rand);
   const group = new THREE.Group();
@@ -451,6 +453,7 @@ export function createFinalSky(sceneApi, uniforms) {
       uPull: uniforms.uPull,
       uRevIn: uniforms.uRevIn,
       uAmount: uniforms.uAmount,
+      uBodyAmount: bodyAmount,
       uFogNear: uniforms.uFogNear,
       uFogFar: uniforms.uFogFar,
       uMap: { value: glowTex },
@@ -462,7 +465,7 @@ export function createFinalSky(sceneApi, uniforms) {
       attribute vec4 aCycle;   // period, phase, size, carry
       attribute vec2 aClump;   // clump phase, peel flag
       attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
-      uniform float uTime, uPull, uRevIn;
+      uniform float uTime, uPull, uRevIn, uAmount, uBodyAmount;
       uniform vec3 uWind;
       varying vec3 vColor;
       varying float vAlpha, vFog, vShrink, vBlur, vTw;
@@ -578,7 +581,10 @@ export function createFinalSky(sceneApi, uniforms) {
         // The 0.55-1.0 per-particle dimmer is the BAND's (broken-haze texture);
         // the hero's shed has no such term, so the plume cohort runs at full
         // alpha like the hero's own dots — the twinkle is the only shimmer.
-        vAlpha = life * reveal * bandGate * mix(1.0, 0.55 + 0.45 * h2, mode);
+        // Body-born plumes retire with their owners. Only the independent
+        // drift band belongs to the sky's deliberately longer fade.
+        vAlpha = life * reveal * bandGate * mix(1.0, 0.55 + 0.45 * h2, mode)
+          * mix(uBodyAmount, uAmount, mode);
         vColor = color;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFog = -mv.z;
@@ -606,13 +612,13 @@ export function createFinalSky(sceneApi, uniforms) {
     `,
     fragmentShader: /* glsl */ `
       uniform sampler2D uMap;
-      uniform float uAmount, uFogNear, uFogFar;
+      uniform float uFogNear, uFogFar;
       varying vec3 vColor;
       varying float vAlpha, vFog, vShrink, vBlur, vTw;
       void main() {
         vec4 t = texture2D(uMap, gl_PointCoord);
         float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
-        gl_FragColor = vec4(vColor * t.a * vTw * vAlpha * uAmount * fogF * vShrink
+        gl_FragColor = vec4(vColor * t.a * vTw * vAlpha * fogF * vShrink
                             * (1.0 - 0.55 * vBlur) * ${SPORE_GAIN.toFixed(1)}, 1.0);
       }
     `,
@@ -859,19 +865,24 @@ export function createFinalSky(sceneApi, uniforms) {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: uniforms.uTime, uPull: uniforms.uPull, uRevIn: uniforms.uRevIn,
-        uAmount: uniforms.uAmount, uFogNear: uniforms.uFogNear, uFogFar: uniforms.uFogFar,
+        uBodyAmount: bodyAmount, uAerialSeatAmount: aerialSeatAmount,
+        uPurposeAerial: purposeAerial, uPullRaw: uniforms.uPullRaw,
+        uFogNear: uniforms.uFogNear, uFogFar: uniforms.uFogFar,
       },
       vertexShader: /* glsl */ `
         attribute vec4 aShed;    // seed, period, phase, cohort (0 drop, 1 lofted)
         attribute float aBody;   // the owner's scale
         attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
-        uniform float uTime, uPull, uRevIn, uFogNear, uFogFar;
+        uniform float uTime, uPull, uPullRaw, uRevIn, uFogNear, uFogFar, uBodyAmount, uAerialSeatAmount, uPurposeAerial;
         varying float vAlpha;
         varying vec3 vColor;
         float hash(float n) { return fract(sin(n) * 43758.5453); }
         void main() {
           float th = uRevIn > 0.5 ? aGate.z : aGate.x;
           float reveal = smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
+          // Mobile Purpose uses the detailed aerial seats with their authored
+          // .14-wide raw-pull reveal, rather than the ring's alternate deal.
+          reveal = mix(reveal, smoothstep(aGate.x, aGate.x + 0.14, uPullRaw), uPurposeAerial);
           float t = fract(uTime / aShed.y + aShed.z);
           float h1 = hash(aShed.x * 12.9898), h2 = hash(aShed.x * 78.233 + 1.), h3 = hash(aShed.x * 45.164 + 2.);
           float s = aBody;
@@ -902,7 +913,11 @@ export function createFinalSky(sceneApi, uniforms) {
           float depth = -mv.z;
           float fogF = clamp((uFogFar - depth) / max(1., uFogFar - uFogNear), 0., 1.);
           float tw = 0.8 + 0.2 * sin(uTime * 1.4 + aShed.x * 7.);
-          vAlpha = life * glow * reveal * fogF * tw;
+          // These seats can be drawn by the original ring or its aerial
+          // replacement during their crossfade. Either living parent can
+          // carry the plume; the ambient sky cannot keep an orphan alight.
+          float owner = max(reveal * uBodyAmount, uAerialSeatAmount);
+          vAlpha = life * glow * owner * fogF * tw;
           vColor = mix(vec3(1.0, 0.70, 0.36), vec3(1.0, 0.86, 0.60), h2);
           // one apparent size at any depth: the colony's pixel band
           gl_PointSize = clamp(0.22 * 300. / max(depth, 1.), 1.6, 2.8) * mix(1., 0.8, 1. - glow);
@@ -911,13 +926,12 @@ export function createFinalSky(sceneApi, uniforms) {
         }
       `,
       fragmentShader: /* glsl */ `
-        uniform float uAmount;
         varying float vAlpha;
         varying vec3 vColor;
         void main() {
           float d = length(gl_PointCoord - 0.5) * 2.;
           float a = pow(max(0., 1. - d * d), 1.5);
-          gl_FragColor = vec4(vColor * a * vAlpha * uAmount, 1.);
+          gl_FragColor = vec4(vColor * a * vAlpha, 1.);
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -950,6 +964,8 @@ export function createFinalSky(sceneApi, uniforms) {
       sprites: sprites.map(s => ({ y: s.spr.position.y, drift: s.drift })),
     },
     addHorizonPlumes,
+    setAerialSeatAmount(amount) { aerialSeatAmount.value = Math.max(0, Math.min(1, amount)); },
+    setPurposeAerial(on) { purposeAerial.value = on ? 1 : 0; },
     /** sprite fade + slow lateral mist drift (sprites sit outside the
      *  shared shader uniforms) */
     update(t, amount) {

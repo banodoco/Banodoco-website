@@ -8,7 +8,7 @@ import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
 import { manifestoConcepts } from '../../content/manifesto-concepts.js';
-import { manifestoPose, mobileFieldCenter, isMobileManifesto, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, WORD_VISIBLE_SECONDS } from './pose.js';
+import { descentFieldPresence, manifestoPose, mobileFieldCenter, isMobileManifesto, smoother, ascentAt, descentU, returnSecondsFrom, awaySecondsFrom, lineSecondsFor, mobileReadingSchedule, CAMERA_SECONDS, TITLE_SECONDS, WORD_STAGGER_SECONDS, WORD_REVEAL_SECONDS, WORD_VISIBLE_SECONDS } from './pose.js';
 
 // The opening beat the navigation rides when the camera starts on Purpose's
 // own rest, and the longer departure when it starts from another section.
@@ -390,10 +390,12 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     }
     // The field reads fog in this same composition slot, after the branch
     // expands it; the director resets the scene range before each frame.
-    // landing elsewhere, Purpose's own world retires over the descent and is
-    // gone before the camera reaches the destination's ground
-    const stay = stay0 + (stayTo - stay0) * smoother(retargetW() / 0.8);
-    if (field) field.setManifesto(pose.field, value * CAMERA_SECONDS, null, camera.aspect, seatLight, stay);
+    // Landing elsewhere, Purpose's world recedes while the camera is still
+    // high, before its background proxies become close foreground objects.
+    // Purpose's own return retains its destination through the field lease.
+    const stay = stay0 + (stayTo - stay0) * smoother(retargetW() / 0.4);
+    const fieldPresence = direction < 0 ? descentFieldPresence(returnK) : 1;
+    if (field) field.setManifesto(pose.field * fieldPresence, value * CAMERA_SECONDS, null, camera.aspect, seatLight, stay);
   }
   /* NOTHING HERE SCROLLS. Every line is laid out from the start (unshown
      lines are only uninked), so a new line never reflows the ones above it.
@@ -697,7 +699,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     } else {
       landPrev = landing;
     }
-    stay0 = stay0 + (stayTo - stay0) * smoother(w / 0.8);
+    stay0 = stay0 + (stayTo - stay0) * smoother(w / 0.4);
     stayTo = home ? 1 : 0;
     landing = landingOf(land);
     landRe = landW;

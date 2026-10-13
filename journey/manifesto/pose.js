@@ -80,6 +80,10 @@ export function mobileReadingSchedule(starts, lastWordBeats) {
 export const AERIAL_BODY_COUNT = 560;
 export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 export const smoother = (v) => { v = clamp01(v); return v * v * v * (v * (v * 6 - 15) + 10); };
+// Let the surrounding aerial field recede while the camera is still high.
+// The actual destination keeps its own presence; these extra mushrooms and
+// their attached ground/spores share this one gentle departure envelope.
+export const descentFieldPresence = k => 1 - smoother((k - .1) / .4);
 const mix = (a, b, t) => a + (b - a) * t;
 export const isMobileManifesto = aspect => aspect < 0.9 ||
   (typeof window !== 'undefined' && window.innerWidth > 0 && window.innerWidth <= 720);

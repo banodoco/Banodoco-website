@@ -97,7 +97,7 @@ export function createFinal(sceneApi) {
    *  has begun to go on the way out. Both curves are the same smoothstep on the
    *  same driver and meet exactly at 0 and 1, so the seams stay no-ops. */
   const skyUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
-  const sky = createFinalSky(sceneApi, skyUniforms);
+  const sky = createFinalSky(sceneApi, skyUniforms, uniforms.uAmount);
   // the horizon breathes from the same colony the Manifesto flies over
   sky.addHorizonPlumes(aerial.bodies);
   // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
@@ -1578,6 +1578,7 @@ export function createFinal(sceneApi) {
       // Reuse the already-built, frustum-culled Manifesto instance layers;
       // hide the old rim-only batch so no mushroom is drawn twice.
       ring.setAerial(mobile);
+      sky.setPurposeAerial(mobile);
       aerial.setPurpose(mobile ? eff : 0, uniforms.uPullRaw.value,
         uniforms.uFogNear.value, uniforms.uFogFar.value);
     }
@@ -1680,17 +1681,15 @@ export function createFinal(sceneApi) {
       const held = base * stay;
       // Mobile already presents these same detailed background instances.
       // Keep them throughout the branch instead of crossfading to old proxies.
-      aerial.setSeatLight(mobile ? held + (1 - held) * (progress ?? 0) : seats);
+      const seatAmount = mobile ? held + (1 - held) * (progress ?? 0) : seats;
+      aerial.setSeatLight(seatAmount);
+      sky.setPurposeAerial(false);
+      sky.setAerialSeatAmount(progress === null ? 0 : seatAmount);
       aerial.set(progress ?? 0, sceneApi.scene.fog.near, sceneApi.scene.fog.far, seconds);
-      /* THE RING COMES HOME DURING THE DESCENT, NOT ON LANDING (2026-10-03 —
-         Hannah: the background mushrooms "disappear when the camera hits the
-         ground... they should disappear as it's travelling down"). Aloft,
-         the colony draws the ring's seats itself and the original ring is
-         hidden. The swap back used to happen on the landing frame, where the
-         two renderings' differences read as mushrooms vanishing. Now the
-         original ring returns as soon as a Return begins (`seats` < 1) and
-         the colony's copies fade out over the descent on top of it. */
-      ring.setAerial(mobile || (progress !== null && seats >= 1));
+      // The original ring recedes continuously as its aerial replacements
+      // arrive, and returns on the same seat clock during descent. Mobile
+      // keeps the detailed aerial representation throughout Purpose.
+      ring.setAerial(mobile ? 1 : progress !== null ? seats : 0);
       if (progress === null) {
         if (manifesto) {
           shownPull = manifesto.shownPull;
