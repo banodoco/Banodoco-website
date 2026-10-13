@@ -79,7 +79,9 @@ function derive(source) {
           }
           const concept = concepts.get(index);
           if (!concept) return escapeText(word);
-          const ink = concept.id === 'imagination'
+          const ink = concept.id === 'synthesis'
+            ? [...concept.ink].map((character, characterIndex) => `<span class="manifesto-synthesis-glyph" style="--synthesis-position:${100 * (concept.characterOffset + characterIndex) / (concept.characterTotal - 1)}%">${escapeText(character)}</span>`).join('')
+            : concept.id === 'imagination'
             ? [...concept.ink].map((character, characterIndex) => `<span class="manifesto-spectrum-glyph" style="--spectrum-index:${concept.characterOffset + characterIndex}">${escapeText(character)}</span>`).join('')
             : concept.id === 'vitality'
               ? [...concept.ink].map(character => `<span class="manifesto-vitality-glyph">${escapeText(character)}</span>`).join('')

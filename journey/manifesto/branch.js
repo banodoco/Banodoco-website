@@ -100,10 +100,12 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         const ink = document.createElement('span');
         ink.className = `manifesto-concept concept-${concept.id} concept-${concept.role} concept-position-${concept.offset || 0}`;
         ink.style.setProperty('--concept-index', concept.offset || 0);
-        if (concept.id === 'imagination' || concept.id === 'vitality') {
+        if (concept.id === 'imagination' || concept.id === 'vitality' || concept.id === 'synthesis') {
           [...concept.ink].forEach((character, characterIndex) => {
             const glyph = document.createElement('span');
-            glyph.className = concept.id === 'imagination' ? 'manifesto-spectrum-glyph' : 'manifesto-vitality-glyph';
+            glyph.className = concept.id === 'synthesis' ? 'manifesto-synthesis-glyph'
+              : concept.id === 'imagination' ? 'manifesto-spectrum-glyph' : 'manifesto-vitality-glyph';
+            if (concept.id === 'synthesis') glyph.style.setProperty('--synthesis-position', `${100 * (concept.characterOffset + characterIndex) / (concept.characterTotal - 1)}%`);
             glyph.style.setProperty('--spectrum-index', concept.characterOffset + characterIndex);
             glyph.style.setProperty('--glyph-delay', `${characterIndex * 24}ms`);
             glyph.style.setProperty('--jitter-phase', `${((concept.characterOffset + characterIndex) * 47) % 173}ms`);

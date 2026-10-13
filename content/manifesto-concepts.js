@@ -5,6 +5,7 @@ const PAIRS = [
   { id: 'passage', organism: 'animals', contribution: 'passage to new ground' },
 ];
 const PHRASES = [
+  { id: 'synthesis', phrase: 'interactive experience' },
   { id: 'kinship', phrase: 'shaped and reshaped' },
   { id: 'vitality', phrase: 'bustles with this kind of creative life' },
   { id: 'imagination', phrase: 'beauty and ambition we have yet to imagine' },
@@ -23,6 +24,15 @@ export function manifestoConcepts(words) {
     matches.set(noun, { id, role: 'organism', pairBeat: start });
     phrase.forEach((_, i) => matches.set(start + i, { id, role: 'contribution', pairBeat: start }));
   }
+  // The example echoes the first paragraph's three partners, one noun each.
+  if (tokens.includes('painter') && tokens.includes('engineer')) {
+    for (const [noun, id] of [['painter', 'sun'], ['model', 'soil'], ['engineer', 'passage']]) {
+      const index = tokens.indexOf(noun);
+      if (index < 0) continue;
+      const word = words[index], ink = word.match(/^[A-Za-z]+/)?.[0] || word;
+      matches.set(index, { id, role: 'organism', ink, suffix: word.slice(ink.length) });
+    }
+  }
   for (const { id, phrase } of PHRASES) {
     const phraseWords = phrase.toLowerCase().split(' ');
     const start = tokens.findIndex((_, i) => phraseWords.every((word, j) => tokens[i + j] === word));
@@ -33,7 +43,7 @@ export function manifestoConcepts(words) {
       const ink = word.match(/^[A-Za-z]+/)?.[0] || word;
       matches.set(start + offset, {
         id, role: 'phrase', offset, ink, suffix: word.slice(ink.length),
-        start, end: start + phraseWords.length - 1, characterOffset,
+        start, end: start + phraseWords.length - 1, characterOffset, characterTotal: phrase.length,
       });
       characterOffset += ink.length + 1;
     });

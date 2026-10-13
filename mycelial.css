@@ -432,21 +432,24 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 
 /* Related words share a colour, but each slow swell starts on its own reveal beat. */
 .manifesto-concept.concept-sun {
-  --concept-rest: #f0cd8d;
+  --concept-rest: var(--palette-sun);
   --concept-lit: #ffd078;
   --concept-glow: 246, 194, 101;
 }
 .manifesto-concept.concept-soil {
-  --concept-rest: #e9b497;
+  --concept-rest: var(--palette-soil);
   --concept-lit: #f5ac7e;
   --concept-glow: 218, 144, 99;
 }
 .manifesto-concept.concept-passage {
-  --concept-rest: #c6d4a8;
+  --concept-rest: var(--palette-passage);
   --concept-lit: #c2df9e;
   --concept-glow: 169, 192, 139;
 }
 .manifesto-concept {
+  --palette-sun: #f0cd8d;
+  --palette-soil: #e9b497;
+  --palette-passage: #c6d4a8;
   color: var(--concept-rest);
   text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62);
 }
@@ -557,9 +560,24 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   filter: saturate(.84) brightness(1.02);
   text-shadow: 0 0 5px rgb(235 191 162 / .16);
 }
-.j-manifesto-line.shown .manifesto-spectrum-glyph {
+.j-manifesto-line.shown .manifesto-spectrum-glyph,
+.j-manifesto-line.shown .manifesto-synthesis-glyph {
   animation: manifesto-iridescence 7s ease-in-out forwards;
   animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
+}
+/* One continuous palette travels through both words: gold, terracotta, sage.
+   Each sampled glyph remains inside its word's original reveal envelope. */
+.manifesto-concept.concept-synthesis { color: transparent; text-shadow: none; }
+.manifesto-synthesis-glyph {
+  background-image: linear-gradient(90deg, var(--palette-sun) 0%, var(--palette-sun) 15%,
+    var(--palette-soil) 50%, var(--palette-passage) 85%, var(--palette-passage) 100%);
+  background-size: 2200% 100%;
+  background-position: var(--synthesis-position) 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: saturate(.84) brightness(1.02);
+  text-shadow: 0 0 5px rgb(235 191 162 / .16);
 }
 @keyframes manifesto-iridescence {
   0%, 100% {
@@ -575,6 +593,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   .j-manifesto-line.shown .manifesto-concept,
   .j-manifesto-line.shown .manifesto-phrase-thread,
   .j-manifesto-line.shown .manifesto-spectrum-glyph,
+  .j-manifesto-line.shown .manifesto-synthesis-glyph,
   .j-manifesto-line.shown .manifesto-vitality-glyph { animation: none; transform: none; }
   .j-manifesto.is-open .j-manifesto-line.shown .manifesto-phrase-thread {
     animation: none; background-size: 100% 1px; --thread-strength: .48;
@@ -735,13 +754,13 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   text-decoration: underline dotted currentColor 1px;
   text-underline-offset: .22em;
 }
-/* Keep the interior space in its word's reveal, with dots across that space. */
-.manifesto-chapter-link.is-connected .manifesto-link-ink {
-  white-space: pre;
-  text-decoration: none;
-  border-bottom: 1px dotted currentColor;
-  padding-bottom: .12em;
+/* One native dotted decoration joins both words once both are readable. */
+.manifesto-chapter-link.is-connected {
+  text-decoration: underline dotted currentColor 1px;
+  text-underline-offset: .22em;
 }
+.manifesto-chapter-link.is-connected .manifesto-link-ink,
+.manifesto-chapter-link.is-connected[aria-disabled="true"] { text-decoration: none; }
 .manifesto-chapter-link:hover,
 .manifesto-chapter-link:focus-visible { color: #f6cb8b; }
 .manifesto-chapter-link:focus-visible { outline: 1px solid #d7ad6980; outline-offset: 4px; border-radius: 2px; }
