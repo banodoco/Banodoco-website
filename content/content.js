@@ -60,18 +60,15 @@
 
 export const CONTENT = {
   manifesto: {
-    title: 'Mycelial',
-    // One entry per line of the Manifesto page (journey/manifesto/branch.js):
-    // a line may hold more than one sentence. `body` is the same text as one
-    // paragraph, for the static page and screen readers.
+    title: 'Mycelial Manifesto',
+    // Paragraphs drive the same text in the animated and static experiences.
     lines: [
-      "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals are woven together by what each has to offer: energy from the sun, nutrients from the soil, passage to new ground.",
-      "We want a future in which AI and humanity thrive similarly — one in which people collectively shape, share and reshape open models in pursuit of the most uniquely human impulse: the drive to create.",
-      "This is more than a technologically advanced or media-rich world. It’s one that bustles with creative life—with artists, technologists and a rich tapestry of AI models intertwining to make new forms of creation possible.",
-      "Tools we can shape around our own purposes; inspiration that moves us to create; art we have dreamed of making; stories only we can tell; work of a beauty we have not yet dared to imagine.",
-      "The goal of Mycelial is to provide the connective tissue that helps us grow this world together."
+      "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals live by trading what each has to offer. Energy from the sun, nutrients from the soil, passage to new ground.",
+      "We want AI and humanity to grow together like this. Open models, shaped, shared and reshaped by many hands, all in pursuit of the most human of impulses: the drive to create.",
+      "We don't just dream of a world of endless content and ever smarter machines, we dream of one that bustles with creative life. Artists, technologists and models inextricably tangled, lifting one another to make together what none could alone.",
+      "Tools bent and refined to our purposes. Inspiration that moves us to create. A community bound by a common cause. And out of all of it, work of a beauty and ambition we have yet to imagine.",
+      "Mycelial aims to be the threads beneath it all, feeding, signalling and holding together all that grows."
     ],
-    note: "Fungi form partnerships with more than four in five plant species and help underpin nearly all life on Earth.",
     get body() { return this.lines.join(' '); },
   },
   chapters: {

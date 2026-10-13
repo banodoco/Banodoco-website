@@ -87,7 +87,7 @@ assert.doesNotMatch(equipMenu, /aria-label=/i,
 assert.equal((html.match(/<span class="menu-badge"[^>]*>Soon<\/span>/g) ?? []).length, 1,
   '2RP alone keeps its Soon badge after Manifesto ships');
 assert.match(html, /href="#manifesto"[\s\S]*>Manifesto<\/span><span class="menu-is">Action at a pivotal moment<\/span>/);
-assert.match(html, /id="manifesto"[\s\S]*data-src="manifesto\.title">Mycelial<\/h2>[\s\S]*data-src="manifesto\.body"/);
+assert.match(html, /id="manifesto"[\s\S]*data-src="manifesto\.title">Mycelial Manifesto<\/h2>[\s\S]*data-src="manifesto\.body"/);
 assert.match(html, />Ownership<\/span><span class="menu-is">equity rewards collaboration<\/span>/);
 assert.match(html, /href="https:\/\/arcagidan\.com\/"[\s\S]*?<span class="menu-ia" aria-hidden="true">↗<\/span>/);
 assert.match(html, /href="#\/owned"[\s\S]*?<span class="menu-ia" aria-hidden="true">→<\/span>/);

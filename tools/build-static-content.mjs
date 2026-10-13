@@ -63,7 +63,7 @@ function derive(source) {
     /(<div\b[^>]*\bdata-src="manifesto\.body"[^>]*>)[\s\S]*?(<\/div>)/gi,
     (_match, open, close) => {
       textCount += 1;
-      const note = `<button type="button" class="manifesto-note-trigger" aria-label="Read note 1 about fungi" title="${escapeAttribute(CONTENT.manifesto.note)}" data-manifesto-note="${escapeAttribute(CONTENT.manifesto.note)}">[1]</button>`;
+      const note = CONTENT.manifesto.note ? `<button type="button" class="manifesto-note-trigger" aria-label="Read note 1 about fungi" title="${escapeAttribute(CONTENT.manifesto.note)}" data-manifesto-note="${escapeAttribute(CONTENT.manifesto.note)}">[1]</button>` : '';
       return `${open}${CONTENT.manifesto.lines.map((line, i) => {
         const words = line.split(/\s+/);
         const concepts = manifestoConcepts(words);
@@ -79,7 +79,7 @@ function derive(source) {
           const closeThread = concept.id === 'kinship' && index === concept.end ? '</span>' : '';
           return `${openThread}<span class="manifesto-concept concept-${concept.id}" style="--concept-index:${concept.offset || 0}">${ink}</span>${escapeText(concept.suffix || '')}${closeThread}`;
         }).join(' ');
-        return `<p>${body}${i === 0 ? ` ${note}` : ''}</p>`;
+        return `<p>${body}${i === 0 && note ? ` ${note}` : ''}</p>`;
       }).join('')}${close}`;
     },
   );

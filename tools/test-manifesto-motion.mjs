@@ -332,7 +332,7 @@ mobileParagraphs.forEach((line, i) => {
 });
 for (let i = 0; i < 300; i++) mobile.update(1 / 60);
 assert.equal(mobileBox.scrollTop, 0, 'first paragraph remains centred');
-const mobileSchedule = mobileReadingSchedule(lineSecondsFor(liveCounts), liveCounts.map((n, i) => i === 0 ? n : n - 1));
+const mobileSchedule = mobileReadingSchedule(lineSecondsFor(liveCounts), liveCounts.map((n, i) => i === 0 && CONTENT.manifesto.note ? n : n - 1));
 const secondStart = mobileSchedule.reveal[1];
 const readingAdvance = () => 200 - mobileParagraphs[0].getBoundingClientRect().top;
 const advanceMobileTo = seconds => {

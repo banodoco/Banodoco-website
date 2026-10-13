@@ -34,7 +34,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   root.style.setProperty('--word-reveal-duration', `${WORD_REVEAL_SECONDS}s`);
   root.id = 'manifesto';
   root.hidden = true;
-  root.setAttribute('aria-label', 'Manifesto');
+  root.setAttribute('aria-label', CONTENT.manifesto.title);
   root.innerHTML = `
     <div class="j-manifesto-panel" role="region" aria-labelledby="j-manifesto-title" tabindex="-1">
       <h1 id="j-manifesto-title"></h1>
@@ -68,7 +68,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     const line = document.createElement('p');
     line.className = 'j-manifesto-line';
     // Keep the inline citation before the first paragraph's closing punctuation.
-    const closingPunctuation = lineEls.length === 0 ? sentence.match(/[.!?]+$/)?.[0] || '' : '';
+    const closingPunctuation = lineEls.length === 0 && CONTENT.manifesto.note ? sentence.match(/[.!?]+$/)?.[0] || '' : '';
     const words = (closingPunctuation ? sentence.slice(0, -closingPunctuation.length) : sentence).trim().split(/\s+/);
     const concepts = manifestoConcepts(words);
     // Highlight the brand name within the manifesto.
@@ -127,7 +127,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         if (trail) line.append(trail);
       }
     });
-    if (lineEls.length === 0) {
+    if (lineEls.length === 0 && CONTENT.manifesto.note) {
       const marker = document.createElement('span');
       marker.className = 'j-manifesto-word manifesto-note-marker';
       marker.style.setProperty('--w', words.length);

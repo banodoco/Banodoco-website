@@ -5,9 +5,9 @@ const PAIRS = [
   { id: 'passage', organism: 'animals', contribution: 'passage to new ground' },
 ];
 const PHRASES = [
-  { id: 'kinship', phrase: 'collectively shape share and reshape open models' },
+  { id: 'kinship', phrase: 'shaped shared and reshaped' },
   { id: 'vitality', phrase: 'bustles with creative life' },
-  { id: 'imagination', phrase: 'beauty we have not yet dared to imagine' },
+  { id: 'imagination', phrase: 'beauty and ambition we have yet to imagine' },
 ];
 // The authored em dash joins life—with; only 'life' carries the accent.
 const normalized = word => word.split('—')[0].toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, '');

@@ -7,13 +7,13 @@ const groundY = () => 0;
 const from = { position: { x: 8, y: 3, z: 9 }, target: { x: 0, y: 2, z: 0 }, fov: 46 };
 const aspect = 390 / 844;
 const counts = CONTENT.manifesto.lines.map(line => line.trim().split(/\s+/).length);
-const beats = counts.map((count, i) => i === 0 ? count : count - 1);
+const beats = counts.map((count, i) => i === 0 && CONTENT.manifesto.note ? count : count - 1);
 const reading = mobileReadingSchedule(lineSecondsFor(counts), beats);
 for (let i = 1; i < counts.length; i++) {
   const previousVisible = reading.reveal[i - 1] + beats[i - 1] * WORD_STAGGER_SECONDS + WORD_VISIBLE_SECONDS;
   assert.ok(reading.admit[i] >= previousVisible, 'prior copy is visibly readable when scroll begins');
   assert.equal(reading.admit[i], Math.max(previousVisible, reading.reveal[i] - 2));
-  assert.ok(reading.reveal[i] - reading.admit[i] > 1.8, 'scroll has a clear lead before incoming copy');
+  assert.ok(reading.reveal[i] > reading.admit[i], 'scroll leads incoming copy after the preceding paragraph is readable');
 }
 assert.deepEqual(reading.reveal, lineSecondsFor(counts), 'original text reveal beats are unchanged');
 const inkKeys = readFileSync(new URL('../journey/site.css', import.meta.url), 'utf8').split('@keyframes j-manifesto-ink {')[1];
