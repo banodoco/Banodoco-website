@@ -137,7 +137,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         ink.className = 'manifesto-link-ink';
         const text = word.match(/^[A-Za-z]+/)?.[0] || word;
         ink.textContent = (i > destination.start ? ' ' : '') + text;
-        span.append(lead, ink, word.slice(text.length), i < destination.end ? '' : trail);
+        span.append(lead, ink, word.slice(text.length));
       } else {
         span.textContent = `${lead}${word}${trail}`;
       }
@@ -150,7 +150,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         line.appendChild(phraseThread);
       }
       (phraseThread || chapterLink || line).appendChild(span);
-      if (destination && i === destination.end) chapterLink = null;
+      if (destination && i === destination.end) {
+        chapterLink = null;
+        // The inter-word space belongs to the link; the following space does not.
+        if (trail) line.append(trail);
+      }
       if (endsThread) {
         phraseThread = null;
         // Keep the following separator outside the decorated phrase.
