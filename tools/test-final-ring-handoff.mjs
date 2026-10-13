@@ -28,6 +28,13 @@ setAerial(false);
 assert.equal(strandMat.uniforms.uOpacity.value, 1.15, 'ordinary Purpose retains authored brightness');
 assert.equal(glowMat.uniforms.uOpacity.value, 1.5);
 const owner = readFileSync(new URL('../journey/chapters/final/index.js', import.meta.url), 'utf8');
-assert.match(owner, /ring\.setAerial\(mobile \? 1 : progress !== null \? seats : 0\)/,
-  'the live branch passes its fractional seat presence, not a three-second boolean switch');
+assert.match(owner, /ring\.setAerial\(mobile \? 1 : ringSeatLevel\)/,
+  'the live branch passes its fractional handoff, not a three-second boolean switch');
+const expression = owner.match(/ringSeatLevel = (normalSeatLevel[^;]+);/)[1];
+const level = new Function('normalSeatLevel', 'ringSeatHold', 'seatRetirement', `return ${expression}`);
+assert.equal(level(.4, 1, 0), .4, 'ascent keeps the live seat fraction');
+assert.equal(level(.4, 1, 1), 1, 'away retirement holds old proxies hidden');
+assert.equal(level(.4, 1, .5), .7, 'Purpose retarget releases the hold continuously');
+assert.match(owner, /sky\.setOriginalRingPresence\(mobile \? 0 : 1 - ringSeatLevel\)/,
+  'far spores see the actual original ring representation');
 console.log('PASS ring handoff: continuous tissue/glow amplitude, zero-light hide, reversible/mobile endpoints, shared ownership preserved.');

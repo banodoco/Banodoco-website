@@ -556,6 +556,7 @@ const dissolveURL = new URL('../journey/lib/body-dissolve.js', import.meta.url).
 let colonySource = readFileSync(new URL('../journey/manifesto/colony.js', import.meta.url),'utf8')
   .replace("'three'", JSON.stringify(threeURL)).replace("'./pose.js'", JSON.stringify(poseURL))
   .replace("'../lib/body-dissolve.js'", JSON.stringify(dissolveURL))
+  .replace("'./retirement.js'", JSON.stringify(new URL("../journey/manifesto/retirement.js", import.meta.url).href))
   .replace("import { groundY, makeRng } from '../chapters/final/world.js';", 'const groundY = () => 0; const makeRng = () => { let n = 19; return () => ((n = (Math.imul(n,1664525)+1013904223)>>>0)/4294967296); };');
 const {createAerialColony} = await import('data:text/javascript;base64,'+Buffer.from(colonySource).toString('base64'));
 const stem = new THREE.Group(), cap = new THREE.Group(), bend = new THREE.Group(); bend.add(cap);

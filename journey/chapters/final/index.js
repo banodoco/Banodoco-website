@@ -1250,6 +1250,7 @@ export function createFinal(sceneApi) {
   // rendered reveal on entry; a reversible scalar owns it until hand-back.
   // Normal Final remains camera-X-pure whenever this explicit lease is null.
   let manifesto = null;
+  let ringSeatLevel = 0, ringSeatHold = 0, ringSeatRetirement = 0;
 
   sceneApi.addAnimator('journey-final', (t, dt) => {
     groundDeparture.step(dt);
@@ -1579,6 +1580,7 @@ export function createFinal(sceneApi) {
       // hide the old rim-only batch so no mushroom is drawn twice.
       ring.setAerial(mobile);
       sky.setPurposeAerial(mobile);
+      sky.setOriginalRingPresence(mobile ? 0 : 1);
       aerial.setPurpose(mobile ? eff : 0, uniforms.uPullRaw.value,
         uniforms.uFogNear.value, uniforms.uFogFar.value);
     }
@@ -1674,7 +1676,7 @@ export function createFinal(sceneApi) {
        landing frame, so a descent onto the hero sank through a fully lit
        fairy ring that then vanished on touchdown. The baseline now fades with
        the descent instead; a Return to Purpose keeps it at 1. */
-    setManifesto(progress, seconds = 0, from = null, aspect = 1.6, seats = 1, stay = 1) {
+    setManifesto(progress, seconds = 0, from = null, aspect = 1.6, seats = 1, stay = 1, retreat = false, seatRetreat = 0) {
       if (from) aerial.prepare(from, aspect);
       const mobile = window.innerWidth <= 620 && window.innerHeight > window.innerWidth;
       const base = manifesto ? manifesto.amount : (group.visible ? uniforms.uAmount.value : 0);
@@ -1682,14 +1684,23 @@ export function createFinal(sceneApi) {
       // Mobile already presents these same detailed background instances.
       // Keep them throughout the branch instead of crossfading to old proxies.
       const seatAmount = mobile ? held + (1 - held) * (progress ?? 0) : seats;
-      aerial.setSeatLight(seatAmount);
+      const seatRetirement = progress === null ? 0 : Math.max(0, Math.min(1, seatRetreat));
+      aerial.setSeatLight(seatAmount, seatRetirement);
       sky.setPurposeAerial(false);
-      sky.setAerialSeatAmount(progress === null ? 0 : seatAmount);
-      aerial.set(progress ?? 0, sceneApi.scene.fog.near, sceneApi.scene.fog.far, seconds);
+      sky.setAerialSeatAmount(progress === null ? 0 : seatAmount, seatRetirement);
+      aerial.set(progress ?? 0, sceneApi.scene.fog.near, sceneApi.scene.fog.far, seconds, retreat);
       // The original ring recedes continuously as its aerial replacements
       // arrive, and returns on the same seat clock during descent. Mobile
       // keeps the detailed aerial representation throughout Purpose.
-      ring.setAerial(mobile ? 1 : progress !== null ? seats : 0);
+      // An away flight retires the field, rather than handing its aerial
+      // seats back to the low-detail ring. The existing eased stay also
+      // releases this hold continuously when redirected back to Purpose.
+      if (seatRetirement > 0 && ringSeatRetirement === 0) ringSeatHold = ringSeatLevel;
+      const normalSeatLevel = progress !== null ? seats : 0;
+      ringSeatLevel = normalSeatLevel + (ringSeatHold - normalSeatLevel) * seatRetirement;
+      ringSeatRetirement = seatRetirement;
+      ring.setAerial(mobile ? 1 : ringSeatLevel);
+      sky.setOriginalRingPresence(mobile ? 0 : 1 - ringSeatLevel);
       if (progress === null) {
         if (manifesto) {
           shownPull = manifesto.shownPull;

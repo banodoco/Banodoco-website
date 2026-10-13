@@ -4,6 +4,7 @@ import { attachManifestoLinkTooltip } from '../../manifesto-link-tooltip.js';
 import { createHeroBodyFogClaim } from '../chapters/hero-body-fog.js';
 import { claimInput, releaseInput } from '../ownership.js';
 import { createReturnFlight, sampleReturnFlight, returnVelocity } from './return-flight.js';
+import { createEntryFlight, sampleEntryFlight } from './entry-flight.js';
 import { applyCameraRoll } from '../camera-roll.js';
 import { attachManifestoNote } from '../../manifesto-note.js';
 import { CONTENT } from '../../content/content.js';
@@ -248,6 +249,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   let returnStart = 0;
   let returnK = 0;          // the descent's own clock, 0 -> 1
   let returnFlight = null, flightStartK = 0;
+  let entryFlight = null;
   let presentedPose = null, presentedVelocity = null;
   let returnRate = 1;       // per second; slowed by a late retarget
   // A destination pressed mid-descent bends the fall toward it rather than
@@ -276,10 +278,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   // `from`), and landW blends the descent from one destination to the other.
   let landing = null;
   let landW = 0;
-  // ...and it may DEPART from somewhere other than its anchor: opened from
-  // another section, the flight is still authored from Purpose's rest pose
-  // (`from`, where the colony is planned), and the camera eases off the pose
-  // it was actually holding (`depart`) over the opening seconds.
+  // Non-Purpose entries fly from the displayed frame into a future frame
+  // of the aerial ascent. Keep the departure's fog during the opening;
+  // Purpose remains the colony's spatial anchor, not a camera waypoint.
   let depart = null;
   let departW = 0;
   let departAtReturn = 0;
@@ -353,6 +354,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       fogNear0 += (depart.fogNear - fogNear0) * departW;
       fogFar0 += (depart.fogFar - fogFar0) * departW;
     }
+    if (entryFlight && direction >= 0 && elapsed < entryFlight.seconds) {
+      const flight = sampleEntryFlight(entryFlight, elapsed);
+      for (const key of ['position', 'target', 'fov', 'roll', 'up', 'viewAngles']) pose[key] = flight[key];
+    }
     if (returnFlight && direction < 0) {
       const flight = sampleReturnFlight(returnFlight,
         (returnK - flightStartK) / Math.max(1e-9, 1 - flightStartK));
@@ -395,7 +400,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     // Purpose's own return retains its destination through the field lease.
     const stay = stay0 + (stayTo - stay0) * smoother(retargetW() / 0.4);
     const fieldPresence = direction < 0 ? descentFieldPresence(returnK) : 1;
-    if (field) field.setManifesto(pose.field * fieldPresence, value * CAMERA_SECONDS, null, camera.aspect, seatLight, stay);
+    if (field) field.setManifesto(pose.field * fieldPresence, value * CAMERA_SECONDS, null, camera.aspect, seatLight, stay, direction < 0, direction < 0 ? 1 - stay : 0);
   }
   /* NOTHING HERE SCROLLS. Every line is laid out from the start (unshown
      lines are only uninked), so a new line never reflows the ones above it.
@@ -605,7 +610,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   }
   /** Open the branch. `anchor` (a pose plus its fog) is the rest the flight
    *  is authored from when the camera is not already standing on it;
-   *  `departFrom` is the presented pose the camera eases off. */
+   *  `departFrom` is the presented pose where the entry flight begins. */
   function begin({ anchor = null, departFrom = null } = {}) {
     if (active) return;
     active = true;
@@ -639,6 +644,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     from.fieldCenter = mobileFieldCenter(field?.seats, from.target);
     depart = anchor && !reduceMotion.matches ? here : null;
     departW = depart ? 1 : 0;
+    entryFlight = depart ? createEntryFlight(here, from, camera.aspect) : null;
     landing = null; landW = 0;
     returnFlight = null; flightStartK = 0;
     presentedPose = here; presentedVelocity = null;
@@ -723,7 +729,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     // look-at targets can cancel their horizontal directions at the pole.
     flightStartK = returnK;
     returnFlight = createReturnFlight(presentedPose || capture(), landing,
-      extendedRemaining, presentedVelocity);
+      extendedRemaining, presentedVelocity, { rootApproach: landing.position.y < 0 });
     return true;
   }
   function returnTo(onFinish = null, { land = null } = {}) {
@@ -745,8 +751,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     returnStart = u;
     returnK = 0;
     returnRate = 1 / (land ? awaySecondsFrom(returnStart) : returnSecondsFrom(returnStart));
-    returnFlight = land
-      ? createReturnFlight(presentedPose || capture(), landing, 1 / returnRate, presentedVelocity) : null;
+    returnFlight = land || (entryFlight && elapsed < entryFlight.seconds)
+      ? createReturnFlight(presentedPose || capture(), landing, 1 / returnRate, presentedVelocity, { rootApproach: landing.position.y < 0 }) : null;
     flightStartK = 0;
     // The reading shade follows the whole fall; the words have their own
     // shorter departure in site.css, matching ordinary section copy.
@@ -775,7 +781,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     controls.target.set(rest.target.x, rest.target.y, rest.target.z);
     camera.fov = rest.fov;
     landing = null; landW = 0; landPrev = null; landRe = 0; stay0 = 1; stayTo = 1;
-    returnFlight = null; presentedPose = null; presentedVelocity = null;
+    returnFlight = null; entryFlight = null; presentedPose = null; presentedVelocity = null;
     depart = null; departW = 0; departAtReturn = 0;
     camera.far = from.far;
     camera.updateProjectionMatrix();

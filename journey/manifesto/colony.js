@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { COLONY_RETIREMENT_GLSL } from './retirement.js';
 import { BODY_DISSOLVE_GLSL } from '../lib/body-dissolve.js';
 import { aerialPlacements, planAerialReveals, manifestoPose, CAMERA_SECONDS } from './pose.js';
 import { groundY, makeRng } from '../chapters/final/world.js';
@@ -108,11 +109,11 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   const group = new THREE.Group();
   group.name = 'manifesto-aerial-colony';
   group.visible = false;
-  const gate = { value: 0 };
+  const gate = { value: 0 }, retiring = { value: 0 }, retirementStart = { value: 1 };
   const clock = { value: 0 }, portrait = { value: 0 };
   // the ring's own seats: 1 while aloft, easing to 0 through a Return while
   // Final's original ring comes back underneath them (see setSeatLight)
-  const seatLight = { value: 1 };
+  const seatLight = { value: 1 }, seatRetiring = { value: 0 }, seatRetirementStart = { value: 1 };
   // Per-body arrival windows in BODY order (the links read them that way);
   // the instanced attributes below are written in ARRIVAL order instead.
   const plan = new Float32Array(bodies.length * 2);
@@ -142,7 +143,11 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   // vertex cost. prepare() sorts the instances by arrival start, so the
   // bodies that can be lit form a prefix. set() then submits only the
   // conservative in-view subset of that prefix, on phones and desktop.
-  const header = `
+  const seatRetirementGLSL = COLONY_RETIREMENT_GLSL.replaceAll('uColonyRetiring', 'uColonySeatRetiring')
+    .replaceAll('uColonyRetirementStart', 'uColonySeatRetirementStart').replaceAll('colonyPresence', 'colonySeatPresence');
+  const header = `${COLONY_RETIREMENT_GLSL}
+${seatRetirementGLSL}
+
     attribute vec4 aColonyPose;
     attribute vec2 aColonyTone;
     attribute vec2 aColonyReveal;
@@ -198,8 +203,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
        Hannah: "random lag when I move ... from Purpose into Manifesto"). */
     if (src.isMeshBasicMaterial) { material.opacity = 1; material.transparent = false; material.clippingPlanes = null; }
     // light compensation for the thinning (1 for the unthinned opaque bodies)
-    const own = { uniforms: { uColonyFrame: { value: frame }, uColonyGate: gate, uColonySeconds: clock, uColonyPortrait: portrait,
-      uColonyGain: { value: stride }, uColonySeatLight: seatLight } };
+    const own = { uniforms: { uColonyFrame: { value: frame }, uColonyGate: gate, uColonyRetiring: retiring, uColonyRetirementStart: retirementStart, uColonySeconds: clock, uColonyPortrait: portrait,
+      uColonyGain: { value: stride }, uColonySeatLight: seatLight, uColonySeatRetiring: seatRetiring, uColonySeatRetirementStart: seatRetirementStart } };
     function vertex(shader) {
       return (src.isMeshBasicMaterial ? 'varying vec3 vBodyDissolvePosition;\n' : '') + header + shader
         .replace(/\bmodelViewMatrix\b/g, '(modelViewMatrix * colonyMatrix())')
@@ -215,7 +220,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
           // opens (ring.setAerial). They must not ride the colony's fade-in
           // gate, or they go dark through the first seconds of the flight —
           // and the last seconds of the Return — and pop back on landing.
-          vColonyFade = aColonyReveal.x < 0. ? uColonySeatLight : uColonyGate * colonyArrival();
+          vColonyFade = aColonyReveal.x < 0. ? colonySeatPresence(uColonySeatLight, aColonyPose.xz) : colonyPresence(uColonyGate, aColonyPose.xz) * colonyArrival();
           vColonyLight = uColonyGain * aColonyTone.y * vColonyFade * mix(0.60,1.,quiet);`)
         .replace('float sz = psize', 'float sz = aColonyPose.w * psize')
         .replace('vFade = mix(1.0, 1.0 - exp(-gap), uFadeOn);', 'vFade = mix(1.0, max(0.20, 1.0 - exp(-gap)), uFadeOn);');
@@ -405,6 +410,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   ground.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const links = new THREE.BufferAttribute(new Float32Array(owners.length * 2), 4);
   ground.setAttribute('aColonyLink', links);
+  ground.setAttribute('aColonyOwners', new THREE.Float32BufferAttribute(owners.flatMap(i => i < 0 ? [0, 0] : [bodies[i].x, bodies[i].z]), 4));
   ground.setAttribute('aColonyPath', new THREE.Float32BufferAttribute(paths, 2));
   const groundBatches = [];
   const batchBox = new THREE.Box3(), batchPoint = new THREE.Vector3();
@@ -422,7 +428,11 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
   groundMat.onBeforeCompile = shader => {
     shader.uniforms.uColonySeconds = clock;
-    shader.vertexShader = `attribute vec4 aColonyLink; attribute vec2 aColonyPath; uniform float uColonySeconds; varying float vColonyLink;
+    shader.uniforms.uColonyRetiring = retiring;
+    shader.uniforms.uColonyRetirementStart = retirementStart;
+    shader.uniforms.uColonyGate = gate;
+    shader.vertexShader = `${COLONY_RETIREMENT_GLSL}
+ attribute vec4 aColonyOwners; uniform float uColonyGate; attribute vec4 aColonyLink; attribute vec2 aColonyPath; uniform float uColonySeconds; varying float vColonyLink;
       float linkStart(vec2 window) { return window.x < 0. ? -1e3 : window.x; }
 ` + shader.vertexShader
       .replace('void main() {', `void main() {
@@ -435,7 +445,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         float passed = uColonySeconds - (max(sa, sb) - 0.5 * travel) - along * travel;
         float grown = smoothstep(0., 0.2, passed);
         float flash = passed > 0. ? exp(-passed / 1.3) : 0.;
-        vColonyLink = grown * (1. + 4. * flash);`);
+        vColonyLink = grown * (1. + 4. * flash) * min(colonyPresence(uColonyGate, aColonyOwners.xy), colonyPresence(uColonyGate, aColonyOwners.zw));`);
     shader.fragmentShader = 'varying float vColonyLink;\n' + shader.fragmentShader
       .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb *= vColonyLink;');
   };
@@ -496,8 +506,8 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   });
   const sporeDraw = indexedBatches(sporeGeo, sporeBatches);
   const sporeMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: time, uColonySeconds: clock, uColonyGate: gate, fogNear, fogFar },
-    vertexShader: /* glsl */ `
+    uniforms: { uTime: time, uColonySeconds: clock, uColonyGate: gate, uColonyRetiring: retiring, uColonyRetirementStart: retirementStart, fogNear, fogFar },
+    vertexShader: /* glsl */ `${COLONY_RETIREMENT_GLSL}
       attribute vec4 aSpore;       // seed, period, phase, cohort (0 drop, 1 lofted)
       attribute vec2 aSporeBody;   // the owner's scale, yaw
       attribute vec2 aSporeGate;   // the owner's arrival window
@@ -544,7 +554,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         float depth = -mv.z;
         float fogF = clamp((fogFar - depth) / max(1., fogFar - fogNear), 0., 1.);
         float tw = 0.8 + 0.2 * sin(uTime * 1.4 + aSpore.x * 7.);
-        vAlpha = life * glow * owner * uColonyGate * fogF * tw * 0.9;
+        vAlpha = life * glow * owner * colonyPresence(uColonyGate, position.xz) * fogF * tw * 0.9;
         vColor = mix(vec3(1.0, 0.70, 0.36), vec3(1.0, 0.86, 0.60), h2);
         // one apparent size at any depth: a fixed pixel band
         gl_PointSize = clamp(0.22 * 300. / max(depth, 1.), 1.6, 2.6) * mix(1., 0.8, 1. - glow);
@@ -656,6 +666,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
      * Manifesto field. Same hero buffers, same materials, visible instances
      * only. prepare() restores the full branch schedule on Manifesto entry. */
     setPurpose(amount, pull, near, far) {
+      retiring.value = 0; seatRetiring.value = 0;
       if (amount <= .001 && !purposeMode) return;
       if (!purposeMode) {
         purposeMode = true;
@@ -685,8 +696,15 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     /** QA: how many bodies each tier holds on the prepared flight. */
     get lod() { return { near: tiers[0].starts.length, far: tiers[1].starts.length }; },
     get drawn() { return { near: tiers[0].drawn, far: tiers[1].drawn }; },
-    setSeatLight(v) { seatLight.value = Math.max(0, Math.min(1, v)); },
-    set(progress, near, far, seconds) {
+    setSeatLight(v, retreat = false) {
+      const next = Math.max(0, Math.min(1, v));
+      if (retreat && !seatRetiring.value) seatRetirementStart.value = Math.max(next, seatLight.value);
+      seatRetiring.value = Math.max(0, Math.min(1, Number(retreat)));
+      seatLight.value = next;
+    },
+    set(progress, near, far, seconds, retreat = false) {
+      if (retreat && !retiring.value) retirementStart.value = Math.max(progress, gate.value);
+      retiring.value = retreat ? 1 : 0;
       /* The ring's own seats stand in for Final's ring from the branch's
          first frame (Final hides its ring lines the moment it opens), so
          the colony is drawn whenever they are lit — not only once the
@@ -711,7 +729,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
           for (const geometry of tier.layers) geometry.instanceCount = count;
         }
       }
-      groundMat.opacity = progress * 0.07;
+      groundMat.opacity = 0.07;
       fogNear.value = near; fogFar.value = far;
     },
   };

@@ -123,6 +123,7 @@ import { scaleFor } from './species.js';
 import { bodyVariation, varyPoint } from './variation.js';
 import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { CAMERA } from './camera.js';
+import { COLONY_RETIREMENT_GLSL } from '../../manifesto/retirement.js';
 
 // Final rest camera (build-time composition anchor). Read from the chapter's
 // own camera leg — the 'final-rest' hold key — so it mirrors the director's
@@ -179,7 +180,9 @@ const SPORE_GAIN = 2.4;
 
 export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount) {
   const aerialSeatAmount = { value: 0 };
+  const seatRetiring = { value: 0 }, seatRetirementStart = { value: 1 };
   const purposeAerial = { value: 0 };
+  const originalRingPresence = { value: 1 };
   const rand = makeRng(88417);
   const gauss = () => gaussOf(rand);
   const group = new THREE.Group();
@@ -866,14 +869,17 @@ export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount
       uniforms: {
         uTime: uniforms.uTime, uPull: uniforms.uPull, uRevIn: uniforms.uRevIn,
         uBodyAmount: bodyAmount, uAerialSeatAmount: aerialSeatAmount,
+        uColonyRetiring: seatRetiring, uColonyRetirementStart: seatRetirementStart,
         uPurposeAerial: purposeAerial, uPullRaw: uniforms.uPullRaw,
+        uOriginalRingPresence: originalRingPresence,
         uFogNear: uniforms.uFogNear, uFogFar: uniforms.uFogFar,
       },
       vertexShader: /* glsl */ `
+        ${COLONY_RETIREMENT_GLSL}
         attribute vec4 aShed;    // seed, period, phase, cohort (0 drop, 1 lofted)
         attribute float aBody;   // the owner's scale
         attribute vec3 aGate;    // reveal threshold, mode, arrival threshold
-        uniform float uTime, uPull, uPullRaw, uRevIn, uFogNear, uFogFar, uBodyAmount, uAerialSeatAmount, uPurposeAerial;
+        uniform float uTime, uPull, uPullRaw, uRevIn, uFogNear, uFogFar, uBodyAmount, uAerialSeatAmount, uPurposeAerial, uOriginalRingPresence;
         varying float vAlpha;
         varying vec3 vColor;
         float hash(float n) { return fract(sin(n) * 43758.5453); }
@@ -916,7 +922,8 @@ export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount
           // These seats can be drawn by the original ring or its aerial
           // replacement during their crossfade. Either living parent can
           // carry the plume; the ambient sky cannot keep an orphan alight.
-          float owner = max(reveal * uBodyAmount, uAerialSeatAmount);
+          float owner = max(reveal * uBodyAmount * max(uOriginalRingPresence, uPurposeAerial),
+            colonyPresence(uAerialSeatAmount, position.xz));
           vAlpha = life * glow * owner * fogF * tw;
           vColor = mix(vec3(1.0, 0.70, 0.36), vec3(1.0, 0.86, 0.60), h2);
           // one apparent size at any depth: the colony's pixel band
@@ -964,8 +971,15 @@ export function createFinalSky(sceneApi, uniforms, bodyAmount = uniforms.uAmount
       sprites: sprites.map(s => ({ y: s.spr.position.y, drift: s.drift })),
     },
     addHorizonPlumes,
-    setAerialSeatAmount(amount) { aerialSeatAmount.value = Math.max(0, Math.min(1, amount)); },
+    setAerialSeatAmount(amount, retreat = 0) {
+      const next = Math.max(0, Math.min(1, amount));
+      const mode = Math.max(0, Math.min(1, retreat));
+      if (mode > 0 && !seatRetiring.value) seatRetirementStart.value = Math.max(next, aerialSeatAmount.value);
+      seatRetiring.value = mode;
+      aerialSeatAmount.value = next;
+    },
     setPurposeAerial(on) { purposeAerial.value = on ? 1 : 0; },
+    setOriginalRingPresence(amount) { originalRingPresence.value = Math.max(0, Math.min(1, amount)); },
     /** sprite fade + slow lateral mist drift (sprites sit outside the
      *  shared shader uniforms) */
     update(t, amount) {
