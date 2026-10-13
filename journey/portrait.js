@@ -40,10 +40,6 @@
 
 import { restProgress, startOf } from './route.js';
 import { smooth01 } from './lib/ease.js';
-import {
-  PHONE_FINAL_SCENE_LIFT_PX,
-  cameraWorldUnitsForPixels,
-} from './layout/final-composition.js';
 import { CONNECT_VIEW } from '../flags.js';
 
 /* ------------------------------------------------------------------ */
@@ -662,46 +658,19 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     pose.target.y += connectLift;
   }
 
-  // Final's phone composition needs a literal CAMERA move, independent of
-  // the aspect field above. The previous version folded this into KEYS and
-  // then tried to cancel it through the tablet aspect band. That made the
-  // requested lift weak or invisible on short/wide phones as their aspect
-  // entered the tablet ramp. Width is the actual design contract used by the
-  // phone typography (<= 620px), so use it here too. Moving eye and target by
-  // the same amount is a pure vertical truck: foreground + background colony
-  // rise together while pitch, scale, diagonal and reveal drivers stay exact.
-  // The first taste pass lifted the colony 1.45 units, leaving a broad empty
-  // ground band between it and Final's lower-left copy. The epilogue wants the
-  // opposite relationship on phones: the field should settle down over the
-  // heading and loosely wrap its top edge. A small downward camera truck puts
-  // the near stems and the right-hand cap back into that band without changing
-  // their scale, the cutaway diagonal, or any camera-pure reveal threshold.
+  // Purpose on phones is a landscape seen from above: a real lift and
+  // downward aim, not another vertical truck of the shallow desktop view.
+  // Preserve X/Z so the colony's camera-position reveal schedule stays exact;
+  // blend through the same route field used by every navigation destination.
   if (viewportWidth <= 620 && aspect < 1) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
-    // A gentle clockwise scene tilt; the DOM copy remains upright.
+    const horizontal = Math.hypot(pose.target.x - pose.pos.x, pose.target.z - pose.pos.z);
+    const aerialY = pose.target.y + horizontal; // 45 degrees down at rest.
+    pose.pos.y += (aerialY - pose.pos.y) * finalW;
+    pose.fov += (58 - pose.fov) * finalW;
     pose.roll = -5 * Math.PI / 180 * finalW;
-    const legacyTruck = 0.35 * finalW;
-    pose.pos.y += legacyTruck;
-    pose.target.y += legacyTruck;
-
-    // Move the world picture upward independently of Final's fixed copy and
-    // Purpose navigation. Eye and target move together, preserving pitch,
-    // scale and every camera-pure reveal threshold; only scene framing moves.
-    const distance = Math.hypot(
-      pose.target.x - pose.pos.x,
-      pose.target.y - pose.pos.y,
-      pose.target.z - pose.pos.z,
-    );
-    const finalLiftWorld = cameraWorldUnitsForPixels({
-      pixels: PHONE_FINAL_SCENE_LIFT_PX,
-      distance,
-      fov: pose.fov,
-      viewportHeight: viewportWidth / aspect,
-    }) * finalW;
-    pose.pos.y -= finalLiftWorld;
-    pose.target.y -= finalLiftWorld;
   }
   return pose;
 }
