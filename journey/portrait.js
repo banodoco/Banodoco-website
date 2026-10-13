@@ -660,12 +660,20 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
 
   // Purpose on phones is a landscape seen from above: a real lift and
   // downward aim, not another vertical truck of the shallow desktop view.
-  // Preserve X/Z so the colony's camera-position reveal schedule stays exact;
+  // Preserve X so the colony's camera-position reveal schedule stays exact;
   // blend through the same route field used by every navigation destination.
   if (viewportWidth <= 620 && aspect < 1) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
+    // Aim right across the larger field, with lateral parallax moving the
+    // near foreground cap out of the lower-right navigation area.
+    const turn = 12 * Math.PI / 180 * finalW;
+    const dx = pose.target.x - pose.pos.x, dz = pose.target.z - pose.pos.z;
+    pose.target.x = pose.pos.x + dx * Math.cos(turn) + dz * Math.sin(turn);
+    pose.target.z = pose.pos.z + dz * Math.cos(turn) - dx * Math.sin(turn);
+    pose.pos.z -= 4 * finalW;
+    pose.target.z -= 4 * finalW;
     const horizontal = Math.hypot(pose.target.x - pose.pos.x, pose.target.z - pose.pos.z);
     const aerialY = pose.target.y + horizontal; // 45 degrees down at rest.
     pose.pos.y += (aerialY - pose.pos.y) * finalW;

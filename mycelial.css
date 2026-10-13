@@ -599,13 +599,12 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
     width: 100%;
     max-width: none;
     text-align: center;
-    bottom: auto;
-    /* Centre the complete copy block between header bottom and the upper
-       edge of Purpose's navigation fork, retaining its independent fade. */
-    top: calc((4.2rem + 44px + 100% - var(--nav-centre-bottom)
-      - var(--purpose-rail-lift-max) - var(--purpose-up-branch)
-      - var(--nav-major) / 2) / 2);
-    translate: 0 -50%;
+    /* Lower in the landscape, with the full block clear of the upper
+       Purpose branch even when phone browser chrome shortens the view. */
+    top: auto;
+    bottom: calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
+      + var(--purpose-up-branch) + var(--nav-major) / 2 + 16px);
+    translate: none;
   }
   .j-block[data-chapter="final"] .j-sub { margin-inline: auto; }
 }
