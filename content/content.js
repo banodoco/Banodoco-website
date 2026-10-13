@@ -64,7 +64,7 @@ export const CONTENT = {
     // Paragraphs drive the same text in the animated and static experiences.
     lines: [
       "Spores on the wind. Threads through the soil. Food on the forest floor. Plants, fungi and animals are bound together, each giving what another needs. Energy from the sun, nutrients from the soil, passage to new ground.",
-      "Our tools have always shaped how we think and what we create, so each of us, and all of us, should have a hand in making them. We therefore believe in open models and open tools, shaped and reshaped by thousands of hands. Together, those hands push what the technology can do and what we can do with it.",
+      "We want AI and humanity to grow together like this. Our tools have always shaped how we think and what we create, so each of us, and all of us, should have a hand in making them. We believe in open models and open tools, shaped and reshaped by thousands of hands.",
       "A painter wants to see her landscapes under snow, so she turns years of her work into a LoRA for an open model. Elsewhere, an engineer builds a workshop for sculpting in 3D. A year later, in that workshop, a stranger sculpts her paintings into a garden you can walk through.",
       "Some dream of endless content and ever smarter machines. We dream of a world that bustles with this kind of creative life. Artists, technologists and models, tangled together, every finished work the start of someone else's.",
       "Mycelial will be the threads beneath it all, seeding, nourishing, and connecting all that grows."
