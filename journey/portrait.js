@@ -651,7 +651,11 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
 
   if (viewportWidth <= 620 && aspect < 1) {
     const connectW = phoneConnectWeight(p);
-    const connectLift = phoneConnectTargetY(viewportWidth) * connectW;
+    // Give the cap a little breathing room beneath Connect's copy on
+    // shorter phones. Use the existing arrival/exit envelope and translate
+    // eye plus aim together, preserving its camera-driven reveal timing.
+    const shortPhoneLift = 1.25 * smooth01((812 - viewportWidth / aspect) / 145);
+    const connectLift = (phoneConnectTargetY(viewportWidth) + shortPhoneLift) * connectW;
     // Eye and target by the SAME amount: forward stays bit-exact, so
     // Connect's camera-pure resolve is the ablation's. See the note above.
     pose.pos.y += connectLift;
