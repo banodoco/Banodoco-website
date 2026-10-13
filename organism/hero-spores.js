@@ -1535,6 +1535,7 @@ function createGround(view, reduced) {
   const glowC0 = new Float32Array(4 * 4);
   const glowC1 = new Float32Array(4 * 4);
   const glowStops = new Float32Array(4 * 2);
+  const glowWave = new Float32Array(4);
   const glowBaseRadii = new Float32Array(LANDING_SITES.length * 2);
   const glowO = new Float32Array(4);   // the per-frame opacity, as the divs had
   const premul = (out, at, r, g, b, a) => {
@@ -1596,7 +1597,8 @@ function createGround(view, reduced) {
       glowBaseRadii.set([w, h], s * 2);
       premul(glowC0, k * 4, 255, 196, 106, a);
       premul(glowC1, k * 4, 224, 146, 60, 0.10);
-      glowStops.set([0.48, 0.72], k * 2);
+      glowWave[k] = desktopPulse ? 1 : 0;
+      glowStops.set([desktopPulse ? 0.62 : 0.48, 0.72], k * 2);
     }
   }
   reframeGlow(view);
@@ -1732,7 +1734,7 @@ function createGround(view, reduced) {
 
   return {
     pos, lit, nV, projectAll, reframeGlow, relight, wake, state,
-    glowEll, glowC0, glowC1, glowStops, glowO, glowFrame,
+    glowEll, glowC0, glowC1, glowStops, glowWave, glowO, glowFrame,
     get gone() { return state.gone; },
     /** True while the glows still have light to give — the layer can only
      *  be taken down after this goes false. */
@@ -1796,7 +1798,8 @@ uniform vec2 uSize;     // drawing buffer, device px
 uniform vec4 uEll;      // centre (x, y) and radii (rx, ry) as fractions of the frame, y down
 uniform vec4 uC0;       // first stop, premultiplied
 uniform vec4 uC1;       // middle stop, premultiplied (only when uStops.x > 0)
-uniform vec3 uStops;    // middle stop's position (0 = none), the end stop's, opacity
+uniform vec3 uStops;    // middle stop / wave crest, end stop, opacity
+uniform float uWave;    // 1 = hollow traveling front, 0 = original filled glow
 void main() {
   vec2 p = vec2(gl_FragCoord.x / uSize.x, 1.0 - gl_FragCoord.y / uSize.y);
   float t = length((p - uEll.xy) / uEll.zw);
@@ -1804,6 +1807,13 @@ void main() {
     ? (t < uStops.x ? mix(uC0, uC1, t / uStops.x)
                     : mix(uC1, vec4(0.0), clamp((t - uStops.x) / (uStops.y - uStops.x), 0.0, 1.0)))
     : mix(uC0, vec4(0.0), clamp(t / uStops.y, 0.0, 1.0));
+  if (uWave > 0.5) {
+    float crest = uStops.x;
+    // A soft trailing edge clears the center as the thin front travels.
+    float wave = smoothstep(crest - 0.16, crest, t)
+      * (1.0 - smoothstep(crest, uStops.y, t));
+    c = uC0 * wave;
+  }
   gl_FragColor = c * uStops.z;
 }`;
 
@@ -1843,6 +1853,7 @@ function createPreludeCore(gl, F) {
     c0: gl.getUniformLocation(progGlow, 'uC0'),
     c1: gl.getUniformLocation(progGlow, 'uC1'),
     stops: gl.getUniformLocation(progGlow, 'uStops'),
+    wave: gl.getUniformLocation(progGlow, 'uWave'),
   };
   const buffers = { frame: gl.createBuffer(), color: gl.createBuffer(), meta: gl.createBuffer() };
   const lineBuffers = { frame: gl.createBuffer(), color: gl.createBuffer() };
@@ -1993,6 +2004,7 @@ function createPreludeCore(gl, F) {
       gl.uniform4f(glowUniforms.c0, c0[k4], c0[k4 + 1], c0[k4 + 2], c0[k4 + 3]);
       gl.uniform4f(glowUniforms.c1, c1[k4], c1[k4 + 1], c1[k4 + 2], c1[k4 + 3]);
       gl.uniform3f(glowUniforms.stops, ground.glowStops[k * 2], end, o);
+      gl.uniform1f(glowUniforms.wave, ground.glowWave[k]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (!first) gl.disable(gl.SCISSOR_TEST);

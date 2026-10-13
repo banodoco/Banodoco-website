@@ -50,6 +50,8 @@ const desktopView = { mode: 'desktop', camX: .15, camY: 2, camZ: 9,
   tgtX: 0, tgtY: 1, tanHalfFov: .5, aspect: 1.6 };
 for (const strikeAt of [.2, .4, .55, 2]) {
   const ground = actual.createGround(desktopView, false);
+  assert.equal(ground.glowWave[0], 0, 'background wash keeps its original shader');
+  assert.equal(ground.glowWave[1], 1, 'desktop contact uses a hollow moving wave');
   const normal = ground.glowEll.slice();
   ground.wake(0, 0); ground.relight(strikeAt);
   const before = ground.glowEll.slice();
@@ -71,3 +73,6 @@ const contact = actual.createGround(desktopView, false);
 contact.wake(0, 0); contact.relight(.5);
 assert.equal(contact.glowO[1], 0, 'contact pulse has spent its light before a delayed growth handoff');
 console.log('PASS single contact light fades continuously through early or late growth; no second start');
+
+const mobileGround = actual.createGround({ ...desktopView, mode: 'mobile' }, false);
+assert.ok(mobileGround.glowWave.every(value => value === 0), 'mobile retains its original filled-glow shader');
