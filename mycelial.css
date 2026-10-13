@@ -603,7 +603,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
        Purpose branch even when phone browser chrome shortens the view. */
     top: auto;
     bottom: calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
-      + var(--purpose-up-branch) + var(--nav-major) / 2 + 16px);
+      + var(--purpose-up-branch) + var(--nav-major) / 2 + 8px);
     translate: none;
   }
   .j-block[data-chapter="final"] .j-sub { margin-inline: 0; }
