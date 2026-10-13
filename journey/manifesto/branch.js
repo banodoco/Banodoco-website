@@ -1,3 +1,4 @@
+import { createManifestoFit } from './fit.js';
 import { manifestoLinks } from '../../content/manifesto-links.js';
 import { attachManifestoLinkTooltip } from '../../manifesto-link-tooltip.js';
 import { createHeroBodyFogClaim } from '../chapters/hero-body-fog.js';
@@ -202,6 +203,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
      it. Focus rests on the reading region itself. */
   const panel = root.querySelector('.j-manifesto-panel');
   document.body.appendChild(root);
+  const fitDesktop = createManifestoFit(root, panel, lines, lineEls);
+  const fitLoadedFont = () => { if (active && !root.hidden) fitDesktop(true); };
+  document.fonts?.addEventListener('loadingdone', fitLoadedFont);
   const wordCounts = sentences.map(s => s.trim().split(/\s+/).length);
   const lineSeconds = lineSecondsFor(wordCounts);
   const mobileSchedule = mobileReadingSchedule(lineSeconds, lastWordBeats);
@@ -378,6 +382,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
      it is two number compares. */
   let liftKey = '';
   function liftColumn() {
+    if (window.innerWidth > 720) {
+      lines.style.setProperty('--lift', '0px');
+      lines.classList.remove('is-lifted');
+      return;
+    }
     if (scrollReading) {
       lines.style.setProperty('--lift', '0px');
       lines.classList.remove('is-lifted');
@@ -423,7 +432,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     readingTopPadding = readingInsetRetired ? 0
       : Math.max(0, Math.max(24, (lines.clientHeight - first) / 2) - readingInsetConsumed);
     lines.style.setProperty('--reading-pad-top', `${readingTopPadding}px`);
-    lines.style.setProperty('--reading-pad-bottom', `${admittedLines === 1 ? Math.max(24, (lines.clientHeight - last) / 2) : 24}px`);
+    lines.style.setProperty('--reading-pad-bottom', `${admittedLines === 1 ? Math.max(24, (lines.clientHeight - last) / 2) : 12}px`);
   }
   // The opening inset centres the first paragraph, but is not permanent
   // scrollable content. Consume it as the reader moves past it, subtracting
@@ -515,10 +524,20 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   lines.addEventListener('scroll', onReadingScroll, { passive: true });
   // Font loading and flex reflow can change the reading box without changing
   // either the viewport or the number of revealed paragraphs.
-  const layoutObserver = new ResizeObserver(() => {
+  const refreshLayout = () => {
     liftKey = '';
-    if (active && !root.hidden) { liftColumn(); measureReadingPadding(); followParagraph('resize'); updateReadingEdges(); }
-  });
+    if (active && !root.hidden && scrollReading !== (window.innerWidth <= 720)) {
+      scrollReading = window.innerWidth <= 720;
+      root.classList.toggle('is-scroll-reading', scrollReading);
+      followEnabled = scrollReading && !reduceMotion.matches;
+      if (scrollReading) claimInput(panel, { modal: true }); else releaseInput(panel);
+      lineEls.forEach((line, i) => { line.hidden = scrollReading && i >= admittedLines; });
+      lines.scrollTop = 0;
+    }
+    if (active && !root.hidden) { fitDesktop(); liftColumn(); measureReadingPadding(); followParagraph('resize'); updateReadingEdges(); }
+  };
+  const layoutObserver = new ResizeObserver(refreshLayout);
+  window.addEventListener('resize', refreshLayout);
   // The content box shrinks/grows whenever we consume centering padding.
   // That is not a viewport resize: observing it rebases the easing every
   // frame and makes automatic scrolling hesitate against its own motion.
@@ -565,7 +584,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   function begin({ anchor = null, departFrom = null } = {}) {
     if (active) return;
     active = true;
-    scrollReading = window.innerWidth <= 720 || reduceMotion.matches;
+    scrollReading = window.innerWidth <= 720;
     root.classList.toggle('is-scroll-reading', scrollReading);
     const timedMobile = scrollReading && !reduceMotion.matches;
     readingStarts = timedMobile ? mobileSchedule.reveal : lineSeconds;
@@ -621,6 +640,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     document.body.classList.add('j-manifesto-open');
     root.hidden = false;
     root.classList.add('is-open');
+    fitDesktop(true);
     liftKey = '';
     liftColumn();
     measureReadingPadding();
@@ -880,6 +900,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     get shownLines() { return shownLines; },
     destroy() {
       layoutObserver.disconnect();
+      window.removeEventListener('resize', refreshLayout);
+      document.fonts?.removeEventListener('loadingdone', fitLoadedFont);
       note?.destroy();
       chapterLinks.forEach(({ hint }) => hint.destroy());
       releaseInput(panel);

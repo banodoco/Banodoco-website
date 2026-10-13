@@ -344,7 +344,7 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
     /* Clear the actual upper navigation circle, rather than reserving the
        old always-visible label and the empty space above its hit target. */
     --manifesto-reserve: calc(var(--nav-centre-bottom) + var(--purpose-rail-lift-max)
-      + var(--nav-major) * .95 + var(--nav-minor-ring-d) / 2 + 24px);
+      + var(--nav-major) * .95 + var(--nav-minor-ring-d) / 2 + 8px);
     align-items: flex-start;
   }
 }
@@ -636,7 +636,16 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
       + var(--purpose-up-branch) + var(--nav-major) / 2 + 8px);
     translate: none;
   }
-  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; max-width: 92%; }
+  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; max-width: 36ch; }
+  /* Names sit beside their branch rings; rail.js retains sole ownership
+     of their arrival/hover opacity on touch devices. */
+  .j-rail:not(.j-rail-column) .j-rail-slot.j-rail-purpose-child .j-rail-name,
+  .j-rail:not(.j-rail-column) .j-rail-slot.j-rail-purpose-child.j-rail-purpose-manifesto .j-rail-name {
+    left: calc(50% + var(--item-d) / 2 + 7px);
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translateY(-50%);
+  }
 }
 
 /* Mobile keeps the desktop reveal rhythm in one continuous native scroll
@@ -790,3 +799,17 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   pointer-events: none;
 }
 .manifesto-link-tooltip[hidden] { display: none; }
+
+/* Desktop fits the entire manuscript before any ink appears; never lift or
+   scroll away earlier paragraphs. Mobile retains its native reading surface. */
+@media (min-width: 721px) {
+  .j-manifesto .j-manifesto-line { font-size: var(--manifesto-fit-size, 17px); }
+  .j-manifesto .j-manifesto-lines {
+    font-size: var(--manifesto-fit-size, 17px);
+    gap: .55em;
+    overflow: hidden;
+    padding-block: 0;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}

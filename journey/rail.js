@@ -2521,7 +2521,10 @@ export function createRail({ onNav, ready = true } = {}) {
     const ownU = gatherU * gatherU * (3 - 2 * gatherU);
     const OWN_REACH_X = L.major * 2.1;
     const OWN_REACH_Y = L.major * 0.95;
-    const REST_X = -pitch / 2 + (-OWN_REACH_X + pitch / 2) * ownU;
+    // Phone branch names sit to the right of their rings. Give them eight
+    // pixels more edge clearance without moving the main row or gathered tree.
+    const labelAir = phonePurposeLabels.matches ? 8 * (1 - ownU) : 0;
+    const REST_X = -pitch / 2 + (-OWN_REACH_X + pitch / 2) * ownU - labelAir;
     const REST_Y = L.major * 1.1 + (OWN_REACH_Y - L.major * 1.1) * ownU;
     const childU = Math.max(0, Math.min(1, (treeU - 0.64) / 0.36));
     /* THE CHILDREN UNSTACK FROM UNDER PURPOSE (2026-10-04 — Hannah: arriving
