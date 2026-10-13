@@ -1,3 +1,4 @@
+import { createHeroBodyFogClaim } from '../hero-body-fog.js';
 // journey-v6 — CONNECT chapter, GROUND RESTAGE (16-connect-ground-restage.md).
 //
 // The gill-chamber staging is deleted (git history is the archive). The
@@ -994,6 +995,7 @@ export function createConnect(sceneApi) {
   // Connect and Purpose overlap during direct flights and both dim these same
   // organism materials. Publish a claim against their one canonical baseline
   // instead of privately capturing whichever value the previous chapter left.
+  const heroBodyFog = createHeroBodyFogClaim(sceneApi);
   const heroGroundDim = createHeroGroundDimClaim(sceneApi, {
     keeps: [0.42, 0.42, 0.60, 0.80, 0.48, 0.52, 0.58],
   });
@@ -1084,7 +1086,8 @@ export function createConnect(sceneApi) {
     // never submitted.
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
     if (!group.visible) {
-      heroGroundDim.clear();                 // preserves any sibling claim
+      heroGroundDim.clear();
+      heroBodyFog.clear();                 // preserves any sibling claim
       return;
     }
 
@@ -1092,6 +1095,9 @@ export function createConnect(sceneApi) {
     // lands — so the two webs never sum to double-exposure mush — and hands
     // the hero's own materials back byte-exactly on retire
     const visualAmount = amount * resolve * entryReveal;
+    // The phone camera is about twice as far from the cap as desktop.
+    // Preserve the same fine tissue instead of fogging it out before 20 units.
+    heroBodyFog.set(phone ? visualAmount : 0, 14, 40);
     heroGroundDim.set(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
 
     U.uTime.value = t;
@@ -1221,6 +1227,7 @@ export function createConnect(sceneApi) {
      reachable and is strictly worse under S-1. */
   owner.own(() => {
     heroGroundDim.clear();
+    heroBodyFog.clear();
     sceneApi.addAnimator('journey-connect', PARKED);
   });
 

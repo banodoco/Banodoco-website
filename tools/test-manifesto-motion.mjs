@@ -632,3 +632,28 @@ for (const aspect of [390 / 844, 1.6]) {
     'turning back restores exactly the same strand and spore identities');
   console.log(`${aspect < 1 ? 'Mobile' : 'Desktop'} visible submissions: ${count} bodies, ${groundCount}/${gp.count} ground vertices, ${sporesCount}/${sg.count} spores.`);
 }
+
+// Purpose reuses only its old far-field seats, not the extra Manifesto field
+// or nearby literal clones. The same batch survives the branch handoff.
+const purposeCamera = new THREE.PerspectiveCamera(58, 390 / 844, .1, 1000);
+purposeCamera.position.set(0, 12, 12); purposeCamera.lookAt(0, 0, 0);
+const purposeColony = createAerialColony({ ...colonyScene, camera: purposeCamera }, [
+  { x: 0, z: 0, gy: 0, s: .5, tier: 4, reveal: .2 },
+  { x: 100, z: 0, gy: 0, s: .5, tier: 4, reveal: .2 },
+  { x: 2, z: 0, gy: 0, s: .5, tier: 3, reveal: .2 },
+]);
+purposeColony.prepare(from, 390 / 844);
+const purposeResources = purposeColony.group.children.map(o => [o, o.geometry, o.material]);
+purposeColony.setPurpose(1, 1, 14, 61);
+assert.deepEqual(purposeColony.lod, { near: 0, far: 2 }, 'Purpose selects existing far seats only');
+assert.deepEqual(purposeColony.drawn, { near: 0, far: 1 }, 'Purpose submits only the visible far seat');
+assert.ok(purposeColony.group.children.slice(-2).every(o => !o.visible), 'Purpose does not duplicate existing ground or spores');
+purposeCamera.lookAt(0, 30, 12);
+purposeColony.setPurpose(1, 1, 14, 61);
+assert.equal(purposeColony.drawn.far, 0, 'offscreen Purpose mushrooms are not submitted');
+purposeColony.prepare(from, 390 / 844);
+purposeColony.setSeatLight(1); purposeColony.set(0, 14, 61, 0);
+assert.ok(purposeColony.group.visible, 'Purpose seats survive the first Manifesto frame');
+assert.deepEqual(purposeColony.group.children.map(o => [o, o.geometry, o.material]), purposeResources,
+  'Purpose/Manifesto reuse the same batches and GPU resources');
+console.log('Purpose quality: existing far seats only, visible submission, no duplicate ground/spores, stable branch resources pass.');

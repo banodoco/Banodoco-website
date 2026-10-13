@@ -1,3 +1,4 @@
+import { createHeroBodyFogClaim } from '../chapters/hero-body-fog.js';
 import { claimInput, releaseInput } from '../ownership.js';
 import { createReturnFlight, sampleReturnFlight, returnVelocity } from './return-flight.js';
 import { applyCameraRoll } from '../camera-roll.js';
@@ -179,6 +180,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   let landPrev = null;
   let landRe = 0;
   let stay0 = 1, stayTo = 1;
+  const bodyFog = createHeroBodyFogClaim(sceneApi);
   const fogSlots = [];
   const fogSeen = new Set();
   sceneApi.groups.sway.traverse((object) => {
@@ -302,7 +304,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       sceneApi.scene.fog.near = fogNear0 + (far * 0.55 - fogNear0) * pose.atmosphere;
       sceneApi.scene.fog.far = fogFar0 + (far - fogFar0) * pose.atmosphere;
     }
+    const mobileBodyFog = isMobileManifesto(camera.aspect);
+    bodyFog.set(mobileBodyFog ? pose.atmosphere : 0, far * 0.55, far);
     for (const { slot, key, base } of fogSlots) {
+      if (mobileBodyFog && bodyFog.owns(slot)) continue;
       const end = key === 'fogNear' ? far * 0.55 : far;
       slot.value = base + (end - base) * pose.atmosphere;
     }
@@ -642,7 +647,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     root.classList.remove('is-open', 'is-returning');
     releaseChrome();
     if (field) field.setManifesto(null);
-    for (const { slot, base } of fogSlots) slot.value = base;
+    for (const { slot, base } of fogSlots) {
+      if (!isMobileManifesto(camera.aspect) || !bodyFog.owns(slot)) slot.value = base;
+    }
+    bodyFog.clear();
     const rest = landing || from;
     if (sceneApi.scene.fog) { sceneApi.scene.fog.near = rest.fogNear; sceneApi.scene.fog.far = rest.fogFar; }
     camera.position.set(rest.position.x, rest.position.y, rest.position.z);

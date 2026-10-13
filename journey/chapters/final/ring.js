@@ -275,7 +275,7 @@ export function createFinalRing(sceneApi, uniforms) {
   // lives down there.
   const gate = {
     armed: () => pickOn,
-    accept: (ref) => lit(ref, uniforms.uPull.value),
+    accept: (ref) => ref.root?.visible !== false && lit(ref, uniforms.uPull.value),
     onTap: (hit) => respond(hit),
   };
   const picker = createPicker(sceneApi, gate);
@@ -440,6 +440,9 @@ export function createFinalRing(sceneApi, uniforms) {
         lum: cloneLum(dist),
         vary: P.V,                                    // this body's own shape
         seed: P.seed,                                 // ...and its own cap figure
+        // The isolated foreground cap directly below the hero in the phone
+        // Purpose composition. Stable world seat, never a screen-edge rule.
+        omitOnPhone: Math.abs(m.x + 8.5870354163) < .001 && Math.abs(m.z - 3.1836851977) < .001,
       });
     } else {
       if (!baked) buildMushroom(spec);

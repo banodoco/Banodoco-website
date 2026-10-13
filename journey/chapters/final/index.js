@@ -1,3 +1,4 @@
+import { createHeroBodyFogClaim } from '../hero-body-fog.js';
 // journey-v6 — FINAL epilogue, PRODUCTION STAGE (W4-D).
 //
 // The grey-box proxy is replaced by the composed cutaway the re-keyed
@@ -1139,6 +1140,7 @@ export function createFinal(sceneApi) {
       else d.m.opacity = d.base;
       d.o.visible = d.vis;
     }
+    bodyFog.clear();
     if (shedFog) {
       shedFog.near.value = shedFog.n0;
       shedFog.far.value = shedFog.f0;
@@ -1175,6 +1177,7 @@ export function createFinal(sceneApi) {
      twenty lines above. Nothing inside organism/ is touched, and at p = 0 the
      chapter is not visible, so the Mission frame cannot see this at all. */
   let shedFog = null;
+  const bodyFog = createHeroBodyFogClaim(sceneApi);
   function collectShedFog() {
     if (shedFog) return;
     const sp = sceneApi.groups && sceneApi.groups.spores;
@@ -1183,6 +1186,11 @@ export function createFinal(sceneApi) {
     shedFog = { near: u.fogNear, far: u.fogFar, n0: u.fogNear.value, f0: u.fogFar.value };
   }
   function applyShedFog(reach) {
+    if (!sceneApi.scene.fog) return;
+    // The aerial phone camera exposes the hero's fine tissue at distances
+    // beyond its intro fog. Give it the same atmosphere as its literal clones.
+    const mobileReach = window.innerWidth <= 620 && window.innerHeight > window.innerWidth ? reach : 0;
+    bodyFog.set(mobileReach, sceneApi.scene.fog.near, sceneApi.scene.fog.far);
     if (!shedFog || !sceneApi.scene.fog) return;
     shedFog.near.value = shedFog.n0 + (sceneApi.scene.fog.near - shedFog.n0) * reach;
     shedFog.far.value = shedFog.f0 + (sceneApi.scene.fog.far - shedFog.f0) * reach;
@@ -1564,6 +1572,15 @@ export function createFinal(sceneApi) {
     // the bodies: clone reveal + sway, and the pointer response for clones
     // and batched members alike. Last, so it reads this frame's uniforms.
     ring.update(t, dt, true);
+    if (!manifesto) {
+      const mobile = window.innerWidth <= 620 && window.innerHeight > window.innerWidth;
+      // Mobile's elevated view needs real tissue even in the background.
+      // Reuse the already-built, frustum-culled Manifesto instance layers;
+      // hide the old rim-only batch so no mushroom is drawn twice.
+      ring.setAerial(mobile);
+      aerial.setPurpose(mobile ? eff : 0, uniforms.uPullRaw.value,
+        uniforms.uFogNear.value, uniforms.uFogFar.value);
+    }
 
     // sprite layers (outside the shared shader uniforms).
     // `buried` (2026-08-11): 1 once the lens is 0.25 under the soil, 0 at the
@@ -1658,6 +1675,12 @@ export function createFinal(sceneApi) {
        the descent instead; a Return to Purpose keeps it at 1. */
     setManifesto(progress, seconds = 0, from = null, aspect = 1.6, seats = 1, stay = 1) {
       if (from) aerial.prepare(from, aspect);
+      const mobile = window.innerWidth <= 620 && window.innerHeight > window.innerWidth;
+      const base = manifesto ? manifesto.amount : (group.visible ? uniforms.uAmount.value : 0);
+      const held = base * stay;
+      // Mobile already presents these same detailed background instances.
+      // Keep them throughout the branch instead of crossfading to old proxies.
+      aerial.setSeatLight(mobile ? held + (1 - held) * (progress ?? 0) : seats);
       aerial.set(progress ?? 0, sceneApi.scene.fog.near, sceneApi.scene.fog.far, seconds);
       /* THE RING COMES HOME DURING THE DESCENT, NOT ON LANDING (2026-10-03 —
          Hannah: the background mushrooms "disappear when the camera hits the
@@ -1667,8 +1690,7 @@ export function createFinal(sceneApi) {
          two renderings' differences read as mushrooms vanishing. Now the
          original ring returns as soon as a Return begins (`seats` < 1) and
          the colony's copies fade out over the descent on top of it. */
-      aerial.setSeatLight(seats);
-      ring.setAerial(progress !== null && seats >= 1);
+      ring.setAerial(mobile || (progress !== null && seats >= 1));
       if (progress === null) {
         if (manifesto) {
           shownPull = manifesto.shownPull;

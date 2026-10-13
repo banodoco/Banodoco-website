@@ -614,7 +614,7 @@ export function createClones(sceneApi) {
    *  memberParams — the same seeded stream the species build drew from, so
    *  a member keeps its shipped facing, lean and size. */
   function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
-                 arc, reveal, revealIn, boost, tw0, phase, amp, lum, vary, seed }) {
+                 arc, reveal, revealIn, boost, tw0, phase, amp, lum, vary, seed, omitOnPhone = false }) {
     const mats = [];
     // two shell groups, because they arrive at two different moments of the
     // draw (STEM_SHELL_LO..HI / CAP_SHELL_LO..HI). The split is free: cloneNode is
@@ -664,7 +664,7 @@ export function createClones(sceneApi) {
     const ownShells = stemShellMats.length > 0 && capShellMats.length > 0
       && !stemShellMats.some(m => capShellMats.includes(m));
     const c = {
-      root, sway, capBend: capBendC, mats,
+      root, sway, capBend: capBendC, mats, omitOnPhone,
       stemShells, capShells, stemShellMats, capShellMats, ownShells,
       shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
@@ -731,6 +731,8 @@ export function createClones(sceneApi) {
     // while kindling out of the dark, the authored rungs on every departure.
     const revIn = uniforms.uRevIn.value > 0.5;
     for (const c of list) {
+      c.root.visible = !(c.omitOnPhone && typeof window !== 'undefined'
+        && window.innerWidth <= 620 && window.innerHeight > window.innerWidth);
       // ---- this body's own arrival clock (§14: charge, take, settle) ----
       // s is pure in the pose: the camera-pure front, on this body's own
       // window. Everything below is a function of s (plus the shared

@@ -133,6 +133,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
   const viewFrustum = new THREE.Frustum(), viewMatrix = new THREE.Matrix4();
   const viewProjection = new THREE.Matrix4(), worldBody = new THREE.Sphere();
   let cullView = false;
+  let purposeMode = false;
   // the welding grid, in hero units: FAR_CELL_PX of the tallest a far body
   // can be (NEAR_PX) — so a weld never spans more than ~1 px on screen
   const farCell = BODY_HEIGHT * FAR_CELL_PX / NEAR_PX;
@@ -611,6 +612,7 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
     // the placements, for layers that dress the same field (sky.js plumes)
     bodies,
     prepare(from, aspect) {
+      purposeMode = false;
       cullView = !!sceneApi.camera;
       planAerialReveals(bodies, from, aspect, plan);
       for (let i = 0; i < owners.length; i++) {
@@ -649,6 +651,36 @@ export function createAerialColony(sceneApi, seats, time = { value: 0 }) {
         tier.drawn = -1;
       }
       portrait.value = aspect < 0.9 ? 1 : 0;
+    },
+    /** Purpose reuses only its existing background seats, never the extra
+     * Manifesto field. Same hero buffers, same materials, visible instances
+     * only. prepare() restores the full branch schedule on Manifesto entry. */
+    setPurpose(amount, pull, near, far) {
+      if (amount <= .001 && !purposeMode) return;
+      if (!purposeMode) {
+        purposeMode = true;
+        const ids = [];
+        bodies.forEach((b, i) => {
+          if (!(b.tier >= 4)) return;
+          plan[i*2] = b.reveal; plan[i*2+1] = .14;
+          ids.push(i);
+        });
+        ids.sort((a, b) => plan[a*2] - plan[b*2]);
+        for (const tier of tiers) {
+          // Background caps are small; use the same detailed line/point
+          // geometry with subpixel shell welding, not sparse rim proxies.
+          const mine = tier.name === 'far' ? ids : [];
+          tier.bodyIds = Int32Array.from(mine);
+          tier.starts = Float32Array.from(mine.map(i => plan[i*2]));
+          tier.activeIds.fill(-1); tier.drawn = -1;
+        }
+      }
+      group.visible = amount > .001;
+      gate.value = amount; seatLight.value = 0;
+      clock.value = pull; portrait.value = 1;
+      fogNear.value = near; fogFar.value = far;
+      updateViewFrustum(); cullBodies(pull);
+      groundDraw.object.visible = false; sporeDraw.object.visible = false;
     },
     /** QA: how many bodies each tier holds on the prepared flight. */
     get lod() { return { near: tiers[0].starts.length, far: tiers[1].starts.length }; },
