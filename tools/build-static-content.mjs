@@ -88,7 +88,7 @@ function derive(source) {
               : escapeText(concept.ink || word);
           const openThread = concept.id === 'kinship' && index === concept.start ? '<span class="manifesto-phrase-thread">' : '';
           const closeThread = concept.id === 'kinship' && index === concept.end ? '</span>' : '';
-          return `${openThread}<span class="manifesto-concept concept-${concept.id}" style="--concept-index:${concept.offset || 0}">${ink}</span>${escapeText(concept.suffix || '')}${closeThread}`;
+          return `${openThread}<span class="manifesto-concept concept-${concept.id}" style="--concept-index:${concept.offset || 0}">${ink}</span>${closeThread}${escapeText(concept.suffix || '')}`;
         });
         const body = rendered.map((html, index) => {
           const destination = destinations.get(index);

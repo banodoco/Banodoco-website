@@ -6,7 +6,7 @@ const PAIRS = [
 ];
 const PHRASES = [
   { id: 'synthesis', phrase: 'interactive experience' },
-  { id: 'kinship', phrase: 'shaped and reshaped' },
+  { id: 'kinship', phrase: 'open models and open tools' },
   { id: 'vitality', phrase: 'bustles with this kind of creative life' },
 ];
 // The authored em dash joins life—with; only 'life' carries the accent.

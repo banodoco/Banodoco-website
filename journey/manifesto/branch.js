@@ -115,7 +115,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         } else {
           ink.textContent = concept.ink || word;
         }
-        span.append(lead, ink, concept.suffix || '', endsThread ? '' : trail);
+        span.append(lead, ink, endsThread ? '' : concept.suffix || '', endsThread ? '' : trail);
       } else if (destination) {
         if (i === destination.start) {
           const link = document.createElement('a');
@@ -157,7 +157,14 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       }
       if (endsThread) {
         phraseThread = null;
-        // Keep the following separator outside the decorated phrase.
+        if (concept.suffix) {
+          const punctuation = document.createElement('span');
+          punctuation.className = 'j-manifesto-word';
+          punctuation.style.setProperty('--w', beat);
+          punctuation.textContent = concept.suffix;
+          line.appendChild(punctuation);
+        }
+        // Keep punctuation and the following separator outside the decorated phrase.
         if (trail) line.append(trail);
       }
     });
