@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import{connectLightProfile,connectHubWelcome}from'../journey/chapters/connect/phone-light.js';
+const desktop=connectLightProfile(false),phone=connectLightProfile(true);
+assert.deepEqual(desktop,{far:.055,head:.55,tip:.032},'desktop lighting unchanged');
+const range=(d,p)=>Math.exp(-p.far*p.far*d*d);
+assert.ok(range(20,phone)>range(20,desktop)*1.8,'phone aerial distance no longer erases most route light');
+assert.ok(range(40,phone)<.11,'far field still falls away rather than becoming a full-screen web');
+assert.ok(phone.head>desktop.head&&phone.tip>desktop.tip,'phone fronts have both presence and width');
+for(const r of[-1,0,.5,.72,1,2])assert.equal(connectHubWelcome(r,true),0,'no early, resting or out-of-range flash');
+for(let i=0;i<=100;i++)assert.equal(connectHubWelcome(i/100,false),0,'desktop hubs unchanged');
+assert.equal(connectHubWelcome(.86,true),1,'welcome peaks during the marker formation window');
+assert.ok(connectHubWelcome(.99999,true)<1e-7,'welcome settles continuously');
+console.log('Connect phone lighting: distance compensation, stronger arrival fronts, marker-aligned swell, desktop untouched.');

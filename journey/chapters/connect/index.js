@@ -42,6 +42,7 @@
 // both orientations (see the measured table below), so the whole group is
 // not merely dark but not drawn at the protected frames, and both arm edges
 // sit where resolve is 0.
+import { connectLightProfile, connectHubWelcome } from './phone-light.js';
 import * as THREE from 'three';
 import { makeRng } from '../../anatomy.js';
 import { startOf, endOf, restProgress } from '../../route.js';
@@ -544,6 +545,8 @@ const ENTRY_CAMERA_READY = 0.24;
 const ENTRY_DURATION_S = 3.2;
 
 export function createConnect(sceneApi) {
+  const phoneMedia = typeof matchMedia === 'function'
+    ? matchMedia('(max-width: 620px) and (orientation: portrait)') : null;
   const rnd = makeRng(41417);
   const group = new THREE.Group();
   group.visible = false;
@@ -1058,6 +1061,10 @@ export function createConnect(sceneApi) {
        keeps performing, so scrubbing away and back cannot bank a stale
        half-arrival against the pure schedule — and the tick after a blend
        ends, an unfinished floored retreat settles here the same way. */
+    const phone = !!phoneMedia?.matches;
+    const light = connectLightProfile(phone);
+    net.strandMat.uniforms.uFar.value = light.far;
+    net.strandMat.uniforms.uTipW.value = light.tip;
     const tgtT = litTargetT();
     if (dt === 0) litShownT = tgtT;
     else if (tgtT >= litShownT) litShownT = Math.min(tgtT, litShownT + dt * LIGHT_PACE_RATE);
@@ -1193,8 +1200,9 @@ export function createConnect(sceneApi) {
       // 2026-08-11 (held still — see the pulse loop above): hover is the
       // visitor's own hand and stays; the ambient clock no longer moves
       // the marker.
-      core.mat.opacity = visualAmount * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a);
-      core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a));
+      const welcome = connectHubWelcome(hubIgnite[i], phone);
+      core.mat.opacity = visualAmount * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a + 0.22 * welcome);
+      core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a + 0.30 * welcome));
     }
   });
   /* PARKED ON DISPOSAL, NEVER REMOVED — journey/journey-owner.js's rule,
@@ -1261,13 +1269,13 @@ export function createConnect(sceneApi) {
   }
 
   function applyFronts(legT) {
+    const peak = connectLightProfile(!!phoneMedia?.matches).head;
     litMin = 1; litAvg = 0;
     for (let i = 0; i < 3; i++) {
       const L = i === ADOS_ROUTE ? frontEase(adosU)
         : frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
       litR[i] = L;
-      // HEAD_PEAK 0.55: warm emphasis while this route's front travels.
-      headR[i] = L > 0 && L < 1 ? 0.55 * Math.sin(Math.PI * L) ** 0.6 : 0;
+      headR[i] = L > 0 && L < 1 ? peak * Math.sin(Math.PI * L) ** 0.6 : 0;
       if (L < litMin) litMin = L;
       litAvg += L / 3;
     }
