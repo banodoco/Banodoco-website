@@ -864,8 +864,20 @@ export function createInspire(sceneApi) {
     s.position.copy(streaks[i].localPos).applyMatrix4(mushroomRestMatrix());
     s.visible = false;
     lipHolder.add(s);
-    return { sprite: s, mat };
+    const outward = new THREE.Vector3(Math.cos(ex.spec.az), 0, Math.sin(ex.spec.az))
+      .transformDirection(mushroomRestMatrix());
+    return { sprite: s, mat, outward };
   });
+  const lipView = new THREE.Vector3();
+  function lipFacing(i) {
+    const lip = lipGlows[i];
+    lipView.subVectors(sceneApi.camera.position, lip.sprite.position).normalize();
+    // Lip glows and their dense source fans light the outer rim,
+    // not the inner cap. Keep their reveal clocks and spore feed intact.
+    // A billboard has no back face, so retire its light smoothly before
+    // the camera crosses inward through the rim's tangent plane.
+    return THREE.MathUtils.smoothstep(lipView.dot(lip.outward), 0, 0.12);
+  }
 
   /* ================================================================
      5c. THE LANDING CASCADE (2026-08-16, Hannah: the three labels
@@ -1514,7 +1526,8 @@ export function createInspire(sceneApi) {
         if (m.uniforms.uOpacity) {
           // taste dial: strand brightness x T, choreography via uFade intact
           m.uniforms.uFade.value = fadeV;
-          m.uniforms.uOpacity.value = m.userData.baseOpacity * T;
+          m.uniforms.uOpacity.value = m.userData.baseOpacity * T
+            * (m === ex.srcMat ? lipFacing(i) : 1);
         } else {
           // beads have no opacity uniform; uFade is both their hash-stagger
           // threshold and their brightness, so x T = fewer, fainter embers —
@@ -1673,7 +1686,7 @@ export function createInspire(sceneApi) {
       // streams around it. Animator and snap() compute the identical value.
       const lg = lipGlows[i];
       const welcome = _surge[i]?.amp || 0;
-      const lo = (0.22 + 0.26 * welcome) * landingReveal(i) * T;
+      const lo = (0.22 + 0.26 * welcome) * landingReveal(i) * T * lipFacing(i);
       lg.sprite.visible = lo > 0.01;
       lg.mat.opacity = lo;
     }
@@ -1736,14 +1749,15 @@ export function createInspire(sceneApi) {
         // 2026-08-11 literally the same expression (the animator's breathing
         // multiplier is gone; the ember holds one level, see 5b). x land (5c):
         // the ember belongs to the landing cascade now.
-        const lo = 0.22 * landingReveal(i) * T;
+        const lo = 0.22 * landingReveal(i) * T * lipFacing(i);
         lipGlows[i].sprite.visible = lo > 0.01;
         lipGlows[i].mat.opacity = lo;
         for (const m of exits[i].mats) {
           const fadeV = m === exits[i].wispMat ? eff[i] : furnOf(i);
           if (m.uniforms.uOpacity) {
             m.uniforms.uFade.value = fadeV;
-            m.uniforms.uOpacity.value = m.userData.baseOpacity * T;
+            m.uniforms.uOpacity.value = m.userData.baseOpacity * T
+              * (m === exits[i].srcMat ? lipFacing(i) : 1);
           } else {
             m.uniforms.uFade.value = fadeV * T;   // beads: see the animator note
           }

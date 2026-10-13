@@ -32,11 +32,11 @@ for (const mode of ['desktop', 'deskNarrow', 'compact', 'tablet']) {
       }
       previous = { fade: field.fade[i], size: field.size[i] };
       if (age >= 1.2) {
-        assert.ok(Math.abs(field.size[i] - Math.max(landing.size0, .10)) < 1e-7, 'existing final core size retained');
+        assert.ok(Math.abs(field.size[i] - Math.max(landing.size0, .075)) < 1e-7, 'smaller desktop core reached');
         complete = true; break;
       }
     }
     assert.ok(selected && fell && complete, 'selection and early descent exercised');
   }
 }
-console.log('PASS 24 desktop recruitment cases: stream identity, continuous size/light through first fall, unchanged final core');
+console.log('PASS 24 desktop recruitment cases: stream identity, continuous size/light through first fall, smaller final core');

@@ -1126,11 +1126,11 @@ function kindleBegin(F, L) {
 function kindleTint(F, L, h) {
   const i3 = L.hi * 3;
   // Recruit an ordinary member first, then gently resolve its small core
-  // during kindling. Desktop needs the same readable floor as phones:
-  // increasing light alone leaves a subpixel stream grain hard to follow.
+  // during kindling. Desktop uses a smaller core than phones while
+  // retaining the same gradual recruitment and light envelope.
   // Nothing moves or changes size on the selection frame.
   const k = smooth01(h / KINDLE_HEAT);
-  const size = L.size0 + (Math.max(L.size0, 0.10) - L.size0) * k;
+  const size = L.size0 + (Math.max(L.size0, F.comp.landFromBottom ? 0.10 : 0.075) - L.size0) * k;
   if (Math.abs(F.size[L.hi] - size) > 1e-7) {
     F.size[L.hi] = size; F.attrsDirty = true;
   }
