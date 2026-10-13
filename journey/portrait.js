@@ -666,14 +666,15 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
-    // Aim right across the larger field, with lateral parallax moving the
-    // near foreground cap out of the lower-right navigation area.
-    const turn = 12 * Math.PI / 180 * finalW;
+    // Negative yaw turns toward screen-right with this X/Z rotation. The
+    // former positive turn and large lateral truck left the field off-right.
+    // Keep a small parallax offset while centring the larger mushroom field.
+    const turn = -24 * Math.PI / 180 * finalW;
     const dx = pose.target.x - pose.pos.x, dz = pose.target.z - pose.pos.z;
     pose.target.x = pose.pos.x + dx * Math.cos(turn) + dz * Math.sin(turn);
     pose.target.z = pose.pos.z + dz * Math.cos(turn) - dx * Math.sin(turn);
-    pose.pos.z -= 4 * finalW;
-    pose.target.z -= 4 * finalW;
+    pose.pos.z -= finalW;
+    pose.target.z -= finalW;
     const horizontal = Math.hypot(pose.target.x - pose.pos.x, pose.target.z - pose.pos.z);
     const aerialY = pose.target.y + horizontal; // 45 degrees down at rest.
     pose.pos.y += (aerialY - pose.pos.y) * finalW;
