@@ -323,8 +323,6 @@ const PEEL_AT = [0.65, 1.85, 3.15];
  * (UPWIND below), floats down over ~2 s whatever the scene is doing, and
  * sways one and a half times: a seed being set down, not thrown. */
 const FLUT_S = [2.05, 2.25, 2.40];  // base flutter durations, priced by drop
-const DESKTOP_FALL_SCALE = 1.15; // a little more air in the desktop descent
-const desktopFallScale = c => c?.landFromBottom ? 1 : DESKTOP_FALL_SCALE;
 const FLUT_MIN_S = 1.85;        // the shortest a settle may be, compressed or not
 const LULL_THR = 0.60;          // the wind is a lull below this gust value
 const LULL_WAIT = 0.9;          // longest a ripe settle waits for its lull
@@ -344,7 +342,6 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * gently resolves a readable core on this existing member; its motion
  * remains the same stream motion until it peels. */
 const KINDLE_S = 0.80;          // the chosen spore catches the light in the stream
-const DESKTOP_KINDLE_VISUAL_S = 1.3; // light eases into the fall; motion clocks stay unchanged
 const KINDLE_FAST_S = 0.45;     // ...shorter when a ready scene compresses the settle
 const KINDLE_LIGHT = 2.4;       // the light it carries through its descent
 const LAND_LIGHT = 3.3;         // ...swelling to this as it settles
@@ -355,8 +352,10 @@ const LAND_COLLAPSE_S = 0.55;   // the landed spore's light sinks into the groun
 const RESPAWN_S = 2.6;          // then the spent hero slot retires permanently
 const RATE_FAST = 1.9;          // compression when the scene is already ready
 const EXTRA_PEEL_S = 5.4;       // elastic hold: occasional extra landings
-// Mobile retains its existing settle glimmers. Desktop contact is a
-// single soft ground-light pulse; its parked point banks stay dark.
+// The settle glow: a landing swells a soft bloom at the site and the
+// ground around it glimmers awake outward at the filaments' own creeping
+// pace — an ignition, never a strike. (These slots were the impact
+// flash + spark ring; same parked banks, same draw call, re-timed.)
 const RING_N = 9;               // 1 bloom + 8 ground glimmers per settle
 const RING_BANKS = 2;           // two settles may overlap in the elastic hold
 const RING_S = 0.90;            // seconds of settle-glow life
@@ -973,9 +972,8 @@ function advance(F, dt, gust) {
     if (L.state === 1 && F.t < L.t0) {
       // KINDLING: the stream loop above has already moved it and written
       // its ordinary light; rise from that light, so the pick is seamless
-      const k = smooth01((F.t - L.kAt) / (c.landFromBottom ? L.t0 - L.kAt : DESKTOP_KINDLE_VISUAL_S));
-      if (c.landFromBottom) F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
-      else F.fade[L.hi] = L.fade0 + (kindleLight - L.fade0) * k;
+      const k = smooth01((F.t - L.kAt) / (L.t0 - L.kAt));
+      F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
       kindleTint(F, L, KINDLE_HEAT * k);
       continue;
     }
@@ -988,7 +986,7 @@ function advance(F, dt, gust) {
         // priced by the DROP, not the arc: a flutter is mostly descent
         L.dur = L.dur * Math.min(1.25, Math.max(0.85, (drop / halfH) / 0.45));
         if (rate > 1) L.dur = L.dur / 1.15;
-        L.dur = Math.max(FLUT_MIN_S, L.dur) * (c.landDuration || 1) * desktopFallScale(c);
+        L.dur = Math.max(FLUT_MIN_S, L.dur) * (c.landDuration || 1);
       }
       const u = Math.min(1, (F.t - L.t0) / L.dur);
       flutterAt(F, L, u, FLUT_POS);
@@ -1003,11 +1001,7 @@ function advance(F, dt, gust) {
       F.fade[L.hi] = kindleLight
         + 0.22 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase)) * Math.sin(Math.PI * u)
         + (landingLight - kindleLight) * sw;
-      // Desktop recruits light slowly from the actual stream grain, even
-      // after it starts falling. Selection, fall and impact times stay put.
-      const kindle = c.landFromBottom ? 1 : smooth01((F.t - L.kAt) / DESKTOP_KINDLE_VISUAL_S);
-      if (!c.landFromBottom) F.fade[L.hi] = L.fade0 + (F.fade[L.hi] - L.fade0) * kindle;
-      kindleTint(F, L, (KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw) * kindle);
+      kindleTint(F, L, KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw);
       if (u >= 1) {
         L.state = 2;
         L.impactAt = F.t;
@@ -1058,12 +1052,6 @@ function advance(F, dt, gust) {
     if (u >= 1) {
       for (let k = 0; k < RING_N; k++) F.fade[base + k] = 0;
       F.rings.splice(r, 1);
-      continue;
-    }
-    // Desktop contact is one continuous ground-light pulse. Keep these
-    // parked point slots dark rather than adding dots around that light.
-    if (!c.landFromBottom) {
-      F.fade.fill(0, base, base + RING_N);
       continue;
     }
     const s3 = R.site * 3;
@@ -1121,7 +1109,6 @@ const KINDLE_SCRATCH = [0, 0, 0];
 function kindleBegin(F, L) {
   const i3 = L.hi * 3;
   L.size0 = F.size[L.hi];
-  L.fade0 = F.fade[L.hi];
   L.c0 = [F.color[i3], F.color[i3 + 1], F.color[i3 + 2]];
   heatLinear(F.tone[L.hi], KINDLE_SCRATCH, 0);
   const lg = KINDLE_SCRATCH[1] > 0 ? L.c0[1] / KINDLE_SCRATCH[1] : 1;
@@ -1131,11 +1118,11 @@ function kindleBegin(F, L) {
 function kindleTint(F, L, h) {
   const i3 = L.hi * 3;
   // Recruit an ordinary member first, then gently resolve its small core
-  // during kindling. Desktop keeps a slightly softer core than phones;
-  // its longer visual envelope continues into the start of the fall.
+  // during kindling. Desktop needs the same readable floor as phones:
+  // increasing light alone leaves a subpixel stream grain hard to follow.
   // Nothing moves or changes size on the selection frame.
   const k = smooth01(h / KINDLE_HEAT);
-  const size = L.size0 + (Math.max(L.size0, F.comp.landFromBottom ? 0.10 : 0.085) - L.size0) * k;
+  const size = L.size0 + (Math.max(L.size0, 0.10) - L.size0) * k;
   if (Math.abs(F.size[L.hi] - size) > 1e-7) {
     F.size[L.hi] = size; F.attrsDirty = true;
   }
@@ -1462,7 +1449,6 @@ const GROUND_FADE_S = 0.35;
 let ground = null;
 
 function createGround(view, reduced) {
-  let desktopPulse = view.mode !== 'mobile';
   // ---- geometry: skeleton polylines -> line-segment buffers ----
   let segCount = 0;
   for (const pl of SKELETON) segCount += pl.p.length / 3 - 1;
@@ -1495,7 +1481,6 @@ function createGround(view, reduced) {
     }
   }
   function projectAll(vw) {
-    desktopPulse = vw.mode !== 'mobile';
     const B = basisOf(vw);
     let v = 0;
     for (const pl of SKELETON) {
@@ -1535,8 +1520,6 @@ function createGround(view, reduced) {
   const glowC0 = new Float32Array(4 * 4);
   const glowC1 = new Float32Array(4 * 4);
   const glowStops = new Float32Array(4 * 2);
-  const glowWave = new Float32Array(4);
-  const glowBaseRadii = new Float32Array(LANDING_SITES.length * 2);
   const glowO = new Float32Array(4);   // the per-frame opacity, as the divs had
   const premul = (out, at, r, g, b, a) => {
     out[at] = (r / 255) * a; out[at + 1] = (g / 255) * a; out[at + 2] = (b / 255) * a; out[at + 3] = a;
@@ -1594,11 +1577,9 @@ function createGround(view, reduced) {
       const a = s === 0 ? 0.62 : 0.5;
       const k = s + 1;
       glowEll.set([px[s][0], px[s][1], w, h], k * 4);
-      glowBaseRadii.set([w, h], s * 2);
       premul(glowC0, k * 4, 255, 196, 106, a);
       premul(glowC1, k * 4, 224, 146, 60, 0.10);
-      glowWave[k] = desktopPulse ? 1 : 0;
-      glowStops.set([desktopPulse ? 0.62 : 0.48, 0.72], k * 2);
+      glowStops.set([0.48, 0.72], k * 2);
     }
   }
   reframeGlow(view);
@@ -1694,20 +1675,6 @@ function createGround(view, reduced) {
         // THE STRIKE: one larger swell breathing under the growth's start
         o += 0.9 * Math.exp(-(nowMs - state.struckAt) / 800);
       }
-      let footprint = 1;
-      if (desktopPulse) {
-        // One grounded light spreads and spends itself. It stays smaller
-        // than the normal pool, with no rim, points or extra geometry.
-        const age = t - w;
-        const spread = smooth01(age / 0.5);
-        // The growth strike retires this same light; it must never
-        // resurrect the former pool or add a second contact swell.
-        o = 0.75 * smooth01(age / 0.10) * (1 - spread);
-        // Restore the baseline footprint only after its light is spent.
-        footprint = age >= 0.5 ? 1 : 0.22 + 0.40 * spread;
-      }
-      glowEll[(s + 1) * 4 + 2] = glowBaseRadii[s * 2] * footprint;
-      glowEll[(s + 1) * 4 + 3] = glowBaseRadii[s * 2 + 1] * footprint;
       const poolFade = state.poolFadeAt < 0 ? 1
         : Math.max(0, 1 - (t - state.poolFadeAt) / POOL_FADE_S);
       o *= lightFade * poolFade;
@@ -1734,7 +1701,7 @@ function createGround(view, reduced) {
 
   return {
     pos, lit, nV, projectAll, reframeGlow, relight, wake, state,
-    glowEll, glowC0, glowC1, glowStops, glowWave, glowO, glowFrame,
+    glowEll, glowC0, glowC1, glowStops, glowO, glowFrame,
     get gone() { return state.gone; },
     /** True while the glows still have light to give — the layer can only
      *  be taken down after this goes false. */
@@ -1798,8 +1765,7 @@ uniform vec2 uSize;     // drawing buffer, device px
 uniform vec4 uEll;      // centre (x, y) and radii (rx, ry) as fractions of the frame, y down
 uniform vec4 uC0;       // first stop, premultiplied
 uniform vec4 uC1;       // middle stop, premultiplied (only when uStops.x > 0)
-uniform vec3 uStops;    // middle stop / wave crest, end stop, opacity
-uniform float uWave;    // 1 = hollow traveling front, 0 = original filled glow
+uniform vec3 uStops;    // middle stop's position (0 = none), the end stop's, opacity
 void main() {
   vec2 p = vec2(gl_FragCoord.x / uSize.x, 1.0 - gl_FragCoord.y / uSize.y);
   float t = length((p - uEll.xy) / uEll.zw);
@@ -1807,13 +1773,6 @@ void main() {
     ? (t < uStops.x ? mix(uC0, uC1, t / uStops.x)
                     : mix(uC1, vec4(0.0), clamp((t - uStops.x) / (uStops.y - uStops.x), 0.0, 1.0)))
     : mix(uC0, vec4(0.0), clamp(t / uStops.y, 0.0, 1.0));
-  if (uWave > 0.5) {
-    float crest = uStops.x;
-    // A soft trailing edge clears the center as the thin front travels.
-    float wave = smoothstep(crest - 0.16, crest, t)
-      * (1.0 - smoothstep(crest, uStops.y, t));
-    c = uC0 * wave;
-  }
   gl_FragColor = c * uStops.z;
 }`;
 
@@ -1853,7 +1812,6 @@ function createPreludeCore(gl, F) {
     c0: gl.getUniformLocation(progGlow, 'uC0'),
     c1: gl.getUniformLocation(progGlow, 'uC1'),
     stops: gl.getUniformLocation(progGlow, 'uStops'),
-    wave: gl.getUniformLocation(progGlow, 'uWave'),
   };
   const buffers = { frame: gl.createBuffer(), color: gl.createBuffer(), meta: gl.createBuffer() };
   const lineBuffers = { frame: gl.createBuffer(), color: gl.createBuffer() };
@@ -2004,7 +1962,6 @@ function createPreludeCore(gl, F) {
       gl.uniform4f(glowUniforms.c0, c0[k4], c0[k4 + 1], c0[k4 + 2], c0[k4 + 3]);
       gl.uniform4f(glowUniforms.c1, c1[k4], c1[k4 + 1], c1[k4 + 2], c1[k4 + 3]);
       gl.uniform3f(glowUniforms.stops, ground.glowStops[k * 2], end, o);
-      gl.uniform1f(glowUniforms.wave, ground.glowWave[k]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (!first) gl.disable(gl.SCISSOR_TEST);
@@ -2031,14 +1988,13 @@ function strikeNeed(S) {
   // forward (no lull wait when the scene is ready) and fluttered
   // at the compressed duration (mirrors advance() exactly)
   let eta = Infinity;
-  const fallScale = S.desktopFallScale ?? desktopFallScale(S.comp);
   for (const L of S.landings) {
     if (L.state === 2) continue;
     const peelIn = L.state === 1
       ? Math.max(0, L.t0 - S.t)
-        + (L.aimed ? Math.max(0, L.dur - Math.max(0, S.t - L.t0)) : Math.max(FLUT_MIN_S, L.dur / 1.15) * fallScale)
+        + (L.aimed ? Math.max(0, L.dur - Math.max(0, S.t - L.t0)) : Math.max(FLUT_MIN_S, L.dur / 1.15))
       : Math.max(0.15, Math.min(L.tPeel - S.t, 0.15)) + KINDLE_FAST_S
-        + Math.max(FLUT_MIN_S, L.dur / 1.15) * fallScale;
+        + Math.max(FLUT_MIN_S, L.dur / 1.15);
     eta = Math.min(eta, peelIn);
   }
   if (!Number.isFinite(eta)) eta = 0.8;
@@ -2107,7 +2063,7 @@ export function preludeWorker(scope) {
   function status() {
     const S = ground ? ground.state : null;
     scope.postMessage({
-      type: 'status', t: F.t, desktopFallScale: desktopFallScale(F.comp), firstImpactAt: F.firstImpactAt, released: F.released, frameMs,
+      type: 'status', t: F.t, firstImpactAt: F.firstImpactAt, released: F.released, frameMs,
       landings: F.landings.map((L) => ({ state: L.state, t0: L.t0, tPeel: L.tPeel,
         dur: L.dur, aimed: !!L.aimed })),
       struck: !!S && S.struckAt >= 0,
