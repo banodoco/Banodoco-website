@@ -453,14 +453,15 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   color: var(--concept-rest);
   text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62);
 }
+.concept-organism, .concept-contribution { opacity: .84; }
 .j-manifesto-line.shown .concept-organism,
 .j-manifesto-line.shown .concept-contribution {
   animation: manifesto-concept-pair 6s ease-in-out forwards;
   animation-delay: calc(var(--w) * var(--stagger));
 }
 @keyframes manifesto-concept-pair {
-  0%, 100% { color: var(--concept-rest); text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62); }
-  40% { color: var(--concept-lit); text-shadow: 0 0 10px rgba(var(--concept-glow), .42), 0 0 3px rgba(var(--concept-glow), .18), 0 1px 12px rgba(0, 0, 0, .62); }
+  0%, 100% { opacity: .84; color: var(--concept-rest); text-shadow: 0 0 5px rgba(var(--concept-glow), .24), 0 1px 12px rgba(0, 0, 0, .62); }
+  40% { opacity: 1; color: var(--concept-lit); text-shadow: 0 0 10px rgba(var(--concept-glow), .42), 0 0 3px rgba(var(--concept-glow), .18), 0 1px 12px rgba(0, 0, 0, .62); }
 }
 /* The word spans still own reveal opacity. Phrase decoration lives outside
    those spans, while colour and fine vibration stay inside their ink. */
@@ -577,7 +578,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   color: transparent;
   filter: none;
   text-shadow: none;
-  opacity: .92;
+  opacity: .84;
 }
 /* The pulse changes presence, never the palette's saturation or lightness. */
 .j-manifesto-line.shown .manifesto-synthesis-glyph {
@@ -585,7 +586,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   animation-delay: calc(var(--w) * var(--stagger) + var(--glyph-delay));
 }
 @keyframes manifesto-synthesis-presence {
-  0%, 100% { opacity: .92; }
+  0%, 100% { opacity: .84; }
   40% { opacity: 1; }
 }
 @keyframes manifesto-iridescence {
