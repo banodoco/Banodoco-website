@@ -136,7 +136,7 @@ globalThis.getComputedStyle = () => ({ paddingTop: '3.2px' });
 const resizeObservers = [];
 globalThis.ResizeObserver = class {
   constructor(callback) { this.callback = callback; resizeObservers.push(this); }
-  observe() {}
+  observe(element, options) { this.observations ||= []; this.observations.push({ element, options }); }
   disconnect() {}
 };
 const camera = { position: vec(8, 3, 9), up: vec(0, 1, 0), fov: 46, far: 100, aspect: 390 / 844,
@@ -288,6 +288,7 @@ const mobileBox = mobileRoot.querySelector('.j-manifesto-lines');
 const mobilePanel = mobileRoot.querySelector('.j-manifesto-panel');
 const { ownerOf } = await import('../journey/ownership.js');
 mobile.begin();
+assert.equal(resizeObservers.at(-1).observations.find(o => o.element === mobileBox).options.box, 'border-box', 'retiring padding must not retrigger viewport easing');
 assert.ok(mobileRoot.classes.has('is-scroll-reading'));
 assert.equal(mobile.shownLines, 0, 'mobile begins with the same quiet opening as desktop');
 assert.ok(mobileBox.children.every(line => line.hidden), 'unrevealed mobile paragraphs contribute no empty scroll extent');
@@ -390,6 +391,30 @@ mobileBox.scrollTop = 0;
 mobileBox.listeners.scroll();
 assert.equal(mobileBox.style['--reading-pad-top'], '0px', 'opening centering inset is gone once reading has advanced');
 assert.equal(mobileParagraphs[0].getBoundingClientRect().top, mobileBox.rect.top, 'scrolling back reaches first text at the top, not the old empty inset');
+// A native gesture that starts before the opening inset is spent must own
+// scrollTop completely, including its momentum scroll events.
+mobile.returnTo();
+for (let i = 0; i < 900; i++) mobile.update(1 / 60);
+mobile.begin();
+mobileBox.scrollHeight = 2000;
+for (let i = 0; i < 300; i++) mobile.update(1 / 60);
+mobilePanel.listeners.touchstart({ type: 'touchstart' });
+advanceMobileTo(mobileSchedule.admit[1] + 0.1);
+const heldPadding = mobileBox.style['--reading-pad-top'];
+assert.ok(parseFloat(heldPadding) > 0);
+mobileBox.scrollTop = 40;
+mobileBox.listeners.scroll();
+assert.equal(mobileBox.scrollTop, 40, 'native drag is not rewritten by inset retirement');
+assert.equal(mobileBox.style['--reading-pad-top'], heldPadding);
+window.listeners.pointercancel({ type: 'pointercancel' });
+for (let i = 0; i < 200; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 40, 'native pan pointercancel does not release the still-held touch');
+window.listeners.touchend({ type: 'touchend', touches: [] });
+mobileBox.scrollTop = 80;
+mobileBox.listeners.scroll();
+assert.equal(mobileBox.scrollTop, 80, 'native momentum is not rewritten either');
+for (let i = 0; i < 170; i++) mobile.update(1 / 60);
+assert.equal(mobileBox.scrollTop, 80, 'native position remains owned for three quiet seconds');
 mobile.destroy();
 const cadence = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } }, { scroll });
 cadence.begin();

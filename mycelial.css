@@ -598,7 +598,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
     left: 0;
     width: 100%;
     max-width: none;
-    text-align: center;
+    text-align: left;
     /* Lower in the landscape, with the full block clear of the upper
        Purpose branch even when phone browser chrome shortens the view. */
     top: auto;
@@ -606,7 +606,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
       + var(--purpose-up-branch) + var(--nav-major) / 2 + 16px);
     translate: none;
   }
-  .j-block[data-chapter="final"] .j-sub { margin-inline: auto; }
+  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; }
 }
 
 /* Mobile keeps the desktop reveal rhythm in one continuous native scroll

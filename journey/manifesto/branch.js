@@ -356,7 +356,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   const FOLLOW_SECONDS = 2.8;
   const FOLLOW_IDLE_SECONDS = 3;
   let followResumeAt = Infinity;
-  let readingHeld = false;
+  let readingHeld = false, readingTouchHeld = false;
   let readingInsetConsumed = 0, readingTopPadding = 0;
   let readingInsetRetired = false;
   function measureReadingPadding() {
@@ -380,7 +380,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   // the same amount from scroll and follow coordinates to hold visible ink
   // still. Returning to the top later then reaches the actual first line.
   function consumeReadingInset() {
-    if (!scrollReading || admittedLines < 2 || readingTopPadding <= 0) return;
+    if (!scrollReading || !followEnabled || readingHeld || admittedLines < 2 || readingTopPadding <= 0) return;
     const consumed = Math.min(readingTopPadding, Math.max(0, lines.scrollTop));
     if (!(consumed > 0)) return;
     const top = lines.scrollTop;
@@ -422,6 +422,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (!followEnabled && !readingHeld && elapsed >= followResumeAt) {
       followEnabled = true;
       followResumeAt = Infinity;
+      // Retire the inset only after native touch/momentum has yielded.
+      consumeReadingInset();
       followParagraph('catchup');
     }
     if (!followEnabled || admittedLines <= 0 || !(lines.clientHeight > 0)) return;
@@ -435,11 +437,15 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
     if (!scrollReading || reduceMotion.matches) return;
     followEnabled = false;
+    if (event.type === 'touchstart') readingTouchHeld = true;
     if (event.type === 'touchstart' || event.type === 'pointerdown') readingHeld = true;
     followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
   }
   function releaseReadingHold(event) {
     if (event.touches?.length) return;
+    // Native panning cancels the PointerEvent while the touch is still held.
+    if (event.type.startsWith('pointer') && readingTouchHeld) return;
+    readingTouchHeld = false;
     readingHeld = false;
     if (!followEnabled && Number.isFinite(followResumeAt)) followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
   }
@@ -463,7 +469,10 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     liftKey = '';
     if (active && !root.hidden) { liftColumn(); measureReadingPadding(); followParagraph('resize'); updateReadingEdges(); }
   });
-  layoutObserver.observe(lines);
+  // The content box shrinks/grows whenever we consume centering padding.
+  // That is not a viewport resize: observing it rebases the easing every
+  // frame and makes automatic scrolling hesitate against its own motion.
+  layoutObserver.observe(lines, { box: 'border-box' });
   lineEls.forEach(line => layoutObserver.observe(line));
   function paintLines(count, admitted = count) {
     const next = Math.max(0, Math.min(sentences.length, count));
@@ -502,7 +511,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     followEnabled = window.innerWidth <= 720 && !reduceMotion.matches;
     followFrom = followTo = followStart = followEnd = 0;
     followResumeAt = Infinity;
-    readingHeld = false;
+    readingHeld = readingTouchHeld = false;
     readingInsetConsumed = readingTopPadding = 0;
     readingInsetRetired = false;
     if (scrollReading) claimInput(panel, { modal: true });

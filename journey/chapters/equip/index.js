@@ -238,11 +238,15 @@ export function createEquip(sceneApi) {
 
   /** Advance the arrival ladder against one dimensionless gate. Called from
    *  both drive() (scrolled arrival, gate = the copy ease) and driveEntry()
-   *  (nav landing, gate = the entry clock) so the two arrivals ring
-   *  identically — the whole reason the gate is a parameter. */
-  function advanceIntro(gate) {
-    if (!armed || blendOwned) return;
-    if (gate < RIPPLE_GATE_ON * 0.5) {
+   *  (nav landing, gate = the camera-ready entry clock). Both share the
+   *  same two beats; navigation needs no second copy-readiness wait. */
+  function advanceIntro(gate, entering = false) {
+    if (!armed || (blendOwned && !entering)) return;
+    // Navigation already waits for the visible under-cap camera. Begin its
+    // first marker ~280 ms later, while the final camera settle continues.
+    // Manual scrolling retains the copy-readiness gate and blend protection.
+    const onset = entering ? 0.015 : RIPPLE_GATE_ON;
+    if (gate < onset * 0.5) {
       // Left the arrival: re-arm so coming back rings again — and the labels
       // sit back down with their rings, so the return is a whole replay.
       // Half the onset, not the onset itself, so a gate hovering on the
@@ -252,7 +256,7 @@ export function createEquip(sceneApi) {
       return;
     }
     if (stage === 0) {
-      if (gate < RIPPLE_GATE_ON) return;
+      if (gate < onset) return;
       stage = 1;
       stalkRangAt = seconds();
       ring('quark', true);
@@ -341,7 +345,7 @@ export function createEquip(sceneApi) {
      *  they sit back down so each can rise again on its own ring. */
     beginEntry() { stage = 0; revealAt.quark = revealAt.brotchen = null; plumeFade.enter(); },
     /** The nav entry's own 0..1 clock, smootherstepped by frame-application. */
-    driveEntry(f) { advanceIntro(f); },
+    driveEntry(f) { advanceIntro(f, true); },
     /** CAMERA-PURE, and it has to be: the entry clock must not start while the
      *  flight is still out at Inspire's radius, or the stalk would ring into a
      *  frame the stipe is barely in. "Under the cap" is a place, and the two
@@ -358,7 +362,7 @@ export function createEquip(sceneApi) {
     /** Seconds. Long enough to carry both rings and the gap between them with
      *  room after the second, so the entry does not finish mid-answer. */
     entryDuration: 2.2,
-    /** A camera blend owns the frame; the ripple waits for it. */
+    /** Departures suppress ordinary ripples; ready destination entries may form. */
     setBlending(on, dstCamX, durS) { blendOwned = !!on; plumeFade.setBlending(on, durS); },
     setGliding(on) { gliding = !!on; },
     get gliding() { return gliding; },
