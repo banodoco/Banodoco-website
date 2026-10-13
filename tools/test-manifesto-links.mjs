@@ -13,7 +13,7 @@ try {
   await page.evaluate(() => window.journey.flyTo('manifesto'));
   assert.deepEqual(await page.locator('.j-manifesto-line').evaluateAll(lines => lines.map(line => line.textContent.trim().replace(/\s+/g, ' '))), CONTENT.manifesto.lines);
 
-  const tools = page.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^nourishing,/ });
+  const tools = page.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^nourishing$/ });
   if (!settled) {
     await page.waitForTimeout(1200);
     assert.equal(await tools.getAttribute('aria-disabled'), 'true');
@@ -24,14 +24,14 @@ try {
   await page.waitForFunction(() => document.querySelector('.j-manifesto .manifesto-chapter-link[href="#/equip"]').getAttribute('aria-disabled') === 'false', null, { timeout: 35000 });
   await tools.hover();
   assert.equal(await page.locator('.manifesto-link-tooltip:not([hidden])').textContent(), 'Jump to the Equip section');
-  assert.equal(await tools.locator('.manifesto-link-ink').evaluate(a => getComputedStyle(a).textDecorationStyle), 'dotted');
+  assert.equal(await tools.evaluate(a => getComputedStyle(a).textDecorationStyle), 'dotted');
   await page.screenshot({ path: '/tmp/manifesto-links-desktop.png' });
   await tools.click();
   await page.waitForFunction(() => window.journey.chapter === 'equip' && document.querySelector('.j-manifesto').hidden, null, { timeout: 12000 });
   assert.equal(await page.locator('.manifesto-link-tooltip:not([hidden])').count(), 0, 'tooltip closes on navigation');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.evaluate(() => window.journey.flyTo('manifesto'));
-  const inspiration = page.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^seeding,/ });
+  const inspiration = page.locator('.j-manifesto .manifesto-chapter-link').filter({ hasText: /^seeding$/ });
   await page.waitForFunction(() => document.querySelector('.j-manifesto .manifesto-chapter-link[href="#/equip"]').getAttribute('aria-disabled') === 'false');
   await inspiration.focus();
   assert.equal(await page.locator('.manifesto-link-tooltip:not([hidden])').textContent(), 'Jump to the Inspire section');

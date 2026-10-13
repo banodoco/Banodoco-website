@@ -95,3 +95,39 @@ for (const seconds of [.2, 1, 2, 3, 4, 4.5, 5, 15, CAMERA_SECONDS]) {
     'retarget preserves the displayed velocity');
 }
 console.log(`PASS continuous mobile away flight: early/late/retarget velocity, pole-safe orientation, exact landing; full-return peak ${(fullPeak*180/Math.PI).toFixed(1)}°/s`);
+
+// Inspire lies across the overhead heading from Purpose. The old desktop
+// blend of independently rewound targets nearly cancelled its horizontal
+// direction and spun >1000 degrees/s. Use the authored rests on both sizes.
+const { installVendorResolver } = await import('./render-report-lib.mjs');
+installVendorResolver();
+const { poseAt } = await import('../journey/director.js');
+const { restProgress } = await import('../journey/route.js');
+for (const [aspect, width] of [[390/844, 390], [1.6, 1280]]) {
+  const rest = id => {
+    const p = poseAt(restProgress(id), { pos: new THREE.Vector3(), target: new THREE.Vector3() }, undefined, aspect, width);
+    return { position: { ...p.pos }, target: { ...p.target }, fov: p.fov, roll: p.roll || 0 };
+  };
+  const purpose = rest('final'), inspire = rest('inspire');
+  for (const seconds of [.3, 1, 2, 4, 12, CAMERA_SECONDS]) {
+    const start = manifestoPose(purpose, seconds, aspect);
+    const velocity = returnVelocity(manifestoPose(purpose, seconds - 1/240, aspect), start, 1/240);
+    const duration = awaySecondsFrom(seconds / CAMERA_SECONDS);
+    const flight = createReturnFlight(start, inspire, duration, velocity);
+    let previous = null;
+    for (let i = 0; i <= 1000; i++) {
+      const pose = sampleReturnFlight(flight, i/1000);
+      camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+      camera.up.set(pose.up.x, pose.up.y, pose.up.z);
+      camera.lookAt(target.set(pose.target.x, pose.target.y, pose.target.z));
+      if (previous) assert.ok(camera.quaternion.angleTo(previous) / (duration/1000) < 1.6,
+        `Inspire return has no pole flip (${width}px, ${seconds}s departure)`);
+      previous = camera.quaternion.clone();
+    }
+    const end = new THREE.PerspectiveCamera();
+    end.position.set(inspire.position.x, inspire.position.y, inspire.position.z);
+    applyCameraRoll(end, target, inspire.roll);
+    assert.ok(camera.quaternion.angleTo(end.quaternion) < 1e-6, 'Inspire handoff keeps exact rest orientation');
+  }
+}
+console.log('PASS authored desktop/mobile Inspire returns: early/late heading continuity and exact landing');

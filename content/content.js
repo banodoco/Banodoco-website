@@ -510,7 +510,7 @@ export const CONTENT = {
       // while the responsive phone measure naturally remains four lines. The
       // copy and house type scale stay unchanged; only the Purpose text measure
       // is scoped in journey/site.css.
-      sub: 'In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.',
+      sub: 'In a world with a thriving open AI art ecosystem, humanity and AI will maximize their collective creative potential.',
       // Ownership now lives exclusively in the Purpose navigator subtree.
       // Keep the copy surface free of the retired duplicate editorial CTA.
       actions: [],

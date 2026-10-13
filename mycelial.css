@@ -635,7 +635,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
       + var(--purpose-up-branch) + var(--nav-major) / 2 + 8px);
     translate: none;
   }
-  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; }
+  .j-block[data-chapter="final"] .j-sub { margin-inline: 0; max-width: 92%; }
 }
 
 /* Mobile keeps the desktop reveal rhythm in one continuous native scroll
@@ -746,35 +746,34 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
   .j-rail, .j-rail:not(.j-rail-column) { transition: none; }
 }
 
-/* Small chapter invitations remain part of the manifesto's word reveal. */
+/* Decoration appears softly once its complete link is readable. Text keeps
+   the original per-word opacity; only the dotted line changes strength. */
 .manifesto-chapter-link {
   pointer-events: auto;
   color: inherit;
   text-decoration-line: underline;
   text-decoration-style: dotted;
-  text-decoration-color: currentColor;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: .22em;
   text-decoration-skip-ink: auto;
   cursor: pointer;
-  transition: color .2s ease;
+  transition: color .2s ease, text-decoration-color .85s ease;
 }
-.manifesto-chapter-link.is-phrase { text-decoration: none; }
-.manifesto-link-ink {
-  text-decoration: underline dotted currentColor 1px;
-  text-underline-offset: .22em;
-}
-/* One native dotted decoration joins both words once both are readable. */
-.manifesto-chapter-link.is-connected {
-  text-decoration: underline dotted currentColor 1px;
-  text-underline-offset: .22em;
-}
-.manifesto-chapter-link.is-connected .manifesto-link-ink,
-.manifesto-chapter-link.is-connected[aria-disabled="true"] { text-decoration: none; }
+.manifesto-link-ink { text-decoration: none; }
 .manifesto-chapter-link:hover,
-.manifesto-chapter-link:focus-visible { color: #f6cb8b; }
+.manifesto-chapter-link:focus-visible {
+  color: #f6cb8b;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+}
 .manifesto-chapter-link:focus-visible { outline: 1px solid #d7ad6980; outline-offset: 4px; border-radius: 2px; }
-.manifesto-chapter-link[aria-disabled="true"] { pointer-events: none; }
+.manifesto-chapter-link[aria-disabled="true"] {
+  pointer-events: none;
+  text-decoration-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .manifesto-chapter-link { transition: none; }
+}
 .manifesto-link-tooltip {
   position: fixed;
   z-index: 1000;

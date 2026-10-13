@@ -279,6 +279,28 @@ assert.deepEqual([camera.position.x, camera.position.y, camera.position.z, camer
   [2, -6, 11, 50, 4, 30], 'it lands exactly on the new rest, in its depth');
 assert.ok(maxStep < 3, `the bend is a glide, not a swing (largest step ${maxStep.toFixed(3)})`);
 branch.destroy();
+// Exercise the actual desktop branch (not just its flight helper): Inspire
+// is across the heading, where the old two-target blend flipped at the pole.
+{
+  const T = await import('../vendor/three/three.module.js');
+  window.innerWidth = 1280; camera.aspect = 1.6;
+  camera.position.set(-14.72, 2.73, 2.7); controls.target.set(-3.06, .83, -1.94);
+  const desktopAway = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } });
+  desktopAway.begin();
+  for (let i = 0; i < 720; i++) desktopAway.update(1/60);
+  desktopAway.returnTo(null, { land: { position: vec(9.9694, 2, -4.6488), target: vec(2.3531, 2.4199, -1.0707), fov: 40, roll: 0, fogNear: 7, fogFar: 20 } });
+  const observed = new T.PerspectiveCamera();
+  let prior = null;
+  for (let i = 0; i < 480; i++) {
+    desktopAway.update(1/60);
+    observed.position.set(camera.position.x, camera.position.y, camera.position.z);
+    observed.up.set(camera.up.x, camera.up.y, camera.up.z);
+    observed.lookAt(new T.Vector3(controls.target.x, controls.target.y, controls.target.z));
+    if (prior) assert.ok(observed.quaternion.angleTo(prior) * 60 < 1.6, 'actual desktop away branch avoids Inspire pole flip');
+    prior = observed.quaternion.clone();
+  }
+  desktopAway.destroy(); camera.aspect = 390/844;
+}
 // Mobile retains the desktop reveal rhythm in a continuous native scroller,
 // gently following each reveal until native reader input takes ownership.
 window.innerWidth = 390;

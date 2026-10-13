@@ -137,7 +137,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         ink.className = 'manifesto-link-ink';
         const text = word.match(/^[A-Za-z]+/)?.[0] || word;
         ink.textContent = (i > destination.start ? ' ' : '') + text;
-        span.append(lead, ink, word.slice(text.length));
+        span.append(lead, ink);
       } else {
         span.textContent = `${lead}${word}${trail}`;
       }
@@ -152,6 +152,15 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       (phraseThread || chapterLink || line).appendChild(span);
       if (destination && i === destination.end) {
         chapterLink = null;
+        // Punctuation follows the same word clock, outside the decorated link.
+        const suffix = word.replace(/^[A-Za-z]+/, '');
+        if (suffix) {
+          const punctuation = document.createElement('span');
+          punctuation.className = 'j-manifesto-word';
+          punctuation.style.setProperty('--w', beat);
+          punctuation.textContent = suffix;
+          line.appendChild(punctuation);
+        }
         // The inter-word space belongs to the link; the following space does not.
         if (trail) line.append(trail);
       }
@@ -666,11 +675,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         }
       }
     }
-    if (isMobileManifesto(camera.aspect)) {
-      flightStartK = returnK;
-      returnFlight = createReturnFlight(presentedPose || capture(), landing,
-        extendedRemaining, presentedVelocity);
-    }
+    // Retarget the displayed orientation on every viewport. Blending two
+    // look-at targets can cancel their horizontal directions at the pole.
+    flightStartK = returnK;
+    returnFlight = createReturnFlight(presentedPose || capture(), landing,
+      extendedRemaining, presentedVelocity);
     return true;
   }
   function returnTo(onFinish = null, { land = null } = {}) {
@@ -692,7 +701,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     returnStart = u;
     returnK = 0;
     returnRate = 1 / (land ? awaySecondsFrom(returnStart) : returnSecondsFrom(returnStart));
-    returnFlight = land && isMobileManifesto(camera.aspect)
+    returnFlight = land
       ? createReturnFlight(presentedPose || capture(), landing, 1 / returnRate, presentedVelocity) : null;
     flightStartK = 0;
     // the words take the whole fall to go (Hannah, 2026-10-06: "the fade out
