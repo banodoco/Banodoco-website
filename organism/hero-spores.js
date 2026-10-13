@@ -338,8 +338,8 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * KINDLES while still riding the current: its light rises and its tone warms
  * toward white-hot, so the visitor has picked it out of the river before it
  * loses lift. It carries that light down, swells as it settles, and its
- * collapse starts from exactly the light it arrived with. Phone kindling
- * also gently resolves a readable core on this existing member; its motion
+ * collapse starts from exactly the light it arrived with. Kindling also
+ * gently resolves a readable core on this existing member; its motion
  * remains the same stream motion until it peels. */
 const KINDLE_S = 0.80;          // the chosen spore catches the light in the stream
 const KINDLE_FAST_S = 0.45;     // ...shorter when a ready scene compresses the settle
@@ -1117,14 +1117,14 @@ function kindleBegin(F, L) {
 }
 function kindleTint(F, L, h) {
   const i3 = L.hi * 3;
-  if (F.comp.landFromBottom) {
-    // Recruit an ordinary member first, then gently resolve its small core
-    // during kindling. Nothing moves or changes size on the selection frame.
-    const k = smooth01(h / KINDLE_HEAT);
-    const size = L.size0 + (Math.max(L.size0, 0.10) - L.size0) * k;
-    if (Math.abs(F.size[L.hi] - size) > 1e-7) {
-      F.size[L.hi] = size; F.attrsDirty = true;
-    }
+  // Recruit an ordinary member first, then gently resolve its small core
+  // during kindling. Desktop needs the same readable floor as phones:
+  // increasing light alone leaves a subpixel stream grain hard to follow.
+  // Nothing moves or changes size on the selection frame.
+  const k = smooth01(h / KINDLE_HEAT);
+  const size = L.size0 + (Math.max(L.size0, 0.10) - L.size0) * k;
+  if (Math.abs(F.size[L.hi] - size) > 1e-7) {
+    F.size[L.hi] = size; F.attrsDirty = true;
   }
   for (let c = 0; c < 3; c++) F.color[i3 + c] = L.c0[c] + (L.cHot[c] - L.c0[c]) * h;
 }
