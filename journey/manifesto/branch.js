@@ -352,6 +352,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   const FOLLOW_IDLE_SECONDS = 3;
   let followResumeAt = Infinity;
   let readingHeld = false;
+  let readingInsetConsumed = 0, readingTopPadding = 0;
+  let readingInsetRetired = false;
   function measureReadingPadding() {
     if (!scrollReading || reduceMotion.matches || !(lines.clientHeight > 0)) return;
     if (admittedLines <= 0) {
@@ -363,8 +365,27 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     // Centre the opening paragraph. Later copy enters at the bottom,
     // retaining the preceding text above without padding for future copy.
     const last = lineEls[admittedLines - 1].getBoundingClientRect().height;
-    lines.style.setProperty('--reading-pad-top', `${Math.max(24, (lines.clientHeight - first) / 2)}px`);
+    readingTopPadding = readingInsetRetired ? 0
+      : Math.max(0, Math.max(24, (lines.clientHeight - first) / 2) - readingInsetConsumed);
+    lines.style.setProperty('--reading-pad-top', `${readingTopPadding}px`);
     lines.style.setProperty('--reading-pad-bottom', `${admittedLines === 1 ? Math.max(24, (lines.clientHeight - last) / 2) : 24}px`);
+  }
+  // The opening inset centres the first paragraph, but is not permanent
+  // scrollable content. Consume it as the reader moves past it, subtracting
+  // the same amount from scroll and follow coordinates to hold visible ink
+  // still. Returning to the top later then reaches the actual first line.
+  function consumeReadingInset() {
+    if (!scrollReading || admittedLines < 2 || readingTopPadding <= 0) return;
+    const consumed = Math.min(readingTopPadding, Math.max(0, lines.scrollTop));
+    if (!(consumed > 0)) return;
+    const top = lines.scrollTop;
+    readingInsetConsumed += consumed;
+    readingTopPadding -= consumed;
+    if (readingTopPadding <= 0) readingInsetRetired = true;
+    followFrom -= consumed;
+    followTo -= consumed;
+    lines.style.setProperty('--reading-pad-top', `${readingTopPadding}px`);
+    lines.scrollTop = top - consumed;
   }
   function followParagraph(mode = 'reveal') {
     if (!followEnabled || admittedLines <= 0) return;
@@ -400,6 +421,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     }
     if (!followEnabled || admittedLines <= 0 || !(lines.clientHeight > 0)) return;
     lines.scrollTop = followFrom + (followTo - followFrom) * smoother(followEnd > followStart ? (elapsed - followStart) / (followEnd - followStart) : 1);
+    consumeReadingInset();
     updateReadingEdges();
   }
   // Yield during a gesture and its momentum, then gently rejoin the current
@@ -425,6 +447,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     root.classList.toggle('has-reading-below', scrollReading && lines.scrollTop + lines.clientHeight < lines.scrollHeight - 2);
   }
   function onReadingScroll() {
+    consumeReadingInset();
     if (!followEnabled && Number.isFinite(followResumeAt)) followResumeAt = elapsed + FOLLOW_IDLE_SECONDS;
     updateReadingEdges();
   }
@@ -475,6 +498,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     followFrom = followTo = followStart = followEnd = 0;
     followResumeAt = Infinity;
     readingHeld = false;
+    readingInsetConsumed = readingTopPadding = 0;
+    readingInsetRetired = false;
     if (scrollReading) claimInput(panel, { modal: true });
     lines.scrollTop = 0;
     paused = reduceMotion.matches;

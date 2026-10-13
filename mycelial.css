@@ -653,6 +653,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
     padding-top: var(--reading-pad-top, 1rem);
     padding-bottom: var(--reading-pad-bottom, 1rem);
     scroll-behavior: auto;
+    overflow-anchor: none; /* The reveal controller preserves visible ink while retiring the opening inset. */
     --reading-mask-top: #000;
     --reading-mask-bottom: #000;
     mask-image: linear-gradient(to bottom, var(--reading-mask-top), #000 1rem,

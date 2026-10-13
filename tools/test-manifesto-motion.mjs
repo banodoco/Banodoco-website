@@ -326,13 +326,14 @@ assert.equal(mobileBox.style['--reading-pad-bottom'], '0px', 'no future-centerin
 mobileBox.rect = { top: 100, bottom: 500, height: 400 };
 const mobileParagraphs = mobileBox.children;
 mobileParagraphs.forEach((line, i) => {
-  line.getBoundingClientRect = () => ({ top: 200 + i * 240 - mobileBox.scrollTop,
-    bottom: 400 + i * 240 - mobileBox.scrollTop, height: 200 });
+  line.getBoundingClientRect = () => ({ top: 100 + Number.parseFloat(mobileBox.style['--reading-pad-top']) + i * 240 - mobileBox.scrollTop,
+    bottom: 300 + Number.parseFloat(mobileBox.style['--reading-pad-top']) + i * 240 - mobileBox.scrollTop, height: 200 });
 });
 for (let i = 0; i < 300; i++) mobile.update(1 / 60);
 assert.equal(mobileBox.scrollTop, 0, 'first paragraph remains centred');
 const mobileSchedule = mobileReadingSchedule(lineSecondsFor(liveCounts), liveCounts.map((n, i) => i === 0 ? n : n - 1));
 const secondStart = mobileSchedule.reveal[1];
+const readingAdvance = () => 200 - mobileParagraphs[0].getBoundingClientRect().top;
 const advanceMobileTo = seconds => {
   while (mobile.progress * mobileSchedule.seconds < seconds - 1e-8) mobile.update(1 / 60);
 };
@@ -344,19 +345,19 @@ advanceMobileTo(mobileSchedule.admit[1] + 0.2);
 assert.equal(mobile.shownLines, 1, 'scroll leads the incoming text instead of waiting for its reveal');
 assert.equal(mobileParagraphs[1].hidden, false, 'space is admitted exactly when the lead scroll needs it');
 assert.ok(!mobileParagraphs[1].classes.has('shown'), 'admitted incoming paragraph remains visually uninked');
-assert.ok(mobileBox.scrollTop > 0 && mobileBox.scrollTop < 25, 'the scroll is already moving before new text starts');
+assert.ok(readingAdvance() > 0 && readingAdvance() < 25, 'the scroll is already moving before new text starts');
 advanceMobileTo(secondStart - 0.025);
-assert.ok(mobileBox.scrollTop > 70, 'the lead visibly advances before incoming ink starts');
+assert.ok(readingAdvance() > 70, 'the lead visibly advances before incoming ink starts');
 assert.equal(mobile.shownLines, 1);
 advanceMobileTo(secondStart + 0.05);
 assert.equal(mobile.shownLines, 2, 'new paragraph starts after a clear pre-ink scroll lead');
 advanceMobileTo(secondStart + 0.1);
-assert.ok(mobileBox.scrollTop > 70 && mobileBox.scrollTop < 164, 'next reveal gently moves into the bottom of the view');
+assert.ok(readingAdvance() > 70 && readingAdvance() < 164, 'next reveal gently moves into the bottom of the view');
 const beforeResizeFollow = mobileBox.scrollTop;
 resizeObservers.at(-1).callback();
 assert.equal(mobileBox.scrollTop, beforeResizeFollow, 'layout remeasure does not jump the visible position');
 advanceMobileTo(mobileSchedule.admit[1] + 2.8);
-assert.ok(Math.abs(mobileBox.scrollTop - 164) < .01, 'same bottom target is reached on its reveal deadline even after resize');
+assert.ok(Math.abs(readingAdvance() - 164) < .01, 'same bottom target is reached on its reveal deadline even after resize');
 mobilePanel.listeners.touchstart({ type: 'touchstart' });
 mobileBox.scrollTop = 75;
 for (let i = 0; i < 600; i++) mobile.update(1 / 60);
@@ -370,7 +371,7 @@ assert.equal(mobileBox.scrollTop, 75, 'momentum scrolling restarts the idle dela
 for (let i = 0; i < 120; i++) mobile.update(1 / 60);
 assert.ok(mobileBox.scrollTop > 75 && mobileBox.scrollTop < 960, 'idle return eases from the manual position');
 for (let i = 0; i < 300; i++) mobile.update(1 / 60);
-assert.ok(mobileBox.scrollTop >= 644, 'following rejoins the current revealing paragraph');
+assert.ok(mobileBox.scrollTop >= 544, 'following rejoins the current revealing paragraph');
 // After every scheduled deadline has passed, manual release still gets a
 // full gentle catch-up rather than jumping onto an already-expired deadline.
 for (let i = 0; i < 600; i++) mobile.update(1 / 60);
@@ -383,7 +384,12 @@ assert.ok(mobileBox.scrollTop > 75 && mobileBox.scrollTop < 100, 'expired reveal
 for (let i = 0; i < 72; i++) mobile.update(1 / 60);
 assert.ok(mobileBox.scrollTop > 200 && mobileBox.scrollTop < 800, 'manual catch-up spends its own full duration');
 for (let i = 0; i < 90; i++) mobile.update(1 / 60);
-assert.ok(Math.abs(mobileBox.scrollTop - 884) < .01, 'manual catch-up reaches the last bottom target');
+assert.ok(Math.abs(mobileBox.scrollTop - 784) < .01, 'manual catch-up reaches the last bottom target');
+mobilePanel.listeners.touchstart({ type: 'touchstart' });
+mobileBox.scrollTop = 0;
+mobileBox.listeners.scroll();
+assert.equal(mobileBox.style['--reading-pad-top'], '0px', 'opening centering inset is gone once reading has advanced');
+assert.equal(mobileParagraphs[0].getBoundingClientRect().top, mobileBox.rect.top, 'scrolling back reaches first text at the top, not the old empty inset');
 mobile.destroy();
 const cadence = createManifestoBranch({ camera, controls, groups: { sway: { traverse() {} } }, scene: { fog } }, { scroll });
 cadence.begin();
