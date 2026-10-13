@@ -72,18 +72,21 @@ export const CAP_CLEARANCE_GLSL = `
           + capRimHeight(a) * pow(u, 1.6)
           - (0.11 + 0.05 * cos(a - 3.6)) * margin * margin + lump;
       }
-      float capTissueMask(vec3 p) {
+      float capTissueMask(vec3 p, float coreRadius) {
         // Most plume particles are far from the cap: reject them before
         // evaluating the curved surfaces (these bounds enclose the form).
-        if (p.y < 2.5 || p.y > 4.55 || dot(p.xz, p.xz) > 8.41) return 0.0;
+        if (p.y < 2.5 - coreRadius || p.y > 4.55 || dot(p.xz, p.xz) > 8.41) return 0.0;
         vec2 surface = capUnderside(p);
-        if (surface.x <= 0.07 || surface.x >= 1.0 || surface.y - p.y >= 0.08) return 0.0;
+        // Lamella tips extend .012 + .044*sin(pi*t) below capUnderPt.
+        // Use their lower envelope, then allow for the luminous sprite core.
+        float clearance = surface.y - 0.056 - p.y - coreRadius;
+        if (surface.x <= 0.07 || surface.x >= 1.0 || clearance >= 0.04) return 0.0;
         float footprint = smoothstep(0.07, 0.10, surface.x)
           * (1.0 - smoothstep(0.97, 1.0, surface.x));
         // Fade in clear air before reaching the flesh; nothing at or
         // above the underside can bloom through its illuminated surface.
         float belowTop = 1.0 - smoothstep(0.0, 0.08, p.y - capTopHeight(p));
-        return footprint * belowTop * (1.0 - smoothstep(0.015, 0.08, surface.y - p.y));
+        return footprint * belowTop * (1.0 - smoothstep(0.0, 0.04, clearance));
       }
 `;
 
@@ -91,7 +94,7 @@ const OCCLUDE_GLSL = `
         if (uCapOcc > 0.0) {
           vec3 wpOcc = (modelMatrix * vec4(placed, 1.0)).xyz;
           vec3 capLocal = (uCapWorldToLocal * vec4(wpOcc, 1.0)).xyz;
-          vShrink *= 1.0 - uCapOcc * capTissueMask(capLocal);
+          vShrink *= 1.0 - uCapOcc * capTissueMask(capLocal, sz * max(0.0, -mv.z) * uCapCorePixelScale);
           if (cameraPosition.y < uCapC.y && wpOcc.y > uCapC.y) {
             float tOcc = (uCapC.y - cameraPosition.y) / (wpOcc.y - cameraPosition.y);
             vec2 hitOcc = mix(cameraPosition.xz, wpOcc.xz, tOcc);
@@ -120,11 +123,12 @@ export function capOcclusionFor(sceneApi) {
       const m = o.material;
       if (!m || !m.isShaderMaterial || !m.vertexShader.includes('gl_PointSize = sz;')) return;
       m.uniforms.uCapOcc = { value: 0 };
+      m.uniforms.uCapCorePixelScale = { value: 0 };
       m.uniforms.uCapWorldToLocal = { value: new THREE.Matrix4() };
       m.uniforms.uCapC = { value: new THREE.Vector3() };
       m.uniforms.uCapR = { value: CAP_R };
       m.vertexShader = m.vertexShader
-        .replace('void main() {', CAP_CLEARANCE_GLSL + '\nuniform mat4 uCapWorldToLocal;\n      uniform float uCapOcc;\n      uniform vec3 uCapC;\n      uniform float uCapR;\n      void main() {')
+        .replace('void main() {', CAP_CLEARANCE_GLSL + '\nuniform float uCapCorePixelScale;\n      uniform mat4 uCapWorldToLocal;\n      uniform float uCapOcc;\n      uniform vec3 uCapC;\n      uniform float uCapR;\n      void main() {')
         .replace('gl_PointSize = sz;', OCCLUDE_GLSL);
       m.needsUpdate = true;
       mats.push(m);
@@ -132,13 +136,26 @@ export function capOcclusionFor(sceneApi) {
   }
   const _c = new THREE.Vector3(), _r = new THREE.Vector3();
   const worldToCap = new THREE.Matrix4();
+  const bufferSize = new THREE.Vector2();
   const occ = {
     set(amount) {
       const a = amount > 0 ? Math.min(1, amount) : 0;
       if (a > 0) {
         mushroom.updateWorldMatrix(true, false);
         worldToCap.copy(mushroom.matrixWorld).invert();
-        for (const m of mats) m.uniforms.uCapWorldToLocal.value.copy(worldToCap);
+        // Half the quad radius contains its luminous core; the outer texture
+        // halo should not erase otherwise clear-air spores. Convert device
+        // pixels through the live lens and cap transform (including scale).
+        sceneApi.renderer.getDrawingBufferSize(bufferSize);
+        const e = worldToCap.elements;
+        const localScale = Math.max(Math.hypot(e[0], e[1], e[2]),
+          Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10]));
+        const corePixelScale = 0.5 * localScale
+          / (bufferSize.y * sceneApi.camera.projectionMatrix.elements[5]);
+        for (const m of mats) {
+          m.uniforms.uCapWorldToLocal.value.copy(worldToCap);
+          m.uniforms.uCapCorePixelScale.value = corePixelScale;
+        }
         sway.updateMatrixWorld();
         sway.localToWorld(_c.set(0, CAP_Y, 0));
         const r = sway.localToWorld(_r.set(CAP_R, CAP_Y, 0)).distanceTo(_c);

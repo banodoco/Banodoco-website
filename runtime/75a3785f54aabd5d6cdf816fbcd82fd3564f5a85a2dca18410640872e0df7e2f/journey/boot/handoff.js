@@ -1,0 +1,643 @@
+/* ==================================================================== *
+ * journey/boot/handoff.js — THE JOURNEY PREPARATION AND HANDOFF OWNER.
+ *
+ * Hero growth and journey preparation have separate readiness gates.
+ * The growth waits for the HERO's own GPU preparation (./hero-gpu.js) and
+ * the prelude's landing, and gives the rest of the journey a short grace
+ * to finish first; whatever journey work is still left then waits for the
+ * growth to finish, so the two never share the main thread. Chapter
+ * construction and shader preparation gate navigation only. A slow
+ * optional asset must never keep an already-ready mushroom blank.
+ *
+ * WHY THIS IS THE ONE REGION OF main.js THAT HAD TO MOVE. Everything
+ * else in that file is wiring: a listener, a table, a query param, a
+ * class. This is a MACHINE — thirteen mutable bindings, five ordered
+ * transitions, an async preparation that can fail at four points, a
+ * gesture buffer replayed into a scroll surface that does not exist yet,
+ * and the preboot -> live rail handoff that decides first paint. It sat
+ * unnamed inside `if (sceneApi) { ... }`, 286 code lines deep, and the
+ * page entry is not where a reader should have to meet it.
+ *
+ * THE MACHINE (G3).
+ *
+ *   States, in the order a normal load walks them:
+ *     PREPARING     the module graph, baked geometry and chapters are
+ *                   being built; the hero has not started drawing.
+ *     INTRO-LIVE    `introReleased` — the specimen's 5.4s draw is
+ *                   running. Reached by releaseIntro().
+ *     FAST-DEPART   `fastHandoffStarted` — a gesture or a queued entry
+ *                   asked to leave early; the intro is accelerating.
+ *     ACTIVE        `journeyActive` — the journey owns input. Terminal.
+ *     FALLBACK      preparation threw; the hero scene is live, the orbit
+ *                   camera is handed back and the visitor is pointed at
+ *                   the static tier. Terminal.
+ *
+ *   Intro release, fast handoff, active navigation and terminal failure
+ *   are explicit latches. Every deferred startup route consults failure
+ *   before touching the prepared state; activation commits after success.
+ *
+ *   Events: a buffered wheel / touch / key gesture during the intro
+ *   (collectBootInput), a queued chapter entry from the page's controls
+ *   or the preboot rail (entryQueue), the specimen reporting its intro
+ *   complete, the preparation promise settling, and two timers —
+ *   `activationTimer` (the defensive 7.6s fallback) and
+ *   `railRevealTimer` (the rail's early entrance).
+ *
+ * WHAT IS PROTECTED HERE, and must not be redesigned by a later tidy:
+ * index.html authors a preboot rail SHELL and this module removes it at
+ * boot, continuing the hero's already-running fade across the DOM swap
+ * by handing the live rail the shell's exact painted opacity. Breaking
+ * that changes first paint. It is inside loadJourney(), moved verbatim.
+ *
+ * THE ONE BOUNDED REGISTRATION IN THE PAGE lives here: the intro input
+ * capture attaches six capture-phase listeners and stopIntroInputCapture()
+ * takes all six back off on every exit path. J05's register in main.js
+ * classifies that file's registrations as PAGE / GATED / BOUNDED; the
+ * single BOUNDED one came with the machine that bounds it, because a
+ * lifecycle split from its owner is how a leak gets written. Every PAGE
+ * registration stayed in main.js. tools/test-page-lifetime.mjs section B
+ * scans both files and requires the union to be the same site set.
+ *
+ * A HAZARD THE CODE ROUTES AROUND, kept where a reader will meet it:
+ * organism/intro.js permanently skews performance.now() by ~8.3s while
+ * fast-forwarding and never restores it. It stays monotonic, so
+ * DIFFERENCES are sound, but mixing sources is not — which is why
+ * observeBootInput() times the finger off `e.timeStamp` and says so.
+ *
+ * `readyState` is published locally only after preparation and navigation
+ * readiness succeed. A terminal failure clears it and retires the prepared
+ * handle; this page boots only one journey and recovery is a fresh reload.
+ * ==================================================================== */
+
+import { FREE_CAM } from '../../flags.js';
+import { ownerOf, modalLive, targetOwnsKey } from '../ownership.js';
+import { NOTE } from './scene-note.js';
+import { prepareHeroGpu } from './hero-gpu.js';
+// The preload atmosphere's singleton (ESM cache: same instance the page
+// booted). Consulted for ONE thing — the prelude's ignition contract:
+// the normal release below waits for the prelude's convergence pulse to
+// reach the mushroom origin along the woken ground skeleton, so the
+// growth reads as caused by the landings that woke it.
+import { heroSpores } from '../../organism/hero-spores.js';
+
+/**
+ * @param scene           the organism's scene handle (never null — the
+ *                        caller only builds this when the scene started)
+ * @param entryQueue      journey/boot/entry-queue.js, shared with the
+ *                        page's own hero controls
+ * @param note            journey/boot/scene-note.js
+ * @param journeyModule   the in-flight dynamic import of journey.js,
+ *                        started at main.js's module scope so the fetch
+ *                        has the whole intro as runway. Passed in rather
+ *                        than started here: a module-scope import in
+ *                        THIS file would begin during import resolution,
+ *                        which is earlier, and the runway comment in
+ *                        main.js would stop being true.
+ *
+ *                        (The specifier is deliberately NOT quoted in
+ *                        this comment. tools/test-page-lifetime.mjs's D1
+ *                        scans raw text for specifier literals with no
+ *                        comment filter, so a prose mention of a relative
+ *                        specifier mints a module that is not on disk —
+ *                        measured here, and the first such phantom in the
+ *                        tree. Its own cardinality caught it.)
+ * @param bakedGeomReady  the baked-geometry fetch, same reasoning
+ * @param skipIntro       ?nointro / ?capture / prefers-reduced-motion
+ * @param frozen          ?introat — the choreography is pinned at a
+ *                        progress and nothing should animate off it
+ * @param introSeconds    the hero entry choreography length
+ */
+export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
+  bakedGeomReady, skipIntro, frozen, introSeconds, onNavigate = null }) {
+  // Read the specimen's clock rather than running a second CSS duration.
+  // This is a one-shot entrance: navigation back to Mission cannot restart it.
+  const heroCopy = document.querySelector('.ui .hero');
+  if (heroCopy && document.body.classList.contains('hero-growth-lift')) {
+    const followGrowth = () => {
+      const progress = skipIntro ? 1 : scene.intro.growthProgress;
+      // Finish between the cap's first stroke and the end of growth: a
+      // calmer rise that still clears the specimen before growth completes.
+      const liftEnd = (1 + scene.intro.capStartProgress) / 2;
+      const lift = Math.min(1, Math.max(0, progress / liftEnd));
+      const eased = lift * lift * (3 - 2 * lift);
+      heroCopy.style.setProperty('--hero-growth-progress', String(eased));
+      if (lift < 1 && !frozen) requestAnimationFrame(followGrowth);
+    };
+    followGrowth();
+  }
+  // Once an accepted navigation leaves the hero, retire the preload ground's
+  // earned lights before the camera flight. Keep this beside the handoff's
+  // existing navigation callback so every activated route shares the same
+  // fade without importing the preload singleton into main.js's static graph.
+  const handleNavigate = (chapter) => {
+    heroSpores.preludeFadeGround();
+    if (typeof onNavigate === 'function') onNavigate(chapter);
+  };
+  // Input policy: the journey owns scroll and pointer gestures, so user
+  // orbit/zoom/pan are disabled at the source (organism/organism.js
+  // setInputPolicy — the DOM event shield this replaces is gone). Taps still
+  // reach the organism's own tap handler; DOM links/nav are untouched.
+  // ?free=1 keeps the hero's fully interactive camera (and the grab cursor,
+  // via body.free-cam in journey/site.css).
+  if (FREE_CAM) document.body.classList.add('free-cam');
+  else scene.setInputPolicy('journey');
+
+  // The organism reports its own real completion after the 5.4s draw and
+  // 0.7s shell restore. This old page-level duration remains only as a
+  // defensive fallback for a suspended/missing animation frame.
+  const HERO_INTRO_MS = 7600;
+  const HERO_SCENE_COMPLETE_MS = introSeconds * 1000 + 700;
+  // Let the navigation form over the mushroom's quiet final settle instead of
+  // waiting until the journey becomes interactive. Input remains gated until
+  // activateJourney(); this changes only the visual entrance.
+  const RAIL_REVEAL_LEAD_MS = 1200;
+
+  let journeyFailed = false;
+  const wantsFastEntry = () => entryQueue.wantsFast?.() ?? !!entryQueue.peek();
+  // when the hero's own programs were linked (./hero-gpu.js), or null
+  let heroReadyAt = null;
+  let journeyLoadP = null;
+  let readyState = null;
+  let preparedState = null;
+  let earlyRail = null;
+  let journeyActive = false;
+  let introReleased = false;
+  let introReleasedAt = -1;
+  let fastHandoffStarted = false;
+  let activationTimer = null;
+  let railRevealTimer = null;
+  let preludeReleaseTimer = null;
+  let preludeLandingPoll = null;
+  let growthWaitTimer = null;
+  let resolveGrowthWait = null;
+  let bootInput = null;
+  let pendingTouch = null;
+  let introCaptureLive = false;
+  let onIntroInput = null;
+  const INTRO_INPUT_EVENTS = ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'keydown'];
+
+  function stopIntroInputCapture() {
+    if (!introCaptureLive) return;
+    introCaptureLive = false;
+    for (const type of INTRO_INPUT_EVENTS) removeEventListener(type, onIntroInput, true);
+  }
+
+  function touchById(list, id) {
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].identifier === id) return list[i];
+    }
+    return null;
+  }
+
+  /* THE GESTURE BUFFER, in three named parts rather than one. Buffer input
+     independently from module loading: the journey's listeners do not exist
+     while an early gesture is asking the intro to finish, so boot consumes
+     this one observed physical input only after scroll.attach().
+
+     `observeBootInput` answers ONE question — what does this event say about
+     the finger, the wheel or the key — and returns the buffer it would open,
+     or null. `collectBootInput` answers the OTHER — is this the first one, so
+     should the fast handoff begin. `takeBootInput` drains.
+
+     That split is not decoration; it is what gives each of the two bindings
+     below exactly two write sites instead of five and three. The arithmetic
+     inside is unchanged, line for line: every `return false` became `return
+     null`, and every `bootInput = X; return true;` became `return X;`. */
+  function observeBootInput(e) {
+    // Event timestamps stay on the browser's physical input clock. The intro
+    // deliberately skews performance.now() while fast-forwarding, so using it
+    // after the first move would falsely add several seconds to the finger's
+    // duration and erase the real swipe rate.
+    const now = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
+    if (e.type === 'touchstart') {
+      if (!bootInput && e.touches && e.touches.length === 1) {
+        const touch = e.touches[0];
+        pendingTouch = { identifier: touch.identifier,
+          startY: touch.clientY, latestY: touch.clientY,
+          startedAt: now, latestAt: now, active: true };
+      }
+      return null;
+    }
+    if (e.type === 'touchmove') {
+      if (!pendingTouch || !e.touches || e.touches.length !== 1) return null;
+      const touch = touchById(e.touches, pendingTouch.identifier);
+      if (!touch) return null;
+      pendingTouch.latestY = touch.clientY;
+      pendingTouch.latestAt = now;
+      if (!bootInput) return { kind: 'touch', contact: pendingTouch };
+      return null;
+    }
+    if (e.type === 'touchend' || e.type === 'touchcancel') {
+      if (pendingTouch) {
+        const touch = touchById(e.changedTouches, pendingTouch.identifier);
+        if (touch) pendingTouch.latestY = touch.clientY;
+        pendingTouch.latestAt = now;
+        pendingTouch.active = false;
+      }
+      return null;
+    }
+    if (e.type === 'wheel') {
+      if (bootInput && bootInput.kind === 'wheel') {
+        bootInput.samples.push({ deltaY: e.deltaY, deltaMode: e.deltaMode });
+        return null;
+      }
+      if (!bootInput) {
+        return { kind: 'wheel', samples: [{ deltaY: e.deltaY, deltaMode: e.deltaMode }] };
+      }
+      return null;
+    }
+    if (e.type === 'keydown' && !bootInput) return { kind: 'key', key: e.key };
+    return null;
+  }
+
+  /** True when this event OPENED the buffer — which is the signal to begin
+   *  the fast handoff, and the reason this returns a boolean at all. */
+  function collectBootInput(e) {
+    const opened = observeBootInput(e);
+    if (!opened) return false;
+    bootInput = opened;
+    return true;
+  }
+
+  /** THE DRAIN. Both callers cleared both bindings by hand before; one of
+   *  them wanted the value and one only wanted the clear, which is why the
+   *  same two lines appeared twice. The contact goes with the buffer: a
+   *  half-drained gesture — no buffer but a live finger still tracked — is a
+   *  state nothing here wants and nothing here checks for. */
+  function takeBootInput() {
+    const input = bootInput;
+    bootInput = null;
+    pendingTouch = null;
+    return input;
+  }
+
+  function replayBootInput(state) {
+    const input = takeBootInput();
+    if (!input || !state) return;
+    // Scroll only requests a navigation hint after normal activation;
+    // it neither accelerates growth nor replays distance into progress.
+    if (state.cueNavigation) state.cueNavigation(input.kind);
+  }
+
+  function releaseIntro() {
+    if (introReleased) return;
+    introReleased = true;
+    introReleasedAt = performance.now();
+    // The scene takes the stream over from the prelude's worker here, as
+    // the growth begins (organism/hero-spores.js adopt(); a no-op when the
+    // prelude draws on this thread). Not earlier: until this frame the scene
+    // has nothing to show, and while it holds its frame the GPU belongs to
+    // the prelude. Every route into the growth passes through this call.
+    scene.setGroundEntryLead?.(heroSpores.preludeLandingStatus().impactAgeSeconds);
+    heroSpores.adopt();
+    document.body.classList.remove('scene-preparing');
+    document.body.classList.add('scene-intro-live');
+    // THE STRIKE: the prelude's convergence pulse arrives on this same
+    // frame — the origin pool swells and the pre-network hands its light
+    // to the real web's own converging draw-on. The normal path timed
+    // this call to the pulse's arrival; the fast and fallback paths fire
+    // it with the pulse mostly arrived.
+    heroSpores.preludeStrike();
+    scene.intro.start();
+    performance.mark('hero-intro-start');
+  }
+
+  function activateJourney() {
+    if (journeyFailed || journeyActive || !readyState) return false;
+    return guardStartup('activating navigation and intro handoff', () => {
+      clearTimeout(activationTimer);
+      clearTimeout(railRevealTimer);
+      const entry = entryQueue.take();
+      readyState.activate({ entry });
+      stopIntroInputCapture();
+      if (entry && entry !== 'mission') takeBootInput();
+      else replayBootInput(readyState);
+      journeyActive = true;
+      performance.mark('journey-interactive');
+      return true;
+    });
+  }
+
+  // Deferred activation and preparation share one terminal failure boundary.
+  function guardStartup(stage, action) {
+    if (journeyFailed) return false;
+    try { return action(); }
+    catch (error) { failJourney(stage, error); return false; }
+  }
+
+  function failJourney(stage, error) {
+    if (journeyFailed) return;
+    journeyFailed = true;
+    journeyActive = false;
+    const failedState = readyState || preparedState;
+    readyState = null;
+    preparedState = null;
+    cancelPreludeWait();
+    clearTimeout(activationTimer);
+    clearTimeout(railRevealTimer);
+    clearTimeout(growthWaitTimer);
+    resolveGrowthWait?.();
+    resolveGrowthWait = null;
+    entryQueue.whenRequested(null);
+    entryQueue.take();
+    stopIntroInputCapture();
+    takeBootInput();
+    // Cleanup must never replace the original diagnosis.
+    const cleanup = (action) => { try { action(); } catch (err) { console.error('[journey-v6] fallback cleanup failed', err); } };
+    cleanup(() => failedState?.failStartup?.());
+    cleanup(() => earlyRail?.setReady(false));
+    cleanup(releaseIntro);
+    cleanup(() => scene.setInputPolicy('free'));
+    performance.mark('journey-fallback');
+    console.error('[journey-v6] failed during ' + stage, error);
+    note.showFailure(NOTE.journeyFailed, stage, error);
+  }
+
+  function cancelPreludeWait() {
+    if (preludeReleaseTimer !== null) {
+      clearTimeout(preludeReleaseTimer);
+      preludeReleaseTimer = null;
+    }
+    if (preludeLandingPoll !== null) {
+      clearTimeout(preludeLandingPoll);
+      preludeLandingPoll = null;
+    }
+  }
+
+  function armNormalActivation() {
+    if (journeyFailed || !readyState || !introReleased || journeyActive) return;
+    const elapsed = Math.max(0, performance.now() - introReleasedAt);
+    const remaining = Math.max(0, HERO_SCENE_COMPLETE_MS - elapsed);
+    const activationRemaining = Math.max(0, HERO_INTRO_MS - elapsed);
+    clearTimeout(activationTimer);
+    clearTimeout(railRevealTimer);
+    railRevealTimer = setTimeout(() => {
+      guardStartup('revealing navigation', () => readyState?.revealRail?.());
+    }, Math.max(0, remaining - RAIL_REVEAL_LEAD_MS));
+    requestAnimationFrame(activateWhenIntroComplete);
+    activationTimer = setTimeout(activateJourney, activationRemaining);
+  }
+
+  function beginNormalIntro() {
+    const waitStarted = performance.now();
+    const PREPARE_CAP_MS = 10000;
+    const JOURNEY_GRACE_MS = 1500;
+    const LANDING_CAP_MS = 7000;
+    const releaseOnStrike = () => {
+      cancelPreludeWait();
+      if (journeyFailed || fastHandoffStarted || journeyActive) return;
+      guardStartup('starting hero intro', () => { releaseIntro(); armNormalActivation(); });
+    };
+    const waitForLanding = () => guardStartup('waiting for hero landing', () => {
+      if (journeyFailed || fastHandoffStarted || journeyActive || introReleased) return;
+      /* THE GROWTH OWNS THE MAIN THREAD (2026-10-04, Hannah: "we need to
+         have ZERO lag on the initial load"). Nothing heavy may run beside
+         the stalk's climb, so the growth waits for two things:
+
+           1. The hero's own programs (./hero-gpu.js) — always. Without them
+              the growth links shaders on its first frames.
+           2. The rest of the journey (readyState) — but only for a grace of
+              JOURNEY_GRACE_MS once the hero is ready. On a fast machine the
+              journey is built well inside it and nothing is left over. On a
+              slow one (measured at a quarter of this machine's CPU on
+              10 Mbps: hero ready ~1 s after the scene, journey ~9 s), waiting
+              for all of it kept the prelude on screen for ~15 s, so the
+              growth goes ahead and loadJourney() parks its remaining steps
+              until the growth has finished (growthSettled).
+
+         The prelude is built to hold meanwhile: the current keeps flowing
+         and the woken network breathes. PREPARE_CAP_MS is only a backstop
+         for a hero preparation that neither resolves nor times out. */
+      const now = performance.now();
+      const prepared = readyState !== null
+        || (heroReadyAt !== null && now - heroReadyAt >= JOURNEY_GRACE_MS)
+        || now - waitStarted >= PREPARE_CAP_MS;
+      if (!prepared) {
+        preludeLandingPoll = setTimeout(waitForLanding, 50);
+        return;
+      }
+      const status = heroSpores.preludeLandingStatus();
+      if (status.firstImpact) {
+        const strikeMs = heroSpores.preludeMsUntilStrike();
+        if (strikeMs > 0) preludeReleaseTimer = setTimeout(releaseOnStrike, strikeMs);
+        else releaseOnStrike();
+        return;
+      }
+      /* The fallback is for a prelude that will never land (hidden tab,
+         failed worker, no field) — not for a slow, unhurried settle. The
+         settle now floats down over ~2 s after its kindle and lull, so a
+         live prelude with a landing still to come can take longer than
+         the old 2.8 s, and the growth would start under a spore still in
+         the air. While the prelude reports a landing pending, wait up to
+         LANDING_CAP_MS; otherwise fall back at the short bound. */
+      const cap = status.pending ? LANDING_CAP_MS : 2800;
+      if (performance.now() - waitStarted >= cap) {
+        releaseOnStrike();
+        return;
+      }
+      preludeLandingPoll = setTimeout(waitForLanding, 50);
+    });
+    waitForLanding();
+  }
+
+  /** The specimen, rather than a second page timer, owns the normal handoff.
+   *  This removes the old ~1.5s pause that belonged to hero callouts which
+   *  are no longer part of this navigation iteration. */
+  function activateWhenIntroComplete() {
+    if (journeyFailed || journeyActive || !readyState) return;
+    if (scene.intro.complete) {
+      activateJourney();
+      return;
+    }
+    requestAnimationFrame(activateWhenIntroComplete);
+  }
+
+  function beginFastHandoff() {
+    if (journeyFailed || !wantsFastEntry() || !readyState || fastHandoffStarted) return;
+    fastHandoffStarted = true;
+    cancelPreludeWait();
+    clearTimeout(activationTimer);
+    guardStartup('activating navigation and intro handoff', () => {
+      document.body.classList.add('intro-fast');
+      releaseIntro();
+      // Start travel first so its actual, destination-dependent duration is
+      // available. The specimen finishes three-quarters through that same flight.
+      if (!activateJourney()) return;
+      const travelMs = readyState.transitionSeconds * 1000;
+      if (travelMs > 0) scene.intro.accelerate({
+        totalMs: HERO_SCENE_COMPLETE_MS,
+        rampMs: travelMs * 0.75,
+        exactDuration: true,
+    });
+    });
+  }
+  entryQueue.whenRequested(beginFastHandoff);
+
+  /** Resolves when no growth is running for journey work to interrupt:
+   *  before the intro is released, once the specimen reports it complete, or
+   *  as soon as the visitor asks to leave (a gesture or a queued entry wants
+   *  the journey, and the accelerated intro is short). Polled on a timer —
+   *  this is a parking spot for a few seconds, not a frame-accurate cue. */
+  function growthSettled() {
+    return new Promise((resolve) => {
+      resolveGrowthWait = resolve;
+      const check = () => {
+        if (journeyFailed || !introReleased || !scene.intro || scene.intro.complete
+            || fastHandoffStarted || wantsFastEntry()) resolve();
+        else growthWaitTimer = setTimeout(check, 100);
+      };
+      check();
+    });
+  }
+
+  function loadJourney() {
+    if (journeyLoadP) return journeyLoadP;
+    journeyLoadP = (async () => {
+      let stage = 'preparing the first frame';
+      try {
+        performance.mark('journey-prepare-start');
+        // Give the DOM copy one paint, then construct one chapter per task.
+        // Hero growth remains live while chapter work yields between slices.
+        const nextTask = () => new Promise(resolve =>
+          requestAnimationFrame(() => setTimeout(resolve, 0)));
+        await nextTask();
+        // The hero's programs first, in parallel with everything below:
+        // they need only the scene, which already exists. The growth's gate
+        // (beginNormalIntro) reads heroReadyAt.
+        if (!skipIntro && !frozen) {
+          prepareHeroGpu(scene).then((usable) => {
+            if (journeyFailed) return;
+            if (usable === false) failJourney('preparing hero shaders', new Error('Graphics context unavailable during hero preparation'));
+            else heroReadyAt = performance.now();
+          }, (error) => failJourney('preparing hero shaders', error));
+        }
+        // Build the lightweight navigation as soon as its module graph is
+        // ready, before chapter geometry/GPU preparation. Its own fade now
+        // shares the hero copy's opening beat instead of arriving after the
+        // mushroom has already finished drawing.
+        stage = 'loading journey modules';
+        const m = await journeyModule;
+        if (journeyFailed) return null;
+        stage = 'building navigation';
+        earlyRail = m.prepareRail ? m.prepareRail((chapter) => {
+          entryQueue.request(chapter);
+        }) : null;
+        if (earlyRail && earlyRail.reveal) {
+          const shell = document.querySelector('.j-rail-preboot');
+          const shellOpacity = shell ? parseFloat(getComputedStyle(shell).opacity) : 0;
+          earlyRail.reveal();
+          if (shell) {
+            // Continue the hero's already-running fade across the DOM swap.
+            // The live rail takes the shell's exact painted opacity, then
+            // completes only the unspent portion of the shared CSS entry beat.
+            const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
+            earlyRail.root.style.transition = 'none';
+            earlyRail.root.style.opacity = String(from);
+            void earlyRail.root.offsetWidth;
+            shell.remove();
+            const finishWithHero = () => guardStartup('revealing navigation', () => {
+              if (journeyFailed) return;
+              const heroLine = document.querySelector('h1 .hl');
+              const heroOpacity = heroLine
+                ? parseFloat(getComputedStyle(heroLine).opacity)
+                : 1;
+              earlyRail.root.style.opacity = String(Number.isFinite(heroOpacity) ? heroOpacity : 1);
+              if (heroOpacity < 0.999) {
+                requestAnimationFrame(finishWithHero);
+              } else {
+                earlyRail.root.style.opacity = '1';
+                requestAnimationFrame(() => { if (!journeyFailed) earlyRail.root.style.transition = ''; });
+              }
+            });
+            requestAnimationFrame(finishWithHero);
+          }
+        }
+        stage = 'loading chapter geometry';
+        await bakedGeomReady;
+        await growthSettled();
+        if (journeyFailed) return null;
+        stage = 'building chapters';
+        let remaining = m.prepareChapter ? m.prepareChapter(scene) : 0;
+        while (remaining > 0) {
+          await nextTask();
+          await growthSettled();
+          if (journeyFailed) return null;
+          remaining = m.prepareChapter ? m.prepareChapter(scene) : 0;
+        }
+        await nextTask();
+        await growthSettled();
+        if (journeyFailed) return null;
+        stage = 'initializing the journey';
+        const state = m.boot({ heroIntroSkipped: !!skipIntro,
+          heroFrozen: frozen, deferActivation: true,
+          rail: earlyRail,
+          onNavigate: handleNavigate,
+          onEntry: (chapter) => {
+            heroSpores.preludeFadeGround();
+            entryQueue.request(chapter);
+          } });
+        if (!state) throw new Error('Journey boot returned no state');
+        preparedState = state;
+        stage = 'preparing journey shaders';
+        const usable = await state.ready;
+        if (journeyFailed) return null;
+        if (usable === false) throw new Error('Graphics context unavailable during journey preparation');
+        stage = 'activating navigation and intro handoff';
+        earlyRail?.setReady(true);
+        readyState = state;
+
+        if (skipIntro || frozen) {
+          document.body.classList.remove('scene-preparing');
+          document.body.classList.add('scene-static');
+          // no intro, so no strike to wait for — the prelude leaves quietly
+          heroSpores.preludeDismiss();
+          scene.intro.finish();
+          activateJourney();
+        } else if (wantsFastEntry()) {
+          beginFastHandoff();
+        } else {
+          armNormalActivation();
+        }
+        return journeyFailed ? null : state;
+      } catch (err) {
+        failJourney(stage, err);
+        return null;
+      }
+    })();
+    return journeyLoadP;
+  }
+
+  onIntroInput = (e) => {
+    if (journeyFailed || journeyActive) return;
+    // The menu can open once navigation is ready, before intro activation
+    // removes this capture listener. Its native scroll owns the gesture
+    // throughout that overlap, exactly as in the active transport.
+    if (ownerOf(e.target)) return;
+    if (e.type === 'keydown' && (modalLive() || targetOwnsKey(e))) return;
+    if (e.type === 'keydown') {
+      if (!['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Spacebar',
+        'Home', 'End'].includes(e.key)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    }
+    if (e.type === 'touchmove' && (!e.touches || e.touches.length !== 1)) return;
+    if ((e.type === 'wheel' || e.type === 'touchmove' || e.type === 'keydown')
+        && e.cancelable) e.preventDefault();
+    // Scrolling can cue the navigation once it is ready, but must not
+    // accelerate growth or start travel. Only an explicit chapter request
+    // takes the fast handoff path.
+    collectBootInput(e);
+  };
+  introCaptureLive = true;
+  for (const type of INTRO_INPUT_EVENTS) {
+    const passive = type !== 'wheel' && type !== 'touchmove' && type !== 'keydown';
+    addEventListener(type, onIntroInput, { capture: true, passive });
+  }
+
+  // Preparation begins now, not after the old 7.6s timer. Its first heavy
+  // slice is still held until the left-hand DOM has painted once.
+  if (!skipIntro && !frozen) beginNormalIntro();
+  loadJourney();
+}
