@@ -195,7 +195,7 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
 .j-manifesto-panel h1 { color: var(--parchment); font-size: clamp(3rem, 5vw, 5rem); }
 .j-manifesto .j-manifesto-line {
   font-family: var(--mycelial-body);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 400;
   line-height: 2;
   letter-spacing: .015em;
@@ -206,7 +206,7 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
    the live scene's fixed composition. */
 body:has(.manifesto-static) h1,
 body:has(.manifesto-static) h2 { font-family: var(--mycelial-display); font-weight: 400; letter-spacing: -.025em; }
-body:has(.manifesto-static) .manifesto-static .sub { font-size: 18px; line-height: 1.9; text-transform: none; letter-spacing: .015em; }
+body:has(.manifesto-static) .manifesto-static .sub { font-size: 17px; line-height: 1.9; text-transform: none; letter-spacing: .015em; }
 @media (min-width: 1800px) {
   .ui .hero { max-width: 60rem; }
 }
@@ -231,7 +231,7 @@ body:has(.manifesto-static) .manifesto-static .sub { font-size: 18px; line-heigh
   .j-h { font-size: clamp(2rem, 8vw, 2.8rem); }
   .j-sub { font-size: 11px; line-height: 1.9; letter-spacing: .16em; }
   .j-manifesto-panel h1 { font-size: 2.8rem; }
-  .j-manifesto .j-manifesto-line { font-size: 17px; line-height: 1.9; letter-spacing: .015em; }
+  .j-manifesto .j-manifesto-line { font-size: 16px; line-height: 1.9; letter-spacing: .015em; }
 }
 @media (max-height: 700px) and (min-width: 1025px) {
   .ui .hero h1 { font-size: clamp(3rem, 5vw, 4.5rem); }
@@ -659,7 +659,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 }
 @media (max-width: 720px) {
   .j-manifesto.is-scroll-reading .j-manifesto-line {
-    font-size: clamp(17px, 4.5vw, 19px);
+    font-size: clamp(16px, 4.25vw, 18px);
     line-height: 1.65;
     letter-spacing: .015em;
   }
