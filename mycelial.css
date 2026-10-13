@@ -276,14 +276,6 @@ body:has(.mycelial-secondary-name) .sub:not([data-src="manifesto.body"]) {
   line-height: 2;
 }
 
-/* The inline brand echoes the shared all-caps wordmark. */
-.j-manifesto-word.is-name {
-  font-family: var(--mycelial-body);
-  font-weight: 400;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-}
-
 /* Keep the existing heading as the manifesto region's accessible name;
    the fixed home signature supplies its one visible Mycelial title. */
 .j-manifesto-panel #j-manifesto-title {
