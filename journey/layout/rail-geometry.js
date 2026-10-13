@@ -183,12 +183,12 @@ export function settledPurposeRowMarks(w, h) {
   const row = rowLayout(w, h);
   const y = row.centreY - row.purposeLift;
   const marks = row.centres.map((x, i) => ({ x: row.left + x, y, radius: row.ringDia[i] / 2 }));
-  const index = NAV_ROW_ITEMS.findIndex(item => item.id === 'final');
+  const index = NAV_ROW_ITEMS.findIndex(item => item.chapter === 'final');
   if (index >= 0) {
     const pitch = index > 0 ? row.centres[index] - row.centres[index - 1] : row.major * 1.8;
     const x = marks[index].x - pitch / 2;
     for (const side of [-1, 1]) marks.push({ x, y: y + side * row.major * 1.1,
-      radius: row.minorRingD / 2 });
+      radius: row.minorRingD / 2, chapter: side < 0 ? 'manifesto' : 'ownership' });
   }
   return marks;
 }

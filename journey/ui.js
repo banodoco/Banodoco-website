@@ -270,6 +270,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project,
     blocks[c.id] = b;
   }
   const fitPurposeCopy = createPurposeCopyFit(blocks.final);
+  if (document.fonts) owner.listen(document.fonts, 'loadingdone', () => fitPurposeCopy(true));
   const heroBlock = document.querySelector('.ui .hero');
 
   /* ==========================================================================
