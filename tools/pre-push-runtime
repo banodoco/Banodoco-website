@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Small publication guard: verify the committed graph actually being pushed.
+# No renderer, captures, staging, commits, network fetches, or source rewrites.
+set -euo pipefail
+REPO_ROOT=$(git rev-parse --show-toplevel)
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/preview/true-union|refs/heads/main) ;;
+    *) continue ;;
+  esac
+  [ "$local_sha" != "0000000000000000000000000000000000000000" ] || continue
+  RUNTIME_PUSH_TREE=$(mktemp -d /tmp/banodoco-pushed-runtime.XXXXXX)
+  trap 'rm -rf "$RUNTIME_PUSH_TREE"' EXIT
+  git -C "$REPO_ROOT" archive "$local_sha" | tar -x -C "$RUNTIME_PUSH_TREE"
+  node "$REPO_ROOT/tools/build-runtime-release.mjs" --root "$RUNTIME_PUSH_TREE" --check || {
+    echo "pre-push: $local_ref has a stale/missing runtime release. Build and commit it before publishing." >&2
+    exit 1
+  }
+  rm -rf "$RUNTIME_PUSH_TREE"
+  trap - EXIT
+done

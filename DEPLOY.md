@@ -9,6 +9,38 @@ bake, favicons, captures) BEFORE shipping, see **[BUILDING.md](BUILDING.md)** �
 
 ## Release command
 
+The current Pages preview at `https://banodoco.github.io/Banodoco-website/`
+deploys `preview/true-union` directly. Before publishing runtime changes, run
+`npm run runtime:build`, then `npm run runtime:check` and
+`node tools/test-runtime-release.mjs --browser`. Stage `runtime-release.js`
+and the new `runtime/<sha256>/` directory along with the source changes.
+Keep every older release directory: cached entry maps and open tabs still
+refer to those exact URLs. A release is about 10 MB before HTTP compression;
+the builder preserves native ESM, original source bytes, workers, baked
+geometry, and the portrait sprite.
+
+`runtime-release.js` installs the import map before the two inline module
+entries run. Its only mutable pointer selects one immutable directory, so
+Pages' ten-minute caching may select an older complete release rather than
+mix module revisions. `npm run check` and the public packager reject a stale or modified
+snapshot. The focused `tools/pre-push-runtime` guard verifies the committed
+tree being pushed to `preview/true-union` or `main`; install it with
+`ln -s ../../tools/pre-push-runtime .git/hooks/pre-push` when no existing
+pre-push hook or custom hooks directory is configured. An existing hook
+should invoke this guard rather than be overwritten. The larger pre-commit
+hook is optional and is not installed by the snapshot builder.
+
+For local development, `python3 serve.py` supplies `runtime-source.js` in
+place of the generated map, including for LAN clients. Source edits appear
+immediately. To inspect exactly what Pages will load, use
+`RUNTIME_MODE=release PORT=8139 python3 serve.py`. Packaged public directories
+default to release mode because they have no developer `tools/` directory.
+The HTML always retains a static door; bootstrap or entry failures also show
+a static exit and an explicit Reload action.
+
+The Railway release flow below is retained separately; it is not the Pages
+preview publication command.
+
 Run `tools/check.sh` for the read-only release gates, including public artifact
 allowlist and byte-roundtrip verification. Deployment is never a
 side effect of checking. The authorized end-to-end release flow is the
@@ -44,11 +76,10 @@ when that boundary is incomplete or leaks an excluded path.
 
 - **MIME**: `.js` must serve as `text/javascript` (object-store hosts often
   need this set explicitly). No other special types (all GLSL is inline).
-- **Caching**: there is no content hashing — do NOT use long immutable TTLs
-  or a CDN will serve mixed-version module graphs after an update (hard
-  `does not provide an export` failures). Use `Cache-Control: max-age=300,
-  must-revalidate` (or `no-store` if traffic is small). Do not add more
-  hand-maintained `?v=` tokens.
+- **Caching**: production runtime modules and their module-relative assets
+  use retained `runtime/<sha256>/` URLs. Do not overwrite or prune those
+  directories. Keep the mutable HTML/entry pointer on a short cache policy;
+  do not add hand-maintained `?v=` tokens. Source-mode `serve.py` uses no-store.
 - **Compression**: enable gzip/brotli — the 3.3 MB raw payload compresses to
   ~1 MB, and `vendor/three/three.module.js` (1.3 MB) is the bulk of it.
 - **CSP**: if any CSP is applied, the inline `<script type="importmap">` in

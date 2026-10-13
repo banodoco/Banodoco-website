@@ -159,6 +159,25 @@ export function rowLayout(w, h) {
   });
 }
 
+/** The fully opened Purpose fork, shared by its painter and reading layout. */
+export function purposeBranchReach(row) {
+  return { x: row.major * 2.1, y: row.major * .95 };
+}
+
+/** Final drawn circles, independent of the rail's current animation frame. */
+export function settledPurposeMarks(w, h) {
+  const row = rowLayout(w, h);
+  const reach = purposeBranchReach(row);
+  const x = w / 2 + reach.x / 2;
+  const y = row.centreY - row.purposeLift;
+  const radius = row.minorRingD / 2;
+  return [
+    { x, y, radius },
+    { x: x - reach.x, y: y - reach.y, radius },
+    { x: x - reach.x, y: y + reach.y, radius },
+  ];
+}
+
 /** WHICH RESPONSIVE BAND A VIEWPORT IS IN. One table, here — and since
  *  DEFECT-01 (2026-08-23) that sentence is true of the PREDICATES too, not
  *  only of the dock constants keyed to them.

@@ -1,3 +1,5 @@
+import { settledPurposeMarks } from '../layout/rail-geometry.js';
+
 /** Fit the complete desktop manuscript, including paragraphs not yet inked.
  * Layout reads happen only when the available box or loaded font changes.
  * No minimum font is imposed: a short desktop must still never scroll. */
@@ -5,6 +7,16 @@ export function createManifestoFit(root, panel, lines, paragraphs) {
   let key = '';
   return function fit(force = false) {
     if (window.innerWidth <= 720 || root.hidden) return;
+    const panelRect = panel.getBoundingClientRect();
+    // Reserve the final circles before the rail gathers. Reading the animated
+    // DOM here would make the manuscript shrink after its ink has appeared.
+    // A wide viewport whose text ends left of the tree needs no extra reserve.
+    const marks = settledPurposeMarks(window.innerWidth, window.innerHeight)
+      .filter(mark => mark.x + mark.radius >= panelRect.left
+        && mark.x - mark.radius <= panelRect.right);
+    const reserve = Math.max(128, ...marks.map(mark =>
+      window.innerHeight - (mark.y - mark.radius) + 12));
+    root.style.setProperty('--manifesto-desktop-reserve', `${reserve}px`);
     const panelStyle = getComputedStyle(panel);
     const available = Math.max(1, parseFloat(panelStyle.maxHeight)
       - parseFloat(panelStyle.paddingTop) - parseFloat(panelStyle.paddingBottom));

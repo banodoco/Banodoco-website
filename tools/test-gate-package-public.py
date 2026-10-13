@@ -46,6 +46,7 @@ Usage: python3 tools/test-gate-package-public.py
 
 import importlib.util
 import json
+import hashlib
 import os
 import shutil
 import subprocess
@@ -236,8 +237,10 @@ class PackagePublicEndToEndTests(unittest.TestCase):
                 "sitemap.xml",
                 "static/index.html",
                 "journey/journey.js",
+                "main.js",
+                "runtime-release.js",
             ],
-            "trees": [],
+            "trees": [{"path": "runtime", "include": ["*.js", "*.json"]}],
             "required": [
                 "404.html",
                 "index.html",
@@ -261,6 +264,22 @@ class PackagePublicEndToEndTests(unittest.TestCase):
         journey_dir = self.fixture_root / "journey"
         journey_dir.mkdir(parents=True, exist_ok=True)
         (journey_dir / "journey.js").write_text(COMMENT_TEXT, encoding="utf-8")
+        (self.fixture_root / "main.js").write_text("export const fixture = 1;\n", encoding="utf-8")
+        entries = []
+        digest = hashlib.sha256()
+        for name in ("journey/journey.js", "main.js"):
+            data = (self.fixture_root / name).read_bytes()
+            checksum = hashlib.sha256(data).hexdigest()
+            entries.append({"path": name, "sha256": checksum})
+            digest.update(name.encode() + b"\0" + checksum.encode() + b"\n")
+        release_hash = digest.hexdigest()
+        release = self.fixture_root / "runtime" / release_hash
+        for entry in entries:
+            path = release / entry["path"]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((self.fixture_root / entry["path"]).read_bytes())
+        (release / "manifest.json").write_text(json.dumps({"version": 1, "hash": release_hash, "files": entries}), encoding="utf-8")
+        (self.fixture_root / "runtime-release.js").write_text(f'const base = "./runtime/{release_hash}/";\n', encoding="utf-8")
 
     def _run(self, origin="https://example.test", revision="cafef00d"):
         return subprocess.run(

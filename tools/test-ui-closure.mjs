@@ -691,7 +691,7 @@ pin('A5', 'main.js still reads the published global three times — OUT OF SCOPE
   },
   'design.md section 11 Q1 names these three explicitly; closing the handle is D13, and B04 owns it. This row is ALSO the live foreign positive control for A1/A2/A3 — the scanner demonstrably finds code sites in a file that has them');
 
-pin('A6', 'ACROSS ALL OF journey/, the only code that names the published global is journey.js publishing the handle it owns and returning it on a second boot',
+pin('A6', 'ACROSS ALL OF journey/, only journey.js returns, publishes, or retires its own public handle',
   (i) => {
     const walk = (dir, acc = []) => {
       for (const entry of readdirSync(dir).sort()) {
@@ -730,6 +730,7 @@ pin('A6', 'ACROSS ALL OF journey/, the only code that names the published global
     codeSites: [
       'journey/journey.js :: if (booted) return window.journey;',
       'journey/journey.js :: window.journey = state;',
+      'journey/journey.js :: if (window.journey === state) delete window.journey;',
     ],
     proseOnly: [
       'journey/chapter-contract.js',
@@ -928,7 +929,7 @@ pin('C3', 'THE KEYING, measured rather than trusted: keying these site sets `fil
     return `${name}:${s.sites.length}:${s.lineKeyed.length}:${d64.length === s.lineKeyed.length}`;
   }),
   { code: CODE, files: { 'journey/journey.js': SRC.journey, 'main.js': SRC.main } },
-  ['journey/journey.js:2:2:true', 'main.js:3:3:true'],
+  ['journey/journey.js:3:3:true', 'main.js:3:3:true'],
   'the third field is the shared foreignSiteSet agreeing with this file\'s own line keying, so the comparison is against the house instrument and not against a second copy of it');
 
 /* ------------------------------------------------------------------ *

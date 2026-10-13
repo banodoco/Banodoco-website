@@ -144,7 +144,7 @@ import {
   railPurposeLabelStage,
   PURPOSE_LABEL_TOP_AT,
 } from './ui/rail-handoff.js';
-import { NAV_ROW_ITEMS, rowLayout } from './layout/rail-geometry.js';
+import { NAV_ROW_ITEMS, rowLayout, purposeBranchReach } from './layout/rail-geometry.js';
 
 /* The panel reuses the initiative pictographs already drawn for the in-scene
    chips. Social marks are local to this panel: they replace the former text
@@ -2519,8 +2519,7 @@ export function createRail({ onNav, ready = true } = {}) {
        well back toward where Connect was and rise only a little, about 24
        degrees each off the row's axis. */
     const ownU = gatherU * gatherU * (3 - 2 * gatherU);
-    const OWN_REACH_X = L.major * 2.1;
-    const OWN_REACH_Y = L.major * 0.95;
+    const { x: OWN_REACH_X, y: OWN_REACH_Y } = purposeBranchReach(L);
     // Phone branch names sit to the right of their rings. Give them eight
     // pixels more edge clearance without moving the main row or gathered tree.
     const labelAir = phonePurposeLabels.matches ? 8 * (1 - ownU) : 0;

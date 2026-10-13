@@ -10,6 +10,7 @@ const ignoredMaterial = [
   'journey-v6-plan/**',
   'static/**',
   'vendor/**',
+  'runtime/**',
   'content/content-archive-deferred.js',
   'ownership/reasons.js',
 ];

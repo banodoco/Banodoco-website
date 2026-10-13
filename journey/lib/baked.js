@@ -48,7 +48,7 @@
 import * as THREE from 'three';
 import { LIVEBUILD, BAKEDUMP } from '../../flags.js';
 
-const MANIFEST_URL = 'static/geom/manifest.json';
+const MANIFEST_URL = new URL('../../static/geom/manifest.json', import.meta.url).href;
 const MANIFEST_VERSION = 1;
 const EXPECTED_CHAPTERS = ['owned', 'final', 'connect', 'inspire'];
 const ATTRIBUTE_KINDS = new Set(['f32', 'u32']);
@@ -207,78 +207,85 @@ function validateBinWindows(chapterId, chapter, bin) {
   }
 }
 
-export async function fetchBakedAssets(fetchImpl = fetch) {
-  let response;
-  try {
-    response = await fetchImpl(MANIFEST_URL);
-  } catch {
-    return null;
-  }
-  if (!response.ok) return null;
-
-  let parsed;
-  try {
-    parsed = await response.json();
-  } catch {
-    return null;
-  }
-  // Unknown versions are unsupported rather than corrupt: preserve the
-  // original all-live compatibility path. Once a manifest claims version 1,
-  // however, its complete schema is our contract and malformed data fails
-  // before any bin request can fan out.
-  if (!isRecord(parsed) || parsed.version !== MANIFEST_VERSION) return null;
-  let checkedManifest;
-  try {
-    checkedManifest = validateBakedManifest(parsed);
-  } catch (error) {
-    if (error instanceof BakedManifestError) return null; // invalid optimisation -> all-live
-    throw error;
-  }
+/** Optional bytes have one deadline across fetch AND body consumption. Results
+ * are staged locally; timeout seals the snapshot before live builders start. */
+export async function fetchBakedAssets(fetchImpl = fetch, { timeoutMs = 8000 } = {}) {
+  const controller = new AbortController();
+  let active = true;
+  let checkedManifest = null;
   const loadedBins = new Map();
-  await Promise.all(Object.entries(checkedManifest.chapters).map(async ([id, chapter]) => {
-    let binResponse;
+  let timer;
+  const snapshot = () => checkedManifest
+    ? { manifest: checkedManifest, bins: new Map(loadedBins) }
+    : null;
+  const deadline = new Promise((resolve) => {
+    timer = setTimeout(() => {
+      active = false;
+      controller.abort();
+      resolve(snapshot());
+    }, timeoutMs);
+  });
+  const load = async () => {
+    let response;
     try {
-      binResponse = await fetchImpl('static/geom/' + chapter.file);
-    } catch { /* absorbed: isBaked(id) stays false; that chapter builds live */ }
-    if (!binResponse || !binResponse.ok) return;
-    let bin;
-    try {
-      bin = await binResponse.arrayBuffer();
+      response = await fetchImpl(MANIFEST_URL, { signal: controller.signal });
     } catch {
-      return;                            // unreadable bin -> this chapter builds live
+      return null;
     }
+    if (!active || !response.ok) return null;
+
+    let parsed;
     try {
-      validateBinWindows(id, chapter, bin);
+      parsed = await response.json();
+    } catch {
+      return null;
+    }
+    if (!active) return null;
+    // Unsupported or corrupt optimisation data retains the all-live path.
+    if (!isRecord(parsed) || parsed.version !== MANIFEST_VERSION) return null;
+    try {
+      checkedManifest = validateBakedManifest(parsed);
     } catch (error) {
-      if (error instanceof BakedManifestError) return; // malformed bin -> chapter builds live
+      if (error instanceof BakedManifestError) return null;
       throw error;
     }
-    loadedBins.set(id, bin);
-  }));
-  return { manifest: checkedManifest, bins: loadedBins };
+    await Promise.all(Object.entries(checkedManifest.chapters).map(async ([id, chapter]) => {
+      let binResponse;
+      try {
+        binResponse = await fetchImpl(new URL(chapter.file, MANIFEST_URL).href, { signal: controller.signal });
+      } catch { /* absorbed: isBaked(id) stays false; that chapter builds live */ }
+      if (!active || !binResponse || !binResponse.ok) return;
+      let bin;
+      try {
+        bin = await binResponse.arrayBuffer();
+      } catch {
+        return;                          // unreadable bin -> this chapter builds live
+      }
+      if (!active) return;
+      try {
+        validateBinWindows(id, chapter, bin);
+      } catch (error) {
+        if (error instanceof BakedManifestError) return;
+        throw error;
+      }
+      loadedBins.set(id, bin);
+    }));
+    return snapshot();
+  };
+  try {
+    return await Promise.race([load(), deadline]);
+  } finally {
+    active = false;
+    clearTimeout(timer);
+  }
 }
 
 // ---- the background fetch (shipped path, module-load time) ------------
 //
-// F06/D4 CLASSIFICATION (2026-08-21): this IIFE is a PAGE-LIFETIME SINGLETON,
-// not a journey-owned cancellable loader. It runs exactly once at module-load
-// time, takes no per-caller identity, and is never restarted or aborted —
-// `manifest`/`bins` below are bare module-top-level state, the same shared
-// cache for every importer for the life of the page (there is one journey
-// per page load here; nothing in this codebase unmounts and remounts the
-// journey within a single page lifetime the way a chapter mounts/unmounts).
-// Evidence: `tools/test-portrait-baked.mjs` B5/B5-neg (C04) proves two
-// separate `import()` call sites resolving the same specifier receive the
-// IDENTICAL module namespace object and share exactly ONE manifest fetch +
-// ONE bin fetch — real singleton semantics, not merely equal values. A
-// cancellable-loader shape would need a factory/instantiation point and an
-// abort/dispose hook; this module exposes neither, and adding either now
-// would be the structural change this order is forbidden from making.
-// Precedent: U01a/U01d classified their own import-time self-starts as KEPT
-// (not retired) for the same reason — no requirement forces the other
-// verdict here either. See journey/lib/baked.js's block comment above for
-// the "how it flows" design this classification is consistent with, and
-// tools/test-baked-lifecycle.mjs for this order's own standalone proof.
+// This cache remains a page-lifetime singleton shared by every importer.
+// Its optional loader now aborts on a deadline and commits only a sealed
+// snapshot, so a stalled request cannot postpone the live-build fallback
+// or switch a chapter to baked after its builder has already chosen live.
 export const ready = (async () => {
   if (LIVEBUILD) {
     // The one console line that answers "which am I looking at?" (2026-08-17,

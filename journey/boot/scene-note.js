@@ -48,7 +48,8 @@ export const NOTE = Object.freeze({
  *
  * THE MACHINE (G3). States: ABSENT (no note has ever been needed) ->
  * SHOWN <-> HIDDEN. `el` is the binding that encodes ABSENT, and it is
- * the only mutable state here. SHOWN vs HIDDEN is carried by `display`
+ * element state. An ownership token prevents an older recovery event from
+ * hiding a newer note. SHOWN vs HIDDEN is carried by `display`
  * on that element rather than by a second binding, because the element
  * IS the state once it exists — a boolean beside it could disagree with
  * the DOM, and there is nothing a boolean could answer that the node
@@ -56,12 +57,15 @@ export const NOTE = Object.freeze({
  */
 export function createSceneNote() {
   let el = null;
+  let owner = null;
+  let failureActive = false;
 
   /** QA reads `window.__pageErrors`; the visitor-facing story is the
    *  specific `show()` calls at the three failure sites. */
   const seen = new Set();
 
-  function show(html) {
+  function show(html, token = Symbol('scene-note')) {
+    owner = token;
     if (!el) {
       el = document.createElement('div');
       el.setAttribute('role', 'status');
@@ -87,9 +91,16 @@ export function createSceneNote() {
     return el;
   }
 
+  /** A delayed/recoverable notice cannot replace terminal diagnostics. */
+  function showTransient(html, token) {
+    if (failureActive) return null;
+    return show(html, token);
+  }
+
   /** Preserve the usable fallback while making a physical-phone failure
    * diagnosable. Exception text is never interpreted as markup. */
   function showFailure(html, stage, error) {
+    failureActive = true;
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     recordError(`[journey-v6] ${stage}: ${message}`);
     const surface = show(html);
@@ -106,13 +117,26 @@ export function createSceneNote() {
     text.style.overflowY = 'auto';
     text.style.fontSize = '.75rem';
     text.textContent = `Stage: ${stage}\n${error?.stack || message}`;
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.textContent = 'Reload to try again';
+    reload.style.marginTop = '.65rem';
+    reload.style.font = 'inherit';
+    reload.style.cursor = 'pointer';
+    reload.onclick = () => window.location.reload();
     details.append(summary, text);
     surface.appendChild(details);
+    surface.appendChild(reload);
     return surface;
   }
 
-  function hide() {
+  // A restoring context may clear its own note, never a newer failure.
+  function hide(token) {
+    if (token !== undefined && token !== owner) return false;
     if (el) el.style.display = 'none';
+    owner = null;
+    failureActive = false;
+    return true;
   }
 
   /* ?debug=1 field overlay: venue staff load /?debug=1 and read failures
@@ -120,7 +144,7 @@ export function createSceneNote() {
      blind to guarded chapter failures until this week; those now arrive
      through the same window channel, so they land here too. */
   function renderOverlay() {
-    if (!DEBUG_OVERLAY) return;
+    if (!DEBUG_OVERLAY || failureActive) return;
     const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     show([...seen].map(esc).join('<br>'));
   }
@@ -135,5 +159,5 @@ export function createSceneNote() {
     renderOverlay();
   }
 
-  return { show, showFailure, hide, recordError };
+  return { show, showTransient, showFailure, hide, recordError };
 }

@@ -168,6 +168,9 @@ function loadBakedFresh(tag) {
 
 const fetchController = { mode: 'no-manifest', manifest: undefined, bins: undefined, calls: [] };
 globalThis.fetch = async (url) => {
+  // The production loader binds assets to its module's release directory.
+  // Scratch-module fixtures key only the static/geom suffix of that URL.
+  url = String(url).slice(String(url).lastIndexOf('/static/geom/') + 1);
   fetchController.calls.push(String(url));
   const { mode } = fetchController;
   if (mode === 'hang') return new Promise(() => {});
@@ -214,9 +217,8 @@ async function run() {
     resetFetch();
     fetchController.mode = 'manifest-ok';
     fetchController.manifest = { version: 1, chapters: { owned: validChapter('owned', { n: 7 }) } };
-    // fetchController keys bins by the literal request URL baked.js sends
-    // ('static/geom/<file>'), which is independent of the scratch path each
-    // rewritten copy lives at.
+    // Fixture keys normalize the module-relative request to static/geom/<file>;
+    // every rewritten module otherwise owns its own scratch URL prefix.
     fetchController.bins = { 'static/geom/owned.bin': new ArrayBuffer(8) };
     fetchController.calls = [];
     const url = rewriteBaked('singleton-shared');

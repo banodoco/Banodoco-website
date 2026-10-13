@@ -26,6 +26,15 @@ runtime data and is public even though lint correctly classifies it as generated
 The Three.js tree is public vendor code and remains excluded from application
 lint/scanning.
 
+The allowlist also ships `runtime-release.js`, `runtime-source.js`, and all
+retained `runtime/<sha256>/` snapshots. The Node builder checks the current
+graph against source and verifies every retained snapshot. The Python
+packager repeats the byte/hash checks without needing Node in the host
+image. `npm run runtime:build` creates a new directory and moves the entry
+pointer only after its files are complete; it never overwrites an older
+release. Source-module lint and census tools continue to inspect their
+existing source directories; ESLint excludes generated `runtime/` copies.
+
 Repository material is outside the boundary. In particular, `archive/`,
 `journey-v6-plan/`, `docs/`, `tools/`, `deploy/`, `.desloppify/`, caches,
 developer dependencies, capture `_check` output, and source artwork are not

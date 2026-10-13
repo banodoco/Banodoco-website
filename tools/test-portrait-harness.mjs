@@ -193,6 +193,9 @@ globalThis.Image = class {
  *  `fetchController.mode`/`delayMs` before each `loadBakedFresh()` call. */
 export const fetchController = { mode: 'no-manifest', delayMs: 0, calls: [] };
 globalThis.fetch = async (url) => {
+  // The production loader binds assets to its module's release directory.
+  // Scratch-module fixtures key only the static/geom suffix of that URL.
+  url = String(url).slice(String(url).lastIndexOf('/static/geom/') + 1);
   fetchController.calls.push(String(url));
   const { mode, delayMs } = fetchController;
   if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));

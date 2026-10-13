@@ -206,6 +206,29 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   const fitDesktop = createManifestoFit(root, panel, lines, lineEls);
   const fitLoadedFont = () => { if (active && !root.hidden) fitDesktop(true); };
   document.fonts?.addEventListener('loadingdone', fitLoadedFont);
+  let fontPendingTimer = null;
+  // Warm both manuscript weights before the first ink, within a bounded wait,
+  // to avoid rewrapping visible desktop paragraphs on ordinary font arrivals.
+  if (document.fonts?.load) {
+    root.classList.add('is-font-pending');
+    const releaseFontPending = () => {
+      clearTimeout(fontPendingTimer);
+      fontPendingTimer = null;
+      if (!root.isConnected) return;
+      fitLoadedFont();
+      root.classList.remove('is-font-pending');
+    };
+    // A stalled download must still admit readable fallback ink. loadingdone
+    // keeps the fit current if the requested font eventually becomes usable.
+    fontPendingTimer = setTimeout(releaseFontPending, 2500);
+    const fontSources = [lineEls[0], lines.querySelector('.is-name')].filter(Boolean);
+    const fonts = new Set(fontSources.map(element => {
+      const style = getComputedStyle(element);
+      return `${style.fontStyle} ${style.fontWeight} 17px ${style.fontFamily}`;
+    }));
+    Promise.allSettled([...fonts].map(font => document.fonts.load(font, lines.textContent)))
+      .then(releaseFontPending);
+  }
   const wordCounts = sentences.map(s => s.trim().split(/\s+/).length);
   const lineSeconds = lineSecondsFor(wordCounts);
   const mobileSchedule = mobileReadingSchedule(lineSeconds, lastWordBeats);
@@ -899,6 +922,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     get progress() { return u; },
     get shownLines() { return shownLines; },
     destroy() {
+      clearTimeout(fontPendingTimer);
       layoutObserver.disconnect();
       window.removeEventListener('resize', refreshLayout);
       document.fonts?.removeEventListener('loadingdone', fitLoadedFont);

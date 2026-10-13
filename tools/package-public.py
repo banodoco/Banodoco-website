@@ -9,6 +9,7 @@ import json
 import re
 import shutil
 import sys
+import hashlib
 from pathlib import Path, PurePosixPath
 
 
@@ -38,6 +39,38 @@ SIDE_EFFECT_IMPORT = re.compile(
 DYNAMIC_IMPORT = re.compile(
     r'''\bimport\s*\(\s*["']([^"']+)["']\s*\)'''
 )
+
+
+def verify_runtime_release(root: Path) -> None:
+    """Check committed release bytes without requiring Node in the host image."""
+    bootstrap = (root / "runtime-release.js").read_text(encoding="utf-8")
+    match = re.search(r'const base = "\./runtime/([a-f0-9]{64})/";', bootstrap)
+    if not match:
+        raise ValueError("invalid runtime release entry; run npm run runtime:build")
+    current = match.group(1)
+    runtime = root / "runtime"
+    for release in runtime.iterdir():
+        if not release.is_dir() or not re.fullmatch(r"[a-f0-9]{64}", release.name):
+            raise ValueError(f"unexpected runtime release: {release.name}")
+        manifest = json.loads((release / "manifest.json").read_text(encoding="utf-8"))
+        if manifest.get("version") != 1 or manifest.get("hash") != release.name:
+            raise ValueError(f"invalid runtime manifest: {release.name}")
+        digest = hashlib.sha256()
+        for entry in manifest["files"]:
+            relative = PurePosixPath(entry["path"])
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("unsafe runtime manifest path")
+            data = (release / relative).read_bytes()
+            checksum = hashlib.sha256(data).hexdigest()
+            if checksum != entry["sha256"]:
+                raise ValueError(f"modified immutable runtime: {release.name}/{relative}")
+            digest.update(entry["path"].encode() + b"\0" + checksum.encode() + b"\n")
+            if release.name == current and (root / relative).read_bytes() != data:
+                raise ValueError(f"runtime release is stale: {relative}; run npm run runtime:build")
+        if digest.hexdigest() != release.name:
+            raise ValueError(f"runtime release hash mismatch: {release.name}")
+    if not (runtime / current / "main.js").is_file():
+        raise ValueError("current runtime release is absent")
 
 
 def matches(path: str, patterns: list[str]) -> bool:
@@ -196,6 +229,7 @@ def main() -> int:
         raise ValueError(f"destination is not empty: {destination}")
     destination.mkdir(parents=True, exist_ok=True)
 
+    verify_runtime_release(ROOT)
     config = json.loads(MANIFEST.read_text(encoding="utf-8"))
     copied = selected_files(config)
     validate_placeholder_declaration(copied)

@@ -1,37 +1,42 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../journey/boot/handoff.js', import.meta.url), 'utf8');
+const queueSource = readFileSync(new URL('../journey/boot/entry-queue.js', import.meta.url), 'utf8');
+const createQueue = new Function('globalThis', queueSource.slice(queueSource.indexOf('export function')).replace('export function', 'function') + '\nreturn createEntryQueue;')({});
 const start = source.indexOf('export function createJourneyHandoff(');
 assert(start >= 0);
 const make = new Function('heroSpores', 'document', 'window', 'performance',
   'requestAnimationFrame', 'setTimeout', 'clearTimeout', 'addEventListener', 'removeEventListener',
-  'prepareHeroGpu',
+  'prepareHeroGpu', 'console',
   'const FREE_CAM = false; const NOTE = {}; const ownerOf = () => null; const modalLive = () => false; const targetOwnsKey = () => false;\n' + source.slice(start).replace('export function', 'function') +
   '\nreturn createJourneyHandoff;');
-function harness({ landed = true, skipIntro = false, heroReady = true, pending = false } = {}) {
-  let now = 0, nextTimer = 0, impact = landed, queued = null, requested;
+function harness({ landed = true, skipIntro = false, heroReady = true, pending = false,
+  failure = null, heroUsable = true } = {}) {
+  let now = 0, nextTimer = 0, impact = landed;
+  const queue = createQueue();
+  const failures = [], policies = [], marks = [];
+  let activationAttempts = 0, failedStates = 0, revealAttempts = 0;
   let starts = 0, finishes = 0, strikes = 0, activations = 0, boots = 0, accelerations = 0;
   let navigationReady = false;
-  let resolveModule, resolveReady, resolveHero;
+  let resolveModule, rejectModule, resolveReady, rejectReady, resolveHero, rejectHero;
   const frames = [], timers = new Map(), listeners = new Set();
-  const ready = new Promise(resolve => { resolveReady = resolve; });
-  const module = new Promise(resolve => { resolveModule = resolve; });
-  const hero = new Promise(resolve => { resolveHero = resolve; });
-  if (heroReady) resolveHero(true);
-  const intro = { complete: false, start() { starts++; }, finish() { finishes++; }, accelerate() { accelerations++; return true; } };
-  const state = { ready, transitionSeconds: 4, activate() { activations++; }, revealRail() {} };
+  const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const module = new Promise((resolve, reject) => { resolveModule = resolve; rejectModule = reject; });
+  const hero = new Promise((resolve, reject) => { resolveHero = resolve; rejectHero = reject; });
+  if (heroReady) resolveHero(heroUsable);
+  const intro = { complete: false, start() { starts++; }, finish() { finishes++; }, accelerate() { accelerations++; if (failure === 'accelerate') throw new Error('injected acceleration failure'); return true; } };
+  const state = { ready, transitionSeconds: 4, activate() { activationAttempts++; if (failure === 'activate') throw new Error('injected activation failure'); activations++; }, failStartup() { failedStates++; }, revealRail() { revealAttempts++; if (failure === 'rail') throw new Error('injected rail failure'); } };
   const callback = make({ preludeStrike() { strikes++; }, preludeDismiss() {}, preludeFadeGround() {}, adopt() {},
     preludeLandingStatus: () => ({ firstImpact: impact, pending: pending && !impact }), preludeMsUntilStrike: () => 100 },
   { body: { classList: { add() {}, remove() {} } }, querySelector: () => null },
-  { innerWidth: 1440 }, { now: () => now, mark() {} },
+  { innerWidth: 1440 }, { now: () => now, mark(name) { marks.push(name); } },
   cb => { frames.push(cb); return frames.length; },
   (cb, ms = 0) => { const id = ++nextTimer; timers.set(id, { cb, due: now + ms }); return id; },
   id => timers.delete(id), (_, cb) => listeners.add(cb), (_, cb) => listeners.delete(cb),
-  () => hero);
-  callback({ scene: { intro, setInputPolicy() {} },
-    entryQueue: { whenRequested(cb) { requested = cb; }, peek: () => queued,
-      take() { const value = queued; queued = null; return value; } },
-    note: { show() {}, showFailure(_html, stage, error) { throw new Error(`${stage}: ${error}`); } }, journeyModule: module, bakedGeomReady: Promise.resolve(),
+  () => hero, { error() {} });
+  callback({ scene: { intro, setInputPolicy(value) { policies.push(value); } },
+    entryQueue: queue,
+    note: { show() {}, showFailure(_html, stage, error) { if (!failure && heroUsable) throw new Error(`${stage}: ${error}`); failures.push({stage,error}); } }, journeyModule: module, bakedGeomReady: Promise.resolve(),
     skipIntro, frozen: false, introSeconds: 5.4 });
   async function tick(ms = 16) {
     now += ms;
@@ -40,8 +45,15 @@ function harness({ landed = true, skipIntro = false, heroReady = true, pending =
     for (let i = 0; i < 6; i++) await Promise.resolve();
   }
   return { intro, tick, land() { impact = true; }, heroReady() { resolveHero(true); },
-    load() { resolveModule({ prepareRail: () => ({ setReady(value) { navigationReady = value; } }), prepareChapter: () => 0, boot: () => { boots++; return state; } }); },
-    ready() { resolveReady(); }, navigate() { queued = 'inspire'; requested(); },
+    load() { resolveModule({ prepareRail: () => ({ setReady(value) { if (value && failure === 'setReady') throw new Error('injected readiness failure'); navigationReady = value; } }), prepareChapter: () => 0, boot: () => { boots++; return state; } }); },
+    ready(value) { if (failure === 'ready') rejectReady(new Error('injected preparation failure')); else resolveReady(value); },
+    rejectModule() { rejectModule(new Error('injected module failure')); },
+    rejectHero() { rejectHero(new Error('injected hero draw failure')); },
+    navigate(chapter = 'inspire', fast = true) { queue.request(chapter, { fast }); },
+    get failures() { return failures; }, get policies() { return policies; }, get marks() { return marks; },
+    get pendingTimers() { return timers.size; }, get inputListeners() { return listeners.size; },
+    get activationAttempts() { return activationAttempts; }, get failedStates() { return failedStates; },
+    get revealAttempts() { return revealAttempts; },
     scroll() { for (const cb of listeners) cb({ type: 'wheel', deltaY: 140, deltaMode: 0, cancelable: true, preventDefault() {} }); },
     get accelerations() { return accelerations; },
     get navigationReady() { return navigationReady; },
@@ -153,3 +165,74 @@ navigationGate.ready();
 await settle(navigationGate);
 assert.equal(navigationGate.navigationReady, true, 'actual readiness unlocks navigation automatically');
 assert.equal(navigationGate.activations, 1);
+
+// Faults before publication, after preparation, and on deferred activation
+// all enter the same terminal fallback. Inputs and already queued frames may
+// still arrive, but cannot resurrect the retained startup state.
+async function assertTerminal(h, stage, interactiveWasPublished = false) {
+  assert.equal(h.failures.length, 1);
+  assert.equal(h.failures[0].stage, stage);
+  assert.equal(h.navigationReady, false);
+  assert.equal(h.inputListeners, 0);
+  assert.equal(h.policies.at(-1), 'free');
+  const attempts = h.activationAttempts;
+  h.navigate(); h.scroll(); h.intro.complete = true;
+  await h.tick(20000); await settle(h);
+  assert.equal(h.activationAttempts, attempts, 'later inputs and scheduled frames cannot revive fallback');
+  assert.equal(h.failures.length, 1, 'failure is reported once');
+  assert.equal(h.pendingTimers, 0, 'all startup timers retire');
+  assert.equal(h.marks.includes('journey-interactive'), interactiveWasPublished, 'failed activation never publishes interactive');
+}
+const moduleFailure = harness({ failure: 'module' });
+moduleFailure.rejectModule(); await settle(moduleFailure);
+await assertTerminal(moduleFailure, 'loading journey modules');
+for (const failure of ['ready', 'setReady']) {
+  const h = harness({ failure }); h.load(); h.ready(); await settle(h);
+  await assertTerminal(h, failure === 'ready' ? 'preparing journey shaders' : 'activating navigation and intro handoff');
+  assert.equal(h.activations, 0);
+  assert.equal(h.failedStates, 1, 'unpublished prepared state is retired');
+}
+for (const trigger of ['timer', 'frame', 'fast']) {
+  const h = harness({ failure: 'activate' }); h.load(); h.ready(); await settle(h); await h.tick(120);
+  if (trigger === 'timer') await h.tick(8000);
+  else if (trigger === 'frame') { h.intro.complete = true; await h.tick(); }
+  else h.navigate();
+  await assertTerminal(h, 'activating navigation and intro handoff');
+  assert.equal(h.activationAttempts, 1);
+  assert.equal(h.activations, 0);
+  assert.equal(h.accelerations, 0, 'failed activation cannot accelerate growth');
+}
+const railFailure = harness({ failure: 'rail' });
+railFailure.load(); railFailure.ready(); await settle(railFailure); await railFailure.tick(120); await railFailure.tick(5000);
+await assertTerminal(railFailure, 'revealing navigation');
+const unavailable = harness({ heroUsable: false });
+await settle(unavailable); unavailable.load(); unavailable.ready(); await settle(unavailable);
+await assertTerminal(unavailable, 'preparing hero shaders');
+const unavailableJourney = harness({ failure: 'gpu', skipIntro: true });
+unavailableJourney.load(); unavailableJourney.ready(false); await settle(unavailableJourney);
+await assertTerminal(unavailableJourney, 'preparing journey shaders');
+
+// Home retains its non-fast intent both before the hook exists and while
+// readiness is pending, including when it supersedes a prior chapter press.
+for (const supersede of [false, true]) {
+  const h = harness();
+  if (supersede) h.navigate();
+  h.navigate('mission', false); h.load(); h.ready(); await settle(h); await h.tick(120);
+  assert.equal(h.activations, 0, 'queued Home respects the ordinary intro');
+  assert.equal(h.accelerations, 0);
+  h.intro.complete = true; await settle(h);
+  assert.equal(h.activations, 1);
+}
+console.log('hero handoff failures: terminal module/readiness/GPU/rail/timer/frame/fast fallback and Home intent passed');
+
+const rejectedHero = harness({ heroReady: false, failure: 'hero' });
+await settle(rejectedHero); rejectedHero.rejectHero(); await settle(rejectedHero);
+await assertTerminal(rejectedHero, 'preparing hero shaders');
+assert.equal(rejectedHero.failures[0].error.message, 'injected hero draw failure', 'real GPU draw diagnosis is preserved');
+const acceleratedFailure = harness({ failure: 'accelerate' });
+acceleratedFailure.load(); acceleratedFailure.ready(); await settle(acceleratedFailure); acceleratedFailure.navigate();
+await assertTerminal(acceleratedFailure, 'activating navigation and intro handoff', true);
+assert.equal(acceleratedFailure.failedStates, 1, 'an acceleration fault retires the partially activated journey');
+const skippedFailure = harness({ failure: 'activate', skipIntro: true });
+skippedFailure.load(); skippedFailure.ready(); await settle(skippedFailure);
+await assertTerminal(skippedFailure, 'activating navigation and intro handoff');

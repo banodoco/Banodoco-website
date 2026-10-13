@@ -320,7 +320,7 @@ body .j-manifesto .j-manifesto-panel { translate: none; }
 @media (min-width: 721px) {
   .j-manifesto .j-manifesto-panel { width: min(44rem, 58vw); }
   body .j-manifesto.is-open {
-    --manifesto-reserve: 8rem;
+    --manifesto-reserve: var(--manifesto-desktop-reserve, 8rem);
     align-items: flex-start;
   }
 }
@@ -803,6 +803,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 /* Desktop fits the entire manuscript before any ink appears; never lift or
    scroll away earlier paragraphs. Mobile retains its native reading surface. */
 @media (min-width: 721px) {
+  .j-manifesto.is-font-pending .j-manifesto-lines { visibility: hidden; }
   .j-manifesto .j-manifesto-line { font-size: var(--manifesto-fit-size, 17px); }
   .j-manifesto .j-manifesto-lines {
     font-size: var(--manifesto-fit-size, 17px);

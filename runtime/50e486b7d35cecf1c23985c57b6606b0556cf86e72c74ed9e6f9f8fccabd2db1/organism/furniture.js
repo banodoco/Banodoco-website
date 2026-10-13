@@ -1,0 +1,154 @@
+// organism/furniture.js — scene-owned page furniture: the region-highlight
+// glow behind the hero callouts (§11) and the tracker projection that pins
+// the callout DOM to world anchors. Split out of the createScene closure at
+// merge step M2 with zero behaviour change; shared state arrives through
+// `ctx` (built in organism.js). The page's entry wiring lives in main.js;
+// the intro fast-forward is intro.js's accelerate() (M5).
+import * as THREE from 'three';
+
+// =====================================================================
+// 11. REGION HIGHLIGHTS — HUD callout hover glow
+// =====================================================================
+// Each region eases toward its target and glows with a slow breathing pulse
+// while hot. Brightness rides on top of the materials' base opacities.
+// Called at §11's original position: base opacities are captured HERE, after
+// every material exists and before any animator has touched them.
+export function createHighlights(ctx) {
+  const { sporePts, stemGroup, groundGroup } = ctx;
+  const _hl = {
+    spores: { h: 0, tgt: 0, mats: [], gain: 0.85 }, // already bright; hover lifts it further
+    stem:   { h: 0, tgt: 0, mats: [], gain: 0.42 },
+    ground: { h: 0, tgt: 0, mats: [], gain: 0.42 },
+  };
+  function _hlCollect(root, list) {
+    root.traverse(o => {
+      const m = o.material;
+      if (!m) return;
+      if (m.uniforms && m.uniforms.uOpacity) list.push({ m, base: m.uniforms.uOpacity.value, pt: true });
+      else if (m.transparent && m.blending === THREE.AdditiveBlending) list.push({ m, base: m.opacity, pt: false });
+    });
+  }
+  _hlCollect(sporePts, _hl.spores.mats);
+  _hlCollect(stemGroup, _hl.stem.mats);
+  _hlCollect(groundGroup, _hl.ground.mats);
+  let _hlPrevT = 0;
+  function _hlUpdate(t) {
+    const dt = Math.min(0.05, Math.max(0, t - _hlPrevT));
+    _hlPrevT = t;
+    for (const k in _hl) {
+      const g = _hl[k];
+      g.h += (g.tgt - g.h) * Math.min(1, dt * 5);
+      if (g.h < 0.004 && g.tgt === 0) { if (g.hot) { g.hot = false; g.h = 0; } else continue; }
+      else g.hot = true;
+      const boost = 1 + g.h * (g.gain + g.gain * 0.38 * Math.sin(t * 3.1));
+      for (const e of g.mats) {
+        if (e.pt) e.m.uniforms.uOpacity.value = e.base * boost;
+        else e.m.opacity = Math.min(1, e.base * boost);
+      }
+    }
+  }
+  return {
+    update: _hlUpdate,
+    /** Ease a highlighted region ('spores' | 'stem' | 'ground') toward on/off; unknown names are ignored. */
+    setHighlight(name, on) { if (_hl[name]) _hl[name].tgt = on ? 1 : 0; },
+  };
+}
+
+// ---- trackers: HUD annotations projected to screen space every frame ----
+// Called at the 'trackers' animator's original registration position — the
+// order matters: 'breeze' calls swayGroup.updateMatrixWorld(true) earlier in
+// the same frame specifically so this projection reads a current matrix.
+//
+// =====================================================================
+// STABLE CALLOUTS (Hannah, 2026-08-05): "in the hero section, make it so
+// the CONNECT and INSPIRE and EQUIP labels and arrows don't move with the
+// wind — they should stay stable."
+//
+// Measured first, at 1440x900, 900 frames (~15 s, ~3 full breeze cycles),
+// before changing anything. TWO independent sources of motion, and the
+// hero camera is NOT one of them:
+//
+//   camera.position   range 0.000e+0 on x, y, z
+//   controls.target   range 0.000e+0 on x, y, z
+//   camera.quaternion range 0.000e+0 on x, y, z, w
+//
+// The hero camera is bit-exact static — OrbitControls' damping has nothing
+// to damp with no input, and nothing else writes it at the Mission pose. So
+// neither a drifting nor a "breathing" camera was ever in play, and no
+// per-frame recomputation of the leader/tag geometry is either: the leaders
+// are static CSS, and this animator is the only thing that positions them.
+//
+//   1. EQUIP rode the breeze BY REQUEST — `sway: true` applied
+//      swayGroup.matrixWorld, so its anchor swung with the stalk.
+//      Measured excursion: 7.4-12.6 px horizontally depending on gust
+//      phase. This is the motion Hannah actually sees.
+//
+//   2. ALL THREE carried a 0.6-0.7 px wobble that was not scene motion at
+//      all: TAA jitters `camera.projectionMatrix` elements [8] and [9] by
+//      +/-0.4 px of a Halton(2,3) walk (organism.js taaFrame(), which runs
+//      LAST in the frame — so this animator reads the PREVIOUS frame's
+//      jitter and inherits a sub-pixel tremor). Invisible on its own, but
+//      it is jitter rather than motion, and a "stable" callout should not
+//      have any.
+//
+// Both are fixed below, and the fix for (2) is deliberately not a rounding
+// or a damping hack: it projects through the camera's CLEAN projection,
+// which is the matrix that was true before the renderer borrowed it.
+//
+// TREATMENT CHOSEN FOR EQUIP — a static world anchor (dropping `sway`),
+// NOT a damped follower. The two candidates the brief raised collapse into
+// one here: swayGroup carries rotation ONLY (organism.js sets rotation.z /
+// rotation.x and never a position), and it sits at the world origin, so
+// "anchor to the sway pivot rather than the swaying tip" and "use the
+// static world point" are arithmetically the SAME point — the anchor's
+// rest position. That is what this now uses.
+//
+// It does not lie about what the leader points at. The anchor sits at
+// y = 1.60 on the stalk; the sway reaches ~0.034 rad, so the real stalk
+// point at that height swings ~1.60 * sin(0.034) = 0.054 world units either
+// side of it — the measured 7.4-12.6 px. The stalk is far wider than that
+// on screen, so the leader lands on the stalk at every phase of the breeze;
+// it annotates the stem, and the stem is still under it. Heavy damping was
+// rejected because a damped follower is still moving, just lazily, and
+// rubber-banding against the wind reads worse than holding still.
+// =====================================================================
+//
+// `sway` tracker support retired (2026-08-16): the equip restage dropped
+// the flag, the organism's tracker JSDoc no longer documents it, and no
+// page tracker sets it.
+export function registerTrackers(ctx) {
+  const { trackers, addAnimator, steadyProject } = ctx;
+  const _trackV = new THREE.Vector3();
+  addAnimator('trackers', () => {
+    for (const tr of trackers) {
+      _trackV.set(tr.pos[0], tr.pos[1], tr.pos[2]);
+      // The jitter-undo for (2) above. It used to be reconstructed here by
+      // zeroing elements[8]/[9]; it now goes through the scene's own
+      // steadyProject(), which projects through the matrix taaFrame() actually
+      // snapshotted one line before jittering it. Same result for this camera
+      // (which sets no view offset, so the true value of both elements IS 0),
+      // one owner instead of two, and the genuine article rather than a
+      // reconstruction. 2026-08-12: the journey's chips had the identical bug
+      // and had NOT had it undone — that is what promoted the undo to scene
+      // API. See organism.js's STEADY PROJECTION note.
+      steadyProject(_trackV);
+      let sx = (_trackV.x * 0.5 + 0.5) * innerWidth;
+      let sy = (-_trackV.y * 0.5 + 0.5) * innerHeight;
+      /* THE ARROW POINTS ON SCREEN AT EVERY SIZE (2026-08-17, Hannah).
+         The anchors are tuned per breakpoint MODE, but a mode covers a
+         RANGE of aspects and the plume anchors deliberately ride near the
+         frame's edge — at an aspect nobody sampled, a projected node (and
+         the ring that marks it) could slip past it. 14px = the ring's 11px
+         radius plus a breath, so the full ring stays visible. A no-op at
+         every tuned size (measured margins 22-59px); it exists for the
+         sizes nobody measured. The leader and tag re-derive from this same
+         transform (main.js railApply parses it), so the whole annotation
+         follows the clamped dot — nothing detaches. */
+      const m = 14;
+      if (sx > innerWidth - m) sx = innerWidth - m; else if (sx < m) sx = m;
+      if (sy > innerHeight - m) sy = innerHeight - m; else if (sy < m) sy = m;
+      tr.el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
+      tr.el.style.visibility = _trackV.z < 1 ? 'visible' : 'hidden';
+    }
+  });
+}

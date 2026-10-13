@@ -11,11 +11,23 @@ sends byte ranges for <video> and stalls mid-playback when the server
 answers 200 with the whole body — that was the ADOS preview "freezing"
 after a second (2026-08-18).
 """
-import http.server, os, re, sys
+import http.server, os, re, sys, urllib.parse
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+# A checkout loads live source, including on LAN phones. Packaged artifacts
+# have no tools directory and serve the production map. Tests can opt into it.
+RUNTIME_MODE = os.environ.get('RUNTIME_MODE', 'source' if os.path.isdir('tools') else 'release')
+if RUNTIME_MODE not in ('source', 'release'):
+    raise ValueError('RUNTIME_MODE must be source or release')
+
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        translated = super().translate_path(path)
+        if RUNTIME_MODE == 'source' and urllib.parse.urlsplit(path).path == '/runtime-release.js':
+            return os.path.join(os.getcwd(), 'runtime-source.js')
+        return translated
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, must-revalidate')
         self.send_header('Pragma', 'no-cache')

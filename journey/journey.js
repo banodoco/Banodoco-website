@@ -45,7 +45,7 @@ import { inputPortOf } from './claim.js';
 import { createTransitionController } from './transition/controller.js';
 import { createFramePublisher } from './frame/publication.js';
 import { createManifestoBranch } from './manifesto/branch.js';
-import { compileForFrame } from './boot/hero-gpu.js';
+import { compileForFrame, prepareGpuWarmup } from './boot/hero-gpu.js';
 import { navCopyDeparture, ticketClock } from './ui/bands.js';
 
 const journeyRegistry = createChapterRegistry();
@@ -317,6 +317,7 @@ export function boot(opts = {}) {
   }
   const deferActivation = opts.deferActivation === true;
   let activated = false;
+  let startupFailed = false;
 
 
   /* ================================================================
@@ -473,6 +474,7 @@ export function boot(opts = {}) {
    *  adopted rail straight to navigateTo() made its callback diverge from both
    *  wheel/touch and the hero CTA as soon as createUI called setOnNav(). */
   function handleNavIntent(id) {
+    if (startupFailed) return;
     if (!activated && typeof opts.onEntry === 'function') {
       opts.onEntry(id);
       return;
@@ -893,6 +895,7 @@ export function boot(opts = {}) {
   }
 
   function navigateFromControl(chapterId) {
+    if (startupFailed) return;
     if (chapterId === 'manifesto') {
       if (manifestoBranch) enterManifesto();
       return;
@@ -1998,22 +2001,31 @@ export function boot(opts = {}) {
     /** Publish and enable the already-prepared journey. Safe to call once the
      *  startup readiness promise has resolved; idempotent for QA callers. */
     activate({ entry: activationEntry = null } = {}) {
+      if (startupFailed) return state;
       const first = !activated;
-      activated = true;
-      scroll.enabled = true;
       state.revealRail();
       /* THE COMPATIBILITY GLOBAL. Written out here on purpose:
          `tools/test-ui-closure.mjs`'s A6 reads this file's TEXT for every
          site that names the global, and a publication that scan cannot see
          is one nobody guards. `activate()` is idempotent and re-publishes. */
-      window.journey = state;
       if (first) {
         warmHiddenChapters();
         const target = activationEntry || queuedEntry;
         queuedEntry = null;
         if (target && target !== 'mission') navigateFromControl(target);
       }
+      activated = true;
+      scroll.enabled = true;
+      window.journey = state;
       return state;
+    },
+    /** Startup failure is terminal for this page, including partial activation. */
+    failStartup() {
+      startupFailed = true;
+      activated = false;
+      scroll.enabled = false;
+      if (window.journey === state) delete window.journey;
+      sceneApi.addAnimator('journey', () => {});
     },
     /** A blocked scroll gesture points to the fixed chapter controls. */
     cueNavigation,
@@ -2088,68 +2100,31 @@ export function boot(opts = {}) {
   };
 
   async function prepareGpu() {
-    const PREPARE_TIMEOUT_MS = 8000;
-    const r = sceneApi.renderer;
-    if (!r) throw new Error('No WebGL renderer for journey preparation');
-    // Portrait images and the next remix are optional. Their own owners
-    // load/build them when needed; neither image loading nor initTexture()
-    // for an unseen remix belongs on the mushroom's readiness path.
-    // The hero's own programs, the growth's shell variants among them, were
-    // linked before the growth by journey/boot/hero-gpu.js; this pass covers
-    // whatever the built journey added to the visible scene.
-
-    if (r.compileAsync) {
-      let compileTimer;
-      const compileOutcome = await Promise.race([
-        Promise.resolve().then(() => compileForFrame(sceneApi, sceneApi.scene))
-          .then(() => ({ done: true }), (error) => ({ error })),
-        new Promise(resolve => {
-          compileTimer = setTimeout(() => resolve({ timeout: true }), PREPARE_TIMEOUT_MS);
-        }),
-      ]);
-      clearTimeout(compileTimer);
-      if (compileOutcome.timeout) {
-        // Compilation is a warmup optimisation. Let the intro proceed and
-        // allow three to finish lazily; do not turn a slow driver into a
-        // permanently blank hero.
-        console.warn('[journey-v6] shader warmup timed out; continuing');
-      } else if (compileOutcome.error) {
-        if (!r.compile) throw compileOutcome.error;
-        r.compile(sceneApi.scene, sceneApi.camera);
-      }
-    } else if (r.compile) {
-      r.compile(sceneApi.scene, sceneApi.camera);
-    }
-
-    performance.mark('journey-gpu-ready');
-    return true;
+    // The hero has already linked its growth variants. This optional pass
+    // covers the built journey, including its hidden chapter materials.
+    const ready = await prepareGpuWarmup(sceneApi, { label: 'journey-v6' });
+    if (ready) performance.mark('journey-gpu-ready');
+    return ready;
   }
 
 
-  /* EVERY CHAPTER'S SHADERS, WARMED BEFORE ITS FIRST VISIT (2026-10-03 —
-     Hannah: "a bunch of lag in general... something kind of slowing things
-     down"). prepareGpu() below compiles through compileAsync, and
-     compileAsync only visits VISIBLE objects — at boot that is the hero and
-     little else, so every chapter compiled its programs on the frame it
-     first appeared. Measured on a cold load at 1440x900: the first flight
-     to Inspire froze 1.3-2.1 s (3 programs), Owned 0.4-2.2 s (18), Final
-     ~0.3 s (7), each a dead stop in the middle of a camera move. Here each
-     chapter group is compiled in its own idle slice once the hero has
-     finished growing; its hidden parts are shown only for the synchronous
-     part of the call, so no frame draws them. A visit before the warm-up reaches it simply
-     compiles lazily, exactly as before. */
+  /* Refresh chapter shader variants and upload their textures in idle
+     slices after activation. Three's compile uses traverse(), so the boot
+     pass already includes hidden materials; this later pass also covers
+     variants/textures whose chapter state has changed since preparation. */
   function warmHiddenChapters() {
     const r = sceneApi.renderer;
     if (!r || typeof r.compileAsync !== 'function') return;
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
     const groups = Object.values(chapters).map((c) => c && c.group).filter(Boolean);
     const next = () => {
+      if (startupFailed) return;
       const group = groups.shift();
       if (!group) return;
       idle(() => {
-        // compileAsync walks visible objects only, and a chapter keeps parts
-        // of itself hidden until they are needed: show the whole subtree for
-        // the synchronous call, then put back exactly what was hidden
+        if (startupFailed) return;
+        // The idle pass deliberately includes every hidden material variant.
+        // Also reveal the subtree for texture upload, then restore visibility.
         const hidden = [];
         group.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
         let pending;

@@ -185,7 +185,8 @@ const entryQueue = createEntryQueue();
      `readyState` (journey/boot/handoff.js) holds the journey's public
      handle and `state.ready` is its un-awaited preparation promise. Both
      are written once, for the one journey this page ever builds, and both
-     live until the document does. THIS USED TO BE RECORDED AS A HAZARD —
+     live until the document does unless startup fails, when the handoff
+     retires the handle. THIS USED TO BE RECORDED AS A HAZARD —
      "a disposed journey stays reachable from readyState" — against a
      recreation nobody had ordered. The disposal machinery it was a hazard
      to is gone (docs/code-health/DISPOSAL-REMOVED.md) and the hazard is
@@ -421,7 +422,7 @@ if (sceneApi) {
   const canvas = sceneApi.renderer.domElement;
   let restoreTimer = null;
   let lossToken = 0;
-  let noteShownByLoss = false;
+  let lossNoteOwner = null;
   canvas.addEventListener('webglcontextlost', (e) => {
     e.preventDefault(); // tell the browser it should attempt a restore
     const token = ++lossToken;
@@ -429,17 +430,17 @@ if (sceneApi) {
     clearTimeout(restoreTimer);
     restoreTimer = setTimeout(() => {
       if (token !== lossToken) return; // a newer loss or a restore owns the story now
-      noteShownByLoss = true;
-      note.show(NOTE.contextLost);
+      lossNoteOwner = Symbol('context-loss');
+      note.showTransient(NOTE.contextLost, lossNoteOwner);
     }, 2500);
   });
   canvas.addEventListener('webglcontextrestored', () => {
     lossToken++; // retire every armed timer, including one already fired
     clearTimeout(restoreTimer);
     restoreTimer = null;
-    if (noteShownByLoss) {
-      note.hide();
-      noteShownByLoss = false;
+    if (lossNoteOwner !== null) {
+      note.hide(lossNoteOwner);
+      lossNoteOwner = null;
     }
     // Order matters: clear the stale history BEFORE the first frame is
     // allowed to render, or that frame ships the smear.

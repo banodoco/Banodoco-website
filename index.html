@@ -79,14 +79,26 @@
     }
   })();
 </script>
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.js",
-    "three/addons/": "./vendor/three/addons/"
-  }
-}
+<script>
+  // A failed entry/import-map request happens before main.js can show its note.
+  window.__runtimeLoadFailed = () => {
+    const show = () => {
+      if (document.getElementById('runtime-load-failure')) return;
+      const note = document.createElement('p');
+      note.id = 'runtime-load-failure';
+      note.setAttribute('role', 'status');
+      note.style.cssText = 'position:fixed;bottom:1.5rem;left:1rem;right:1rem;z-index:20;background:#1c160b;color:#f2ebdd;padding:1rem;text-align:center';
+      note.innerHTML = 'The interactive journey could not load. <a href="./static/" style="color:inherit">Open the static journey</a> or <button type="button">reload</button>.';
+      note.querySelector('button').addEventListener('click', () => location.reload());
+      document.body.appendChild(note);
+    };
+    if (document.body) show();
+    else addEventListener('DOMContentLoaded', show, { once: true });
+  };
 </script>
+<!-- This small synchronous map pins every ESM/worker dependency to one retained
+     release. serve.py substitutes source mode for local development. -->
+<script src="./runtime-release.js" onerror="window.__runtimeLoadFailed()"></script>
 <!-- THE ATMOSPHERE DOES NOT WAIT FOR THE ORGANISM. Its own module script,
      discovered here rather than at the foot of <body>, because the whole
      point is how early it can paint: this module imports nothing but
@@ -119,11 +131,11 @@
         || q.has('capture') || q.has('introat') || q.has('nointro')
         || q.get('prelude') === 'main') return;
     try {
-      window.__preludeWorker = new Worker('./organism/hero-spores-worker.js', { type: 'module' });
+      window.__preludeWorker = new Worker((window.__runtimeBase || './') + 'organism/hero-spores-worker.js', { type: 'module' });
     } catch { /* hero-spores.js starts its own, or draws on the page */ }
   })();
 </script>
-<script type="module" src="./organism/hero-spores.js"></script>
+<script type="module">import './organism/hero-spores.js';</script>
 </head>
 <body class="scene-preparing hero-entry-pending">
   <!-- M5 a11y: skip link, first focusable element on the page. The canvas
@@ -257,7 +269,10 @@
     </div>
   </div>
 
-  <script src="./hero-deco.js"></script>
+  <script>
+    // Keep this optional classic script's parser-time ordering inside the release.
+    document.write('<script src="' + (window.__runtimeBase || './') + 'hero-deco.js"><\/script>');
+  </script>
 
   <!-- COLD-LOAD ENTRY BARRIER. Linked stylesheets block this parser point, and
        both the hero copy and all five preboot rail marks are now in the DOM.
@@ -341,6 +356,6 @@
     })();
   </script>
 
-<script type="module" src="./main.js"></script>
+<script type="module" onerror="window.__runtimeLoadFailed()">import './main.js';</script>
 </body>
 </html>

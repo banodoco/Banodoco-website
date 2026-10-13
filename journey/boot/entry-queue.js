@@ -43,18 +43,21 @@
 export function createEntryQueue({ onRequest = null } = {}) {
   let pending = null;
   let hook = null;
+  let pendingFast = false;
 
   const api = {
     /** What is queued, without draining it. Boot reads this to decide
      *  whether a load that has just finished should hand off fast, and
      *  whether the departure gets its immediate visual acknowledgement. */
     peek: () => pending,
+    wantsFast: () => pending !== null && pendingFast,
 
     /** THE WRITE-IN. One chapter is held; a second press overwrites the
      *  first, which is what the six assignment sites did and what a
      *  visitor who changes their mind mid-intro means. */
     request(chapter, { fast = true } = {}) {
       pending = chapter;
+      pendingFast = fast;
       if (typeof onRequest === 'function') onRequest(chapter);
       if (fast && hook) hook();
     },
@@ -65,6 +68,7 @@ export function createEntryQueue({ onRequest = null } = {}) {
     take() {
       const chapter = pending;
       pending = null;
+      pendingFast = false;
       return chapter;
     },
 
@@ -86,15 +90,14 @@ export function createEntryQueue({ onRequest = null } = {}) {
      one. Replacing the global with the sink is what closes the seam: a press
      after this constructor runs but before the live rail is built goes
      straight to `request` with nothing buffered in between.
-     No `fast: true` here. This runs at main.js's module scope, before the
-     boot machine has installed its hook, so an accelerated departure has
-     nobody to ask; loadJourney's own `entryQueue.peek()` branch is what turns
-     an adopted intent into a fast handoff, and it is already written. */
+     The adopted shell chapter retains fast intent even though the hook is
+     not installed yet. Home explicitly records fast:false at its own caller;
+     loadJourney reads that metadata rather than treating any queue as fast. */
   const buffered = typeof globalThis.__banodocoEntry === 'string'
     ? globalThis.__banodocoEntry
     : null;
   globalThis.__banodocoEntry = (chapter) => api.request(chapter);
-  if (buffered) api.request(buffered, { fast: false });
+  if (buffered) api.request(buffered);
 
   return api;
 }

@@ -43,6 +43,23 @@ STATIC_CONTENT="$TOOLS/build-static-content.mjs"
 
 STAGED=$(git diff --cached --name-only)
 
+# Pages serves this branch directly: check the STAGED tree, including retained
+# releases, so a source-only commit cannot publish a stale production graph.
+if echo "$STAGED" | grep -Eq '^(main\.js|flags\.js|inspire-exits\.js|index\.html|runtime-release\.js|runtime/|organism/|journey/|content/|assets/contributor-portraits/|static/geom/|tools/build-runtime-release\.mjs)'; then
+  RUNTIME_STAGED_TREE=$(mktemp -d /tmp/banodoco-staged-runtime.XXXXXX) || exit 2
+  git checkout-index --all --prefix="$RUNTIME_STAGED_TREE/" || {
+    rm -rf "$RUNTIME_STAGED_TREE"
+    exit 1
+  }
+  node "$TOOLS/build-runtime-release.mjs" --root "$RUNTIME_STAGED_TREE" --check
+  RUNTIME_CHECK_STATUS=$?
+  rm -rf "$RUNTIME_STAGED_TREE"
+  if [ "$RUNTIME_CHECK_STATUS" != "0" ]; then
+    echo "pre-commit: regenerate and stage the runtime release (npm run runtime:build)." >&2
+    exit "$RUNTIME_CHECK_STATUS"
+  fi
+fi
+
 # The static tier is generated HTML, not a hand-maintained twin. Block any
 # content/tool/static commit whose checked-in output is not the deterministic
 # derivation of content/content.js. --check never writes.

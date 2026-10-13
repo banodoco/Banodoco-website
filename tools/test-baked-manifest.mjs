@@ -8,6 +8,7 @@ const manifestUrl = new URL('../static/geom/manifest.json', import.meta.url);
 // The site resolves Three through its browser import map. Replace only the two
 // browser imports so this Node test executes the real validator/loader source.
 const loaderSource = (await readFile(loaderUrl, 'utf8'))
+  .replaceAll('import.meta.url', JSON.stringify(loaderUrl.href))
   .replace("import * as THREE from 'three';", 'const THREE = {};')
   .replace(
     "import { LIVEBUILD, BAKEDUMP } from '../../flags.js';",
@@ -103,7 +104,7 @@ const requests = [];
 const loaded = await baked.fetchBakedAssets(async (url) => {
   requests.push(url);
   if (url.endsWith('manifest.json')) return { ok: true, json: async () => structuredClone(valid) };
-  const bytes = await readFile(new URL(`../${url}`, import.meta.url));
+  const bytes = await readFile(new URL(url));
   return {
     ok: true,
     arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
@@ -117,13 +118,13 @@ const partialRequests = [];
 const partialLoaded = await baked.fetchBakedAssets(async (url) => {
   partialRequests.push(url);
   if (url.endsWith('manifest.json')) return { ok: true, json: async () => structuredClone(partial) };
-  const bytes = await readFile(new URL(`../${url}`, import.meta.url));
+  const bytes = await readFile(new URL(url));
   return {
     ok: true,
     arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
   };
 });
-assert.deepEqual(partialRequests, ['static/geom/manifest.json', 'static/geom/owned.bin']);
+assert.deepEqual(partialRequests, [manifestUrl.href, new URL('owned.bin', manifestUrl).href]);
 assert.deepEqual([...partialLoaded.bins.keys()], ['owned']);
 
 const invalidRequests = [];
@@ -132,14 +133,14 @@ assert.equal(await baked.fetchBakedAssets(async (url) => {
   const manifest = changed((m) => { delete m.chapters.connect.payload; });
   return { ok: true, json: async () => manifest };
 }), null);
-assert.deepEqual(invalidRequests, ['static/geom/manifest.json']);
+assert.deepEqual(invalidRequests, [manifestUrl.href]);
 
 const jsonRequests = [];
 assert.equal(await baked.fetchBakedAssets(async (url) => {
   jsonRequests.push(url);
   return { ok: true, json: async () => { throw new SyntaxError('bad JSON'); } };
 }), null);
-assert.deepEqual(jsonRequests, ['static/geom/manifest.json']);
+assert.deepEqual(jsonRequests, [manifestUrl.href]);
 
 for (const manifest of [null, { version: 2, chapters: {} }]) {
   const unsupportedRequests = [];
@@ -147,7 +148,7 @@ for (const manifest of [null, { version: 2, chapters: {} }]) {
     unsupportedRequests.push(url);
     return { ok: true, json: async () => manifest };
   }), null);
-  assert.deepEqual(unsupportedRequests, ['static/geom/manifest.json']);
+  assert.deepEqual(unsupportedRequests, [manifestUrl.href]);
 }
 
 for (const unavailableManifest of [
@@ -181,5 +182,51 @@ const shortBinLoaded = await baked.fetchBakedAssets(async (url) => {
 });
 assert.equal(shortBinLoaded.bins.has('owned'), false);
 assert.deepEqual([...shortBinLoaded.bins.keys()].sort(), ['connect', 'final', 'inspire']);
+
+// A deadline covers the response AND its body, even for a fetch double
+// which ignores AbortSignal. Delayed arrivals must never mutate the result.
+for (const stage of ['manifest-fetch', 'manifest-body', 'bin-fetch', 'bin-body']) {
+  let release;
+  let signal;
+  const stalled = new Promise(resolve => { release = resolve; });
+  const body = new ArrayBuffer(8);
+  const small = {
+    version: 1, chapters: {
+      owned: { file: 'owned.bin', sha256: '0'.repeat(64), payload: {}, keys: [
+        { key: 'owned/fixture', attrs: [
+          { name: 'position', itemSize: 1, byteOffset: 0, byteLength: 8, kind: 'f32' },
+        ] },
+      ] },
+      final: { file: 'final.bin', sha256: '0'.repeat(64), payload: {}, keys: [
+        { key: 'final/fixture', attrs: [
+          { name: 'position', itemSize: 1, byteOffset: 0, byteLength: 8, kind: 'f32' },
+        ] },
+      ] },
+    },
+  };
+  const manifestResponse = { ok: true, json: async () => small };
+  const binResponse = { ok: true, arrayBuffer: async () => body };
+  const started = performance.now();
+  const result = await baked.fetchBakedAssets(async (url, options) => {
+    signal = options.signal;
+    if (url.endsWith('manifest.json')) {
+      if (stage === 'manifest-fetch') return stalled;
+      if (stage === 'manifest-body') return { ok: true, json: () => stalled };
+      return manifestResponse;
+    }
+    if (url.endsWith('final.bin')) return binResponse;
+    if (stage === 'bin-fetch') return stalled;
+    return { ok: true, arrayBuffer: () => stalled };
+  }, { timeoutMs: 20 });
+  assert(performance.now() - started < 1000, `${stage} settles without waiting for the asset`);
+  assert.equal(signal.aborted, true, `${stage} cancels the underlying request`);
+  if (stage.startsWith('manifest')) assert.equal(result, null);
+  else assert.deepEqual([...result.bins.keys()], ['final'], `${stage} keeps a usable sibling`);
+  release(stage === 'manifest-fetch' ? manifestResponse
+    : stage === 'manifest-body' ? small
+      : stage === 'bin-fetch' ? binResponse : body);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  if (result) assert.deepEqual([...result.bins.keys()], ['final'], `${stage} cannot commit late bytes`);
+}
 
 console.log('baked manifest contract: PASS');

@@ -4,19 +4,28 @@
     "favicon.ico",
     "flags.js",
     "hero.css",
+    "hero-deco.js",
+    "hero-deco.css",
     "mycelial.css",
     "manifesto-note.js",
+    "manifesto-link-tooltip.js",
     "assets/fonts/mycelial/Cormorant-Garamond-OFL.txt",
     "assets/fonts/mycelial/DM-Sans-OFL.txt",
     "index.html",
     "inspire-exits.js",
     "main.js",
+    "runtime-release.js",
+    "runtime-source.js",
     "robots.txt",
     "serve.py",
     "site.webmanifest",
     "sitemap.xml"
   ],
   "trees": [
+    {
+      "path": "runtime",
+      "include": ["*.js", "*.json", "*.bin", "*.jpg"]
+    },
     {
       "path": "assets",
       "include": ["*.js", "*.json", "*.jpg", "*.mp4", "*.png", "*.svg", "*.woff2", "*.ttf"],
@@ -29,7 +38,7 @@
     },
     {
       "path": "content",
-      "include": ["connect-nodes.js", "content.js", "contributors.js", "manifesto-concepts.js"]
+      "include": ["connect-nodes.js", "content.js", "contributors.js", "manifesto-concepts.js", "manifesto-links.js"]
     },
     {
       "path": "journey",

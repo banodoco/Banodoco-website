@@ -28874,6 +28874,7 @@ class WebGLRenderer {
 		const _this = this;
 
 		let _isContextLost = false;
+		let _contextGeneration = 0;
 
 		// internal state cache
 
@@ -29352,6 +29353,8 @@ class WebGLRenderer {
 
 		this.dispose = function () {
 
+			_contextGeneration ++;
+
 			canvas.removeEventListener( 'webglcontextlost', onContextLost, false );
 			canvas.removeEventListener( 'webglcontextrestored', onContextRestore, false );
 			canvas.removeEventListener( 'webglcontextcreationerror', onContextCreationError, false );
@@ -29384,6 +29387,7 @@ class WebGLRenderer {
 			console.log( 'THREE.WebGLRenderer: Context Lost.' );
 
 			_isContextLost = true;
+			_contextGeneration ++;
 
 		}
 
@@ -29392,6 +29396,7 @@ class WebGLRenderer {
 			console.log( 'THREE.WebGLRenderer: Context Restored.' );
 
 			_isContextLost = false;
+			_contextGeneration ++;
 
 			const infoAutoReset = info.autoReset;
 			const shadowMapEnabled = shadowMap.enabled;
@@ -29748,59 +29753,80 @@ class WebGLRenderer {
 
 		// compileAsync
 
-		this.compileAsync = function ( scene, camera, targetScene = null ) {
+		this.compileAsync = function ( scene, camera, targetScene = null, options = {} ) {
 
-			const materials = this.compile( scene, camera, targetScene );
+			const generation = _contextGeneration;
+			const materials = this.compile( scene, camera, targetScene, options );
+			// Capture this compile's programs. A later render may select a different
+			// material variant, and restoration replaces the properties cache.
+			const programs = new Set();
+			materials.forEach( material => programs.add( properties.get( material ).currentProgram ) );
+			const signal = options.signal;
 
-			// Wait for all the materials in the new object to indicate that they're
-			// ready to be used before resolving the promise.
+			return new Promise( ( resolve, reject ) => {
 
-			return new Promise( ( resolve ) => {
+				let timer;
+				let settled = false;
+				function finish( error ) {
 
+					if ( settled ) return;
+					settled = true;
+					clearTimeout( timer );
+					if ( signal ) signal.removeEventListener( 'abort', onAbort );
+					if ( error ) reject( error );
+					else resolve( scene );
+
+				}
+				function onAbort() {
+
+					const error = new Error( 'THREE.WebGLRenderer: Shader preparation aborted.' );
+					error.name = 'AbortError';
+					finish( error );
+
+				}
 				function checkMaterialsReady() {
 
-					materials.forEach( function ( material ) {
+					if ( settled ) return;
+					if ( _isContextLost || generation !== _contextGeneration ) {
 
-						const materialProperties = properties.get( material );
-						const program = materialProperties.currentProgram;
-
-						if ( program.isReady() ) {
-
-							// remove any programs that report they're ready to use from the list
-							materials.delete( material );
-
-						}
-
-					} );
-
-					// once the list of compiling materials is empty, call the callback
-
-					if ( materials.size === 0 ) {
-
-						resolve( scene );
+						const error = new Error( 'THREE.WebGLRenderer: Context invalidated during shader preparation.' );
+						error.name = 'WebGLContextInvalidatedError';
+						finish( error );
 						return;
 
 					}
+					try {
 
-					// if some materials are still not ready, wait a bit and check again
+						programs.forEach( program => {
 
-					setTimeout( checkMaterialsReady, 10 );
+							if ( program.isReady() ) programs.delete( program );
+
+						} );
+
+					} catch ( error ) {
+
+						finish( error );
+						return;
+
+					}
+					if ( programs.size === 0 ) finish();
+					else timer = setTimeout( checkMaterialsReady, 10 );
 
 				}
 
-				if ( extensions.get( 'KHR_parallel_shader_compile' ) !== null ) {
+				if ( signal ) {
 
-					// If we can check the compilation status of the materials without
-					// blocking then do so right away.
+					signal.addEventListener( 'abort', onAbort, { once: true } );
+					if ( signal.aborted ) { onAbort(); return; }
+
+				}
+				if ( extensions.get( 'KHR_parallel_shader_compile' ) !== null ) {
 
 					checkMaterialsReady();
 
 				} else {
 
-					// Otherwise start by waiting a bit to give the materials we just
-					// initialized a chance to finish.
-
-					setTimeout( checkMaterialsReady, 10 );
+					timer = setTimeout( checkMaterialsReady, 10 );
 
 				}
 

@@ -42,6 +42,7 @@ FAST_STEPS = [
     ("bake-geom.py", [], "geometry bake    static/geom/*.bin", True),
     ("build-meta.py", [], "favicons + og    favicon.ico, assets/brand/og-*", False),
     ("build-mark.py", [], "logo masks       assets/brand/mark-b-mask-*.png", False),
+    ("build-runtime-release.mjs", [], "immutable runtime runtime/<hash>/", False),
 ]
 CAPTURE_STEP = ("capture.py", [], "Tier-3 stills    static/captures/*.png", True)
 
