@@ -6,7 +6,7 @@ assert(start >= 0);
 const make = new Function('heroSpores', 'document', 'window', 'performance',
   'requestAnimationFrame', 'setTimeout', 'clearTimeout', 'addEventListener', 'removeEventListener',
   'prepareHeroGpu',
-  'const FREE_CAM = false; const NOTE = {};\n' + source.slice(start).replace('export function', 'function') +
+  'const FREE_CAM = false; const NOTE = {}; const ownerOf = () => null; const modalLive = () => false; const targetOwnsKey = () => false;\n' + source.slice(start).replace('export function', 'function') +
   '\nreturn createJourneyHandoff;');
 function harness({ landed = true, skipIntro = false, heroReady = true, pending = false } = {}) {
   let now = 0, nextTimer = 0, impact = landed, queued = null, requested;
@@ -31,7 +31,7 @@ function harness({ landed = true, skipIntro = false, heroReady = true, pending =
   callback({ scene: { intro, setInputPolicy() {} },
     entryQueue: { whenRequested(cb) { requested = cb; }, peek: () => queued,
       take() { const value = queued; queued = null; return value; } },
-    note: { show() {} }, journeyModule: module, bakedGeomReady: Promise.resolve(),
+    note: { show() {}, showFailure(_html, stage, error) { throw new Error(`${stage}: ${error}`); } }, journeyModule: module, bakedGeomReady: Promise.resolve(),
     skipIntro, frozen: false, introSeconds: 5.4 });
   async function tick(ms = 16) {
     now += ms;

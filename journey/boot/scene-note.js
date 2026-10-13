@@ -87,6 +87,30 @@ export function createSceneNote() {
     return el;
   }
 
+  /** Preserve the usable fallback while making a physical-phone failure
+   * diagnosable. Exception text is never interpreted as markup. */
+  function showFailure(html, stage, error) {
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    recordError(`[journey-v6] ${stage}: ${message}`);
+    const surface = show(html);
+    const details = document.createElement('details');
+    details.style.marginTop = '.65rem';
+    details.style.textAlign = 'left';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Technical details';
+    summary.style.cursor = 'pointer';
+    const text = document.createElement('pre');
+    text.style.whiteSpace = 'pre-wrap';
+    text.style.overflowWrap = 'anywhere';
+    text.style.maxHeight = '30vh';
+    text.style.overflowY = 'auto';
+    text.style.fontSize = '.75rem';
+    text.textContent = `Stage: ${stage}\n${error?.stack || message}`;
+    details.append(summary, text);
+    surface.appendChild(details);
+    return surface;
+  }
+
   function hide() {
     if (el) el.style.display = 'none';
   }
@@ -111,5 +135,5 @@ export function createSceneNote() {
     renderOverlay();
   }
 
-  return { show, hide, recordError };
+  return { show, showFailure, hide, recordError };
 }

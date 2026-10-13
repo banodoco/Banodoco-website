@@ -457,6 +457,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
   function loadJourney() {
     if (journeyLoadP) return journeyLoadP;
     journeyLoadP = (async () => {
+      let stage = 'preparing the first frame';
       try {
         performance.mark('journey-prepare-start');
         // Give the DOM copy one paint, then construct one chapter per task.
@@ -474,7 +475,9 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         // ready, before chapter geometry/GPU preparation. Its own fade now
         // shares the hero copy's opening beat instead of arriving after the
         // mushroom has already finished drawing.
+        stage = 'loading journey modules';
         const m = await journeyModule;
+        stage = 'building navigation';
         earlyRail = m.prepareRail ? m.prepareRail((chapter) => {
           entryQueue.request(chapter);
         }) : null;
@@ -507,8 +510,10 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
             requestAnimationFrame(finishWithHero);
           }
         }
+        stage = 'loading chapter geometry';
         await bakedGeomReady;
         await growthSettled();
+        stage = 'building chapters';
         let remaining = m.prepareChapter ? m.prepareChapter(scene) : 0;
         while (remaining > 0) {
           await nextTask();
@@ -517,6 +522,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         }
         await nextTask();
         await growthSettled();
+        stage = 'initializing the journey';
         const state = m.boot({ heroIntroSkipped: !!skipIntro,
           heroFrozen: frozen, deferActivation: true,
           rail: earlyRail,
@@ -526,8 +532,10 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
             entryQueue.request(chapter);
           } });
         if (!state) throw new Error('Journey boot returned no state');
+        stage = 'preparing journey shaders';
         await state.ready;
         readyState = state;
+        stage = 'activating navigation and intro handoff';
         earlyRail?.setReady(true);
 
         if (skipIntro || frozen) {
@@ -548,12 +556,12 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         stopIntroInputCapture();
         releaseIntro();
         performance.mark('journey-fallback');
-        console.error('[journey-v6] failed to load', err);
+        console.error(`[journey-v6] failed during ${stage}`, err);
         // the hero scene is still live but was left holding the journey's
         // input policy (set above) — hand the orbit camera back and point the
         // visitor at the static tier.
         scene.setInputPolicy('free');
-        note.show(NOTE.journeyFailed);
+        note.showFailure(NOTE.journeyFailed, stage, err);
         return null;
       }
     })();
