@@ -253,18 +253,22 @@ branch.update(0);
 beforeBend.forEach((v, i) => {
   if (typeof v === 'number') assert.ok(Math.abs(snapshot()[i] - v) < 1e-9, `no jump on the press (channel ${i})`);
 });
-// A late change of destination stretches the remaining fade without
-// restarting it or changing its already-painted progress.
+// A late change of destination stretches only the reading shade, while
+// the words keep their departure pace and already-painted progress.
 tick(branch.returnSeconds - 0.2);
 const fade = { transitionProperty: 'opacity', playbackRate: 1, currentTime: 1200,
   updatePlaybackRate(rate) { this.playbackRate = rate; } };
 root.querySelector('.j-manifesto-panel').getAnimations = () => [fade];
+const shadeFade = { ...fade };
+root.getAnimations = () => [shadeFade];
 const remainingBefore = branch.returnSeconds;
 branch.retarget(() => { landedOn = 'B'; }, { land: landB });
 assert.ok(branch.returnSeconds > remainingBefore, 'late retarget extends the remaining flight');
-assert.ok(Math.abs(fade.playbackRate - remainingBefore / branch.returnSeconds) < 1e-9,
-  'return fade slows by exactly the flight extension');
-assert.equal(fade.currentTime, 1200, 'retiming leaves the painted fade progress untouched');
+assert.ok(Math.abs(shadeFade.playbackRate - remainingBefore / branch.returnSeconds) < 1e-9,
+  'reading shade slows by exactly the flight extension');
+assert.equal(shadeFade.currentTime, 1200, 'retiming leaves the painted shade progress untouched');
+assert.equal(fade.playbackRate, 1, 'retarget never slows the outgoing words');
+assert.equal(fade.currentTime, 1200, 'retarget leaves the painted copy progress untouched');
 let maxStep = 0, last = snapshot();
 for (let i = 0; i < 600 && branch.active; i++) {
   branch.update(1 / 60);

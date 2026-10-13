@@ -710,12 +710,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     const extendedRemaining = (1 - returnK) / returnRate;
     if (extendedRemaining > remaining) {
       // Changing transition-duration does not retime an in-flight transition.
-      // Adjust its playback rate instead, preserving the exact painted frame.
-      for (const element of [panel, root]) {
-        for (const animation of element.getAnimations?.() || []) {
-          if (!['opacity', 'filter', 'transform'].includes(animation.transitionProperty)) continue;
-          animation.updatePlaybackRate(animation.playbackRate * remaining / extendedRemaining);
-        }
+      // Retime only the reading shade, preserving its exact painted frame.
+      // The words keep their ordinary departure pace even if the flight grows.
+      for (const animation of root.getAnimations?.() || []) {
+        if (!['opacity', 'filter', 'transform'].includes(animation.transitionProperty)) continue;
+        animation.updatePlaybackRate(animation.playbackRate * remaining / extendedRemaining);
       }
     }
     // Retarget the displayed orientation on every viewport. Blending two
@@ -747,8 +746,8 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     returnFlight = land
       ? createReturnFlight(presentedPose || capture(), landing, 1 / returnRate, presentedVelocity) : null;
     flightStartK = 0;
-    // the words take the whole fall to go (Hannah, 2026-10-06: "the fade out
-    // should take the time of the transition") — site.css reads this
+    // The reading shade follows the whole fall; the words have their own
+    // shorter departure in site.css, matching ordinary section copy.
     root.style.setProperty('--manifesto-return-s', `${(1 / returnRate).toFixed(2)}s`);
     direction = -1;
     paused = false;
