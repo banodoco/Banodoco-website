@@ -342,6 +342,7 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * gently resolves a readable core on this existing member; its motion
  * remains the same stream motion until it peels. */
 const KINDLE_S = 0.80;          // the chosen spore catches the light in the stream
+const DESKTOP_RECRUIT_S = 1.2; // visual fade continues into descent; never changes its clock
 const KINDLE_FAST_S = 0.45;     // ...shorter when a ready scene compresses the settle
 const KINDLE_LIGHT = 2.4;       // the light it carries through its descent
 const LAND_LIGHT = 3.3;         // ...swelling to this as it settles
@@ -972,8 +973,10 @@ function advance(F, dt, gust) {
     if (L.state === 1 && F.t < L.t0) {
       // KINDLING: the stream loop above has already moved it and written
       // its ordinary light; rise from that light, so the pick is seamless
-      const k = smooth01((F.t - L.kAt) / (L.t0 - L.kAt));
-      F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
+      const k = smooth01((F.t - L.kAt) /
+        (c.landFromBottom ? L.t0 - L.kAt : DESKTOP_RECRUIT_S));
+      if (c.landFromBottom) F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
+      else F.fade[L.hi] = L.fade0 + (kindleLight - L.fade0) * k;
       kindleTint(F, L, KINDLE_HEAT * k);
       continue;
     }
@@ -1001,7 +1004,11 @@ function advance(F, dt, gust) {
       F.fade[L.hi] = kindleLight
         + 0.22 * Math.sin(2 * (SWAY_CYC * 6.2832 * u + L.phase)) * Math.sin(Math.PI * u)
         + (landingLight - kindleLight) * sw;
-      kindleTint(F, L, KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw);
+      // Carry the same visual recruitment through the start of falling,
+      // so reaching t0 cannot suddenly reveal a fully lit, larger core.
+      const recruit = c.landFromBottom ? 1 : smooth01((F.t - L.kAt) / DESKTOP_RECRUIT_S);
+      if (!c.landFromBottom) F.fade[L.hi] = L.fade0 + (F.fade[L.hi] - L.fade0) * recruit;
+      kindleTint(F, L, (KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw) * recruit);
       if (u >= 1) {
         L.state = 2;
         L.impactAt = F.t;
@@ -1109,6 +1116,7 @@ const KINDLE_SCRATCH = [0, 0, 0];
 function kindleBegin(F, L) {
   const i3 = L.hi * 3;
   L.size0 = F.size[L.hi];
+  L.fade0 = F.fade[L.hi];
   L.c0 = [F.color[i3], F.color[i3 + 1], F.color[i3 + 2]];
   heatLinear(F.tone[L.hi], KINDLE_SCRATCH, 0);
   const lg = KINDLE_SCRATCH[1] > 0 ? L.c0[1] / KINDLE_SCRATCH[1] : 1;
