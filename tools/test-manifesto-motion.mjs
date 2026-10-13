@@ -379,7 +379,7 @@ assert.equal(mobileParagraphs[1].hidden, true, 'incoming paragraph creates no sc
 assert.equal(mobileBox.scrollTop, 0, 'scroll stays still before its new earlier lead');
 advanceMobileTo(mobileSchedule.admit[1] + 0.2);
 assert.equal(mobile.shownLines, 1, 'scroll leads the incoming text instead of waiting for its reveal');
-assert.equal(mobileParagraphs[1].hidden, false, 'space is admitted exactly when the lead scroll needs it');
+assert.equal(mobileParagraphs[1].hidden, true, 'early lead plans the next paragraph without adding invisible native scroll space');
 assert.ok(!mobileParagraphs[1].classes.has('shown'), 'admitted incoming paragraph remains visually uninked');
 assert.ok(readingAdvance() > 0 && readingAdvance() < 25, 'the scroll is already moving before new text starts');
 advanceMobileTo(secondStart - 0.025);

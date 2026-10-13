@@ -448,6 +448,14 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   let readingHeld = false, readingTouchHeld = false;
   let readingInsetConsumed = 0, readingTopPadding = 0;
   let readingInsetRetired = false;
+  // Plan the early reading move against the next paragraph, but keep its
+  // invisible height out of the native scroll range until its ink starts.
+  function withAdmittedLayout(read) {
+    const pending = lineEls.filter((line, i) => scrollReading && i < admittedLines && line.hidden);
+    pending.forEach(line => { line.hidden = false; });
+    try { return read(); }
+    finally { pending.forEach(line => { line.hidden = true; }); }
+  }
   function measureReadingPadding() {
     if (!scrollReading || reduceMotion.matches || !(lines.clientHeight > 0)) return;
     if (admittedLines <= 0) {
@@ -458,7 +466,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
     const first = lineEls[0].getBoundingClientRect().height;
     // Centre the opening paragraph. Later copy enters at the bottom,
     // retaining the preceding text above without padding for future copy.
-    const last = lineEls[admittedLines - 1].getBoundingClientRect().height;
+    const last = withAdmittedLayout(() => lineEls[admittedLines - 1].getBoundingClientRect().height);
     readingTopPadding = readingInsetRetired ? 0
       : Math.max(0, Math.max(24, (lines.clientHeight - first) / 2) - readingInsetConsumed);
     lines.style.setProperty('--reading-pad-top', `${readingTopPadding}px`);
@@ -468,11 +476,11 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   // scrollable content. Consume it as the reader moves past it, subtracting
   // the same amount from scroll and follow coordinates to hold visible ink
   // still. Returning to the top later then reaches the actual first line.
-  function consumeReadingInset() {
+  function consumeReadingInset(requestedTop = lines.scrollTop) {
     if (!scrollReading || !followEnabled || readingHeld || admittedLines < 2 || readingTopPadding <= 0) return;
-    const consumed = Math.min(readingTopPadding, Math.max(0, lines.scrollTop));
+    const consumed = Math.min(readingTopPadding, Math.max(0, requestedTop));
     if (!(consumed > 0)) return;
-    const top = lines.scrollTop;
+    const top = requestedTop;
     readingInsetConsumed += consumed;
     readingTopPadding -= consumed;
     if (readingTopPadding <= 0) readingInsetRetired = true;
@@ -484,12 +492,14 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
   function followParagraph(mode = 'reveal') {
     if (!followEnabled || admittedLines <= 0) return;
     const box = lines.getBoundingClientRect();
-    const paragraph = lineEls[admittedLines - 1].getBoundingClientRect();
     followFrom = lines.scrollTop;
-    const target = admittedLines === 1
-      ? followFrom + paragraph.top - box.top + paragraph.height / 2 - lines.clientHeight / 2
-      : followFrom + paragraph.bottom - box.top - lines.clientHeight + 24;
-    followTo = Math.max(0, Math.min(lines.scrollHeight - lines.clientHeight, target));
+    followTo = withAdmittedLayout(() => {
+      const paragraph = lineEls[admittedLines - 1].getBoundingClientRect();
+      const target = admittedLines === 1
+        ? followFrom + paragraph.top - box.top + paragraph.height / 2 - lines.clientHeight / 2
+        : followFrom + paragraph.bottom - box.top - lines.clientHeight + 24;
+      return Math.max(0, Math.min(lines.scrollHeight - lines.clientHeight, target));
+    });
     if (mode === 'reveal') {
       const index = admittedLines - 1;
       // Admit layout once the previous paragraph is visibly readable.
@@ -516,8 +526,9 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       followParagraph('catchup');
     }
     if (!followEnabled || admittedLines <= 0 || !(lines.clientHeight > 0)) return;
-    lines.scrollTop = followFrom + (followTo - followFrom) * smoother(followEnd > followStart ? (elapsed - followStart) / (followEnd - followStart) : 1);
-    consumeReadingInset();
+    const requestedTop = followFrom + (followTo - followFrom) * smoother(followEnd > followStart ? (elapsed - followStart) / (followEnd - followStart) : 1);
+    lines.scrollTop = requestedTop;
+    consumeReadingInset(requestedTop);
     updateReadingEdges();
   }
   // Yield during a gesture and its momentum, then gently rejoin the current
@@ -561,7 +572,7 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
       root.classList.toggle('is-scroll-reading', scrollReading);
       followEnabled = scrollReading && !reduceMotion.matches;
       if (scrollReading) claimInput(panel, { modal: true }); else releaseInput(panel);
-      lineEls.forEach((line, i) => { line.hidden = scrollReading && i >= admittedLines; });
+      lineEls.forEach((line, i) => { line.hidden = scrollReading && i >= shownLines; });
       lines.scrollTop = 0;
     }
     if (active && !root.hidden) { fitDesktop(); liftColumn(); measureReadingPadding(); followParagraph('resize'); updateReadingEdges(); }
@@ -600,12 +611,16 @@ export function createManifestoBranch(sceneApi, { onTravelLock = () => {}, onRet
         // CSS up to that same clock so its final fade ends with the camera.
         line.style.setProperty('--reveal-lateness', `${Math.max(0, elapsed - readingStarts[i])}s`);
       }
-      line.hidden = scrollReading && i >= admittedLines;
+      line.hidden = scrollReading && i >= shownLines;
       line.classList.toggle('shown', i < shownLines);
     });
     liftColumn();
     measureReadingPadding();
     if (layoutChanged) followParagraph();
+    // A lead may reach the end of the currently available native range.
+    // Rebase when ink adds real content rather than jumping to a planned
+    // scroll position that the browser previously had to clamp.
+    else if (next > previous) followParagraph('resize');
     updateReadingEdges();
   }
   /** Open the branch. `anchor` (a pose plus its fog) is the rest the flight
