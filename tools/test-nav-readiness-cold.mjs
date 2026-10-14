@@ -17,7 +17,7 @@ try {
           const controls = [...rail.querySelectorAll('a, button')];
           window.navReadinessTrace.push({ t: performance.now(), busy: rail.getAttribute('aria-busy') === 'true',
             readiness: Number(style.getPropertyValue('--nav-readiness')), opacity: Number(style.opacity),
-            transition: style.transitionProperty, trackingHero: rail.style.getPropertyValue('--rail-opacity-duration') === '0s',
+            transition: style.transitionProperty, entryAnimation: rail.getAnimations().some(a => a.id === 'rail-entry-handoff'),
             disabled: controls.every(c => c.getAttribute('aria-disabled') === 'true' && c.tabIndex === -1) });
         }
         requestAnimationFrame(sample);
@@ -37,8 +37,8 @@ try {
       const intermediate = rows.filter(r => !r.busy && r.readiness > .02 && r.readiness < .98);
       assert.ok(intermediate.length > 10, 'real readiness contains multiple visible fade frames');
       assert.ok(intermediate.at(-1).t - intermediate[0].t > 1100, 'readiness visibly progresses for more than a second');
-      assert.ok(rows.filter(r => r.trackingHero).every(r => r.transition.includes('--nav-readiness')),
-        'hero opacity tracking cannot disable the readiness transition');
+      assert.ok(rows.filter(r => r.entryAnimation).every(r => r.transition.includes('--nav-readiness')),
+        'compositor entry animation cannot disable the readiness transition');
       assert.ok(intermediate.every(r => !r.disabled), 'visual easing does not postpone enabled navigation');
       assert.equal(rows.at(-1).readiness, 1);
       console.log(`${width}x${height}: ready ${ready.t.toFixed(0)}ms, readiness .02→.98 ${(intermediate.at(-1).t - intermediate[0].t).toFixed(0)}ms`);

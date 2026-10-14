@@ -1,0 +1,780 @@
+{
+  "version": 1,
+  "hash": "06ca486b4df83d3ab30d09b10ad0662c584d2bd8987da1af44faa9ec7fa9fc77",
+  "entries": [
+    "main.js",
+    "organism/hero-spores.js",
+    "organism/hero-spores-worker.js",
+    "hero-deco.js"
+  ],
+  "files": [
+    {
+      "path": "assets/contributor-portraits/manifest.js",
+      "sha256": "9695c7a331a070bcdd11a3fd681bd7640ac441300ae006131c92abc25bb35509"
+    },
+    {
+      "path": "assets/contributor-portraits/profile-sprite.jpg",
+      "sha256": "0ce6b563c88bbe0e58f2cbddfd6c9edfb40994bac99f61f2294c9ceb293ef5f4"
+    },
+    {
+      "path": "content/connect-nodes.js",
+      "sha256": "a7797e177df150a3a7c554d248ac7c0baceff4f9de56c5b6c01fb21e39479435"
+    },
+    {
+      "path": "content/content.js",
+      "sha256": "3cd10b39afd1bff96c98eda5d8be1ca5f8b06d6b7f893554fc5f089940db4e28"
+    },
+    {
+      "path": "content/contributors.js",
+      "sha256": "45ecc60c1e24aa9d06113abf91f087e30b2c9265bbd97a54d7049552d7784a9e"
+    },
+    {
+      "path": "content/manifesto-concepts.js",
+      "sha256": "9edee9e4d70c38eeeadf467dfb8f427332e632ca804ebee909d5b3447518e022"
+    },
+    {
+      "path": "content/manifesto-links.js",
+      "sha256": "054c1c04de0db012def807a31f8bf64eb52984a974efd2ee07dda195ad9cb12d"
+    },
+    {
+      "path": "flags.js",
+      "sha256": "07bea8ad426c61721e8e385cc3f96147bd717eb5c2de1f069cc3479912ee3172"
+    },
+    {
+      "path": "hero-deco.js",
+      "sha256": "57c46047509b2f29038ff4e587ab4f2a8a2e8ae1029d322fbdcea6b61afa37f7"
+    },
+    {
+      "path": "inspire-exits.js",
+      "sha256": "eef8fdfd3b14106c735d4f57c3c2142184f18206ead58b2d6f1c57b2248cec6f"
+    },
+    {
+      "path": "journey/anatomy.js",
+      "sha256": "abf2fe7fe473fccf73375cece5c7f51813c9ddc9d6224560353b105642a34b2c"
+    },
+    {
+      "path": "journey/backdrop.js",
+      "sha256": "c0d89f8492f2c69efb41e3881123ff463260f3025f9ca46f570b6927e3eb7faf"
+    },
+    {
+      "path": "journey/boot/entry-queue.js",
+      "sha256": "ad7392b6520d6b448c21b313bc404f60fa35f2b049064ad1737979d1c673bd45"
+    },
+    {
+      "path": "journey/boot/handoff.js",
+      "sha256": "81f1344685bec519216cc9ffc3c85b576ec085a52e7c09b2482c5641e2da84fb"
+    },
+    {
+      "path": "journey/boot/hero-gpu.js",
+      "sha256": "555cdbf2ef2f21b5e6dfe72e4e482d1d4aa39c6e7face15ce79894e0f12a88bc"
+    },
+    {
+      "path": "journey/boot/hero-mode.js",
+      "sha256": "b63313458b731cbd38cbad76ec32ffe162317c0ecd8eb6f8c0a0febef1f36e44"
+    },
+    {
+      "path": "journey/boot/rail-entry.js",
+      "sha256": "b5ddcbdfd593c5226af5cb886d9a42c469d8fa265492fd1d85aef2c54e313649"
+    },
+    {
+      "path": "journey/boot/scene-note.js",
+      "sha256": "cb5195d21aff846763ae6badde2cd6d2f11ec439a76b4675f49b2a4b282d95bd"
+    },
+    {
+      "path": "journey/camera-blend.js",
+      "sha256": "b4ecee30079a02c1c1e69403851bb77596f4ab66192113dd8d835b0f21533c33"
+    },
+    {
+      "path": "journey/camera-path.js",
+      "sha256": "4f0d71fe981d1195e9b22f000317638e1555be0db48467f3a115514b85326e56"
+    },
+    {
+      "path": "journey/camera-roll.js",
+      "sha256": "66553035a9cc750bba2b4c3a7b65a1441410cd3d099edba91a5f68e409a0361f"
+    },
+    {
+      "path": "journey/cap-occlusion.js",
+      "sha256": "b777162f5dda3c87225aa5d2248f68c2ecd0f92902b3eba334dbd8370b2faf4f"
+    },
+    {
+      "path": "journey/cards/ados.js",
+      "sha256": "bdadec1eb5401a99539d529dc6427ba3c66c7934b00d1523a3c679bc2436b82c"
+    },
+    {
+      "path": "journey/cards/arca.js",
+      "sha256": "b6843c6a309595cec8e2d60681c1584870b16ad265e5a2e2c59fff87736c3650"
+    },
+    {
+      "path": "journey/cards/artcompute.js",
+      "sha256": "aa5f8524783fc5ed999a1b2e2ce1be2a274a6544f0855a10a030e3e2fdb4204e"
+    },
+    {
+      "path": "journey/cards/discord.js",
+      "sha256": "1eed3ae181ecdd663ff2ab5bc1724ed0ebe0628610553d453f52047c8edf5709"
+    },
+    {
+      "path": "journey/cards/hivemind.js",
+      "sha256": "20e53239bbc1b37542ad73f0f2e48f8c700a6878fb403bc1cbd395f810ee6936"
+    },
+    {
+      "path": "journey/cards/icons.js",
+      "sha256": "457a8e9d68ee127ab94e7701486db335b563f097c3f28a456e073dc27df23325"
+    },
+    {
+      "path": "journey/cards/index.js",
+      "sha256": "6fb1210afc067da3997a8a4f29172d6ca1fc9d12d91b71c135bed37338993187"
+    },
+    {
+      "path": "journey/cards/registry.js",
+      "sha256": "f942b48624d191de7b17e2913fa4f74c83dde0c9d0d045345240fbfe9b1991ed"
+    },
+    {
+      "path": "journey/cards/runtime.js",
+      "sha256": "4631bbf3d0446522ae23490ad351371aff95e78c1c8121597af0b60a287907b0"
+    },
+    {
+      "path": "journey/cards/soon-icons.js",
+      "sha256": "a630da8885bc18fb0f69161f7c1d833fd5ba9cab2b6c5af36eaf4afe311f8080"
+    },
+    {
+      "path": "journey/cards/tworp.js",
+      "sha256": "287bbee100836c483f009ca0e44c40bba315634321534739ffa94c3162c3d678"
+    },
+    {
+      "path": "journey/chapter-entry.js",
+      "sha256": "592dd734d7ab662072fb3f9d4342f2968e326c50eec0faafb975741d8422432f"
+    },
+    {
+      "path": "journey/chapter-interactions.js",
+      "sha256": "8a9b512bd0db8a05be2f45a46bff900fc8efd2abc0b558611d3bc017f25e4024"
+    },
+    {
+      "path": "journey/chapter-registry.js",
+      "sha256": "3189d13e0018468eff863c2798436fda74d55d5f19da08e74bc3b650c3d46e07"
+    },
+    {
+      "path": "journey/chapters/connect/camera.js",
+      "sha256": "e240fabd86e0c940e332107a7fb65015a6dd5790f70033c6e1b379ac5eb2ebbd"
+    },
+    {
+      "path": "journey/chapters/connect/index.js",
+      "sha256": "000a4e973845974425927d115d9ebc5884c0bddb8e0b5aa3e980a70ecf9953fa"
+    },
+    {
+      "path": "journey/chapters/connect/phone-light.js",
+      "sha256": "6bc38d9bc4fd3e16fd3058a894ed0d2869cff78523de99092aa67a192da7b430"
+    },
+    {
+      "path": "journey/chapters/connect/tendrils-baked.js",
+      "sha256": "4e07d0f36997e602aafba2125085625e47ae362203cc80248e1ce2e51bd3273f"
+    },
+    {
+      "path": "journey/chapters/connect/tendrils-materials.js",
+      "sha256": "d6a107fc88faaac9ad89eda1940b20017f7bc5bb3635fcbba2498edeef750b69"
+    },
+    {
+      "path": "journey/chapters/connect/tendrils.js",
+      "sha256": "46e1cd41d68465d9d477fa0c4b00c2afc88dd805b794cedc59141bf1e8ad1346"
+    },
+    {
+      "path": "journey/chapters/equip/camera.js",
+      "sha256": "32e8923db8881d022541ac05a1092cb1990fb3d669965044161d20d59a91de93"
+    },
+    {
+      "path": "journey/chapters/equip/index.js",
+      "sha256": "8e5959f4598123d0a1bc5f1f551ab165309383ee669321c91c19eef7b958ed7c"
+    },
+    {
+      "path": "journey/chapters/final/camera.js",
+      "sha256": "b45011e675bf6075fb6e81e38ff9f3ace30c6e575916d54f16ac9d9df9d7f729"
+    },
+    {
+      "path": "journey/chapters/final/canopy-baked.js",
+      "sha256": "23e123f49567954a76d5e3825f4ddb7bcf195d87ec82743955acf635b2d596d4"
+    },
+    {
+      "path": "journey/chapters/final/canopy-levels.js",
+      "sha256": "8ef4e094a7ca625e0b01a74d6edaf4de32086987b1f8dd6ca4ef414ff71f89a2"
+    },
+    {
+      "path": "journey/chapters/final/canopy-routes.js",
+      "sha256": "5ec95c3ae65bd31afb74b1870731be17f2a752f4bd455bd3219fd3a8e4c3322d"
+    },
+    {
+      "path": "journey/chapters/final/canopy.js",
+      "sha256": "b1616bfc929be80f53fe1d38d7b5743f073476c4aa6199b59e0fb7587714a590"
+    },
+    {
+      "path": "journey/chapters/final/capfigure.js",
+      "sha256": "57edcb505ae60e32ca053b44ebfcdc6424ab18384db4e1ba16ec63824f836156"
+    },
+    {
+      "path": "journey/chapters/final/clones-materials.js",
+      "sha256": "8a314e1b0b4c2c4c0000ab7a423ba641984a50032bcdc756234d171022cc63ee"
+    },
+    {
+      "path": "journey/chapters/final/clones-tap.js",
+      "sha256": "f0874553841ba1c2f5b12fb5798e772cdd08ec8feccf15a14d986b8223176224"
+    },
+    {
+      "path": "journey/chapters/final/clones.js",
+      "sha256": "0a80ab06a92436800f9799413f531c340d290d5076c1dfbcb8949ebc31d25e73"
+    },
+    {
+      "path": "journey/chapters/final/index.js",
+      "sha256": "07d2f627845b9a6c5ef3b39e11103efcb5b2d701959296577e5cea4e53379c40"
+    },
+    {
+      "path": "journey/chapters/final/interact.js",
+      "sha256": "df671d46d3fe08b8eaf8c639ef845bd2aca33a49c51d1c58be77f551be7a656f"
+    },
+    {
+      "path": "journey/chapters/final/ring-baked.js",
+      "sha256": "dedef0b26207e3c307a866732905b8d4409cfdcbdb8f8bcac13440fe87a0a28f"
+    },
+    {
+      "path": "journey/chapters/final/ring-primordia.js",
+      "sha256": "779c5eaebf0164c7fc50c1fc9770e1cfb7df8bd427066c96ec81adeeed2f3906"
+    },
+    {
+      "path": "journey/chapters/final/ring.js",
+      "sha256": "c4597d0fddb18ed013cddb6313ced0cbaa60c84bddef57240b432d813173b8d1"
+    },
+    {
+      "path": "journey/chapters/final/shed.js",
+      "sha256": "4c4ba7904de212ae61cb5d2ac291b43c29579a7e11dbf64943022718fe615d2f"
+    },
+    {
+      "path": "journey/chapters/final/sky.js",
+      "sha256": "f9e6e00bbe377388b7df19903081428127661583b5706609c7c55fff09c90acd"
+    },
+    {
+      "path": "journey/chapters/final/species.js",
+      "sha256": "1bd97053742454ec71de8a0b79ca955bfcbe93df19d747ae17a28b109725746f"
+    },
+    {
+      "path": "journey/chapters/final/terrain-baked.js",
+      "sha256": "2b9e77ade7c3ce5ecbf5839daab57ada92270c8b3ca01de9cce0a13d8d966b02"
+    },
+    {
+      "path": "journey/chapters/final/terrain-section.js",
+      "sha256": "3116d55b88cf5768b8ab1c8939a3f3e2ebade9a4adbecb3688b89231de540dcb"
+    },
+    {
+      "path": "journey/chapters/final/terrain-soil.js",
+      "sha256": "51c6fd8bd2daaabea0193ba3f4bf2a60aae0787c477252b5d46220707a5747d3"
+    },
+    {
+      "path": "journey/chapters/final/terrain.js",
+      "sha256": "de4ccf4c2dffb61a1ccf45f3829b4aa91fca7058874c570fbc8ec96053a35f66"
+    },
+    {
+      "path": "journey/chapters/final/variation.js",
+      "sha256": "ffa19845eae17a29e3a977a482b5c4ecf4f970f449ed8cbf8a03c2a526b000ac"
+    },
+    {
+      "path": "journey/chapters/final/world.js",
+      "sha256": "f47ef3f5b54075bf84884fd8fce9e1c67b22b8fc3e270b2461e9540141c77cfa"
+    },
+    {
+      "path": "journey/chapters/hero-body-fog.js",
+      "sha256": "e47a744e975b5815814d1c576b511e730bffa75ca87fb11fc174177e1486cee3"
+    },
+    {
+      "path": "journey/chapters/hero-ground-dim.js",
+      "sha256": "06f9ec15610005d5b64bfe6c13b726ae613c19e6cd03fa30d9dd05939eba7e38"
+    },
+    {
+      "path": "journey/chapters/inspire/camera.js",
+      "sha256": "2f409a0abb89a5192f4d0fbbe3db997fb2bfc5f7d134b1e64f89422095844bdb"
+    },
+    {
+      "path": "journey/chapters/inspire/index.js",
+      "sha256": "fc6dfeb1fbe0f0ac86c40b0aa2e7ecbe4f1ffa2e90fca676561c0cb0b17e9257"
+    },
+    {
+      "path": "journey/chapters/owned/camera.js",
+      "sha256": "3767b32e3512bc3356ec0a5d2189803783180184812947e7dc53723dafb2a71d"
+    },
+    {
+      "path": "journey/chapters/owned/index.js",
+      "sha256": "622a117f55e726bd59503db7fc4d9ddf7327043a01a491ef5c2326d50e114d2d"
+    },
+    {
+      "path": "journey/chapters/owned/leg.js",
+      "sha256": "760a2291f94f0689de4a16bf8f2ee7f934bba53fb4445ebf4411f0bc8133075b"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-atlas.js",
+      "sha256": "20d94550c896b3ed5e168f66c385db06fc08342ee675f068e06a709c40537027"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-deal.js",
+      "sha256": "390673ee0fba4115c007e30c9a4912ec63997d835844493030ee72bc84297dfa"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-paint.js",
+      "sha256": "390969ad7cb66a48d77925bae594006b34b22d76ec3a76d5641005ae45224ab9"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-photo-loader.js",
+      "sha256": "198b467d5691cdca953d193092d16e42b8c4b2055a7384095ab5cbc24edd4a48"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-remix.js",
+      "sha256": "48d4c184ead65766b8a9b40b7a54256d827c7f13c2d65a1455c1e5c5434f541f"
+    },
+    {
+      "path": "journey/chapters/owned/portrait-textures.js",
+      "sha256": "cf25646e76558f3b0ad8c938a010f79d2fbf68cc6d6850c3a36b85d93d067012"
+    },
+    {
+      "path": "journey/chapters/owned/portraits.js",
+      "sha256": "2d77529c0e403b23cc1b08668f6f5d26451b40f967fa5984dc9c163032720153"
+    },
+    {
+      "path": "journey/chapters/owned/substrate-baked.js",
+      "sha256": "c57d5def5033b5fe04861ac2f8e54164961f950d3ccaa3e1577348ae0dea0cf6"
+    },
+    {
+      "path": "journey/chapters/owned/substrate-ownership.js",
+      "sha256": "1d5ca1f91ce86ba7a639da5fb9c8efbc0d83cc855fccdc5096c064e660730122"
+    },
+    {
+      "path": "journey/chapters/owned/substrate.js",
+      "sha256": "1242560bf41eb7f16ab2f94c14ccf1fcf46b507317f65f3dfc98cb910f980b34"
+    },
+    {
+      "path": "journey/claim.js",
+      "sha256": "fb9b92298b2c62e18c8ec16bce3cb7a45cae5e1b0b0466fc86378786bd76a45a"
+    },
+    {
+      "path": "journey/constants.js",
+      "sha256": "a1de0b29a84117c92606bf967548d7c4f9540a5378a3f2ba9eb585f934b0835b"
+    },
+    {
+      "path": "journey/constants/camera.js",
+      "sha256": "1de103b9c08d750a341c42480153034e81eaf593afb97db2c96c49f6c53fe207"
+    },
+    {
+      "path": "journey/constants/copy.js",
+      "sha256": "1512279e74333f9a0d34430a856f37fe6fb64ae34d221cb056a16170df7086a7"
+    },
+    {
+      "path": "journey/constants/fog.js",
+      "sha256": "2b43a2ca8d3b2e7555080f3448f72bb3dc64c86f0a9c7ed66f7534767207485f"
+    },
+    {
+      "path": "journey/constants/hero.js",
+      "sha256": "13163b5cc8d1442f181706717d3483768bc08c9c80437e42467e8067804939f4"
+    },
+    {
+      "path": "journey/constants/scroll.js",
+      "sha256": "ff8d3e2eb7c4d980621b701d762253f8db16ee317203f5c2ac64a261fd11ee09"
+    },
+    {
+      "path": "journey/dial.js",
+      "sha256": "7b1fdaddfcefda0993cf0d244fcce10f85459ee1401a2a6f6ff824a55a193af4"
+    },
+    {
+      "path": "journey/director.js",
+      "sha256": "96dd52d7cc7196984828d5d955c5a7691ce8038e9ec15f152037e4879097c107"
+    },
+    {
+      "path": "journey/failure-guard.js",
+      "sha256": "424b3067664fe0453521ed63bb86be60b22afa50c9e418004e6ccb07a3886405"
+    },
+    {
+      "path": "journey/frame-application.js",
+      "sha256": "6d8bc408aa48690512a337ad1db065678f9d6d7f6ee71b62f2b9175b331388ea"
+    },
+    {
+      "path": "journey/frame/publication.js",
+      "sha256": "c5d4649c580801526d2ba54afb72c3a7acc9d6644ac3d63cfc3a0710b26b7ad7"
+    },
+    {
+      "path": "journey/hero-field.js",
+      "sha256": "3184ed94ff2063e3bea4fb215d84c1cacccdcc8697654314372bdaf394a7f356"
+    },
+    {
+      "path": "journey/journey-owner.js",
+      "sha256": "be9e336adc6094217b20cf4a600c0d2cb9de1829063959b23ce2fceb38b7be93"
+    },
+    {
+      "path": "journey/journey.js",
+      "sha256": "d3511248651ae23a94a4f9295c2de3105972f3d06c556febfcf79f0db7f53095"
+    },
+    {
+      "path": "journey/layout/final-composition.js",
+      "sha256": "694610a2295b6b21d55c93a93e4f1e163cfa6d79ee639e45d3f2bd7e10c27ee4"
+    },
+    {
+      "path": "journey/layout/purpose-copy-fit.js",
+      "sha256": "5d7b9a58464d9664ccdbd38f6405bbcf81e3b6a16567cead5217eebb5d6a96d2"
+    },
+    {
+      "path": "journey/layout/rail-geometry.js",
+      "sha256": "800dcd8543898fe776943174ee2816efe7e1fc7c3634ee760fb2b4d79285bcd3"
+    },
+    {
+      "path": "journey/lens.js",
+      "sha256": "f31fbbafb9b8682e1903bc0f6bc2c003f9dac6071374a0a77a1330c0307220d8"
+    },
+    {
+      "path": "journey/lib/baked.js",
+      "sha256": "68e71d9cd036ef4ef2f371c8579be5524230e8d0352e0d7ee1fffcab2b15e4e5"
+    },
+    {
+      "path": "journey/lib/body-dissolve.js",
+      "sha256": "47ee56f5b78ff11c8a53521da292b3adbc7b340ca2ecee6ebaab97a612788cfc"
+    },
+    {
+      "path": "journey/lib/ease.js",
+      "sha256": "f166db906f201a1937533430e27a0bf390728baba1dd48a6450bb65fc9b160c2"
+    },
+    {
+      "path": "journey/lib/helpers.js",
+      "sha256": "a84c8b6320b7a9f8ebc32671e17d74c76175a66ed81beac2d84515f389c054e1"
+    },
+    {
+      "path": "journey/manifesto/branch.js",
+      "sha256": "ea7860ef0b54fc9f5b954c3259f5c0c65fb3f054e0abd7d80a55a982ca4cb45e"
+    },
+    {
+      "path": "journey/manifesto/colony.js",
+      "sha256": "7b7d5cd482cade48ce88b11f99ba72103d83463245fab8be7f281b261bccb7eb"
+    },
+    {
+      "path": "journey/manifesto/connected-lines.js",
+      "sha256": "cc3cc7ad88552fd733174f1262103607554b4b94f3276d13fcb3d4bdd4f2d119"
+    },
+    {
+      "path": "journey/manifesto/entry-flight.js",
+      "sha256": "e10bd14e30d41046e35616eb7bb658801e82b27db0430beeb0ebcfe4376b4c72"
+    },
+    {
+      "path": "journey/manifesto/fit.js",
+      "sha256": "1f8a09bdd2861d98542628804dfcec3a4f3201b43a20ed924856336e2ee09117"
+    },
+    {
+      "path": "journey/manifesto/pose.js",
+      "sha256": "58a19ab8bbca2867c03c3f8853b5eadb039cdc44c10a781ca8b616e30c5e8fc6"
+    },
+    {
+      "path": "journey/manifesto/retirement.js",
+      "sha256": "c9134dcb6185bd275f1d43e7242a15fa3353311514dd4bfc668fc71a731f4857"
+    },
+    {
+      "path": "journey/manifesto/return-flight.js",
+      "sha256": "af3296c52b33c1ba0251f12c72c802cf0bcf6c24c8a2da1ddfcb9f7e2a2a7f37"
+    },
+    {
+      "path": "journey/navigation-timing.js",
+      "sha256": "bfef93b2708158ca4ab23a41a8c10812d855d085fc6a8146c7f0719291232f43"
+    },
+    {
+      "path": "journey/navigation.js",
+      "sha256": "d5c0d0f1f17985abdece48168e6cdf35ac8a154416c829c858ff023bb6a3c849"
+    },
+    {
+      "path": "journey/ownership.js",
+      "sha256": "1e39a1da6688515d61538a79e718a20a4e7a988ef5a74d648092bbe588b20120"
+    },
+    {
+      "path": "journey/plume-fade.js",
+      "sha256": "7f342186fcd6d49ee7b6faa4e8c190baa0d975cfb3e95f1c0f43c2b790833415"
+    },
+    {
+      "path": "journey/portrait.js",
+      "sha256": "794720a3861d080fc2eda40b9b9b66af63dcf0db9b2049a3719c507543f0c92b"
+    },
+    {
+      "path": "journey/rail.js",
+      "sha256": "f31ec6153e92cd6e1fb9bb9768de448825782da3b3f5153bc2d3b52a2395ed2c"
+    },
+    {
+      "path": "journey/road.js",
+      "sha256": "6a8be3ae927469f5a8491f2328448a34b9387960fb404083b4d7531f068b7a45"
+    },
+    {
+      "path": "journey/route.js",
+      "sha256": "46d7a28fa533fb6d993d033399321cb48adebf38a947c10bd0c65c88fdea4a7c"
+    },
+    {
+      "path": "journey/scroll.js",
+      "sha256": "ffd54f6cc4001747baab606e89fab9f3b62ffbfdbd7cca2c1866c2b0cf8f6b00"
+    },
+    {
+      "path": "journey/seams.js",
+      "sha256": "b48de9925978ad61a86f91e21d47370613f9634e9c4c60dadf6b7e2fc61aec99"
+    },
+    {
+      "path": "journey/state.js",
+      "sha256": "dab8e6f414bbe4d544245d6e415659cdcdc4d0d87a9840e999fc7527ab36ad5b"
+    },
+    {
+      "path": "journey/structure.js",
+      "sha256": "412af6f9a20b638c69a7340c057d4a21a700d9b1bb48d9917be34225d5517f07"
+    },
+    {
+      "path": "journey/symbols.js",
+      "sha256": "4059b34f156598b2f3623378e8f7e57bf8f4fb1b599116a70e855e45dc905940"
+    },
+    {
+      "path": "journey/symbols/data.js",
+      "sha256": "f40ddd1796c431bfe81972cbdc76d9765771ec005126abce1d60ee6dd02cdc25"
+    },
+    {
+      "path": "journey/symbols/render.js",
+      "sha256": "c9fcdbd0fc2e44962a851d6db703e11955713a5abc99a52b0a6c5bb692528193"
+    },
+    {
+      "path": "journey/transition/controller.js",
+      "sha256": "434208869f341f08ec21ab5038526ccd57c7bbc4418017169e84640d311abb14"
+    },
+    {
+      "path": "journey/transport.js",
+      "sha256": "641017b5c966c7298a6819b0c5c26b731cacc6f791000ea17e116cf81db9d8b2"
+    },
+    {
+      "path": "journey/ui.js",
+      "sha256": "fe83496c62faa004c4636a5b232a0982a9b6f3b9ab53a525eff569932975e3dd"
+    },
+    {
+      "path": "journey/ui/arrival-motion.js",
+      "sha256": "ca859582529b25487f89d4b2119bbaaabd0e4fa424c6656166bfd87a5c07d6be"
+    },
+    {
+      "path": "journey/ui/bands.js",
+      "sha256": "49486a5eb939b15e83ac5ef865338b6f582c462c16267a3ab5e93f72c7103a87"
+    },
+    {
+      "path": "journey/ui/card-layout.js",
+      "sha256": "a0bb93341ee45b3fc2c323ce74812113cc5fd8f448fead8751441bb77116e62a"
+    },
+    {
+      "path": "journey/ui/card-tier.js",
+      "sha256": "e6f41d440652b49adf3bbbc4dbe9c48279e86148f772f15246629396417881ef"
+    },
+    {
+      "path": "journey/ui/copy-arrival.js",
+      "sha256": "f15913a618405aefd84960f56f7719a908c721b73463a54262b77e800ad030f0"
+    },
+    {
+      "path": "journey/ui/dom.js",
+      "sha256": "6d2bd421fad0fc9626e828924df6ca41f6f2919a3b5cf0a6fb16179c0f0d7356"
+    },
+    {
+      "path": "journey/ui/frame-projection.js",
+      "sha256": "d69915d289d84407ead40e5f12dab33f47c827134bdd2f004f595d0470a4a836"
+    },
+    {
+      "path": "journey/ui/hot-state.js",
+      "sha256": "a4ef688bbb15557304f2df37f97df9dfaf88ddb773b08c66d322b35ca1c2de3c"
+    },
+    {
+      "path": "journey/ui/hotspot-frame.js",
+      "sha256": "006946a9e32258ed614c15ab299be172bc19f3dc6f925fa4a68096eb27084346"
+    },
+    {
+      "path": "journey/ui/hover-zone.js",
+      "sha256": "909ca3700798851b71316e323f2d07be9dec9fd1bc567823c0645d0bd75f9924"
+    },
+    {
+      "path": "journey/ui/label-policies.js",
+      "sha256": "777ff51f7177e8624dece056f27d3ee3a67f545602f7fa36ef83a02a8ff24c9c"
+    },
+    {
+      "path": "journey/ui/label-policy.js",
+      "sha256": "a9f37690338e0b807797bbc429c85052429a011d1b8552f11494e14d85b0e1e0"
+    },
+    {
+      "path": "journey/ui/live-region.js",
+      "sha256": "ced8ce46a92fbe00bf6f949dcf57d0adcac766cb8bef2a213c1ac8af2907158b"
+    },
+    {
+      "path": "journey/ui/logo-morph.js",
+      "sha256": "2028c3df55614c460d43fad63cd32d8e95f96347173ea935b1008fbf72370d67"
+    },
+    {
+      "path": "journey/ui/media.js",
+      "sha256": "a86cd284a2b5bd3c577847cc0ea8fd7930fded5983551722990b532fac0aa113"
+    },
+    {
+      "path": "journey/ui/owner.js",
+      "sha256": "67c6f7fbf6d3ff7bb265c4b8a8d26fb8e3ed33d102e092db31fb390a0eebafe1"
+    },
+    {
+      "path": "journey/ui/popover-tier.js",
+      "sha256": "62255b6b8902bd38cff3ac781f29dc9aa39be81abb7311e4460720eb4bc0b325"
+    },
+    {
+      "path": "journey/ui/purpose-label-fade.js",
+      "sha256": "c3a2d83b3c1385f99e86d5503cb6ffa2c1c41619c6f1ffd0c932cb8d5680e7d1"
+    },
+    {
+      "path": "journey/ui/rail-handoff.js",
+      "sha256": "f25455964d5cda6794740b24ac293a0cfe4b5515208e28f94b28f6a577f92b5d"
+    },
+    {
+      "path": "journey/ui/rail-mask.js",
+      "sha256": "5a88a020168fad13050cf8f1397929e1e05f27439c33f2b4e10768e4f6953fed"
+    },
+    {
+      "path": "journey/ui/selection.js",
+      "sha256": "3d575e4e9ff923e6f7dfb3ceebb42f90f7d25efd2fde2c68863cf2831aea1bc3"
+    },
+    {
+      "path": "journey/ui/sheet-gesture.js",
+      "sha256": "7426d57c7495d632da129d10d656cef81d098330c9c4de64ad86e7af00fb5025"
+    },
+    {
+      "path": "main.js",
+      "sha256": "df57f43ce7baa6590d405aadcaaf2f29918e1c522f3cd82c6fa19b48c97509a2"
+    },
+    {
+      "path": "manifesto-link-tooltip.js",
+      "sha256": "6a87f8a3d4451b2255fcb031c30e3c740a0f2172e4f258f3502c3bed40d99fc2"
+    },
+    {
+      "path": "manifesto-note.js",
+      "sha256": "0c582c90caa04f0a77bed0238af366bf7c8896bdfe8d14574c8e419c8e4bf387"
+    },
+    {
+      "path": "organism/animation.js",
+      "sha256": "ec2701a642b2df282f9f678236eef4f369301cfcc4597789c6021351ad2fd541"
+    },
+    {
+      "path": "organism/furniture.js",
+      "sha256": "5f38154999976793384a54bb2c6881c1295285e33b85ef9270b6b0be46912734"
+    },
+    {
+      "path": "organism/hero-spores-worker.js",
+      "sha256": "7fa37d96d0540eb03921fc49ec77a32b9b756507a7d86634f350c40d2652cb5b"
+    },
+    {
+      "path": "organism/hero-spores.js",
+      "sha256": "2e7db1ba9df8ae968a0e5474d6c5f54f3ba494166f4eee2a1e2adfed85e49f43"
+    },
+    {
+      "path": "organism/intro-clock.js",
+      "sha256": "917a908a68dce6b7182936b046d2691abb09b6a69ad462d7b943bb3f2915545f"
+    },
+    {
+      "path": "organism/intro.js",
+      "sha256": "df2aac31f47a67c30908558fc3674f63a0bddbc33a194fb557141e8ba8a2a048"
+    },
+    {
+      "path": "organism/network-skeleton.js",
+      "sha256": "af0c3bf37ce8a0f9d61050328a4b365e9601c4c0bfa2f7473c21eb34bdc19248"
+    },
+    {
+      "path": "organism/organism.js",
+      "sha256": "07bfc48dbb58cbe4f04fdef60bb7b1cff87526a5b1fae1fd4b0322cd244230ba"
+    },
+    {
+      "path": "organism/performance.js",
+      "sha256": "00d5af9ea4ee7bc13d8845f4e11d383488af434b96f0e5785772dea5838dea90"
+    },
+    {
+      "path": "organism/random.js",
+      "sha256": "b17ade3dd32b2bc288902c2f1234a5c715466c1ebb846ab09bed207d41033ea9"
+    },
+    {
+      "path": "organism/renderer.js",
+      "sha256": "12a5525113868921f3b8aa73fcce533d50ed8728a84617a61d5410c2f942ae61"
+    },
+    {
+      "path": "organism/shaders.js",
+      "sha256": "34d6c786bb9fa8773fc2abdc26a142d0a96e03861cef6e0e48218906b3fb11f4"
+    },
+    {
+      "path": "organism/spore-cap-flow.js",
+      "sha256": "0d4ddaede7c2a5715a8b9afe6d3ff5b3ad87065dc411d185ec2308b51067b57b"
+    },
+    {
+      "path": "organism/spore-lifetime.js",
+      "sha256": "7f027941a6c3acb409bd70325828b6fd6172dd5e1d31cceb9d199f781d4a688c"
+    },
+    {
+      "path": "organism/spores.js",
+      "sha256": "70c5448bb967d4ed430cbef4122d11d1c69388bf08cc04fe3a6298e7de439893"
+    },
+    {
+      "path": "ownership/data.js",
+      "sha256": "ddf297953725f0f9fef4573cc3e2f2c2ff4e965edc6dd5c2910d8cde7dfec890"
+    },
+    {
+      "path": "ownership/reasons.js",
+      "sha256": "fe9d66ea60d773761371a8c97d65eabc0b9e5dd8f48c15fbd7ae3d962a21f463"
+    },
+    {
+      "path": "static/geom/connect.bin",
+      "sha256": "6db6d8cc85f5b2d76e8c8113f0f002a093b26cf40bb295e0ddf8d3c5071fce2b"
+    },
+    {
+      "path": "static/geom/final.bin",
+      "sha256": "ea6d53c4a829d080b65afd378bc6e23688f93264edfe108c52002848bd8f9598"
+    },
+    {
+      "path": "static/geom/inspire.bin",
+      "sha256": "604e3855456819136e7e24dd34021cb6a11f77895fdc2a4cfa8c5641a59e05e9"
+    },
+    {
+      "path": "static/geom/manifest.json",
+      "sha256": "8c1b4adc7a3eda2713502e1dae926fbff82e1367184a6e45711de7c788f8b162"
+    },
+    {
+      "path": "static/geom/owned.bin",
+      "sha256": "9e525bb97ee68e4abdae047cb776e80518b19960ce358ca0e61978c2117fbf96"
+    },
+    {
+      "path": "vendor/three/addons/controls/OrbitControls.js",
+      "sha256": "80efaadea4f8a636a65fb0bd08bfef62f3d93a0bb94e2e7500f23176c5c07f4e"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/EffectComposer.js",
+      "sha256": "d234e578618fa816955ebdc059c049c577e203e650e33cf22bde3f232c29e669"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/MaskPass.js",
+      "sha256": "328cf7db0da5d9be83ffe39d54b01d5ac1fddf108cc98182ddbb056f5c8b537f"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/OutputPass.js",
+      "sha256": "32f879d2179087676631c799857a885586b3cdd13b9731bd3b13f06428bd58b7"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/Pass.js",
+      "sha256": "b3c6128340eaa37e40a6a2f1b738e894c855239417d50959759b34a2b5e89f92"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/RenderPass.js",
+      "sha256": "6c9b8a539ea16e898f65e4760f14937ef9ea94043bd9842c141e0301f41903e8"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/ShaderPass.js",
+      "sha256": "3b28a1ee27e0eb96c0eab137a1f442ccf127a926904eced2d51e125ec44af781"
+    },
+    {
+      "path": "vendor/three/addons/postprocessing/UnrealBloomPass.js",
+      "sha256": "3bd23a1097af75c7002d0ffc21a6c14f45c4dd701dbaf737030dfc61fb7c64d9"
+    },
+    {
+      "path": "vendor/three/addons/shaders/CopyShader.js",
+      "sha256": "4e3346db194db56a596cd074e9bdb39fb5eb52040c333e0d29dc4eb1324d3b1d"
+    },
+    {
+      "path": "vendor/three/addons/shaders/LuminosityHighPassShader.js",
+      "sha256": "9f4866f9abb2d96fd83eec46ba4bf2165b22155a7a37ff425c0f60eba18007cb"
+    },
+    {
+      "path": "vendor/three/addons/shaders/OutputShader.js",
+      "sha256": "4944cecd49c0d4d1520a4d927bde8a590fd43f041ee913252b9451855a01d0f0"
+    },
+    {
+      "path": "vendor/three/three.module.js",
+      "sha256": "5dc239ce4c8be6d04c8e12ba242d6a7f72b293c793b077a0a2448dd19c477f7e"
+    }
+  ]
+}

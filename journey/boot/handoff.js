@@ -73,6 +73,7 @@ import { FREE_CAM } from '../../flags.js';
 import { ownerOf, modalLive, targetOwnsKey } from '../ownership.js';
 import { NOTE } from './scene-note.js';
 import { prepareHeroGpu } from './hero-gpu.js';
+import { continueRailEntry } from './rail-entry.js';
 // The preload atmosphere's singleton (ESM cache: same instance the page
 // booted). Consulted for ONE thing — the prelude's ignition contract:
 // the normal release below waits for the prelude's convergence pulse to
@@ -525,35 +526,8 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
         }) : null;
         if (earlyRail && earlyRail.reveal) {
           const shell = document.querySelector('.j-rail-preboot');
-          const shellOpacity = shell ? parseFloat(getComputedStyle(shell).opacity) : 0;
           earlyRail.reveal();
-          if (shell) {
-            // Continue the hero's already-running fade across the DOM swap.
-            // The live rail takes the shell's exact painted opacity, then
-            // completes only the unspent portion of the shared CSS entry beat.
-            const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
-            // Only opacity follows the hero frame by frame. Readiness can
-            // resolve during this handoff and must retain its own CSS fade.
-            earlyRail.root.style.setProperty('--rail-opacity-duration', '0s');
-            earlyRail.root.style.opacity = String(from);
-            void earlyRail.root.offsetWidth;
-            shell.remove();
-            const finishWithHero = () => guardStartup('revealing navigation', () => {
-              if (journeyFailed) return;
-              const heroLine = document.querySelector('h1 .hl');
-              const heroOpacity = heroLine
-                ? parseFloat(getComputedStyle(heroLine).opacity)
-                : 1;
-              earlyRail.root.style.opacity = String(Number.isFinite(heroOpacity) ? heroOpacity : 1);
-              if (heroOpacity < 0.999) {
-                requestAnimationFrame(finishWithHero);
-              } else {
-                earlyRail.root.style.opacity = '1';
-                requestAnimationFrame(() => { if (!journeyFailed) earlyRail.root.style.removeProperty('--rail-opacity-duration'); });
-              }
-            });
-            requestAnimationFrame(finishWithHero);
-          }
+          if (shell) continueRailEntry(earlyRail.root, shell, () => journeyFailed);
         }
         stage = 'loading chapter geometry';
         await bakedGeomReady;
