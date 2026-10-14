@@ -21,6 +21,18 @@
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
   body { font-family: "EB Garamond", Georgia, serif; overflow: hidden; }
 
+  :root { --version-ink: #f2ca83; --version-bg: #382a16; }
+  html[data-ver="b"] { --version-ink: #edb3a7; --version-bg: #3b2423; }
+  html[data-ver="c"] { --version-ink: #c7b9ed; --version-bg: #2c2540; }
+  html[data-ver="d"] { --version-ink: #a8d9cf; --version-bg: #19352f; }
+  .version-badge {
+    position: fixed; top: max(16px, env(safe-area-inset-top)); left: max(16px, 2.4vw);
+    z-index: 30; padding: 8px 13px; border-radius: 7px;
+    background: var(--version-bg); color: var(--version-ink);
+    border: 1px solid var(--version-ink);
+    font: 500 13px/1.2 system-ui, sans-serif; letter-spacing: .025em;
+    pointer-events: none;
+  }
   .deck { position: fixed; inset: 0; }
   .slide {
     position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
@@ -169,12 +181,43 @@
   .m-team > div { background: #15110d; border: 1px solid #ffffff1c; border-radius: 6px; padding: 0.7rem; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
   .m-team i { display: block; aspect-ratio: 1; border-radius: 50%; background: #ffffff0d; border: 1px dashed #f0c67e55; margin-bottom: 0.4rem; }
   .m-team b { font-weight: 400; color: var(--ink); } .m-team em { color: #f0c67e; font-size: 0.85rem; }
+
+  /* All versions share slide geometry and typography. */
+  .slide { overflow-y: auto; }
+  .slide > .num, .slide > .split { flex-shrink: 0; }
+  .d-cards { display: grid; gap: 0.7rem; }
+  .d-cards > div { padding: 0.85rem 1.1rem; border-left: 1px solid #e0ab5e77; background: #ffffff03; }
+  .d-cards .m-role { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; }
+  .d-cards b { display: block; font: 400 1.4rem/1.15 "Cormorant Garamond", serif; color: var(--ink); }
+  .d-cards p { margin: 0.3rem 0 0; line-height: 1.3; font-size: 0.95rem; }
+  .d-community { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .d-community img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 5px; }
+  .d-pull { color: var(--gold); font-style: italic; text-align: center; padding: 0.6rem 0; }
+  .d-funding { display: grid; gap: 0.7rem; }
+  .d-funding > div { padding: 0.7rem 0; border-bottom: 1px solid #ffffff22; font-size: 1.2rem; }
+  @media (max-width: 760px) {
+    .slide { padding: 68px 24px 90px; justify-content: flex-start; }
+    .slide > .num { margin-top: 0; margin-bottom: 1.1rem; }
+    .split { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+    .split h1 { font-size: clamp(1.8rem, 6.8vw, 2.4rem); max-width: none; }
+    .body { font-size: 1.05rem; }
+    .m-collage { aspect-ratio: 4 / 3; }
+    .m-grid4 img { max-height: 200px; }
+    .chrome { gap: 0.5rem; padding: 0.8rem 12px; font-size: 0.75rem; }
+    .chrome button { padding: 0.4rem 0.55rem; }
+    .chrome .bar { min-width: 8px; }
+    .d-cards { gap: 0.5rem; }
+    .d-cards > div { padding: 0.65rem 0.85rem; }
+    .d-cards b { font-size: 1.25rem; }
+    .d-cards p { font-size: 0.9rem; }
+    .d-community img { max-height: 220px; }
+  }
 </style>
 </head>
 <body>
 <main class="deck" id="deck">
 
-  <section class="slide" data-v="a b">
+  <section class="slide" data-v="a b d">
     <div class="num">01<span class="act">The opportunity</span></div>
 <div class="split">
       <div>
@@ -186,7 +229,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a b">
+  <section class="slide" data-v="a b d">
     <div class="num">02<span class="act">The problem</span></div>
 <div class="split">
       <div>
@@ -715,12 +758,103 @@
 <p class="cap">Full-bleed. Silence.</p></div>
     </div>
   </section>
+
+  <!-- Version D: Codex feedback; opening slides are shared above. -->
+  <section class="slide " data-v="d">
+    <div class="num">03<span class="act">The missing connection</span></div>
+    <div class="split">
+      <div><h1>Bring the power of open tools <em>into the act of creating.</em></h1><div class="body">An artist should be able to describe an idea, try it, and keep shaping the result. Astrid brings agents into a creative workspace to connect that intent with the community’s models, tools and knowledge.</div></div>
+      <div class="vis"><div class="d-cards"><div><span class="m-role">Start with intent</span><b>“Make this feel like 16mm.”</b><p>A creative decision, in the artist’s own words.</p></div><div><span class="m-role">Reach for the tools</span><b>Find a way to make it.</b><p>An agent works across models and community workflows.</p></div><div><span class="m-role">Keep the artist involved</span><b>Bring it back to the timeline.</b><p>An editable result to review, change and build on.</p></div></div></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">04<span class="act">Astrid · the starting point</span></div>
+    <div class="split">
+      <div><h1>A video editor with <em>the community’s tools within reach.</em></h1><div class="body">Start with a shot: match its grain to the surrounding footage, then hold it two seconds longer. The agent draws on the relevant tools while the artist keeps working in the timeline. Video is the starting point for a broader creative workspace.</div></div>
+      <div class="vis"><div class="m-app">
+  <div class="m-bar"><span class="m-dots"></span>Astrid — untitled project</div>
+  <div class="m-app-body">
+    <div class="m-preview"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt=""><span class="m-tc">00:12:04</span></div>
+    <div class="m-agent"><p class="u">Make shot 3 match the grain of the first two, and extend it by 2s</p><p class="a">Matching grain from shots 1–2 using the film-grain workflow… extending with the i2v model.</p><div class="m-prog"><i></i></div></div>
+    <div class="m-timeline"><div class="m-track"><i style="flex:3"></i><i style="flex:2"></i><i style="flex:4"></i><i style="flex:2"></i><i style="flex:3"></i></div><div class="m-track a"><i style="flex:5"></i><i style="flex:4"></i><i style="flex:5"></i></div><div class="m-head"></div></div>
+  </div>
+</div>
+<p class="cap">Illustrative editing flow.</p></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">05<span class="act">The sharing model · proposed</span></div>
+    <div class="split">
+      <div><h1>One person’s solution becomes <em>someone else’s starting point.</em></h1><div class="body">The aim is to make useful discoveries reusable. A creator chooses to publish a tool or workflow; another artist’s agent finds it and brings it into a new project. What travels is a reusable capability, with its maker credited—not every private project.</div></div>
+      <div class="vis"><div class="d-cards"><div><span class="m-role">01 · Make</span><b>Solve a creative problem.</b><p>Develop a film-grain workflow while making a scene.</p></div><div><span class="m-role">02 · Publish</span><b>Share the reusable part.</b><p>Package the workflow with instructions, requirements and credit.</p></div><div><span class="m-role">03 · Build on it</span><b>Use it in another project.</b><p>Another artist applies it, adapts it, and can share the improvement.</p></div></div><p class="cap">Proposed contribution journey; the grain example continues from the previous slide.</p></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">06<span class="act">The community · already here</span></div>
+    <div class="split">
+      <div><h1>We’ve spent years bringing <em>these people together.</em></h1><div class="body">Banodoco connects artists, model trainers, builders and toolmakers through Discord, ADOS events and creative initiatives. Astrid grows from that community: a place to carry its exchanges into the work itself.</div></div>
+      <div class="vis"><div class="d-community"><img src="../assets/cards/ados/paris-2026-thumb.jpg" alt="ADOS Paris event artwork"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt="ADOS Los Angeles event artwork"></div><div class="d-pull">Artists · Model trainers · Builders · Toolmakers</div><p class="cap">ADOS Paris and Los Angeles, from the community’s existing event archive.</p></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">07<span class="act">The vision</span></div>
+    <div class="split">
+      <div><h1>People should shape their tools—<em>and expand what each other can imagine.</em></h1><div class="body">Our tools shape how we think and what we create. We want thousands of people to have a hand in making them, so each contribution opens possibilities its maker could never have foreseen.</div></div>
+      <div class="vis"><div class="d-cards"><div><span class="m-role">Imagine a painter</span><b>Her landscapes become a LoRA.</b><p>She shares a new way to see the world.</p></div><div><span class="m-role">An engineer</span><b>Builds a workshop for sculpting.</b><p>The model becomes material for another medium.</p></div><div><span class="m-role">A stranger</span><b>Makes a garden you can walk through.</b><p>Their work begins where the others left off.</p></div></div><p class="cap">An imagined creative exchange from the Mycelial Manifesto.</p></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">08<span class="act">Where it can grow</span></div>
+    <div class="split">
+      <div><h1>A shared foundation. <em>Many ways to create.</em></h1><div class="body">The ambition is to let people shape Astrid around their own practice. Specialist workspaces could draw from—and contribute to—the same pool of tools, models and workflows. Each can go deeper into a medium without starting from zero.</div></div>
+      <div class="vis"><div class="d-cards"><div><span class="m-role">A possible workspace</span><b>Anime studio</b><p>A workflow and interface shaped around a visual language.</p></div><div><span class="m-role">A possible workspace</span><b>Music videos</b><p>Tools organized around the relationship between image and sound.</p></div><div><span class="m-role">A possible workspace</span><b>Live visuals</b><p>A workspace shaped around performance.</p></div></div><div class="m-return">Shared tools, models and workflows beneath them all</div></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">09<span class="act">The business model · proposed</span></div>
+    <div class="split">
+      <div><h1>Build freely. <em>Pay for an easier way to create.</em></h1><div class="body">Builders can run Astrid on their own hardware. The proposed hosted service gives creators access without managing the setup. Revenue would support the service and reward the toolmakers whose work people use; pricing and revenue sharing still need to be defined.</div></div>
+      <div class="vis"><div class="d-cards"><div><span class="m-role">Builders</span><b>Local, extensible tools</b><p>Experiment, adapt the software, and contribute capabilities.</p></div><div><span class="m-role">Creators</span><b>Hosted creation</b><p>Pay for compute and convenience in a polished workspace.</p></div><div><span class="m-role">Toolmakers</span><b>Share in the value</b><p>The proposed model returns a share of revenue to contributors.</p></div></div></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">10<span class="act">How we support the work</span></div>
+    <div class="split">
+      <div><h1>Give people a reason to try—<em>and the means to keep going.</em></h1><div class="body">The work around Astrid matters too: prizes encourage ambition, compute helps ideas outgrow hardware limits, and a stage brings new work to an audience. Together, these initiatives help people discover what is possible and contribute what comes next.</div></div>
+      <div class="vis"><div class="m-cards3"><div><img src="../assets/cards/arca/poster-2.jpg" alt="Arca Gidan artwork"><b>Arca Gidan</b><span>Open-source AI art prize</span><em>Encourage ambition</em></div><div><div class="m-avs"><img src="../assets/cards/artcompute/ashmotv.jpg" alt="ArtCompute community member"><img src="../assets/cards/artcompute/loreweavr.jpg" alt="ArtCompute community member"><img src="../assets/cards/artcompute/persoon.jpg" alt="ArtCompute community member"></div><b>ArtCompute</b><span>Compute micro-grants</span><em>Support experimentation</em></div><div><img src="../assets/cards/tworp/cover.jpg" alt="2RP publication artwork"><b>2RP</b><span>A stage for art and technology</span><em>Coming soon</em></div></div></div>
+    </div>
+  </section>
+
+  <section class="slide " data-v="d">
+    <div class="num">11<span class="act">The raise</span></div>
+    <div class="split">
+      <div><h1>We’re raising $1M <em>to bring this creative world within reach.</em></h1><div class="body">We’re looking for angels and small funds who want the open ecosystem to thrive. The focus is Astrid and the people who make it valuable: the product, shared creative capabilities, and the community around them.</div></div>
+      <div class="vis"><div class="m-raise"><div class="m-big">$1M</div><div class="d-funding"><span class="m-role">Investment focus</span><div>Product &amp; engineering</div><div>Community &amp; initiatives</div><div>Compute &amp; infrastructure</div></div></div></div>
+    </div>
+  </section>
+
+  <section class="slide d-ending" data-v="d">
+    <div class="num">12<span class="act">The world we want</span></div>
+    <div class="split">
+      <div><h1>A world bustling <em>with creative life.</em></h1><div class="body">Artists, technologists and models, building on one another’s discoveries. People shaping their tools and making things none of us could have imagined alone. Every finished work, the start of someone else’s.</div></div>
+      <div class="vis"><div class="m-grid4"><img src="../assets/cards/arca/poster-1.jpg" alt=""><img src="../assets/cards/arca/poster-2.jpg" alt=""><img src="../assets/cards/arca/poster-3.jpg" alt=""><img src="../assets/cards/arca/poster-4.jpg" alt=""></div><p class="cap">Arca Gidan — a glimpse of what people can make with open models.</p></div>
+    </div>
+  </section>
 </main>
 
 <nav class="overview" id="overview" aria-label="All slides">
   <h2>The story, in titles</h2>
   <ol id="list"></ol>
 </nav>
+
+<div class="version-badge" id="versionBadge" aria-live="polite"></div>
 
 <div class="chrome">
   <span id="count">1 / 12</span>
@@ -731,7 +865,7 @@
 
 <script>
   const all = [...document.querySelectorAll('.slide')];
-  const VERS = { a: 'Yours', b: "Claude's", c: 'Guru' };
+  const VERS = { a: 'Yours', b: "Claude's", c: 'Guru', d: 'Codex feedback' };
   let ver = new URLSearchParams(location.search).get('v');
   if (!VERS[ver]) { try { ver = localStorage.getItem('deck-ver'); } catch (e) {} }
   if (!VERS[ver]) ver = 'a';
@@ -750,10 +884,11 @@
   const toggleOv = (on = !ov.classList.contains('on')) => ov.classList.toggle('on', on);
 
   const setVer = (v) => {
-    const cur = slides[i];
+    const hadSlides = slides.length > 0;
     ver = v;
     try { localStorage.setItem('deck-ver', v); } catch (e) {}
     document.documentElement.dataset.ver = v;
+    document.getElementById('versionBadge').textContent = `${v.toUpperCase()} · ${VERS[v]}`;
     slides = all.filter((s) => !s.dataset.v || s.dataset.v.split(' ').includes(v));
     all.forEach((s) => s.classList.toggle('out', !slides.includes(s)));
     all.forEach((s) => { if (!slides.includes(s)) s.classList.remove('on'); });
@@ -767,24 +902,31 @@
       li.onclick = () => { go(k); toggleOv(false); };
       list.appendChild(li);
     });
-    // Stay on the same slide if it's shared; otherwise stay at the same position.
-    const k = slides.indexOf(cur);
-    if (cur) go(k >= 0 ? k : i);
+    // Compare the same slide number across versions; clamp for shorter decks.
+    if (hadSlides) go(i);
   };
   setVer(ver);
 
+  const cycleVersion = (direction) => {
+    const versions = Object.keys(VERS);
+    setVer(versions[(versions.indexOf(ver) + direction + versions.length) % versions.length]);
+  };
+
   addEventListener('keydown', (e) => {
-    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
-    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); cycleVersion(e.key === 'ArrowDown' ? 1 : -1);
+    }
+    else if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1); }
     else if (e.key === 'Home') go(0);
     else if (e.key === 'End') go(slides.length - 1);
     else if (e.key === 'o' || e.key === 'O') toggleOv();
     else if (e.key === 'Escape') toggleOv(false);
-    else if (e.key === 'v' || e.key === 'V') setVer({ a: 'b', b: 'c', c: 'a' }[ver]);
+    else if (e.key === 'v' || e.key === 'V') cycleVersion(1);
   });
   document.getElementById('deck').addEventListener('click', (e) => go(i + (e.clientX < innerWidth / 3 ? -1 : 1)));
   document.getElementById('ovBtn').onclick = () => toggleOv();
-  document.getElementById('verBtn').onclick = () => setVer({ a: 'b', b: 'c', c: 'a' }[ver]);
+  document.getElementById('verBtn').onclick = () => cycleVersion(1);
   let tx = null;
   addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
   addEventListener('touchend', (e) => {
