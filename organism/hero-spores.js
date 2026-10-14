@@ -210,13 +210,13 @@ const COMPOSITION = {
   // — the reference river is dense and fine-grained, and so is the shed
   // this current must read as one species with.
   desktop: {
-    nA: 2900, nH: 8, land: 1, xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    nA: 2900, nH: 8, land: 1, sourceOffset: [-0.105, -0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
     fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 2600, nH: 8, land: 1, xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    nA: 2600, nH: 8, land: 1, sourceOffset: [-0.105, -0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
     fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Short landscape (a phone on its side; a very shallow window).
@@ -334,16 +334,14 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * up in a visual way"). It used to jump from stream light to 1.45x in ONE
  * frame as its descent began — on a ~2 px sprite, inside a current of
  * hundreds — so the eye never found it, and its light then stepped down
- * again (2.4 -> 1.62) on the impact frame. Now it is chosen a beat early and
- * KINDLES while still riding the current: its light rises and its tone warms
- * toward white-hot, so the visitor has picked it out of the river before it
- * loses lift. It carries that light down, swells as it settles, and its
- * collapse starts from exactly the light it arrived with. Kindling also
- * gently resolves a readable core on this existing member; its motion
- * remains the same stream motion until it peels. */
-const KINDLE_S = 0.80;          // the chosen spore catches the light in the stream
-const DESKTOP_RECRUIT_S = 1.2; // visual fade continues into descent; never changes its clock
-const KINDLE_FAST_S = 0.45;     // ...shorter when a ready scene compresses the settle
+ * again (2.4 -> 1.62) on the impact frame. Recruitment now warms the
+ * existing member while it descends immediately. Its light and readable
+ * core resolve gradually, swell near the site, and collapse from exactly
+ * the light it arrived with. The old kindling time is retained in the
+ * descent budget so removing the wait does not rush the landing. */
+const KINDLE_S = 0.80;         // former kindle budget, now spent descending
+const SPORE_RECRUIT_S = 2.4;   // independent light/core fade
+const KINDLE_FAST_S = 0.45;    // compressed budget when the scene is ready
 const KINDLE_LIGHT = 2.4;       // the light it carries through its descent
 const LAND_LIGHT = 3.3;         // ...swelling to this as it settles
 const KINDLE_HEAT = 0.55;       // how far its tone warms toward white-hot
@@ -554,8 +552,8 @@ function seedOne(F, i, c, rand, atEntry) {
   F.band[i] = ring ? 4 : band;
   F.fade[i] = ring ? 0 : 1;
   // Every stream slot uses the shed's own size, tone, and speed family. A
-  // landing is selected from this ordinary family. Kindling makes the
-  // selected member followable without moving it out of the stream.
+  // landing is selected from this ordinary family. Recruitment makes the
+  // selected member followable while it descends from its stream position.
   F.size[i] = ring ? 0.030 : (Math.pow(rand(), 1.8) * 0.072 + 0.019) * szMul;
   F.tone[i] = ring ? 0.78 + rand() * 0.14 : 0.64 + Math.pow(rand(), 1.9) * 0.36;
   F.speed[i] = (0.028 + rand() * 0.055) * c.gain * vel;
@@ -796,7 +794,26 @@ function pickPeeler(F, site) {
       offer(2, i, Math.hypot(lead, drop) + bandCost);
     }
   }
-  return best[0] >= 0 ? best[0] : best[1] >= 0 ? best[1] : best[2];
+  const original = best[0] >= 0 ? best[0] : best[1] >= 0 ? best[1] : best[2];
+  if (original < 0 || !F.comp.sourceOffset) return original;
+  // Move desktop recruitment a little down and left within the real current.
+  // Start from the established picker, then select a neighbouring grain;
+  // never teleport a particle or delay ignition waiting for an exact point.
+  const at = original * 3, half = F.frame[at + 2] * F.tanHalfFov;
+  const originX = F.frame[at] / (half * F.aspect), originY = F.frame[at + 1] / half;
+  const targetX = originX + F.comp.sourceOffset[0];
+  const targetY = originY + F.comp.sourceOffset[1];
+  let selected = original, score = Infinity;
+  for (let i = 0; i < F.nA + F.nH; i++) {
+    if (F.retired[i] || heldByLanding(F, i)) continue;
+    const k = i * 3, h = F.frame[k + 2] * F.tanHalfFov;
+    const x = F.frame[k] / (h * F.aspect), y = F.frame[k + 1] / h;
+    if (x < -0.92 || x >= originX || y >= originY || y < syN + 0.03
+        || originX - x > 0.25 || originY - y > 0.30) continue;
+    const distance = Math.hypot((x - targetX) * F.aspect, y - targetY);
+    if (distance < score) { score = distance; selected = i; }
+  }
+  return selected;
 }
 
 /** The flutter: aim a settle from the spore's current position down to
@@ -829,11 +846,10 @@ function aimFlutter(F, L, src, srcAt) {
 
 /** Where a settling spore is at descent parameter u — one closed form,
  *  evaluated by both renderers through advance(). Blown down, not dropped:
- *  each axis is a cubic Hermite that LEAVES at the stream velocity the spore
- *  was riding (v0, scaled by the duration) and ARRIVES at rest on its site.
+ *  horizontal carry leaves at the stream velocity and eases to rest; the
+ *  descent travels from recruitment and settles softly onto its site.
  *  Horizontally the wind's carry leads — it keeps drifting right and eases
- *  off; vertically the lift dies late, so the fall gathers as the carry
- *  fades — the curve of a seed the wind sets down. On top rides the
+ *  off while the vertical journey keeps a steady middle pace. On top rides the
  *  falling-leaf sway, zero at both ends, with a small vertical bob at each
  *  swing's end. */
 const FLUT_POS = [0, 0, 0];   // flutterAt's per-frame scratch
@@ -841,17 +857,28 @@ function hermite(p0, p1, m0, u) {
   const u2 = u * u, u3 = u2 * u;
   return p0 * (2 * u3 - 3 * u2 + 1) + p1 * (3 * u2 - 2 * u3) + m0 * (u3 - 2 * u2 + u);
 }
+// Travel at a readable pace from recruitment, then settle softly. The
+// recruitment light still fades independently; it must not create a pause
+// followed by a second, faster motion phase.
+function descentAt(p0, p1, u) {
+  const out = 0.18, cruise = 1 / (1 - 0.5 * out);
+  let travel = cruise * u;
+  if (u > 1 - out) {
+    const t = (u - (1 - out)) / out;
+    travel = cruise * (1 - out) + cruise * out * (t - t ** 3 + 0.5 * t ** 4);
+  }
+  return p0 + (p1 - p0) * travel;
+}
 function flutterAt(F, L, u, out) {
   const ph = SWAY_CYC * 6.2832 * u + L.phase;
   const env = Math.sin(Math.PI * u);
-  const sway = L.swayA * 0.6 * Math.sin(ph) * Math.pow(env, 0.7);
+  const sway = L.swayA * 0.6 * Math.sin(ph) * env * env;
   const dx = L.p3[0] - L.p0[0];
   // tangent = velocity x duration; capped so a short carry never overshoots
   const mx = Math.min((L.v0x || 0) * L.dur, Math.max(0, 1.6 * dx));
-  const my = Math.max((L.v0y || 0) * L.dur, -0.5 * Math.abs(L.p0[1] - L.p3[1]));
   out[0] = hermite(L.p0[0], L.p3[0], mx, u) + sway;
-  out[1] = hermite(L.p0[1], L.p3[1], my, u)
-    + L.swayA * 0.22 * Math.cos(2 * ph) * env;
+  out[1] = descentAt(L.p0[1], L.p3[1], u)
+    + L.swayA * 0.22 * Math.cos(2 * ph) * env * env;
   const s = u * u * (3 - 2 * u);
   out[2] = L.p0[2] + (L.p3[2] - L.p0[2]) * s;
 }
@@ -960,37 +987,24 @@ function advance(F, dt, gust) {
         if (peeler < 0 || F.released) continue;
         L.hi = peeler;
         L.state = 1;
-        // claimed now, falling after the kindle: t0 is when the descent
-        // starts, and until then the stream keeps carrying the spore
+        // Recruitment is only a light envelope. Start travelling now and
+        // spend the former kindle dwell on the same descent instead, so
+        // the authored selection-to-impact budget does not shorten.
+        const kindle = rate > 1 ? KINDLE_FAST_S : KINDLE_S;
         L.kAt = F.t;
-        L.t0 = F.t + (rate > 1 ? KINDLE_FAST_S : KINDLE_S);
-        L.aimed = false;
+        L.t0 = F.t;
+        L.aimed = true;
+        const drop = aimFlutter(F, L, F.frame, peeler * 3);
+        const halfH = F.frame[peeler * 3 + 2] * F.tanHalfFov;
+        L.dur *= Math.min(1.25, Math.max(0.85, (drop / halfH) / 0.45));
+        if (rate > 1) L.dur /= 1.15;
+        L.dur = kindle + Math.max(FLUT_MIN_S, L.dur) * (c.landDuration || 1);
         kindleBegin(F, L);
       }
       continue;
     }
     const hi3 = L.hi * 3;
-    if (L.state === 1 && F.t < L.t0) {
-      // KINDLING: the stream loop above has already moved it and written
-      // its ordinary light; rise from that light, so the pick is seamless
-      const k = smooth01((F.t - L.kAt) /
-        (c.landFromBottom ? L.t0 - L.kAt : DESKTOP_RECRUIT_S));
-      if (c.landFromBottom) F.fade[L.hi] += (kindleLight - F.fade[L.hi]) * k;
-      else F.fade[L.hi] = L.fade0 + (kindleLight - L.fade0) * k;
-      kindleTint(F, L, KINDLE_HEAT * k);
-      continue;
-    }
     if (L.state === 1) {
-      if (!L.aimed) {
-        // the descent leaves from wherever the current has carried it
-        L.aimed = true;
-        const drop = aimFlutter(F, L, F.frame, hi3);
-        const halfH = F.frame[hi3 + 2] * F.tanHalfFov;
-        // priced by the DROP, not the arc: a flutter is mostly descent
-        L.dur = L.dur * Math.min(1.25, Math.max(0.85, (drop / halfH) / 0.45));
-        if (rate > 1) L.dur = L.dur / 1.15;
-        L.dur = Math.max(FLUT_MIN_S, L.dur) * (c.landDuration || 1);
-      }
       const u = Math.min(1, (F.t - L.t0) / L.dur);
       flutterAt(F, L, u, FLUT_POS);
       F.frame[hi3] = FLUT_POS[0];
@@ -1006,8 +1020,8 @@ function advance(F, dt, gust) {
         + (landingLight - kindleLight) * sw;
       // Carry the same visual recruitment through the start of falling,
       // so reaching t0 cannot suddenly reveal a fully lit, larger core.
-      const recruit = c.landFromBottom ? 1 : smooth01((F.t - L.kAt) / DESKTOP_RECRUIT_S);
-      if (!c.landFromBottom) F.fade[L.hi] = L.fade0 + (F.fade[L.hi] - L.fade0) * recruit;
+      const recruit = smooth01((F.t - L.kAt) / SPORE_RECRUIT_S);
+      F.fade[L.hi] = L.fade0 + (F.fade[L.hi] - L.fade0) * recruit;
       kindleTint(F, L, (KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw) * recruit);
       if (u >= 1) {
         L.state = 2;
@@ -1100,8 +1114,8 @@ function heldByLanding(F, i) {
   return false;
 }
 
-/** Held in place by its landing — descending or landed. A kindling spore is
- *  claimed (heldByLanding) but still rides the stream, so it is not pinned. */
+/** Position belongs to its descent immediately upon recruitment, then to
+ *  its landing site. Brightening runs independently of that motion. */
 function pinnedByLanding(F, i) {
   for (const L of F.landings) {
     if (L.hi === i && ((L.state === 1 && F.t >= L.t0) || L.state === 2)) return true;
@@ -1994,7 +2008,8 @@ function strikeNeed(S) {
   }
   // earliest settle under compression: the nearest landing, pulled
   // forward (no lull wait when the scene is ready) and fluttered
-  // at the compressed duration (mirrors advance() exactly)
+  // at the compressed duration. A recruited landing already includes its
+  // former kindle budget in dur and starts at t0 without a separate wait.
   let eta = Infinity;
   for (const L of S.landings) {
     if (L.state === 2) continue;

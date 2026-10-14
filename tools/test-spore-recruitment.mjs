@@ -21,10 +21,10 @@ for (const mode of ['desktop', 'deskNarrow', 'compact', 'tablet']) {
       if (!selected) {
         for (const key of ['size', 'fade']) assert.equal(field[key][i], stream[key][i], 'selection keeps stream photometry');
         assert.deepEqual(field.color.slice(i * 3, i * 3 + 3), stream.color.slice(i * 3, i * 3 + 3));
+        assert.deepEqual(field.frame.slice(i * 3, i * 3 + 3), stream.frame.slice(i * 3, i * 3 + 3), 'selection keeps its actual stream position');
         selected = true;
       }
-      if (!landing.aimed) assert.deepEqual(field.frame.slice(i * 3, i * 3 + 3), stream.frame.slice(i * 3, i * 3 + 3), 'selection stays on its real streamline');
-      else fell = true;
+      if (landing.aimed && age > 0) fell = true;
       if (previous) {
         assert.ok(Math.abs(field.fade[i] - previous.fade) < .035, 'light is continuous, including first fall frame');
         assert.ok(Math.abs(field.size[i] - previous.size) < .0015, 'core size is continuous, including first fall frame');
@@ -32,7 +32,8 @@ for (const mode of ['desktop', 'deskNarrow', 'compact', 'tablet']) {
       }
       previous = { fade: field.fade[i], size: field.size[i] };
       if (age >= 1.2) {
-        assert.ok(Math.abs(field.size[i] - Math.max(landing.size0, .075)) < 1e-7, 'smaller desktop core reached');
+        assert.ok(field.size[i] <= Math.max(landing.size0, .075), 'desktop core stays within its smaller peak');
+        if (landing.size0 < .075) assert.ok(field.size[i] < .075 - .001, 'slower fade is still resolving the core at 1.2 seconds');
         complete = true; break;
       }
     }
