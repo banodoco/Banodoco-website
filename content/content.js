@@ -976,6 +976,6 @@ export const CONTENT = {
     ],
     // The detailed ownership statement now lives beside the Owned section's
     // dedicated page link; the panel footer is copyright only.
-    legal: '© 2026 Banodoco',
+    legal: '© 2026 Mycelial',
   },
 };

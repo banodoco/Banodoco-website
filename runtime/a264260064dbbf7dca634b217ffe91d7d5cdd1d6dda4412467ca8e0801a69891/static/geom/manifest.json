@@ -1,0 +1,4796 @@
+{
+  "version": 1,
+  "chapters": {
+    "owned": {
+      "file": "owned.bin",
+      "sha256": "9e525bb97ee68e4abdae047cb776e80518b19960ce358ca0e61978c2117fbf96",
+      "keys": [
+        {
+          "key": "owned/fan",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 224208,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 224208,
+              "byteLength": 74736,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 298944,
+              "byteLength": 74736,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hair",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 373680,
+              "byteLength": 277920,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 651600,
+              "byteLength": 92640,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 744240,
+              "byteLength": 92640,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/web",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 836880,
+              "byteLength": 172440,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1009320,
+              "byteLength": 57480,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1066800,
+              "byteLength": 57480,
+              "kind": "f32"
+            },
+            {
+              "name": "aOwner",
+              "itemSize": 1,
+              "byteOffset": 1124280,
+              "byteLength": 57480,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/glints",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1181760,
+              "byteLength": 6612,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1188372,
+              "byteLength": 2204,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1190576,
+              "byteLength": 2204,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/crown",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1192780,
+              "byteLength": 8496,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1201276,
+              "byteLength": 2832,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1204108,
+              "byteLength": 2832,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubs",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1206940,
+              "byteLength": 14040,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1220980,
+              "byteLength": 4680,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1225660,
+              "byteLength": 4680,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubCores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230340,
+              "byteLength": 72,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1230412,
+              "byteLength": 24,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1230436,
+              "byteLength": 24,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubHalos",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230460,
+              "byteLength": 72,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1230532,
+              "byteLength": 24,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1230556,
+              "byteLength": 24,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/ceiling",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230580,
+              "byteLength": 24300,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 1254880,
+              "byteLength": 46464,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "owned/lid",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1301344,
+              "byteLength": 89280,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1390624,
+              "byteLength": 29760,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1420384,
+              "byteLength": 29760,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/felt",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1450144,
+              "byteLength": 226656,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1676800,
+              "byteLength": 75552,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1752352,
+              "byteLength": 75552,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/grain",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1827904,
+              "byteLength": 50400,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/fill",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1878304,
+              "byteLength": 195552,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2073856,
+              "byteLength": 65184,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2139040,
+              "byteLength": 65184,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/aggregateFar",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2204224,
+              "byteLength": 672,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/aggregateNear",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2204896,
+              "byteLength": 936,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/planes",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2205832,
+              "byteLength": 768,
+              "kind": "f32"
+            },
+            {
+              "name": "aCorner",
+              "itemSize": 2,
+              "byteOffset": 2206600,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aCellA",
+              "itemSize": 2,
+              "byteOffset": 2207112,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aCellB",
+              "itemSize": 2,
+              "byteOffset": 2207624,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2208136,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2208392,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2208648,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aTilt",
+              "itemSize": 1,
+              "byteOffset": 2208904,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aAnonF",
+              "itemSize": 1,
+              "byteOffset": 2209160,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSwapD",
+              "itemSize": 1,
+              "byteOffset": 2209416,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2209672,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 2209928,
+              "byteLength": 384,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "owned/rim",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2210312,
+              "byteLength": 13824,
+              "kind": "f32"
+            },
+            {
+              "name": "aOff",
+              "itemSize": 2,
+              "byteOffset": 2224136,
+              "byteLength": 9216,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2233352,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2237960,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2242568,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2247176,
+              "byteLength": 4608,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/cores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2251784,
+              "byteLength": 192,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2251976,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2252040,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2252104,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2252168,
+              "byteLength": 64,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/halos",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2252232,
+              "byteLength": 192,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2252424,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2252488,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2252552,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2252616,
+              "byteLength": 64,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/strands",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2252680,
+              "byteLength": 20352,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2273032,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2279816,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2286600,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2293384,
+              "byteLength": 6784,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/front",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2300168,
+              "byteLength": 5760,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2305928,
+              "byteLength": 1920,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2307848,
+              "byteLength": 1920,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "substrate": {
+          "primaries": 66,
+          "skirt": 340,
+          "secondaries": 292,
+          "netNodes": 430,
+          "netLinks": 1437,
+          "hubs": 5,
+          "voids": 5
+        },
+        "portraits": {
+          "nodeIds": [
+            "contributor-0",
+            "contributor-1",
+            "contributor-2",
+            "contributor-3",
+            "contributor-4",
+            "contributor-5",
+            "contributor-6",
+            "contributor-7",
+            "contributor-8",
+            "contributor-9",
+            "contributor-10",
+            "contributor-11",
+            "contributor-12",
+            "contributor-13",
+            "contributor-14",
+            "contributor-15"
+          ],
+          "nodeRoutable": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "nodeContentKeys": [
+            "contributor-0",
+            "contributor-1",
+            "contributor-2",
+            "contributor-3",
+            "contributor-4",
+            "contributor-5",
+            "contributor-6",
+            "contributor-7",
+            "contributor-8",
+            "contributor-9",
+            "contributor-10",
+            "contributor-11",
+            "contributor-12",
+            "contributor-13",
+            "contributor-14",
+            "contributor-15"
+          ],
+          "nodePos": [
+            -12.101143374249306,
+            -0.9338969877444225,
+            4.061662563848048,
+            -7.073939830690958,
+            -0.9093474835286086,
+            -9.117194403489838,
+            -11.1061711038728,
+            -2.837203891323855,
+            5.553392106271358,
+            -5.804763198088192,
+            -3.0724208675965343,
+            -9,
+            -11.139883583597031,
+            -2.073472500860375,
+            2.656385768226343,
+            -7.540934438278795,
+            -2.401836699123758,
+            -7.902784267738305,
+            -8.068301356876722,
+            -3.8434560958111015,
+            3.4772684531373925,
+            -4.5421685630349815,
+            -3.8660236553725746,
+            -7.531227604226852,
+            -7.845740051589067,
+            -3.577674593744633,
+            -0.2511614465920258,
+            -6.514961891122042,
+            -3.7444737058683075,
+            -3.9786489488675025,
+            -5.637345826225991,
+            -3.9771015393067075,
+            2.0145990473193134,
+            -3.9803932743744834,
+            -3.993684179090709,
+            -4.615648891973361,
+            -5.760759410519142,
+            -4.539519686556779,
+            -1.3696335606745729,
+            -6.440438558463321,
+            -4.363597858601271,
+            3.9381537407448306,
+            -2.0487660191157495,
+            -4.04384359235321,
+            -5.300338734166723,
+            -2.699053341947714,
+            -4.235533925468394,
+            -2.803387888780897
+          ],
+          "nodeSize": [
+            0.4043334458893165,
+            0.388655570108816,
+            0.4207673757115379,
+            0.38201893211267896,
+            0.3596476433597505,
+            0.36122551736831665,
+            0.4280792990136892,
+            0.43673028491400184,
+            0.3872185136303306,
+            0.38921177778281274,
+            0.4127591939896345,
+            0.4648245849750936,
+            0.43157770260926337,
+            0.42345779611123724,
+            0.4334269504917786,
+            0.39410675051361327
+          ],
+          "nodeAnchors": [
+            [],
+            [
+              [
+                -5.277919052551314,
+                -6.8281555057503285,
+                -8.1478756908218
+              ],
+              [
+                -5.344132211325504,
+                -6.7001328652724625,
+                -8.012648337044064
+              ],
+              [
+                -4.957268547765724,
+                -6.797989402525126,
+                -8.24917374398863
+              ]
+            ],
+            [
+              [
+                -9.30261549841583,
+                -6.67074721455574,
+                4.91418912073693
+              ],
+              [
+                -8.959953645933124,
+                -6.602020998671651,
+                4.897916096477795
+              ]
+            ],
+            [
+              [
+                -5.321816096697748,
+                -6.960592422541231,
+                -8.250736849488002
+              ],
+              [
+                -4.953349508378468,
+                -6.747455563396215,
+                -7.997462525720019
+              ]
+            ],
+            [
+              [
+                -9.351680072364102,
+                -6.735673543531448,
+                4.881571103218969
+              ],
+              [
+                -9.093770767668898,
+                -6.997737054992467,
+                4.608444902213316
+              ]
+            ],
+            [
+              [
+                -5.596599352780688,
+                -6.906476489920169,
+                -7.114837660633065
+              ],
+              [
+                -5.646459743498783,
+                -6.646808698493987,
+                -7.190423235359639
+              ]
+            ],
+            [
+              [
+                -8.088615973900518,
+                -6.967328759655357,
+                3.6781094640554874
+              ],
+              [
+                -7.9251735434648385,
+                -6.908385377842933,
+                3.853645658406058
+              ],
+              [
+                -8.043587517995833,
+                -6.609473922103644,
+                3.6807843195801615
+              ]
+            ],
+            [
+              [
+                -4.921771281665005,
+                -6.819143853150308,
+                -7.866728865064923
+              ],
+              [
+                -5.320264343438484,
+                -6.6287323529832065,
+                -8.17657998773573
+              ]
+            ],
+            [
+              [
+                -6.964303927667265,
+                -6.764410877041518,
+                0.13507824421132697
+              ]
+            ],
+            [
+              [
+                -5.498962243397714,
+                -6.607770825456828,
+                -4.18862761534322
+              ],
+              [
+                -5.517268549611786,
+                -6.6027194946073,
+                -4.2040263772992414
+              ]
+            ],
+            [
+              [
+                -3.6963042060988966,
+                -4.821303905746037,
+                1.6559210522047745
+              ],
+              [
+                -3.378178516696674,
+                -4.669405753364854,
+                1.4474313679331483
+              ]
+            ],
+            [],
+            [
+              [
+                -5.984652401650825,
+                -6.960344418790191,
+                -1.4917129117647905
+              ],
+              [
+                -5.960459734433831,
+                -6.857683729380369,
+                -1.3764254622046623
+              ]
+            ],
+            [
+              [
+                -6.470045861919165,
+                -6.859076252952218,
+                4.153664290685489
+              ],
+              [
+                -6.433023555218928,
+                -6.710800990089774,
+                4.031184813021033
+              ]
+            ],
+            [
+              [
+                -1.3446022497729984,
+                -4.637322618268385,
+                -4.1757016099987725
+              ],
+              [
+                -1.4654580706039098,
+                -4.730694999467537,
+                -4.112234962126071
+              ],
+              [
+                -1.1177714908036989,
+                -4.566863500807389,
+                -4.088407698622736
+              ]
+            ],
+            [
+              [
+                -2.9244190909087378,
+                -4.781842982643509,
+                -2.4907082980860986
+              ],
+              [
+                -2.640194351494098,
+                -4.495997304716372,
+                -2.5339723467257835
+              ],
+              [
+                -2.67892833746762,
+                -4.7191778545875485,
+                -2.464546809242017
+              ]
+            ]
+          ],
+          "swapMaxR": 12.809057281139973,
+          "strandCurves": 106
+        }
+      }
+    },
+    "final": {
+      "file": "final.bin",
+      "sha256": "ea6d53c4a829d080b65afd378bc6e23688f93264edfe108c52002848bd8f9598",
+      "keys": [
+        {
+          "key": "final/ringLines",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 509328,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 509328,
+              "byteLength": 509328,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1018656,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1188432,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1358208,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1527984,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1697760,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1867536,
+              "byteLength": 169776,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2037312,
+              "byteLength": 169776,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/ringGlows",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2207088,
+              "byteLength": 5784,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2212872,
+              "byteLength": 5784,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2218656,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2220584,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2222512,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2224440,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2226368,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2228296,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2230224,
+              "byteLength": 1928,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 2232152,
+              "byteLength": 1928,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/primordia",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2234080,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2234128,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aDelay",
+              "itemSize": 1,
+              "byteOffset": 2234176,
+              "byteLength": 16,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2234192,
+              "byteLength": 16,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 2234208,
+              "byteLength": 16,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/soil",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2234224,
+              "byteLength": 9060,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 2243284,
+              "byteLength": 15264,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "final/surface",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2258548,
+              "byteLength": 5040,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2263588,
+              "byteLength": 5040,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2268628,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2270308,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2271988,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2273668,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2275348,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2277028,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2278708,
+              "byteLength": 1680,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/cut",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2280388,
+              "byteLength": 9264,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2289652,
+              "byteLength": 9264,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2298916,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2302004,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2305092,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2308180,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2311268,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2314356,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2317444,
+              "byteLength": 3088,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/aggr",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2320532,
+              "byteLength": 3336,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2323868,
+              "byteLength": 3336,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2327204,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2328316,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2329428,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2330540,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2331652,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2332764,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2333876,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 2334988,
+              "byteLength": 1112,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/cords",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2336100,
+              "byteLength": 5280,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2341380,
+              "byteLength": 5280,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2346660,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2348420,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2350180,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2351940,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2353700,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2355460,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2357220,
+              "byteLength": 1760,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/hyph",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2358980,
+              "byteLength": 57768,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2416748,
+              "byteLength": 57768,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2474516,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2493772,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2513028,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2532284,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2551540,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2570796,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2590052,
+              "byteLength": 19256,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/ends",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2609308,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2609452,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2609596,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2609644,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2609692,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2609740,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2609788,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2609836,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2609884,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 2609932,
+              "byteLength": 48,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/front",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2609980,
+              "byteLength": 3456,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2613436,
+              "byteLength": 3456,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2616892,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2618044,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2619196,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2620348,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2621500,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2622652,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2623804,
+              "byteLength": 1152,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/conn",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2624956,
+              "byteLength": 432,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2625388,
+              "byteLength": 432,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2625820,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2625964,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2626108,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2626252,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2626396,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2626540,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2626684,
+              "byteLength": 144,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/spores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2626828,
+              "byteLength": 93600,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2720428,
+              "byteLength": 93600,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2814028,
+              "byteLength": 31200,
+              "kind": "f32"
+            },
+            {
+              "name": "aCycle",
+              "itemSize": 4,
+              "byteOffset": 2845228,
+              "byteLength": 124800,
+              "kind": "f32"
+            },
+            {
+              "name": "aClump",
+              "itemSize": 2,
+              "byteOffset": 2970028,
+              "byteLength": 62400,
+              "kind": "f32"
+            },
+            {
+              "name": "aGate",
+              "itemSize": 3,
+              "byteOffset": 3032428,
+              "byteLength": 93600,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/trees",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 3126028,
+              "byteLength": 5184,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 3131212,
+              "byteLength": 5184,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 3136396,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 3138124,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 3139852,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 3141580,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 3143308,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 3145036,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 3146764,
+              "byteLength": 1728,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/canopyLines",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 3148492,
+              "byteLength": 90192,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 3238684,
+              "byteLength": 90192,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 3328876,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 3358940,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 3389004,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 3419068,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 3449132,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 3479196,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 3509260,
+              "byteLength": 30064,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/canopyGlows",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 3539324,
+              "byteLength": 3912,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 3543236,
+              "byteLength": 3912,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 3547148,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 3548452,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 3549756,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 3551060,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 3552364,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 3553668,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 3554972,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 3556276,
+              "byteLength": 1304,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "ring": {
+          "ringSegs": 21222,
+          "glowPts": 482,
+          "primordia": 4,
+          "memberSegsPts": [
+            {
+              "i": 0,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 1,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 2,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 3,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 4,
+              "segs": 3,
+              "pts": 2
+            },
+            {
+              "i": 5,
+              "segs": 3,
+              "pts": 5
+            },
+            {
+              "i": 6,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 7,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 8,
+              "segs": 2,
+              "pts": 2
+            },
+            {
+              "i": 100,
+              "segs": 397,
+              "pts": 7
+            },
+            {
+              "i": 101,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 102,
+              "segs": 415,
+              "pts": 7
+            },
+            {
+              "i": 103,
+              "segs": 390,
+              "pts": 5
+            },
+            {
+              "i": 104,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 105,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 106,
+              "segs": 381,
+              "pts": 4
+            },
+            {
+              "i": 107,
+              "segs": 456,
+              "pts": 5
+            },
+            {
+              "i": 108,
+              "segs": 402,
+              "pts": 6
+            },
+            {
+              "i": 109,
+              "segs": 418,
+              "pts": 5
+            },
+            {
+              "i": 110,
+              "segs": 518,
+              "pts": 5
+            },
+            {
+              "i": 111,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 112,
+              "segs": 426,
+              "pts": 5
+            },
+            {
+              "i": 113,
+              "segs": 381,
+              "pts": 7
+            },
+            {
+              "i": 114,
+              "segs": 373,
+              "pts": 5
+            },
+            {
+              "i": 115,
+              "segs": 358,
+              "pts": 4
+            },
+            {
+              "i": 116,
+              "segs": 424,
+              "pts": 7
+            },
+            {
+              "i": 117,
+              "segs": 361,
+              "pts": 4
+            },
+            {
+              "i": 118,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 119,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 120,
+              "segs": 377,
+              "pts": 12
+            },
+            {
+              "i": 121,
+              "segs": 373,
+              "pts": 8
+            },
+            {
+              "i": 122,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 123,
+              "segs": 484,
+              "pts": 8
+            },
+            {
+              "i": 124,
+              "segs": 392,
+              "pts": 8
+            },
+            {
+              "i": 125,
+              "segs": 385,
+              "pts": 7
+            },
+            {
+              "i": 126,
+              "segs": 374,
+              "pts": 7
+            },
+            {
+              "i": 127,
+              "segs": 395,
+              "pts": 5
+            },
+            {
+              "i": 128,
+              "segs": 362,
+              "pts": 6
+            },
+            {
+              "i": 129,
+              "segs": 425,
+              "pts": 9
+            },
+            {
+              "i": 130,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 131,
+              "segs": 452,
+              "pts": 7
+            },
+            {
+              "i": 132,
+              "segs": 441,
+              "pts": 6
+            },
+            {
+              "i": 133,
+              "segs": 428,
+              "pts": 5
+            },
+            {
+              "i": 134,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 135,
+              "segs": 484,
+              "pts": 6
+            },
+            {
+              "i": 136,
+              "segs": 424,
+              "pts": 7
+            },
+            {
+              "i": 137,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 138,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 139,
+              "segs": 490,
+              "pts": 43
+            },
+            {
+              "i": 140,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 141,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 142,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 900,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 901,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 902,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 903,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 904,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 905,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 906,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 907,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 908,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 909,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 910,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 911,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 912,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 913,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 914,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 915,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 916,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 917,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 918,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 919,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 706,
+              "segs": 374,
+              "pts": 7
+            },
+            {
+              "i": 702,
+              "segs": 405,
+              "pts": 4
+            },
+            {
+              "i": 712,
+              "segs": 419,
+              "pts": 9
+            },
+            {
+              "i": 705,
+              "segs": 417,
+              "pts": 5
+            },
+            {
+              "i": 719,
+              "segs": 379,
+              "pts": 4
+            },
+            {
+              "i": 701,
+              "segs": 364,
+              "pts": 6
+            },
+            {
+              "i": 720,
+              "segs": 489,
+              "pts": 9
+            },
+            {
+              "i": 703,
+              "segs": 503,
+              "pts": 6
+            },
+            {
+              "i": 710,
+              "segs": 409,
+              "pts": 7
+            },
+            {
+              "i": 714,
+              "segs": 376,
+              "pts": 6
+            },
+            {
+              "i": 700,
+              "segs": 363,
+              "pts": 6
+            },
+            {
+              "i": 717,
+              "segs": 366,
+              "pts": 7
+            },
+            {
+              "i": 713,
+              "segs": 367,
+              "pts": 7
+            },
+            {
+              "i": 716,
+              "segs": 400,
+              "pts": 9
+            },
+            {
+              "i": 721,
+              "segs": 417,
+              "pts": 5
+            },
+            {
+              "i": 709,
+              "segs": 404,
+              "pts": 7
+            },
+            {
+              "i": 708,
+              "segs": 371,
+              "pts": 7
+            },
+            {
+              "i": 704,
+              "segs": 514,
+              "pts": 5
+            },
+            {
+              "i": 711,
+              "segs": 435,
+              "pts": 5
+            },
+            {
+              "i": 715,
+              "segs": 413,
+              "pts": 6
+            },
+            {
+              "i": 707,
+              "segs": 380,
+              "pts": 4
+            },
+            {
+              "i": 718,
+              "segs": 407,
+              "pts": 7
+            },
+            {
+              "i": 960,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 961,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 962,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 963,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 964,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 965,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 966,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 967,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 968,
+              "segs": 8,
+              "pts": 2
+            }
+          ]
+        },
+        "terrain": {
+          "soilTris": 1272,
+          "surfaceStrokes": 105,
+          "surfaceSegs": 210,
+          "lipRootlets": 46,
+          "lipStrata": 42,
+          "cutSegs": 386,
+          "aggrPts": 278,
+          "cordSegs": 220,
+          "hyphSegs": 2407,
+          "pitStrands": 53,
+          "frontSegs": 144,
+          "connSegs": 18,
+          "haze": [
+            {
+              "tone": 0.3177565350662917,
+              "base": 0.06643036362109705
+            },
+            {
+              "tone": 0.3554540999233723,
+              "base": 0.07504198467219249
+            },
+            {
+              "tone": 0.3760453481692821,
+              "base": 0.06348901973804459
+            },
+            {
+              "tone": 0.38078620033338667,
+              "base": 0.07821768009709194
+            },
+            {
+              "tone": 0.3598050334956497,
+              "base": 0.0833369515906088
+            },
+            {
+              "tone": 0.3842720614746213,
+              "base": 0.07888122508535161
+            }
+          ]
+        },
+        "sky": {
+          "spores": 7800,
+          "treeSegs": 216,
+          "sprites": [
+            {
+              "y": 2.043240296840668,
+              "drift": 4.389748880192327
+            },
+            {
+              "y": 1.618611647747457,
+              "drift": 3.331388849557465
+            },
+            {
+              "y": 1.6568210389465095,
+              "drift": 5.88071590326201
+            },
+            {
+              "y": 1.7144654529169203,
+              "drift": 4.6668259593934085
+            },
+            {
+              "y": 1.9,
+              "drift": 3.454789943811218
+            },
+            {
+              "y": 2.3,
+              "drift": 0.8930499848536305
+            },
+            {
+              "y": 4.5,
+              "drift": 4.396583532517315
+            },
+            {
+              "y": 3.6,
+              "drift": 3.9817056164896893
+            }
+          ]
+        },
+        "canopy": {
+          "canopyNodes": 200,
+          "canopyBodies": 104,
+          "canopyEdges": 482,
+          "canopyBodyLinks": 18,
+          "canopyDropped": 0,
+          "canopyHubs": 8,
+          "canopySegs": 3758,
+          "canopyPts": 326,
+          "canopyHair": 2716,
+          "canopySec": 765,
+          "canopyLum": 277,
+          "canopyLumTarget": 376,
+          "canopyLumPts": 91,
+          "arteries": 8,
+          "arteryLinks": [
+            [
+              0,
+              0,
+              -2.15,
+              6.44
+            ],
+            [
+              0,
+              0,
+              -5.74,
+              -5.79
+            ],
+            [
+              -0.33,
+              3.63,
+              -0.46,
+              -4.39
+            ],
+            [
+              -2.1,
+              -8.46,
+              -0.46,
+              -4.39
+            ],
+            [
+              4.25,
+              -0.92,
+              3.13,
+              3.3
+            ],
+            [
+              -1.15,
+              -6.38,
+              -2.51,
+              -13.05
+            ],
+            [
+              9.08,
+              6.8,
+              7.25,
+              0.23
+            ],
+            [
+              8.61,
+              -2.82,
+              5.71,
+              -8.42
+            ]
+          ],
+          "arterySegs": 242,
+          "arteryNodes": 63,
+          "arteryBranches": 16,
+          "arteryConverge": 15,
+          "ringArcs": 3,
+          "ringArcSegs": 146,
+          "ringArcTouch": 1,
+          "pools": 54
+        }
+      }
+    },
+    "connect": {
+      "file": "connect.bin",
+      "sha256": "6db6d8cc85f5b2d76e8c8113f0f002a093b26cf40bb295e0ddf8d3c5071fce2b",
+      "keys": [
+        {
+          "key": "connect/strands",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 77352,
+              "kind": "f32"
+            },
+            {
+              "name": "aA",
+              "itemSize": 4,
+              "byteOffset": 77352,
+              "byteLength": 103136,
+              "kind": "f32"
+            },
+            {
+              "name": "aB",
+              "itemSize": 4,
+              "byteOffset": 180488,
+              "byteLength": 103136,
+              "kind": "f32"
+            },
+            {
+              "name": "aAdosShiftW",
+              "itemSize": 1,
+              "byteOffset": 283624,
+              "byteLength": 25784,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "connect/points",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 309408,
+              "byteLength": 2160,
+              "kind": "f32"
+            },
+            {
+              "name": "aP",
+              "itemSize": 4,
+              "byteOffset": 311568,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aR",
+              "itemSize": 1,
+              "byteOffset": 314448,
+              "byteLength": 720,
+              "kind": "f32"
+            },
+            {
+              "name": "aLife",
+              "itemSize": 1,
+              "byteOffset": 315168,
+              "byteLength": 720,
+              "kind": "f32"
+            },
+            {
+              "name": "aAdosShiftW",
+              "itemSize": 1,
+              "byteOffset": 315888,
+              "byteLength": 720,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "counts": {
+          "primarySegs": 448,
+          "secondarySegs": 238,
+          "hairSegs": 1755,
+          "hubSegs": 357,
+          "contSegs": 425,
+          "glints": 72,
+          "particles": 108,
+          "totalSegs": 3223,
+          "points": 180
+        },
+        "uLitMax": [
+          0.9191815263841291,
+          1.235,
+          1.235
+        ],
+        "hubMeta": [
+          {
+            "id": "ados",
+            "pos": [
+              2.66,
+              -0.00754459330575806,
+              3.56
+            ],
+            "along": 0.3482531834525938,
+            "route": 0
+          },
+          {
+            "id": "hivemind",
+            "pos": [
+              7.85,
+              0.1055480293427078,
+              -4.12
+            ],
+            "along": 0.7535527870510073,
+            "route": 1
+          },
+          {
+            "id": "discord",
+            "pos": [
+              8.92,
+              -0.012688457711803151,
+              -1.6
+            ],
+            "along": 0.7382891482106106,
+            "route": 2
+          }
+        ],
+        "routes": [
+          {
+            "id": "ados",
+            "poly": [
+              [
+                0.4639635752455091,
+                0.07473426872934481,
+                0.3346969309827406
+              ],
+              [
+                0.46746315560362356,
+                0.07733194227115897,
+                0.4157731923873849
+              ],
+              [
+                0.4689519403554168,
+                0.07999064621498378,
+                0.49823050047911843
+              ],
+              [
+                0.46932870347162403,
+                0.08267786410589587,
+                0.5814546136491966
+              ],
+              [
+                0.4694090208653992,
+                0.08535832259010882,
+                0.6648879379777921
+              ],
+              [
+                0.46990275257691816,
+                0.08799585508654495,
+                0.7480448591087858
+              ],
+              [
+                0.47139886700294525,
+                0.09055511754417053,
+                0.8305220750910324
+              ],
+              [
+                0.47435907265102806,
+                0.09300299326114633,
+                0.9120029323739087
+              ],
+              [
+                0.479121041913139,
+                0.09530956089457188,
+                0.9922552308122423
+              ],
+              [
+                0.4859112598468469,
+                0.09744854918513879,
+                1.0711224752197734
+              ],
+              [
+                0.4948667686313525,
+                0.09939725476461078,
+                1.1485090700573843
+              ],
+              [
+                0.5060643660336409,
+                0.10113595011262574,
+                1.2243604388532476
+              ],
+              [
+                0.5195552109143031,
+                0.10264685445122432,
+                1.2986394620910904
+              ],
+              [
+                0.5354023392308642,
+                0.10391277941683041,
+                1.371300933406078
+              ],
+              [
+                0.5537183366309703,
+                0.10491559168751752,
+                1.4422659091621763
+              ],
+              [
+                0.5747003698727091,
+                0.1056346536232595,
+                1.5113978563448016
+              ],
+              [
+                0.5986599533756356,
+                0.10604540798967722,
+                1.578482385184736
+              ],
+              [
+                0.626045206332612,
+                0.10611826386800785,
+                1.643212094790532
+              ],
+              [
+                0.6574539108644308,
+                0.10581792205378188,
+                1.7051776821442965
+              ],
+              [
+                0.6958202726459874,
+                0.10503859232519273,
+                1.7658548917953045
+              ],
+              [
+                0.747859670978028,
+                0.10346636635751899,
+                1.824188075673853
+              ],
+              [
+                0.8103627946677205,
+                0.10115206283860201,
+                1.8754244335765002
+              ],
+              [
+                0.8822907839508146,
+                0.09814548022542213,
+                1.9202619546528032
+              ],
+              [
+                0.9626735103287034,
+                0.09450734124300456,
+                1.9593518304771347
+              ],
+              [
+                1.0505726572763754,
+                0.09031226945586343,
+                1.9933235925654864
+              ],
+              [
+                1.1450433156975832,
+                0.08565059292425835,
+                2.022811261167551
+              ],
+              [
+                1.24509691888668,
+                0.08062840092954816,
+                2.0484785820187805
+              ],
+              [
+                1.3496682135338938,
+                0.0753653616057939,
+                2.0710415150411237
+              ],
+              [
+                1.4575886269194716,
+                0.06999005048379256,
+                2.091286368022403
+              ],
+              [
+                1.5675678731271008,
+                0.06463295194214749,
+                2.110082320532503
+              ],
+              [
+                1.6781849843644592,
+                0.059417815560378166,
+                2.128387530495784
+              ],
+              [
+                1.7878892097352457,
+                0.054452542986487835,
+                2.1472485222373954
+              ],
+              [
+                1.8950104522297497,
+                0.049821074332276796,
+                2.1677930801707905
+              ],
+              [
+                1.9977781764756188,
+                0.04557768886622106,
+                2.1912173749348685
+              ],
+              [
+                2.0943470732425116,
+                0.041744686464553926,
+                2.2187684890091344
+              ],
+              [
+                2.182827262645597,
+                0.038313672756512776,
+                2.2517238520307554
+              ],
+              [
+                2.2613164957213674,
+                0.03524985795184746,
+                2.291369315464778
+              ],
+              [
+                2.3279316981781033,
+                0.03249816757719832,
+                2.3389776751728606
+              ],
+              [
+                2.376416694794578,
+                0.03026644912271648,
+                2.3878000811396562
+              ],
+              [
+                2.4151377557260987,
+                0.02828020605181405,
+                2.4376679225022846
+              ],
+              [
+                2.4480140539737025,
+                0.0263520019391468,
+                2.491426144612905
+              ],
+              [
+                2.4754889220284957,
+                0.024453131618239254,
+                2.5487811674080163
+              ],
+              [
+                2.498097317011215,
+                0.022558730139194103,
+                2.609377025671538
+              ],
+              [
+                2.5164557164434367,
+                0.02064800908437768,
+                2.6728022487772667
+              ],
+              [
+                2.531244518998358,
+                0.018704487121740956,
+                2.7386018436224258
+              ],
+              [
+                2.5431845950832406,
+                0.016716171416451243,
+                2.806293260809443
+              ],
+              [
+                2.553010118818957,
+                0.01467564087792966,
+                2.8753848927409265
+              ],
+              [
+                2.561440121975191,
+                0.012579986378528987,
+                2.9453954419063355
+              ],
+              [
+                2.569151316698102,
+                0.01043057789282914,
+                3.0158724252763607
+              ],
+              [
+                2.5767546288604444,
+                0.008232652088099816,
+                3.086408152217804
+              ],
+              [
+                2.5847775761130296,
+                0.005994742497221366,
+                3.156651722882576
+              ],
+              [
+                2.593654139183793,
+                0.003728003450761172,
+                3.2263159246126922
+              ],
+              [
+                2.6037231510346475,
+                0.0014455038308747135,
+                3.295178328727193
+              ],
+              [
+                2.615235516773346,
+                -0.0008384167051021518,
+                3.363076374646301
+              ],
+              [
+                2.6283698355329688,
+                -0.0031086314078767885,
+                3.429896733304521
+              ],
+              [
+                2.64325528420976,
+                -0.005349461078003395,
+                3.4955597261274822
+              ],
+              [
+                2.66,
+                -0.0075445933057579975,
+                3.559999999999999
+              ]
+            ],
+            "arcs": [
+              0,
+              0.0811933195150128,
+              0.16370691139194626,
+              0.24697524933251613,
+              0.33045165867725224,
+              0.4136518622867328,
+              0.4961823374997408,
+              0.5777536867380436,
+              0.658180224709886,
+              0.7373681314313778,
+              0.8152955569732585,
+              0.8919887078884674,
+              0.9674980385746976,
+              1.0418783011149633,
+              1.1151757033695764,
+              1.187425193957996,
+              1.2586611706162776,
+              1.3289455408072899,
+              1.3984173404217342,
+              1.4702108557431859,
+              1.5483986502808422,
+              1.6292513610756871,
+              1.7140633795494076,
+              1.8035208395354791,
+              1.8978497284339246,
+              1.9969252507903927,
+              2.100340710385334,
+              2.2074478585767063,
+              2.3173822192980293,
+              2.429084595870532,
+              2.5413272956677946,
+              2.6527517454327114,
+              2.7619235822595227,
+              2.8674124871362108,
+              2.9679077985538047,
+              3.062388334770305,
+              3.1503753192673223,
+              3.232300363743136,
+              3.3011436843236126,
+              3.36431066401528,
+              3.4273544218510903,
+              3.490978888237471,
+              3.555682723667461,
+              3.621739067879609,
+              3.6892081173794704,
+              3.757973274087236,
+              3.8277898787348077,
+              3.8983372650466843,
+              3.969267425527483,
+              4.0402458025788,
+              4.110981473507205,
+              4.181245493322102,
+              4.25087756570686,
+              4.319782540110379,
+              4.387919347603019,
+              4.45528570809836,
+              4.521902170096565
+            ],
+            "len": 4.521902170096565
+          },
+          {
+            "id": "hivemind",
+            "poly": [
+              [
+                0.5112373598452278,
+                0.05778293606273395,
+                -0.22012517128157114
+              ],
+              [
+                0.6032732419231185,
+                0.05405690095167924,
+                -0.35990844227130026
+              ],
+              [
+                0.6912887494929051,
+                0.050492160388588475,
+                -0.5070618548466478
+              ],
+              [
+                0.7759147697689783,
+                0.04719487343004155,
+                -0.6604356215314252
+              ],
+              [
+                0.857796323440872,
+                0.04424350230588241,
+                -0.8188533585549718
+              ],
+              [
+                0.9376015604998686,
+                0.04168847282640717,
+                -0.9810951575559588
+              ],
+              [
+                1.016029519635084,
+                0.03955286193668203,
+                -1.1458829839942422
+              ],
+              [
+                1.0938159864682666,
+                0.03783473550187407,
+                -1.3118696531573786
+              ],
+              [
+                1.17173690866114,
+                0.03651159515948054,
+                -1.4776324036307322
+              ],
+              [
+                1.2506089890887837,
+                0.03554710840809887,
+                -1.6416717810671217
+              ],
+              [
+                1.3312872708818004,
+                0.03489992746282755,
+                -1.8024161826409677
+              ],
+              [
+                1.4146597371647915,
+                0.034534012960237136,
+                -1.958232019230219
+              ],
+              [
+                1.5016391595160585,
+                0.03442954448816869,
+                -2.107439054939297
+              ],
+              [
+                1.593152628055237,
+                0.03459328569634021,
+                -2.2483301093216284
+              ],
+              [
+                1.6901293688813925,
+                0.035067203919455614,
+                -2.379193982456494
+              ],
+              [
+                1.7934875892568967,
+                0.03593419542234441,
+                -2.4983402096084326
+              ],
+              [
+                1.9041211778836844,
+                0.03731986126158484,
+                -2.6041240885730006
+              ],
+              [
+                2.022887120427087,
+                0.03938931855702861,
+                -2.6949703610736284
+              ],
+              [
+                2.150594466291919,
+                0.04233794501340098,
+                -2.7693939750206757
+              ],
+              [
+                2.293100665804509,
+                0.04654487758817291,
+                -2.8274862375735426
+              ],
+              [
+                2.4597968932895147,
+                0.05271907636432513,
+                -2.863059438700773
+              ],
+              [
+                2.641085862602702,
+                0.06075184315222284,
+                -2.8721104873435306
+              ],
+              [
+                2.8352014364218645,
+                0.07047862815156629,
+                -2.8578290954915557
+              ],
+              [
+                3.040318680715255,
+                0.08147586364110801,
+                -2.823515618453746
+              ],
+              [
+                3.254562159587407,
+                0.09306191125851873,
+                -2.7725654456636764
+              ],
+              [
+                3.476017239130763,
+                0.1043494073282735,
+                -2.7084477291548468
+              ],
+              [
+                3.7027437810283557,
+                0.11434906948689573,
+                -2.6346796150157203
+              ],
+              [
+                3.9327914523708927,
+                0.12211057095565231,
+                -2.55479743346159
+              ],
+              [
+                4.1642157720942965,
+                0.126873241851639,
+                -2.472326502738147
+              ],
+              [
+                4.395093963680721,
+                0.1281933888493835,
+                -2.3907512975973817
+              ],
+              [
+                4.623539691745404,
+                0.12601903520597485,
+                -2.3134877180708657
+              ],
+              [
+                4.847715826448404,
+                0.12069610718583756,
+                -2.2438590694711493
+              ],
+              [
+                5.065844500088776,
+                0.11290802000424416,
+                -2.185077137949067
+              ],
+              [
+                5.276213886973248,
+                0.10356696292262287,
+                -2.1402294321748028
+              ],
+              [
+                5.477181339880714,
+                0.09368465061054052,
+                -2.1122732811565466
+              ],
+              [
+                5.667172741030582,
+                0.08425065113545646,
+                -2.10403705558462
+              ],
+              [
+                5.844678157824976,
+                0.07613884974113193,
+                -2.1182283428315034
+              ],
+              [
+                6.0082441187134945,
+                0.07005071038180236,
+                -2.1574484821863376
+              ],
+              [
+                6.141106713303174,
+                0.06670166602353986,
+                -2.214761054506087
+              ],
+              [
+                6.257846445748755,
+                0.0649670735305526,
+                -2.282412021878677
+              ],
+              [
+                6.3683550707102246,
+                0.06440805292162205,
+                -2.361129619186588
+              ],
+              [
+                6.473434417872387,
+                0.0648873693832997,
+                -2.449466115231136
+              ],
+              [
+                6.573876496921564,
+                0.06624779369582416,
+                -2.545992258031857
+              ],
+              [
+                6.67045054781427,
+                0.0683233606804991,
+                -2.649321643558489
+              ],
+              [
+                6.763892090772985,
+                0.07094860909970957,
+                -2.7581313213876695
+              ],
+              [
+                6.85489457639945,
+                0.07396602328577642,
+                -2.8711775074730457
+              ],
+              [
+                6.944104053017133,
+                0.07723176492919037,
+                -2.987305619110391
+              ],
+              [
+                7.032117060805796,
+                0.08061973011147279,
+                -3.1054542377434013
+              ],
+              [
+                7.119481744562859,
+                0.08402398982479581,
+                -3.2246530149755808
+              ],
+              [
+                7.206701963690694,
+                0.08735974181849257,
+                -3.3440149384191376
+              ],
+              [
+                7.294243983530953,
+                0.09056297771170965,
+                -3.4627237399794772
+              ],
+              [
+                7.382545169346206,
+                0.09358911754387308,
+                -3.5800175355691763
+              ],
+              [
+                7.472023983756135,
+                0.09641086488720826,
+                -3.695170011988474
+              ],
+              [
+                7.563090518000974,
+                0.09901548747707865,
+                -3.807470609252642
+              ],
+              [
+                7.656156771309249,
+                0.1014016440598329,
+                -3.9162051769352386
+              ],
+              [
+                7.75164593144438,
+                0.10357578016295363,
+                -4.020638510087449
+              ],
+              [
+                7.849999999999998,
+                0.1055480293427078,
+                -4.119999999999999
+              ]
+            ],
+            "arcs": [
+              0,
+              0.16740325497460395,
+              0.3389070851960301,
+              0.514109675690948,
+              0.6924617960228837,
+              0.8732871409852543,
+              1.055798875814117,
+              1.2391162528428874,
+              1.422284782509544,
+              1.6043030581177822,
+              1.784159018913034,
+              1.9608782226220254,
+              2.133586561538569,
+              2.301589629785014,
+              2.464470157017718,
+              2.622202515264207,
+              2.7752774643938727,
+              2.9248190204543163,
+              3.0726592548249307,
+              3.226608682072069,
+              3.3971701244519297,
+              3.5788625492209336,
+              3.7737456539242293,
+              3.9820037577313827,
+              4.2025268287375095,
+              4.433353260052005,
+              4.6719882380157784,
+              4.915634159231423,
+              5.161360334491396,
+              5.406229679718746,
+              5.647397337596041,
+              5.882198150283961,
+              6.108242588480354,
+              6.323542033437293,
+              6.526685144579422,
+              6.717088842728007,
+              6.895345306697582,
+              7.0636578384153825,
+              7.208393515030105,
+              7.3433298975554635,
+              7.479009405296487,
+              7.616287355010653,
+              7.755599085464396,
+              7.897048076968211,
+              8.040497579822205,
+              8.185652660225939,
+              8.332127006441713,
+              8.479493433869985,
+              8.627319431062002,
+              8.775190194346083,
+              8.922722040148242,
+              9.069569210439337,
+              9.215427063542188,
+              9.360034538674324,
+              9.503178618039131,
+              9.644703271878624,
+              9.784525009265598
+            ],
+            "len": 9.784525009265598
+          },
+          {
+            "id": "discord",
+            "poly": [
+              [
+                0.564160960526742,
+                0.06225481920268901,
+                -0.05770782888627159
+              ],
+              [
+                0.7266047048216843,
+                0.06281241320768288,
+                -0.0046555371169654785
+              ],
+              [
+                0.8901771787855096,
+                0.06280176511551243,
+                0.055476155602348795
+              ],
+              [
+                1.0547102961870587,
+                0.06225873742454612,
+                0.12159196378040281
+              ],
+              [
+                1.2200280573759048,
+                0.06123429970361362,
+                0.19255372855933273
+              ],
+              [
+                1.3859414762941342,
+                0.0597924367712733,
+                0.26715293325109135
+              ],
+              [
+                1.5522450584921428,
+                0.05800832160761772,
+                0.3440916219119958
+              ],
+              [
+                1.7187150845384314,
+                0.05596632767736911,
+                0.4219730991908294
+              ],
+              [
+                1.8851097914397819,
+                0.05375736940904642,
+                0.4993029132280833
+              ],
+              [
+                2.051171376994757,
+                0.05147513536790281,
+                0.574499714853402
+              ],
+              [
+                2.2166295924320703,
+                0.049211037339167214,
+                0.6459147218015927
+              ],
+              [
+                2.381206550551279,
+                0.04704809743692235,
+                0.7118577682837995
+              ],
+              [
+                2.544622271383008,
+                0.04505443095064337,
+                0.7706273502961035
+              ],
+              [
+                2.706600423855957,
+                0.04327732151914944,
+                0.8205417328547033
+              ],
+              [
+                2.8668737053593714,
+                0.041739013443662015,
+                0.8599680954192009
+              ],
+              [
+                3.0251883327788365,
+                0.040435215390494036,
+                0.8873468634511051
+              ],
+              [
+                3.181307195901361,
+                0.03933695891615147,
+                0.9012087929493118
+              ],
+              [
+                3.335011340578275,
+                0.03839599413849769,
+                0.9001830059382137
+              ],
+              [
+                3.486099594980762,
+                0.03755347101697772,
+                0.8829949655928938
+              ],
+              [
+                3.638809691209037,
+                0.03673339136054586,
+                0.8467182561199205
+              ],
+              [
+                3.79636280037639,
+                0.03594661878659306,
+                0.7819466187839471
+              ],
+              [
+                3.949816553421972,
+                0.03520362900949273,
+                0.6914485643714213
+              ],
+              [
+                4.099756608853896,
+                0.034470895935462986,
+                0.5788364281292875
+              ],
+              [
+                4.246761394174826,
+                0.03375735614207669,
+                0.44768336912323636
+              ],
+              [
+                4.391395310050956,
+                0.03310425860395697,
+                0.301486551746922
+              ],
+              [
+                4.53420263692009,
+                0.0325681088296493,
+                0.14363413290951457
+              ],
+              [
+                4.67570269230784,
+                0.032200990605135996,
+                -0.022620974683296446
+              ],
+              [
+                4.816386697770668,
+                0.03203240843291737,
+                -0.19417807682259114
+              ],
+              [
+                4.956716685629937,
+                0.03205600325781029,
+                -0.3680946208985305
+              ],
+              [
+                5.097126617635182,
+                0.03222313397805416,
+                -0.5415801352002976
+              ],
+              [
+                5.2380257129869845,
+                0.032443687432224574,
+                -0.7119781983353702
+              ],
+              [
+                5.379803805792149,
+                0.03259297677819291,
+                -0.8767374135793576
+              ],
+              [
+                5.522838386356772,
+                0.03252254520101465,
+                -1.0333732605194628
+              ],
+              [
+                5.667502840233173,
+                0.03207226926436211,
+                -1.179423457500575
+              ],
+              [
+                5.814175295161151,
+                0.031081330550521084,
+                -1.3124000306180679
+              ],
+              [
+                5.963247427629135,
+                0.029396258238126544,
+                -1.4297416014822097
+              ],
+              [
+                6.115132572772654,
+                0.026875190321466253,
+                -1.5287694493654038
+              ],
+              [
+                6.270272524753048,
+                0.023388681975088116,
+                -1.6066506680729056
+              ],
+              [
+                6.410803553753348,
+                0.01952396435702452,
+                -1.6575833889510732
+              ],
+              [
+                6.543766028546721,
+                0.015774474838244065,
+                -1.6962823068934922
+              ],
+              [
+                6.677758109315893,
+                0.012070442801141293,
+                -1.727767689526577
+              ],
+              [
+                6.812697008182194,
+                0.00850939952974359,
+                -1.7526397971602066
+              ],
+              [
+                6.94852973897124,
+                0.0051669620836594585,
+                -1.7713374302662455
+              ],
+              [
+                7.085226587254153,
+                0.0020973263304125377,
+                -1.784173307525271
+              ],
+              [
+                7.222773035535724,
+                -0.0006649069246578362,
+                -1.7913778135867082
+              ],
+              [
+                7.361160730871771,
+                -0.003102026311387493,
+                -1.7931479347614159
+              ],
+              [
+                7.500378151765366,
+                -0.005210098308334583,
+                -1.7896978239628298
+              ],
+              [
+                7.64040164999672,
+                -0.0069958960805687545,
+                -1.7813073343304044
+              ],
+              [
+                7.781187509724846,
+                -0.00847424296195158,
+                -1.768365041472558
+              ],
+              [
+                7.922665583540523,
+                -0.009666030686223112,
+                -1.7514027220940003
+              ],
+              [
+                8.06473493984189,
+                -0.010597021229763817,
+                -1.7311189356682606
+              ],
+              [
+                8.207261798007824,
+                -0.011297363739733696,
+                -1.7083902112667801
+              ],
+              [
+                8.350079849979927,
+                -0.01180157691876986,
+                -1.6842693052903135
+              ],
+              [
+                8.49299288319151,
+                -0.012148598016562158,
+                -1.659970990949633
+              ],
+              [
+                8.635779444863013,
+                -0.012381425042402194,
+                -1.636846788020245
+              ],
+              [
+                8.778199135309842,
+                -0.012545914837600022,
+                -1.6163508669242703
+              ],
+              [
+                8.919999999999996,
+                -0.012688457711803151,
+                -1.6000000000000005
+              ]
+            ],
+            "arcs": [
+              0,
+              0.17088834551721357,
+              0.3451633432114274,
+              0.522484356326011,
+              0.7023915093179823,
+              0.8843101254255551,
+              1.0675575710603211,
+              1.251356275664561,
+              1.4348555348468635,
+              1.6171635647411289,
+              1.7973902287312118,
+              1.9746999544434438,
+              2.1483736032532534,
+              2.3178773659922784,
+              2.4829359289954596,
+              2.643605833094741,
+              2.8003427422111526,
+              2.954053189951593,
+              3.106118304933673,
+              3.263080229204747,
+              3.43342977050899,
+              3.611582806436071,
+              3.799103606214931,
+              3.99611132416764,
+              4.201763714304543,
+              4.414628944431279,
+              4.63294788829833,
+              4.854812389982232,
+              5.078283798338237,
+              5.301470268830837,
+              5.522576812458488,
+              5.739939755239895,
+              5.95205690387373,
+              6.1576260333703505,
+              6.355607244580421,
+              6.545329105208326,
+              6.726662962375391,
+              6.900289125923095,
+              7.049815204619099,
+              7.188345651181376,
+              7.32603707023767,
+              7.463295254673314,
+              7.600449562390785,
+              7.737782044852685,
+              7.875544740365728,
+              8.013965212479867,
+              8.153241332157044,
+              8.293527359425983,
+              8.434914582163074,
+              8.577410848806359,
+              8.72092391697453,
+              8.865253368893402,
+              9.010094897141215,
+              9.155059249880694,
+              9.29970635549817,
+              9.443593387802807,
+              9.58633390901007
+            ],
+            "len": 9.58633390901007
+          }
+        ],
+        "particles": [
+          {
+            "route": 2,
+            "phase": 0.7384747983887792,
+            "speed": 0.02999712110962719,
+            "seed": 0.636818082537502
+          },
+          {
+            "route": 2,
+            "phase": 0.7808558286633343,
+            "speed": 0.015685476185753944,
+            "seed": 0.0984725768212229
+          },
+          {
+            "route": 2,
+            "phase": 0.989840682130307,
+            "speed": 0.025949818440712986,
+            "seed": 0.813069362193346
+          },
+          {
+            "route": 2,
+            "phase": 0.01354726986028254,
+            "speed": 0.0101086431927979,
+            "seed": 0.20159256900660694
+          },
+          {
+            "route": 2,
+            "phase": 0.5760608892887831,
+            "speed": 0.029756227689795196,
+            "seed": 0.9808357902802527
+          },
+          {
+            "route": 2,
+            "phase": 0.8323090139310807,
+            "speed": 0.017949632098898292,
+            "seed": 0.30453890678472817
+          },
+          {
+            "route": 1,
+            "phase": 0.34443919779732823,
+            "speed": 0.027835631412453953,
+            "seed": 0.954908718355
+          },
+          {
+            "route": 2,
+            "phase": 0.1260530531872064,
+            "speed": 0.02388848815113306,
+            "seed": 0.023056210717186332
+          },
+          {
+            "route": 1,
+            "phase": 0.9272308340296149,
+            "speed": 0.012801622352562846,
+            "seed": 0.758387956302613
+          },
+          {
+            "route": 2,
+            "phase": 0.41942999116145074,
+            "speed": 0.02884211973287165,
+            "seed": 0.2034858821425587
+          },
+          {
+            "route": 1,
+            "phase": 0.15899514919146895,
+            "speed": 0.02273551805410534,
+            "seed": 0.6455184575170279
+          },
+          {
+            "route": 1,
+            "phase": 0.3624091970268637,
+            "speed": 0.018094982262700794,
+            "seed": 0.2536090749781579
+          },
+          {
+            "route": 2,
+            "phase": 0.4552062302827835,
+            "speed": 0.017730588461272418,
+            "seed": 0.12399294646456838
+          },
+          {
+            "route": 2,
+            "phase": 0.7730968750547618,
+            "speed": 0.016240370003506543,
+            "seed": 0.8300723091233522
+          },
+          {
+            "route": 2,
+            "phase": 0.17323960969224572,
+            "speed": 0.027947819163091484,
+            "seed": 0.9206902151927352
+          },
+          {
+            "route": 2,
+            "phase": 0.4477813069242984,
+            "speed": 0.018319522812962532,
+            "seed": 0.9215802957769483
+          },
+          {
+            "route": 0,
+            "phase": 0.10673604998737574,
+            "speed": 0.011193464188836516,
+            "seed": 0.7850141278468072
+          },
+          {
+            "route": 1,
+            "phase": 0.03129608719609678,
+            "speed": 0.017112161116674542,
+            "seed": 0.7352046074811369
+          },
+          {
+            "route": 0,
+            "phase": 0.6207886929623783,
+            "speed": 0.020704423510469496,
+            "seed": 0.26325618475675583
+          },
+          {
+            "route": 1,
+            "phase": 0.3902062347624451,
+            "speed": 0.015379718635231257,
+            "seed": 0.04413338820450008
+          },
+          {
+            "route": 0,
+            "phase": 0.8309076745063066,
+            "speed": 0.02665951165836304,
+            "seed": 0.9182248101569712
+          },
+          {
+            "route": 2,
+            "phase": 0.2135486255865544,
+            "speed": 0.0152414486464113,
+            "seed": 0.3514763612765819
+          },
+          {
+            "route": 1,
+            "phase": 0.47578661935403943,
+            "speed": 0.02917296510655433,
+            "seed": 0.22326734010130167
+          },
+          {
+            "route": 0,
+            "phase": 0.543397254543379,
+            "speed": 0.02102373581379652,
+            "seed": 0.4288409554865211
+          },
+          {
+            "route": 2,
+            "phase": 0.04502824228256941,
+            "speed": 0.027421067333780233,
+            "seed": 0.341255999635905
+          },
+          {
+            "route": 1,
+            "phase": 0.6728753966744989,
+            "speed": 0.01311435186304152,
+            "seed": 0.06280943215824664
+          },
+          {
+            "route": 0,
+            "phase": 0.1106815948151052,
+            "speed": 0.020353551716543735,
+            "seed": 0.5196169707924128
+          },
+          {
+            "route": 0,
+            "phase": 0.9049008006695658,
+            "speed": 0.014826049637049437,
+            "seed": 0.2496734585147351
+          },
+          {
+            "route": 2,
+            "phase": 0.9882013089954853,
+            "speed": 0.010398473660461606,
+            "seed": 0.7045519654639065
+          },
+          {
+            "route": 1,
+            "phase": 0.10342660988681018,
+            "speed": 0.018277796311303975,
+            "seed": 0.18132163514383137
+          },
+          {
+            "route": 0,
+            "phase": 0.6307595022954047,
+            "speed": 0.013932524626143278,
+            "seed": 0.5137345297262073
+          },
+          {
+            "route": 1,
+            "phase": 0.3527297687251121,
+            "speed": 0.025087102800607684,
+            "seed": 0.22552704787813127
+          },
+          {
+            "route": 2,
+            "phase": 0.35322382021695375,
+            "speed": 0.012308291955851019,
+            "seed": 0.7194586186669767
+          },
+          {
+            "route": 0,
+            "phase": 0.4319002346601337,
+            "speed": 0.02948331263847649,
+            "seed": 0.2845459769014269
+          },
+          {
+            "route": 1,
+            "phase": 0.4010604056529701,
+            "speed": 0.016155749657191337,
+            "seed": 0.19597479328513145
+          },
+          {
+            "route": 2,
+            "phase": 0.7735983787570149,
+            "speed": 0.011549369860440493,
+            "seed": 0.4794154583942145
+          },
+          {
+            "route": 2,
+            "phase": 0.8374283965677023,
+            "speed": 0.024757296550087633,
+            "seed": 0.6880697035230696
+          },
+          {
+            "route": 2,
+            "phase": 0.17087451997213066,
+            "speed": 0.012928491672500968,
+            "seed": 0.6161264565307647
+          },
+          {
+            "route": 0,
+            "phase": 0.5313028660602868,
+            "speed": 0.012783939433284104,
+            "seed": 0.07532733399420977
+          },
+          {
+            "route": 1,
+            "phase": 0.28588360105641186,
+            "speed": 0.02274232793599367,
+            "seed": 0.40645096614025533
+          },
+          {
+            "route": 0,
+            "phase": 0.5030959313735366,
+            "speed": 0.029824750176630915,
+            "seed": 0.8504558014683425
+          },
+          {
+            "route": 2,
+            "phase": 0.06217957637272775,
+            "speed": 0.023908595750108362,
+            "seed": 0.5031154288444668
+          },
+          {
+            "route": 1,
+            "phase": 0.3344410709105432,
+            "speed": 0.025192506895400583,
+            "seed": 0.6130713056772947
+          },
+          {
+            "route": 2,
+            "phase": 0.010438144439831376,
+            "speed": 0.025768833663314582,
+            "seed": 0.12873940798453987
+          },
+          {
+            "route": 1,
+            "phase": 0.08806350082159042,
+            "speed": 0.012695460612885654,
+            "seed": 0.3149011475034058
+          },
+          {
+            "route": 1,
+            "phase": 0.08843302051536739,
+            "speed": 0.014190826294943691,
+            "seed": 0.9929975301492959
+          },
+          {
+            "route": 0,
+            "phase": 0.024479775223881006,
+            "speed": 0.018678450067527594,
+            "seed": 0.09100054111331701
+          },
+          {
+            "route": 0,
+            "phase": 0.09238000703044236,
+            "speed": 0.011345406398177146,
+            "seed": 0.36531426361761987
+          },
+          {
+            "route": 0,
+            "phase": 0.6571525866165757,
+            "speed": 0.012906118570826948,
+            "seed": 0.5867732590995729
+          },
+          {
+            "route": 2,
+            "phase": 0.18086468218825758,
+            "speed": 0.010423747645691038,
+            "seed": 0.16356516652740538
+          },
+          {
+            "route": 2,
+            "phase": 0.1691720555536449,
+            "speed": 0.01703676807228476,
+            "seed": 0.0548439621925354
+          },
+          {
+            "route": 1,
+            "phase": 0.9269835895393044,
+            "speed": 0.021908917669206857,
+            "seed": 0.7952348000835627
+          },
+          {
+            "route": 2,
+            "phase": 0.2350426111370325,
+            "speed": 0.020767416837625206,
+            "seed": 0.9616503776051104
+          },
+          {
+            "route": 0,
+            "phase": 0.20155537384562194,
+            "speed": 0.013894367134198546,
+            "seed": 0.8087705646175891
+          },
+          {
+            "route": 1,
+            "phase": 0.6632248763926327,
+            "speed": 0.022468908396549525,
+            "seed": 0.7235063025727868
+          },
+          {
+            "route": 0,
+            "phase": 0.7927973710466176,
+            "speed": 0.015602186881005765,
+            "seed": 0.24197327881120145
+          },
+          {
+            "route": 0,
+            "phase": 0.31121478509157896,
+            "speed": 0.01052445066627115,
+            "seed": 0.29833172215148807
+          },
+          {
+            "route": 0,
+            "phase": 0.028214722638949752,
+            "speed": 0.016945371413603427,
+            "seed": 0.4536793848965317
+          },
+          {
+            "route": 1,
+            "phase": 0.23763746907934546,
+            "speed": 0.02488574540708214,
+            "seed": 0.004754142835736275
+          },
+          {
+            "route": 0,
+            "phase": 0.34511314728297293,
+            "speed": 0.02395098326727748,
+            "seed": 0.25721622514538467
+          },
+          {
+            "route": 0,
+            "phase": 0.35759126767516136,
+            "speed": 0.026817899416200816,
+            "seed": 0.9373555560596287
+          },
+          {
+            "route": 2,
+            "phase": 0.8196230649482459,
+            "speed": 0.016365019036456943,
+            "seed": 0.9016508974600583
+          },
+          {
+            "route": 1,
+            "phase": 0.7707975232042372,
+            "speed": 0.02966759011615068,
+            "seed": 0.007972258143126965
+          },
+          {
+            "route": 1,
+            "phase": 0.6729118314106017,
+            "speed": 0.026044934093952178,
+            "seed": 0.9322047603782266
+          },
+          {
+            "route": 2,
+            "phase": 0.7494946392253041,
+            "speed": 0.026008489443920556,
+            "seed": 0.7806500657461584
+          },
+          {
+            "route": 0,
+            "phase": 0.7898624034132808,
+            "speed": 0.029062189282849434,
+            "seed": 0.7668697203043848
+          },
+          {
+            "route": 2,
+            "phase": 0.9169601905159652,
+            "speed": 0.01794373119715601,
+            "seed": 0.19461527839303017
+          },
+          {
+            "route": 2,
+            "phase": 0.8724108173046261,
+            "speed": 0.027034839112311602,
+            "seed": 0.014738996280357242
+          },
+          {
+            "route": 2,
+            "phase": 0.7305526863783598,
+            "speed": 0.01892723824363202,
+            "seed": 0.7979420521296561
+          },
+          {
+            "route": 0,
+            "phase": 0.06946142646484077,
+            "speed": 0.020339087238535287,
+            "seed": 0.6953541201073676
+          },
+          {
+            "route": 2,
+            "phase": 0.8177349013276398,
+            "speed": 0.018454007250256838,
+            "seed": 0.5569796608760953
+          },
+          {
+            "route": 1,
+            "phase": 0.34033790533430874,
+            "speed": 0.013758891262114048,
+            "seed": 0.659971492132172
+          },
+          {
+            "route": 2,
+            "phase": 0.31217349972575903,
+            "speed": 0.02661397983785719,
+            "seed": 0.4755484345369041
+          },
+          {
+            "route": 1,
+            "phase": 0.4815795903559774,
+            "speed": 0.02007410512305796,
+            "seed": 0.22756587550975382
+          },
+          {
+            "route": 0,
+            "phase": 0.9122049934230745,
+            "speed": 0.015054910317994654,
+            "seed": 0.4659209754317999
+          },
+          {
+            "route": 0,
+            "phase": 0.24005679064430296,
+            "speed": 0.02531030362471938,
+            "seed": 0.393114774255082
+          },
+          {
+            "route": 2,
+            "phase": 0.24821588397026062,
+            "speed": 0.025606671418063345,
+            "seed": 0.9731755671091378
+          },
+          {
+            "route": 2,
+            "phase": 0.31135526369325817,
+            "speed": 0.02712733986787498,
+            "seed": 0.5057467028964311
+          },
+          {
+            "route": 0,
+            "phase": 0.11130515346303582,
+            "speed": 0.018932720650918784,
+            "seed": 0.07814150210469961
+          },
+          {
+            "route": 0,
+            "phase": 0.8436691139359027,
+            "speed": 0.021358842626214028,
+            "seed": 0.11218791804276407
+          },
+          {
+            "route": 1,
+            "phase": 0.4754800805822015,
+            "speed": 0.024343981235288085,
+            "seed": 0.004351367708295584
+          },
+          {
+            "route": 0,
+            "phase": 0.39654293446801603,
+            "speed": 0.02728126694448292,
+            "seed": 0.27910624467767775
+          },
+          {
+            "route": 2,
+            "phase": 0.8520816708914936,
+            "speed": 0.01958617272321135,
+            "seed": 0.44367314130067825
+          },
+          {
+            "route": 0,
+            "phase": 0.7032180747482926,
+            "speed": 0.016038767490535975,
+            "seed": 0.20892719249241054
+          },
+          {
+            "route": 0,
+            "phase": 0.6606438029557467,
+            "speed": 0.01724365774076432,
+            "seed": 0.7061152593232691
+          },
+          {
+            "route": 1,
+            "phase": 0.11756447958759964,
+            "speed": 0.015029070442542435,
+            "seed": 0.9099866200704128
+          },
+          {
+            "route": 1,
+            "phase": 0.7974605043418705,
+            "speed": 0.013641152498312294,
+            "seed": 0.7041806364431977
+          },
+          {
+            "route": 0,
+            "phase": 0.8541186072397977,
+            "speed": 0.010215675942599773,
+            "seed": 0.13598576723597944
+          },
+          {
+            "route": 1,
+            "phase": 0.7442685840651393,
+            "speed": 0.028019179976545273,
+            "seed": 0.013590923976153135
+          },
+          {
+            "route": 1,
+            "phase": 0.11509949690662324,
+            "speed": 0.01452312939800322,
+            "seed": 0.33412853837944567
+          },
+          {
+            "route": 1,
+            "phase": 0.19714816054329276,
+            "speed": 0.015559925944544375,
+            "seed": 0.022710109129548073
+          },
+          {
+            "route": 2,
+            "phase": 0.503939118469134,
+            "speed": 0.019944756161421537,
+            "seed": 0.9985474820714444
+          },
+          {
+            "route": 0,
+            "phase": 0.6225014366209507,
+            "speed": 0.01879718921612948,
+            "seed": 0.30506686912849545
+          },
+          {
+            "route": 1,
+            "phase": 0.8133396997582167,
+            "speed": 0.019996160371229053,
+            "seed": 0.1781639747787267
+          },
+          {
+            "route": 1,
+            "phase": 0.1752903857268393,
+            "speed": 0.019307398800738156,
+            "seed": 0.13550790678709745
+          },
+          {
+            "route": 1,
+            "phase": 0.9096597891766578,
+            "speed": 0.023932944983243942,
+            "seed": 0.9984796789940447
+          },
+          {
+            "route": 0,
+            "phase": 0.3570968257263303,
+            "speed": 0.02659820185508579,
+            "seed": 0.33320980658754706
+          },
+          {
+            "route": 1,
+            "phase": 0.07703237398527563,
+            "speed": 0.020967516275122763,
+            "seed": 0.48746040859259665
+          },
+          {
+            "route": 2,
+            "phase": 0.4605136695317924,
+            "speed": 0.02503690759185702,
+            "seed": 0.6665347628295422
+          },
+          {
+            "route": 0,
+            "phase": 0.39653243706561625,
+            "speed": 0.017817492354661228,
+            "seed": 0.8091500967275351
+          },
+          {
+            "route": 2,
+            "phase": 0.5543839540332556,
+            "speed": 0.013743103551678359,
+            "seed": 0.7080358439125121
+          },
+          {
+            "route": 0,
+            "phase": 0.580437897471711,
+            "speed": 0.022547141453251242,
+            "seed": 0.767441624077037
+          },
+          {
+            "route": 1,
+            "phase": 0.3239745614118874,
+            "speed": 0.02985804189462215,
+            "seed": 0.5953002693131566
+          },
+          {
+            "route": 1,
+            "phase": 0.721666942583397,
+            "speed": 0.028073432035744188,
+            "seed": 0.2090328277554363
+          },
+          {
+            "route": 0,
+            "phase": 0.8038043593987823,
+            "speed": 0.023747924617491666,
+            "seed": 0.4472644883207977
+          },
+          {
+            "route": 0,
+            "phase": 0.7163263221736997,
+            "speed": 0.016149683007970452,
+            "seed": 0.29151007370091975
+          },
+          {
+            "route": 2,
+            "phase": 0.7410417995415628,
+            "speed": 0.02674899785313755,
+            "seed": 0.5186426620930433
+          },
+          {
+            "route": 0,
+            "phase": 0.23546923720277846,
+            "speed": 0.023362458553165197,
+            "seed": 0.5522283378522843
+          }
+        ]
+      }
+    },
+    "inspire": {
+      "file": "inspire.bin",
+      "sha256": "604e3855456819136e7e24dd34021cb6a11f77895fdc2a4cfa8c5641a59e05e9",
+      "keys": [
+        {
+          "key": "inspire/srcFil0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 6720,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 13440,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 15680,
+              "byteLength": 324,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 16004,
+              "byteLength": 324,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 16328,
+              "byteLength": 108,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcFil1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 16436,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 23156,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 29876,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 32116,
+              "byteLength": 384,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 32500,
+              "byteLength": 384,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 32884,
+              "byteLength": 128,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcFil2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 33012,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 39732,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 46452,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 48692,
+              "byteLength": 288,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 48980,
+              "byteLength": 288,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 49268,
+              "byteLength": 96,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 49364,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 52244,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 55124,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 56084,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 58964,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 61844,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 62804,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 65684,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 68564,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/rimCurrents0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 69524,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 71972,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 74420,
+              "byteLength": 816,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/rimCurrents1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 75236,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 77684,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 80132,
+              "byteLength": 816,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "counts": {
+          "sourceSegs": 840,
+          "wispSegs": 360,
+          "beads": 83,
+          "rimSegs": 204
+        }
+      }
+    }
+  }
+}

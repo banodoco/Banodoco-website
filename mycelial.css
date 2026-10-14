@@ -168,6 +168,13 @@ body, button, input, select, textarea { font-family: var(--mycelial-body); }
   letter-spacing: -.03em;
 }
 .j-h { font-size: clamp(2.35rem, 3.7vw, 3.75rem); line-height: 1.04; }
+.j-menu-h, .menu-h {
+  font-family: var(--mycelial-display);
+  font-size: clamp(1rem, calc(20vw - 3rem), 1.5rem);
+  font-weight: 400;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+}
 /* Purpose's longer headline needs a wider measure at this display scale.
    Keep its anchor and phone layout; let desktop copy form a balanced pair. */
 .j-block[data-chapter="final"] .j-h { text-wrap: balance; }
