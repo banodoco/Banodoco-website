@@ -532,7 +532,9 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
             // The live rail takes the shell's exact painted opacity, then
             // completes only the unspent portion of the shared CSS entry beat.
             const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
-            earlyRail.root.style.transition = 'none';
+            // Only opacity follows the hero frame by frame. Readiness can
+            // resolve during this handoff and must retain its own CSS fade.
+            earlyRail.root.style.setProperty('--rail-opacity-duration', '0s');
             earlyRail.root.style.opacity = String(from);
             void earlyRail.root.offsetWidth;
             shell.remove();
@@ -547,7 +549,7 @@ export function createJourneyHandoff({ scene, entryQueue, note, journeyModule,
                 requestAnimationFrame(finishWithHero);
               } else {
                 earlyRail.root.style.opacity = '1';
-                requestAnimationFrame(() => { if (!journeyFailed) earlyRail.root.style.transition = ''; });
+                requestAnimationFrame(() => { if (!journeyFailed) earlyRail.root.style.removeProperty('--rail-opacity-duration'); });
               }
             });
             requestAnimationFrame(finishWithHero);

@@ -753,7 +753,7 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 .j-rail,
 .j-rail:not(.j-rail-column) {
   --nav-readiness: 1;
-  transition: opacity .45s ease, --nav-readiness 1.6s ease-in-out;
+  transition: opacity var(--rail-opacity-duration, .45s) ease, --nav-readiness 1.6s ease-in-out;
 }
 .j-rail.is-loading { --nav-readiness: 0; }
 .j-rail .j-rail-item,
