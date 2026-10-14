@@ -753,14 +753,14 @@ body.j-manifesto-open .j-rail .j-rail-purpose-child .j-rail-name,
 .j-rail,
 .j-rail:not(.j-rail-column) {
   --nav-readiness: 1;
-  transition: opacity .45s ease, --nav-readiness .9s ease;
+  transition: opacity .45s ease, --nav-readiness 1.6s ease-in-out;
 }
 .j-rail.is-loading { --nav-readiness: 0; }
 .j-rail .j-rail-item,
 .j-rail .j-rail-menu,
 .j-rail .j-rail-active-ring {
-  filter: opacity(calc(.35 + .65 * var(--nav-readiness)))
-    saturate(calc(.45 + .55 * var(--nav-readiness)));
+  filter: opacity(calc(.7 + .3 * var(--nav-readiness)))
+    saturate(calc(.85 + .15 * var(--nav-readiness)));
 }
 .j-rail.is-loading .j-rail-item,
 .j-rail.is-loading .j-rail-menu { cursor: default; }
