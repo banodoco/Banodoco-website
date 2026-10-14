@@ -12,8 +12,11 @@ for (const duration of [2.3,2.68,3.68,4.5]) {
   assert.deepEqual(at(0),landing.p0);
   at(1).forEach((v,i)=>assert.ok(Math.abs(v-landing.p3[i])<1e-12));
   const velocity = u => (at(u+.00001)[1]-at(u-.00001)[1])/(.00002*duration);
-  const speeds = [.001,.03,.08,.15,.25,.4,.55,.7,.8].map(u=>-velocity(u));
-  assert.ok(Math.max(...speeds)/Math.min(...speeds)<1.15,'first motion and middle share steady pace with small natural flutter');
+  const speeds = [.35,.4,.55,.7,.8].map(u=>-velocity(u));
+  assert.ok(Math.max(...speeds)/Math.min(...speeds)<1.15,'middle descent stays steady after the gentle acceleration');
+  assert.ok(-velocity(.001) > .4 * -velocity(.4), 'starts moving without a stationary hold');
+  assert.ok(-velocity(.001) < .55 * -velocity(.4), 'starts gently below cruise speed');
+  assert.ok(-velocity(.15) > -velocity(.03), 'speed eases up during the opening');
   const end = (at(1)[1]-at(.999999)[1])/(.000001*duration);
   assert.ok(Math.abs(end)<.001,'spore still settles gently at the unchanged endpoint');
 }
@@ -36,12 +39,13 @@ for (const mode of ['desktop','mobile']) for (const ready of [false,true]) {
       if(!selected) {
         assert.deepEqual(p,Array.from(stream.frame.slice(landing.hi*3,landing.hi*3+3)), 'selection keeps the actual stream position');
         assert.equal(landing.t0,landing.kAt,'no motionless kindle phase');
+        if (mode === 'desktop') assert.ok(field.t <= 1/240, 'desktop recruits on its first frame even before scene readiness');
         selected=true;
       }
       const age=field.t-landing.kAt;
       if(age>=.1&&age<=.5) {
         const progress=(landing.p0[1]-p[1])/(landing.p0[1]-landing.p3[1]);
-        assert.ok(progress>=.9*age/landing.dur,'first100–500ms travel at the same scale as the full descent');
+        assert.ok(progress>=.4*age/landing.dur,'first100–500ms keep moving through the slower acceleration');
         early++;
       }
     }

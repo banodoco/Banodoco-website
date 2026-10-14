@@ -210,13 +210,13 @@ const COMPOSITION = {
   // — the reference river is dense and fine-grained, and so is the shed
   // this current must read as one species with.
   desktop: {
-    nA: 2900, nH: 8, land: 1, sourceOffset: [-0.105, -0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
+    nA: 2900, nH: 8, land: 1, earlyLanding: true, sourceOffset: [-0.105, 0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.14],
     fall: [0.10, 0.28], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Landscape under aspect 1.55 — iPads on their side, narrow laptop
   // windows. Same reading, a shade steeper for the shorter frame.
   deskNarrow: {
-    nA: 2600, nH: 8, land: 1, sourceOffset: [-0.105, -0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
+    nA: 2600, nH: 8, land: 1, earlyLanding: true, sourceOffset: [-0.105, 0.133], xIn: -1.42, xOut: 1.42, e: [0.50, 1.12],
     fall: [0.12, 0.32], depth: [6.2, 15.5], gain: 6.0, dpr: 2, lum: 1,
   },
   // Short landscape (a phone on its side; a very shallow window).
@@ -686,7 +686,7 @@ function planLandings(F) {
   for (let k = 0; k < F.comp.land; k++) {
     F.landings.push({
       hi: F.nA + k, site: k % LANDING_SITES.length,
-      tPeel: PEEL_AT[k], dur: FLUT_S[k],
+      tPeel: F.comp.earlyLanding && k === 0 ? 0 : PEEL_AT[k], dur: FLUT_S[k],
       state: 0, impactAt: 0, swayA: SWAY_AMP, phase: 0,
       p0: [0, 0, 0], p3: [0, 0, 0],
     });
@@ -796,7 +796,7 @@ function pickPeeler(F, site) {
   }
   const original = best[0] >= 0 ? best[0] : best[1] >= 0 ? best[1] : best[2];
   if (original < 0 || !F.comp.sourceOffset) return original;
-  // Move desktop recruitment a little down and left within the real current.
+  // Move desktop recruitment a little up and left within the real current.
   // Start from the established picker, then select a neighbouring grain;
   // never teleport a particle or delay ignition waiting for an exact point.
   const at = original * 3, half = F.frame[at + 2] * F.tanHalfFov;
@@ -808,8 +808,8 @@ function pickPeeler(F, site) {
     if (F.retired[i] || heldByLanding(F, i)) continue;
     const k = i * 3, h = F.frame[k + 2] * F.tanHalfFov;
     const x = F.frame[k] / (h * F.aspect), y = F.frame[k + 1] / h;
-    if (x < -0.92 || x >= originX || y >= originY || y < syN + 0.03
-        || originX - x > 0.25 || originY - y > 0.30) continue;
+    if (x < -0.92 || x >= originX || y <= originY || y > 1 || y < syN + 0.03
+        || originX - x > 0.25 || y - originY > 0.30) continue;
     const distance = Math.hypot((x - targetX) * F.aspect, y - targetY);
     if (distance < score) { score = distance; selected = i; }
   }
@@ -857,18 +857,25 @@ function hermite(p0, p1, m0, u) {
   const u2 = u * u, u3 = u2 * u;
   return p0 * (2 * u3 - 3 * u2 + 1) + p1 * (3 * u2 - 2 * u3) + m0 * (u3 - 2 * u2 + u);
 }
-// Travel at a readable pace from recruitment, then settle softly. The
-// recruitment light still fades independently; it must not create a pause
-// followed by a second, faster motion phase.
+// Begin moving immediately at a gentle pace, ease into the descent, then
+// settle softly. This envelope changes speed, not recruitment or impact time.
 function descentAt(p0, p1, u) {
-  const out = 0.18, cruise = 1 / (1 - 0.5 * out);
-  let travel = cruise * u;
-  if (u > 1 - out) {
+  const into = 0.30, out = 0.18, start = 0.4;
+  const cruise = 1 / (1 - 0.5 * out - 0.5 * into * (1 - start));
+  const entryDistance = 0.5 * into * (1 + start);
+  let travel;
+  if (u < into) {
+    const t = u / into;
+    travel = cruise * (start * u + (1 - start) * into * (t ** 3 - 0.5 * t ** 4));
+  } else if (u <= 1 - out) {
+    travel = cruise * (entryDistance + u - into);
+  } else {
     const t = (u - (1 - out)) / out;
-    travel = cruise * (1 - out) + cruise * out * (t - t ** 3 + 0.5 * t ** 4);
+    travel = cruise * (entryDistance + 1 - out - into + out * (t - t ** 3 + 0.5 * t ** 4));
   }
   return p0 + (p1 - p0) * travel;
 }
+
 function flutterAt(F, L, u, out) {
   const ph = SWAY_CYC * 6.2832 * u + L.phase;
   const env = Math.sin(Math.PI * u);
@@ -977,7 +984,7 @@ function advance(F, dt, gust) {
       // elastic clock holds, and compression skips it entirely: a ready
       // scene gets its causality at pace, not a meteorology lesson.
       if (F.t >= L.tPeel
-          && (rate > 1 || gust < LULL_THR || F.t >= L.tPeel + LULL_WAIT)) {
+          && (c.earlyLanding && L.site === 0 || rate > 1 || gust < LULL_THR || F.t >= L.tPeel + LULL_WAIT)) {
         // THE SETTLE CHOOSES ITS SPORE AT THE LAST MOMENT: whichever free
         // stream spore is riding low, close to the site — the one
         // for whom losing lift RIGHT NOW would deliver it here. A fixed
