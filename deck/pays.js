@@ -81,8 +81,8 @@
   // Drawn in the reference's own units (1672 x 941), scaled by k about the middle.
   // The core: a lens centred at (750, 415), 136 wide and 226 tall, in those units.
   const CORE_REF = { cx: 750, cy: 415, w: 136, h: 226 };
-  // On a phone the picture is scaled as one (k) above the text. Beside the text on the right, it is laid out
-  // in the room to the left: positions stretch by kx across and ky down, while sizes (circles, the lens,
+  // On a phone the picture is scaled as one (k) above the text. Beside the text on the left, it is laid out
+  // in the room to the right: positions stretch by kx across and ky down, while sizes (circles, the lens,
   // the mink, dots) scale by k so nothing is squashed.
   let W = 0, H = 0, dpr = 1, k = 1, kx = 1, ky = 1, ox = 0, oy = 0, LW = 1, small = false;
   const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
@@ -106,9 +106,9 @@
       k = Math.min((W - 24) / 1430, (top - 60) / 690);
       ox = W / 2 - 29 * k;
       oy = Math.max(40 + 345 * k, top * 0.5);
-    } else { // to the left of the text: from 64 px in to 56 px short of the text column, centred down the slide
+    } else { // to the right of the text: from ~96 px past the text column to 64 px short of the edge, centred down the slide
       const text = slide.querySelector('.split > :first-child').getBoundingClientRect();
-      const left = 64, right = text.left - b.left - 96; // the hosted band keeps ~96 px of air before the text
+      const left = text.right - b.left + 96, right = W - 64; // the builders keep ~96 px of air after the text
       kx = (right - left - 20) / 1430;
       ky = Math.min((H - 230) / 690, 1.0);
       k = Math.min(ky, kx * 1.35, 1.05);
@@ -120,7 +120,7 @@
     // The builders' machines, and their threads into the core's left side.
     // The core: three strands of a lens, nodes at its tips and on its sides.
     // The mink is this slide's hero: as large a whole-number cell as fits (4 beside the text), the lens widened to hold her.
-    cell = small ? 1 : k >= 0.62 ? 4 : Math.max(2, Math.round(3.4 * k));
+    cell = small ? 1 : k >= 0.45 ? 4 : 3;
     const lw0 = small ? CORE_REF.w * k : Math.max(CORE_REF.w * k, 23 * cell + 40);
     lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: lw0, h: Math.max(CORE_REF.h * k, lw0 * 1.66) };
     const lensL = { x: lens.c.x - lens.w / 2, y: lens.c.y }, lensR = { x: lens.c.x + lens.w / 2, y: lens.c.y };
@@ -460,6 +460,7 @@
       const b = root.getBoundingClientRect(), v = (p) => ({ x: b.left + p.x, y: b.top + p.y });
       return {
         core: { ...v(lens.c), w: lens.w, h: lens.h, cell },
+        mink: { ...v({ x: lens.c.x + 4 * k, y: lens.c.y + 8 * k }), cell }, // her centre, as paintMink draws her
         machines: machines.map((m) => ({ ...v(m), r: m.r })),
         people: arcs.flatMap((a) => a.dots).map((d) => ({ ...v(d), r: d.r * Math.max(0.8, k), bright: d.bright })),
         k, lw: LW,

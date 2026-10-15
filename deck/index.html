@@ -221,6 +221,15 @@
   .as-stage { position: absolute; left: 50%; top: 0; bottom: 0; width: min(1180px, 100%); transform: translateX(-50%);
     display: grid; grid-template-columns: minmax(0, 31fr) minmax(0, 69fr); grid-template-rows: auto minmax(0, 1fr); column-gap: var(--as-gap); row-gap: 12px; }
   .as-seat { grid-column: 1 / -1; position: relative; height: calc(var(--as-cell, 4px) * 21 + 6px); }
+  /* A quiet way to go and try it: just above the editor's top-right corner, level with the mink's seat, in the deck's
+     small-label voice (clear of the deck's chrome bar at the bottom). Opens in a new tab. */
+  .as-try { position: absolute; right: 4px; top: calc(var(--as-cell, 4px) * 21 + 6px - 1.6em); z-index: 1; font: italic 400 1.05rem/1.2 "Cormorant Garamond", serif;
+    color: #ecc57e; text-decoration: none; letter-spacing: .02em; pointer-events: auto; transition: opacity .5s ease .3s, color .2s ease; }
+  .as-try span { display: inline-block; transition: transform .2s ease; }
+  .as-try:hover, .as-try:focus-visible { color: #ffd991; }
+  .as-try:hover span, .as-try:focus-visible span { transform: translateX(3px); }
+  .as-try:focus-visible { outline: 1px solid #ecc57e88; outline-offset: 4px; border-radius: 3px; }
+  .as.is-morphing .as-try { opacity: 0; transition: none; }
   .as-chat { grid-column: 1; grid-row: 2; }
   .as-edit { grid-column: 2; grid-row: 2; }
   .as-panel { position: relative; min-height: 0; border-radius: 12px; border: 1px solid rgb(240 200 119 / .2); background: var(--as-panel); color: var(--as-ink);
@@ -327,12 +336,12 @@
 
   /* Version F, slide 7: how it pays (pays.js). Text centred at the bottom as on slide 4; above it, in the same
      gold-thread language, the few builders running Astrid locally, the core, and everyone else on the hosted version. */
-  /* The text sits on the right, right-aligned and vertically centred, in the deck's text-right preset (as on slide 3);
-     the picture is laid out in the room to its left. */
-  html[data-ver="f"] .pa-host { padding-right: max(16px, 7vw); }
-  html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr) minmax(300px, 31vw); }
-  html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 2; text-align: right; }
-  html[data-ver="f"] .pa-host h1 { max-width: 10.6em; margin-left: auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
+  /* The text sits on the left, left-aligned and vertically centred; the picture is laid out in the room to its right
+     (builders nearest the text, the hosted fronts out towards the edge). */
+  html[data-ver="f"] .pa-host { padding-left: max(16px, 7vw); }
+  html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(300px, 31vw) minmax(0, 1fr); }
+  html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: left; }
+  html[data-ver="f"] .pa-host h1 { max-width: 10.6em; margin-right: auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
   /* From slide 6 the slide shows at once, so the mink's power-up can play over the stack as it recedes. */
   .slide.pa-arrive { transition: none; }
   html[data-ver="f"] .pa-host .body, html[data-ver="f"] .pa-host .vis, html[data-ver="f"] .pa-host .e-note { display: none; }
@@ -347,7 +356,7 @@
   .pa-side span { display: block; font-size: .78em; color: #b8a98f; font-style: italic; }
   .pa-core { color: #f0c67e; }
   @media (max-width: 760px) {
-    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-right: max(16px, 9vw); padding-bottom: max(70px, 8.5vh); }
+    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-left: max(16px, 9vw); padding-bottom: max(70px, 8.5vh); }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
     html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: center; }
     html[data-ver="f"] .pa-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 20ch; margin: 0 auto; }
@@ -355,9 +364,11 @@
   /* Version F, slide 6: where it goes (stack.js). The text on the left; on the right slide 5's product taken apart into
      one exploded stack of thin planes (preview, timeline, agent, tools & effects, models / runtime), tied by fine gold
      registration threads and rooted in the network. The planes keep slide 5's dusk palette; the mink perches on top. */
-  html[data-ver="f"] .st-host { padding-left: max(16px, 4.4vw); }
-  html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 30vw); }
-  html[data-ver="f"] .st-host h1 { font-size: clamp(1.9rem, 3.1vw, 3.3rem); max-width: 8.25em; }
+  /* Text on the right, right-aligned (like slide 3); the stack stands on the left. */
+  html[data-ver="f"] .st-host { padding-right: max(16px, 4.4vw); }
+  html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr) minmax(0, 30vw); }
+  html[data-ver="f"] .st-host > .split > :first-child { grid-column: 2; text-align: right; }
+  html[data-ver="f"] .st-host h1 { font-size: clamp(1.9rem, 3.1vw, 3.3rem); max-width: 8.25em; margin-left: auto; }
   .st-host .body, .st-host .vis { display: none; }
   .st-host > .num, .st-host > .split { position: relative; z-index: 1; }
   /* The text's row runs across the stack, so it takes no clicks (the slide behind it still turns the deck); and while
@@ -368,11 +379,12 @@
   .st { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; user-select: none; -webkit-user-select: none;
     --as-card: #2c2822; --as-line: #4a4337; --as-field: rgb(27 25 21 / .9); --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
     font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif; text-align: left; }
-  .st-world { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; perspective: 2600px; perspective-origin: 1900px 420px; }
+  .st-world { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; perspective: 2600px; perspective-origin: 210px 420px; }
   .st-plane { position: absolute; left: 0; top: 0; opacity: 0; border-radius: 16px; border: 1px solid rgb(240 200 119 / .42); border-bottom-color: rgb(255 214 150 / .7); color: var(--as-ink); pointer-events: auto; overflow: hidden;
     background: linear-gradient(180deg, rgb(41 37 31 / .93), rgb(30 27 23 / .93)); backface-visibility: hidden;
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -1px 0 rgb(255 220 160 / .18), 0 0 34px rgb(240 200 119 / .1), 0 50px 60px -36px rgb(0 0 0 / .95); }
   .st-threads { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .st-hit { position: absolute; left: 0; top: 0; pointer-events: auto; }
   /* Each plane's content at its settled size, scaled as one unit to fit the plane as it moves (never reflowed). */
   .st-in { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   /* Arriving from slide 5: exact copies of its panels ride on the top three planes, then dissolve into them. */
@@ -382,32 +394,32 @@
   .st-plane { transition: border-color .5s ease, box-shadow .5s ease; }
   .st-plane.is-lit { border-color: rgb(255 214 150 / .78); border-bottom-color: rgb(255 226 170 / .95);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), inset 0 -1px 0 rgb(255 220 160 / .3), 0 0 0 1px rgb(255 214 150 / .18), 0 0 46px rgb(240 200 119 / .26), 0 50px 60px -36px rgb(0 0 0 / .95); }
-  /* Flags: each layer's name, sticking out to the right on a fine gold leader. A flag unfolds into its card. */
-  .st-flag { all: unset; position: absolute; left: 0; top: 0; z-index: 2; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 13px 7px 10px; border-radius: 999px; transform: translateY(-50%); white-space: nowrap; cursor: pointer; pointer-events: auto;
+  /* Flags: each layer's name, sticking out to the left on a fine gold leader (its dot toward the leader). A flag unfolds into its card. */
+  .st-flag { all: unset; position: absolute; left: 0; top: 0; z-index: 2; box-sizing: border-box; display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 8px;
+    padding: 6px 10px 7px 13px; border-radius: 999px; transform: translate(-100%, -50%); white-space: nowrap; cursor: pointer; pointer-events: auto;
     border: 1px solid rgb(240 200 119 / .4); background: rgb(24 20 15 / .9); box-shadow: 0 8px 22px rgb(0 0 0 / .45);
     font: italic 400 18px/1 "Cormorant Garamond", serif; letter-spacing: .01em; color: #ecc57e;
     opacity: calc(var(--in, 0) * var(--dim, 1)); transition: opacity .35s ease .22s, border-color .3s ease, background-color .3s ease; }
   .st-flag i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; box-shadow: 0 0 8px rgb(255 214 150 / .6); }
-  .st-flag::after { content: "+"; margin-left: 1px; font: 300 13px/1 Inter, system-ui, sans-serif; font-style: normal; color: #b8a98f; }
+  .st-flag::after { content: "+"; font: 300 13px/1 Inter, system-ui, sans-serif; font-style: normal; color: #b8a98f; }
   .st-flag:hover { border-color: rgb(255 214 150 / .8); background: rgb(36 29 21 / .96); }
   .st-flag:focus-visible { outline: 1px solid #f0c67e; outline-offset: 3px; }
   .st-short { display: none; }
   .st.has-card .st-flag { --dim: .3; transition-delay: 0s; }
   .st.has-card .st-flag.is-on { --dim: 0; } /* its card takes its place */
-  .st-card { position: absolute; left: 0; top: 0; z-index: 3; box-sizing: border-box; width: 300px; padding: 11px 16px 12px 14px; border-radius: 7px; pointer-events: auto; cursor: default;
-    background: linear-gradient(180deg, rgb(31 26 20 / .97), rgb(21 18 14 / .97)); border: 1px solid rgb(255 255 255 / .1); border-left: 1px solid #e0ab5e;
+  .st-card { position: absolute; left: 0; top: 0; z-index: 3; box-sizing: border-box; width: 300px; padding: 11px 14px 12px 16px; border-radius: 7px; pointer-events: auto; cursor: default;
+    background: linear-gradient(180deg, rgb(31 26 20 / .97), rgb(21 18 14 / .97)); border: 1px solid rgb(255 255 255 / .1); border-right: 1px solid #e0ab5e;
     box-shadow: 0 18px 46px rgb(0 0 0 / .62), 0 0 30px rgb(240 200 119 / .07);
-    font: 400 15px/1.3 "EB Garamond", serif; color: var(--ink); text-align: left;
-    opacity: 0; visibility: hidden; transform: translateX(-8px); transition: opacity .3s ease, transform .4s cubic-bezier(.2, .7, .2, 1), visibility 0s linear .4s; }
+    font: 400 15px/1.3 "EB Garamond", serif; color: var(--ink); text-align: right;
+    opacity: 0; visibility: hidden; transform: translateX(8px); transition: opacity .3s ease, transform .4s cubic-bezier(.2, .7, .2, 1), visibility 0s linear .4s; }
   .st-card.is-focus { outline: 1px solid #f0c67e; outline-offset: 3px; }
   .st-card.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity .38s ease, transform .5s cubic-bezier(.2, .7, .2, 1), visibility 0s; }
-  .st-ch { display: flex; align-items: center; gap: 8px; font: italic 400 19px/1.1 "Cormorant Garamond", serif; color: #f0c67e; letter-spacing: .01em; }
+  .st-ch { display: flex; flex-direction: row-reverse; align-items: center; gap: 8px; font: italic 400 19px/1.1 "Cormorant Garamond", serif; color: #f0c67e; letter-spacing: .01em; }
   .st-ch::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; box-shadow: 0 0 8px rgb(255 214 150 / .6); }
   .st-card p { margin: 3px 0 8px; font: italic 400 14px/1.3 "EB Garamond", serif; color: #cbbfa9; }
   .st-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
-  .st-card li { position: relative; padding-left: 13px; line-height: 1.25; opacity: 0; transform: translateY(3px); transition: opacity .3s ease, transform .3s ease; }
-  .st-card li::before { content: ""; position: absolute; left: 0; top: .5em; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; opacity: .85; }
+  .st-card li { position: relative; padding-right: 13px; line-height: 1.25; opacity: 0; transform: translateY(3px); transition: opacity .3s ease, transform .3s ease; }
+  .st-card li::before { content: ""; position: absolute; right: 0; top: .5em; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; opacity: .85; }
   .st-card.is-open li { opacity: 1; transform: none; transition-duration: .45s; }
   .st-card.is-open li:nth-child(1) { transition-delay: .08s; } .st-card.is-open li:nth-child(2) { transition-delay: .14s; }
   .st-card.is-open li:nth-child(3) { transition-delay: .2s; } .st-card.is-open li:nth-child(4) { transition-delay: .26s; }
@@ -481,32 +493,46 @@
   @media (max-width: 760px) {
     html[data-ver="f"] .st-host { padding-left: 24px; }
     html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr); }
-    html[data-ver="f"] .st-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 16em; }
+    html[data-ver="f"] .st-host > .split > :first-child { grid-column: 1; text-align: left; }
+    html[data-ver="f"] .st-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 16em; margin-left: 0; }
     /* On a phone: short names on the flags, and every card opens in one slot between the text and the stack. */
     .st-flag { gap: 6px; padding: 4px 9px 5px 7px; font-size: 13.5px; }
     .st-flag::after { display: none; }
     .st-long { display: none; } .st-short { display: inline; }
     .st.has-card .st-flag { --dim: .45; }
     .st.has-card .st-flag.is-on { --dim: 1; border-color: rgb(255 214 150 / .85); background: rgb(40 31 22 / .97); }
-    .st-card { padding: 10px 13px 10px 12px; transform: translateY(6px); }
+    .st-card { padding: 10px 13px 10px 12px; transform: translateY(6px); text-align: left; border-right: 1px solid rgb(255 255 255 / .1); border-left: 1px solid #e0ab5e; }
+    .st-ch { flex-direction: row; }
+    .st-card li { padding-right: 0; padding-left: 13px; } .st-card li::before { right: auto; left: 0; }
     .st-card p { font-size: 13.5px; margin-bottom: 7px; }
     .st-card li b { font-size: 14.5px; } .st-card li span { font-size: 13px; }
   }
 
-  /* Version F, slide 8: a thousand flowers (flowers.js). Text centred at the bottom; above it the core on its
-     foundation, with apps growing up out of it, each with its community. */
-  html[data-ver="f"] .fl-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
-  html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
-  html[data-ver="f"] .fl-host h1 { max-width: 25em; margin: 0 auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
+  /* Version F, slide 8: a thousand flowers, as people reached (flowers.js). It reads left to right: the text top left,
+     Astrid under it with a quiet counter, and to the right a crowd of people where app after app lands. */
+  html[data-ver="f"] .fl-host { justify-content: flex-start; padding-top: max(60px, 8.6vh); padding-left: max(16px, 6.2vw); text-align: left; }
+  html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 36vw); }
+  html[data-ver="f"] .fl-host h1 { max-width: 13.6em; font-size: clamp(1.7rem, 2.55vw, 2.9rem); text-wrap: balance; }
   html[data-ver="f"] .fl-host .body, html[data-ver="f"] .fl-host .vis { display: none; }
   html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
   .fl-host > .num, .fl-host > .split { position: relative; z-index: 1; }
   .fl { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .fl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .fl-ax { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; transition: opacity .6s ease; font: italic 400 1.2rem/1.2 "Cormorant Garamond", serif; color: #ecc57e; }
-  .fl.is-labelled .fl-ax { opacity: 1; }
-  .fl-core { color: #f0c67e; }
-  @media (max-width: 760px) { html[data-ver="f"] .fl-host h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); max-width: 22ch; } }
+  .fl-ax { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 1.2rem/1.2 "Cormorant Garamond", serif; color: #ecc57e;
+    text-shadow: 0 0 3px #0d0a07, 0 0 7px #0d0a07, 0 0 14px #0d0a07; }
+  .fl-core { color: #f0c67e; transition: opacity .6s ease; }
+  .fl.is-labelled .fl-core { opacity: 1; }
+  .fl-count { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: .5em; opacity: 0; transition: opacity .8s ease; white-space: nowrap; }
+  .fl.is-counting .fl-count { opacity: 1; }
+  .fl-n { font: 400 2.7em/1 "Cormorant Garamond", serif; font-variant-numeric: lining-nums tabular-nums; letter-spacing: .01em;
+    background: var(--gild); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 .06em .06em 0; }
+  .fl-u { font-style: italic; font-size: .64em; margin-left: .24em; }
+  .fl-cl { font: 400 .68em/1.2 "DM Sans", system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--soft); opacity: .8; }
+  @media (max-width: 760px) {
+    html[data-ver="f"] .fl-host { padding-top: 64px; padding-right: 16px; }
+    html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 1fr); }
+    html[data-ver="f"] .fl-host h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); max-width: 20ch; }
+  }
   /* Version F, slides 9–11: the community's flywheel (flywheel.js), one picture evolving across three slides on a
      fixed layer under the text. 9 and 10 keep the text centred at the bottom, as on slides 4 and 8; 11 centres it,
      with the wheel opened out round it. */
@@ -891,6 +917,7 @@
     <div class="as" data-astrid-demo role="img" aria-label="Astrid at work: asked in the chat, she generates three anchor images, animates them, and layers community-made effects on top, while the editor's preview and timeline change with each step">
       <div class="as-stage">
         <div class="as-seat"><canvas class="as-mink" aria-hidden="true"></canvas></div>
+        <a class="as-try" href="https://astrid.haus/" target="_blank" rel="noopener">Try Astrid <span aria-hidden="true">→</span></a>
         <section class="as-panel as-chat" aria-hidden="true">
           <header class="as-chat-head"><span class="as-avatar"><img src="../assets/astrid/mink-profile.png" alt=""></span><span>Astrid</span><em class="as-state">working</em></header>
           <div class="as-msgs"></div>
@@ -951,7 +978,7 @@
   </section>
 
   <section class="slide fl-host" data-v="f">
-    <div class="fl" data-astrid-flowers role="img" aria-label="Astrid at the centre, built on its stack, with many apps growing up out of it (an anime studio, a drawing app, music videos and more), each with a community round it"><canvas class="fl-canvas" aria-hidden="true"></canvas></div>
+    <div class="fl" data-astrid-flowers role="img" aria-label="Astrid on the left; one after another, niche apps fire out of it into a growing crowd of people (an anime studio for a niche fandom, storyboards to motion for architects, interactive storytelling, live VJ and DJ sets and more), each lighting up its own community, while an illustrative counter of people who could be reached climbs into the billions"><canvas class="fl-canvas" aria-hidden="true"></canvas></div>
     <div class="num">08<span class="act">A thousand flowers</span></div>
     <div class="split">
       <div>
