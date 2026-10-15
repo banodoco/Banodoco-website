@@ -368,9 +368,45 @@
   /* Arriving from slide 5: exact copies of its panels ride on the top three planes, then dissolve into them. */
   .st-ghost { position: absolute; left: 0; top: 0; display: none; pointer-events: none; backface-visibility: hidden; }
   .st-mink { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: auto; cursor: pointer; opacity: 0; }
-  .st-lab, .st-call { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 22px/1 "Cormorant Garamond", serif; letter-spacing: .01em; }
-  .st-lab { color: #ecc57e; transform: translate(-100%, -55%); }
-  .st-call { color: #e3c08a; transform: translateY(-55%); }
+  /* The layer being explained: a brighter rim and a soft gold glow (stack.js also lifts it a little). */
+  .st-plane { transition: border-color .5s ease, box-shadow .5s ease; }
+  .st-plane.is-lit { border-color: rgb(255 214 150 / .78); border-bottom-color: rgb(255 226 170 / .95);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), inset 0 -1px 0 rgb(255 220 160 / .3), 0 0 0 1px rgb(255 214 150 / .18), 0 0 46px rgb(240 200 119 / .26), 0 50px 60px -36px rgb(0 0 0 / .95); }
+  /* Flags: each layer's name, sticking out to the right on a fine gold leader. A flag unfolds into its card. */
+  .st-flag { all: unset; position: absolute; left: 0; top: 0; z-index: 2; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 13px 7px 10px; border-radius: 999px; transform: translateY(-50%); white-space: nowrap; cursor: pointer; pointer-events: auto;
+    border: 1px solid rgb(240 200 119 / .4); background: rgb(24 20 15 / .9); box-shadow: 0 8px 22px rgb(0 0 0 / .45);
+    font: italic 400 18px/1 "Cormorant Garamond", serif; letter-spacing: .01em; color: #ecc57e;
+    opacity: calc(var(--in, 0) * var(--dim, 1)); transition: opacity .35s ease .22s, border-color .3s ease, background-color .3s ease; }
+  .st-flag i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; box-shadow: 0 0 8px rgb(255 214 150 / .6); }
+  .st-flag::after { content: "+"; margin-left: 1px; font: 300 13px/1 Inter, system-ui, sans-serif; font-style: normal; color: #b8a98f; }
+  .st-flag:hover { border-color: rgb(255 214 150 / .8); background: rgb(36 29 21 / .96); }
+  .st-flag:focus-visible { outline: 1px solid #f0c67e; outline-offset: 3px; }
+  .st-short { display: none; }
+  .st.has-card .st-flag { --dim: .3; transition-delay: 0s; }
+  .st.has-card .st-flag.is-on { --dim: 0; } /* its card takes its place */
+  .st-card { position: absolute; left: 0; top: 0; z-index: 3; box-sizing: border-box; width: 300px; padding: 11px 16px 12px 14px; border-radius: 7px; pointer-events: auto; cursor: default;
+    background: linear-gradient(180deg, rgb(31 26 20 / .97), rgb(21 18 14 / .97)); border: 1px solid rgb(255 255 255 / .1); border-left: 1px solid #e0ab5e;
+    box-shadow: 0 18px 46px rgb(0 0 0 / .62), 0 0 30px rgb(240 200 119 / .07);
+    font: 400 15px/1.3 "EB Garamond", serif; color: var(--ink); text-align: left;
+    opacity: 0; visibility: hidden; transform: translateX(-8px); transition: opacity .3s ease, transform .4s cubic-bezier(.2, .7, .2, 1), visibility 0s linear .4s; }
+  .st-card.is-focus { outline: 1px solid #f0c67e; outline-offset: 3px; }
+  .st-card.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity .38s ease, transform .5s cubic-bezier(.2, .7, .2, 1), visibility 0s; }
+  .st-ch { display: flex; align-items: center; gap: 8px; font: italic 400 19px/1.1 "Cormorant Garamond", serif; color: #f0c67e; letter-spacing: .01em; }
+  .st-ch::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; box-shadow: 0 0 8px rgb(255 214 150 / .6); }
+  .st-card p { margin: 3px 0 8px; font: italic 400 14px/1.3 "EB Garamond", serif; color: #cbbfa9; }
+  .st-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .st-card li { position: relative; padding-left: 13px; line-height: 1.25; opacity: 0; transform: translateY(3px); transition: opacity .3s ease, transform .3s ease; }
+  .st-card li::before { content: ""; position: absolute; left: 0; top: .5em; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; opacity: .85; }
+  .st-card.is-open li { opacity: 1; transform: none; transition-duration: .45s; }
+  .st-card.is-open li:nth-child(1) { transition-delay: .08s; } .st-card.is-open li:nth-child(2) { transition-delay: .14s; }
+  .st-card.is-open li:nth-child(3) { transition-delay: .2s; } .st-card.is-open li:nth-child(4) { transition-delay: .26s; }
+  .st-card li b { font-weight: 400; font-size: 15.5px; color: var(--ink); }
+  .st-card li span { font-style: italic; font-size: 13.5px; color: #a89a84; }
+  .st-card li span::before { content: "— "; color: #6f6556; font-style: normal; }
+  .st-card code { font: 400 12.5px ui-monospace, "SF Mono", Menlo, monospace; color: #e7c27c; }
+  .st-more { margin-top: 8px; font: 400 11.5px/1.4 Inter, system-ui, sans-serif; letter-spacing: .015em; color: #aca395; }
+  .st-card em { display: block; margin-top: 9px; padding-top: 7px; border-top: 1px solid rgb(255 255 255 / .07); font: italic 400 14px/1.2 "Cormorant Garamond", serif; color: #c9a86e; }
   /* The preview, as on slide 5: the light study playing, its title on it, the transport beneath. */
   .st-preview { display: grid; grid-template-rows: minmax(0, 1fr) 36px; gap: 6px; padding: 12px 14px 8px; }
   .st-screen { position: relative; border-radius: 10px; background: #12100d; overflow: hidden; }
@@ -419,10 +455,11 @@
   .st-composer { padding: 0 14px 12px; display: flex; align-items: center; }
   .st-field { flex: 1; display: flex; align-items: center; gap: 10px; height: 44px; border: 1px solid var(--as-line); border-radius: 12px; background: var(--as-field); padding: 0 6px 0 14px; font-size: 15px; color: #8a8174; }
   .st-field b { margin-left: auto; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--as-orange); color: #25241f; opacity: .55; }
-  /* Tools & effects, and the models and runtime beneath them. */
+  /* Effects (the community's packs), and the models and runtime beneath them. */
   .st-tools { display: flex; align-items: center; gap: 16px; padding: 0 18px; }
   .st-tile { flex: none; width: 132px; height: 178px; display: grid; justify-items: center; align-content: center; gap: 16px; border-radius: 14px; border: 1px solid var(--as-line);
-    background: rgb(27 25 21 / .8); font-size: 16px; color: var(--as-ink); }
+    background: rgb(27 25 21 / .8); font-size: 16px; line-height: 1.2; text-align: center; color: var(--as-ink); }
+  .st-beat { position: absolute; bottom: 3px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: #e0ab5e; opacity: .7; }
   .st-tile svg { color: #e7c27c; }
   .st-tag { margin-left: auto; padding: 7px 14px; border-radius: 999px; border: 1px solid rgb(240 200 119 / .45); color: #ecc57e; font-size: 14px; white-space: nowrap; }
   .st-models { display: flex; align-items: center; gap: 0; padding: 0 18px 0 26px; }
@@ -435,7 +472,15 @@
     html[data-ver="f"] .st-host { padding-left: 24px; }
     html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr); }
     html[data-ver="f"] .st-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 16em; }
-    .st-call { display: none; }
+    /* On a phone: short names on the flags, and every card opens in one slot between the text and the stack. */
+    .st-flag { gap: 6px; padding: 4px 9px 5px 7px; font-size: 13.5px; }
+    .st-flag::after { display: none; }
+    .st-long { display: none; } .st-short { display: inline; }
+    .st.has-card .st-flag { --dim: .45; }
+    .st.has-card .st-flag.is-on { --dim: 1; border-color: rgb(255 214 150 / .85); background: rgb(40 31 22 / .97); }
+    .st-card { padding: 10px 13px 10px 12px; transform: translateY(6px); }
+    .st-card p { font-size: 13.5px; margin-bottom: 7px; }
+    .st-card li b { font-size: 14.5px; } .st-card li span { font-size: 13px; }
   }
 
   /* Version F, slide 8: a thousand flowers (flowers.js). Text centred at the bottom; above it the core on its
@@ -824,7 +869,7 @@
   </section>
 
   <section class="slide st-host" data-v="f">
-    <div class="st" data-astrid-stack role="img" aria-label="One stack, from the top: the preview, the timeline's effects and video tracks, the agent, community-made tools and effects, and the models and runtime at the foundation, rooted in the community"></div>
+    <div class="st" data-astrid-stack role="group" aria-label="One stack, from the top: rendering, the timeline, effects, the agent's tools, and the models and runtime at the foundation, rooted in the community. Each layer's flag opens examples of what can be customised there."></div>
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
