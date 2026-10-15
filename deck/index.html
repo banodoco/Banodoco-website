@@ -347,7 +347,10 @@
   html[data-ver="f"] .st-host h1 { font-size: clamp(1.9rem, 3.1vw, 3.3rem); max-width: 8.25em; }
   .st-host .body, .st-host .vis { display: none; }
   .st-host > .num, .st-host > .split { position: relative; z-index: 1; }
-  .st-host > .split { pointer-events: none; } .st-host > .split > * { pointer-events: auto; } /* the text's row runs across the stack */
+  /* The text's row runs across the stack, so it takes no clicks (the slide behind it still turns the deck); and while
+     on, the slide sits above its later siblings, so nothing of theirs (unseen) can take the stack's clicks. */
+  .st-host > .split { pointer-events: none; }
+  .slide.st-host.on { z-index: 1; }
   .slide.st-arrive { transition: none; }
   .st { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; user-select: none; -webkit-user-select: none;
     --as-card: #2c2822; --as-line: #4a4337; --as-field: rgb(27 25 21 / .9); --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
@@ -357,7 +360,11 @@
     background: linear-gradient(180deg, rgb(41 37 31 / .93), rgb(30 27 23 / .93)); backface-visibility: hidden;
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -1px 0 rgb(255 220 160 / .18), 0 0 34px rgb(240 200 119 / .1), 0 50px 60px -36px rgb(0 0 0 / .95); }
   .st-threads { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .st-mink { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: auto; opacity: 0; }
+  /* Each plane's content at its settled size, scaled as one unit to fit the plane as it moves (never reflowed). */
+  .st-in { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  /* Arriving from slide 5: exact copies of its panels ride on the top three planes, then dissolve into them. */
+  .st-ghost { position: absolute; left: 0; top: 0; display: none; pointer-events: none; backface-visibility: hidden; }
+  .st-mink { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: auto; cursor: pointer; opacity: 0; }
   .st-lab, .st-call { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 22px/1 "Cormorant Garamond", serif; letter-spacing: .01em; }
   .st-lab { color: #ecc57e; transform: translate(-100%, -55%); }
   .st-call { color: #e3c08a; transform: translateY(-55%); }
