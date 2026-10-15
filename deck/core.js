@@ -319,10 +319,10 @@
     feed = line(bez({ x: nx, y: ny - 3 }, { x: nx + 9 * k, y: ny + up * 0.35 }, { x: bot0.x - 8 * k, y: bot0.y - up * 0.6 }, { x: bot0.x, y: bot0.y }, 32));
 
     // Labels.
-    const ls = small ? Math.max(11, 21 * k) : clamp(W * 0.0132, 13, 26);
+    const ls = small ? Math.max(11, 21 * k) : clamp(W * 0.014, 13, 26);
     put(labels.agent, X(692), Y(143), ls);
     put(labels.face, X(980), Y(143), ls);
-    put(labels.com, X(836), orbAt(270 * DEG).y, ls * 0.95);
+    put(labels.com, X(836), orbAt(270 * DEG).y, ls);
     root.style.setProperty('--ac-lw', lw);
     LW = lw;
     return true;
