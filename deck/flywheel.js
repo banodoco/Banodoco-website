@@ -391,8 +391,8 @@
         for (const side of [-1, 1]) { const h = line(lensPts(lens, side, 36, inset)), mid = h.total / 2, half = mid * ql; stroke(h, mid - half, mid + half, w * LW, THREAD, a); }
       });
       node(lens[0], lens[1] - lens[3] / 2, 1, ql); node(lens[0], lens[1] + lens[3] / 2, 1, ql);
-      if (spokes > 0 && qr > 0.5) {
-        const sa = 0.2 * spokes * clamp((qr - 0.5) * 2);
+      if (spokes > 0 && qr > 0.9) { // once the ring has closed
+        const sa = 0.2 * spokes * clamp((qr - 0.9) * 10);
         for (const side of [-1, 1]) {
           const lp = [lens[0] + side * lens[2] / 2, lens[1]];
           const ths = side < 0 ? [entryTh(1), entryTh(3), entryTh(5)] : [exitTh(0), exitTh(1), exitTh(2)];
@@ -548,6 +548,7 @@
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(clearTimeout); timers = [];
+    if (waiting) { waiting.disconnect(); waiting = null; }
     stop();
     begun = false; armed = false; morph = null; motes = []; ta = 0; boost = 0; attach = { dir: 0, t0: 0 }; lastM = -1; pulsed = [false, false, false];
     flashes = { art: [0, 0, 0, 0, 0, 0, 0], grp: [0, 0, 0], ring: 0 };
@@ -557,7 +558,7 @@
   };
   // Draw the picture in, from nothing: lens and ring, artists, everyone else, then the motes (and, on 10 or 11, the initiatives).
   const begin = () => {
-    if (!layout()) return;
+    if (stageOf() < 0 || !layout()) return;
     begun = true;
     m = Math.max(0, stageOf());
     lastM = -1;
@@ -572,11 +573,11 @@
     if (m >= 1) attach = { dir: 1, t0: T.chips };
     start();
   };
+  let waiting = null;
   const whenOpen = (fn) => { // on a first load, wait for the Mycelial mark to land
     if (!html.classList.contains('dt-intro')) { fn(); return; }
-    const mo = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { mo.disconnect(); fn(); } });
-    mo.observe(html, { attributes: true, attributeFilter: ['class'] });
-    timers.push(setTimeout(() => { mo.disconnect(); }, 8000));
+    waiting = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waiting.disconnect(); waiting = null; fn(); } });
+    waiting.observe(html, { attributes: true, attributeFilter: ['class'] });
   };
   const arm = () => {
     const on = hosts[stageOf()];
@@ -638,5 +639,6 @@
     if (inPicture(e.clientX, e.clientY)) e.stopPropagation();
   }));
 
-  if (stageOf() >= 0) follow();
+  // Loaded straight onto one of these slides: the network is already at the node (or the mark is about to land there).
+  if (stageOf() >= 0) { follow(); if (armed) { armed = false; whenOpen(begin); } }
 })();
