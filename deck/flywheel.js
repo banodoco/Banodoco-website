@@ -102,14 +102,14 @@
     ring: [[835, 360, 237, 237], [835, 360, 237, 237], [835, 455, 545, 292]], // cx, cy, rx, ry
     lens: [[835, 367, 112, 176], [835, 367, 112, 176], [835, 163, 80, 128]], // cx, cy, w, h
     artR: [39, 39, 33],
-    artists: [ // brush, camera, pencil, film, palette, picture, music
-      [[222, 224], [329, 268], [182, 322], [306, 377], [184, 428], [328, 488], [226, 528]],
-      [[222, 224], [329, 268], [182, 322], [306, 377], [184, 428], [328, 488], [226, 528]],
-      [[112, 262], [80, 336], [70, 412], [80, 488], [98, 564], [134, 636], [178, 706]],
+    artists: [ // brush, camera, pencil, film, palette, picture, music: two staggered columns, clear of each other
+      [[205, 180], [335, 240], [205, 300], [335, 360], [205, 420], [335, 480], [205, 540]],
+      [[205, 180], [335, 240], [205, 300], [335, 360], [205, 420], [335, 480], [205, 540]],
+      [[78, 250], [178, 315], [78, 380], [178, 445], [78, 510], [178, 575], [78, 640]],
     ],
     grpR: [40, 40, 36],
     groups: [[[1316, 182], [1348, 366], [1316, 550]], [[1316, 182], [1348, 366], [1316, 550]], [[1452, 262], [1484, 455], [1452, 648]]],
-    artistsLabel: [[280, 150], [280, 150], [104, 200]],
+    artistsLabel: [[270, 122], [270, 122], [128, 194]],
     inspire: [[835, 74], [835, 74], [600, 140]],
     equip: [[835, 640], [835, 640], [835, 786]],
     // Initiatives: the thumbnail's centre, and where its thread meets the ring (degrees, clockwise from 3 o'clock).
@@ -120,31 +120,31 @@
     ],
     thumb: [76, 52],
     // What each slide's picture spans (reference units), to fit it on screen: x0, x1, y0, y1.
-    span: [[140, 1625, 52, 652], [140, 1625, 40, 694], [36, 1630, 40, 800]],
+    span: [[150, 1625, 52, 652], [150, 1625, 40, 694], [36, 1630, 40, 800]],
   };
   // On a phone the same picture stands upright: artists along the top, everyone else along the bottom,
   // so inspire runs down the right of the ring and equip back up its left.
   const TALL = {
-    ring: [[200, 330, 118, 118], [200, 330, 118, 118], [200, 420, 168, 300]],
-    lens: [[200, 334, 60, 94], [200, 334, 60, 94], [200, 120, 44, 70]],
-    artR: [19, 19, 17],
-    artists: [
-      [[62, 92], [112, 70], [162, 92], [212, 70], [262, 92], [312, 70], [362, 92]].map(([x, y]) => [x - 12, y + 10]),
-      [[62, 92], [112, 70], [162, 92], [212, 70], [262, 92], [312, 70], [362, 92]].map(([x, y]) => [x - 12, y + 10]),
-      [[30, 176], [22, 246], [30, 316], [22, 386], [30, 456], [22, 526], [30, 596]],
+    ring: [[200, 330, 118, 118], [200, 330, 118, 118], [200, 430, 132, 300]],
+    lens: [[200, 334, 60, 94], [200, 334, 60, 94], [200, 132, 40, 64]],
+    artR: [19, 19, 15],
+    artists: [ // two staggered rows along the top, the first on the right (where its thread meets the ring)
+      [[350, 82], [300, 132], [250, 82], [200, 132], [150, 82], [100, 132], [50, 82]],
+      [[350, 82], [300, 132], [250, 82], [200, 132], [150, 82], [100, 132], [50, 82]],
+      [[30, 274], [30, 326], [30, 378], [30, 430], [30, 482], [30, 534], [30, 586]],
     ],
-    grpR: [20, 20, 17],
-    groups: [[[92, 560], [200, 584], [308, 560]], [[92, 560], [200, 584], [308, 560]], [[370, 250], [378, 420], [370, 590]]],
-    artistsLabel: [[200, 36], [200, 36], [26, 140]],
-    inspire: [[346, 262], [346, 262], [200, 744]],
-    equip: [[54, 262], [54, 262], [200, 760]],
+    grpR: [22, 22, 15],
+    groups: [[[312, 548], [200, 572], [88, 548]], [[312, 548], [200, 572], [88, 548]], [[370, 340], [370, 430], [370, 520]]],
+    artistsLabel: [[200, 38], [200, 38], [30, 238]],
+    inspire: [[350, 330], [350, 330], [70, 168]],
+    equip: [[52, 330], [52, 330], [70, 694]],
     chips: [
-      { at: [[52, 190], [52, 190], [60, 690]], th: [200, 200, 140], side: 'r' },
-      { at: [[346, 190], [346, 190], [336, 690]], th: [340, 340, 40], side: 'l' },
-      { at: [[200, 470], [200, 470], [200, 690]], th: [90, 90, 90], side: 't' },
+      { at: [[290, 192], [290, 192], [66, 96]], th: [310, 310, 228], side: ['l', 'l', 'b'] },
+      { at: [[330, 468], [330, 468], [316, 96]], th: [40, 40, 312], side: ['l', 'l', 'b'] },
+      { at: [[30, 470], [30, 470], [176, 772]], th: [140, 140, 90], side: 't' },
     ],
     thumb: [34, 24],
-    span: [[8, 392, 20, 640], [8, 392, 20, 640], [0, 400, 30, 780]],
+    span: [[8, 392, 20, 640], [8, 392, 20, 640], [0, 400, 60, 800]],
   };
   // Where the artists' threads meet the ring, and the others' (degrees); a phone turns them a quarter.
   const ENTRY = [189, 186, 183, 180, 177, 174, 171], EXIT = [-14, 0, 14];
@@ -172,7 +172,15 @@
       kk = Math.min(kh, kv);
       ox = W / 2; oy = cy;
     }
+    // Labels and chip captions are type, not picture: keep their measured widths inside the right margin.
+    for (const [rx_, px] of rightOf(s)) if (rx_ > cxRef) kk = Math.min(kk, (W - mx - px - ox) / (rx_ - cxRef));
     return { k: kk, X: (rx) => ox + (rx - cxRef) * kk, Y: (ry) => oy + (ry - cyRef) * kk };
+  };
+  const rightOf = (s) => {
+    const out = [];
+    if (!tall) R.groups[s].forEach(([x], j) => out.push([x + R.grpR[s] + 16, labels[`g${j}`].offsetWidth + 6]));
+    if (s >= 1) R.chips.forEach((c, i) => out.push([c.at[s][0] + R.thumb[0] / 2, chips[i].lastChild.offsetWidth + 14]));
+    return out;
   };
   const build = (s, f) => {
     const { k: kk, X, Y } = f, P = ([x, y]) => [X(x), Y(y)];
@@ -216,12 +224,14 @@
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     tall = W <= 760 && H > W;
     R = tall ? TALL : WIDE;
+    // Type first (it sets the labels' widths), from the room there is; then the picture round it.
+    const kBase = tall ? Math.min((W - 24) / 400, (H * 0.6) / 640) : Math.min((W / 2 - 64) / 795, (H * 0.64) / 600);
+    root.style.fontSize = `${clamp(22 * (tall ? kBase * 0.55 : kBase), tall ? 10.5 : 12.5, 22).toFixed(1)}px`;
     // Fit 9 and 10 at one scale, so the wheel holds its size between them; 11 fits its own.
     const f0 = fit(0), f1 = fit(1), f2 = fit(2);
     const k01 = Math.min(f0.k, f1.k);
     const rescale = (f, s) => { const cxRef = R.ring[s][0], cyRef = (R.span[s][2] + R.span[s][3]) / 2, ox = f.X(cxRef), oy = f.Y(cyRef); return { k: k01, X: (x) => ox + (x - cxRef) * k01, Y: (y) => oy + (y - cyRef) * k01 }; };
     stages = [build(0, rescale(f0, 0)), build(1, rescale(f1, 1)), build(2, f2)];
-    root.style.fontSize = `${Math.max(tall ? 10.5 : 12.5, 22 * (tall ? stages[0].k * 1.9 : stages[0].k)).toFixed(1)}px`;
     return true;
   };
 
@@ -235,7 +245,7 @@
   const stageOf = () => hosts.findIndex((s) => s.classList.contains('on'));
   const chipQ = (i) => {
     if (attach.dir > 0) return clamp((ta - attach.t0 - i * 0.4) / 1.0);
-    if (attach.dir < 0) return 1 - clamp((ta - attach.t0) / 0.5);
+    if (attach.dir < 0) return attach.from[i] * (1 - clamp((ta - attach.t0) / 0.5));
     return 0;
   };
   const chipsIn = () => attach.dir > 0 && ta - attach.t0 > 2 * 0.4 + 1.0;
@@ -246,29 +256,30 @@
     const n = Math.max(8, Math.ceil(Math.abs(th1 - th0) / 0.05));
     return Array.from({ length: n + 1 }, (_, i) => { const u = i / n, th = lerp(th0, th1, u), o = off * smooth(clamp(u / 0.12)) * smooth(clamp((1 - u) / 0.12)); return ell(th, o); });
   };
-  const turn = () => (tall ? 90 : 0) * RAD; // a phone turns the wheel a quarter: artists on top
+  const upright = () => (tall ? 1 - smooth(clamp(m - 1)) : 0); // a phone stands the wheel up on 9 and 10: artists on top
+  const turn = () => upright() * 90 * RAD;
+  const lane = () => (tall ? 9 : 15) * k; // the inner strand: equip's lane
   const entryTh = (i) => ENTRY[i] * RAD + turn();
   const exitTh = (j) => EXIT[j] * RAD + turn();
+  // Threads leave sideways on a wide screen and downwards on an upright phone; between, they blend.
+  const edge = (x, y, r, sx, sy) => { const f = upright(), dx = (1 - f) * sx, dy = f * sy, n = Math.hypot(dx, dy) || 1; return { x: x + (r * dx) / n, y: y + (r * dy) / n }; };
+  const flow = (p0, p1) => { const f = upright(), dx = (p1.x - p0.x) * 0.45 * (1 - f), dy = (p1.y - p0.y) * 0.45 * f; return line(bez(p0, { x: p0.x + dx, y: p0.y + dy }, { x: p1.x - dx, y: p1.y - dy }, p1)); };
   const artThread = (i) => { // from the artist to its point on the ring
-    const [x, y] = cur.artists[i], r = cur.artR, [ex, ey] = ell(entryTh(i));
-    if (tall && m < 1.5) { const p0 = { x, y: y + r }, p1 = { x: ex, y: ey }, dy = p1.y - p0.y; return line(bez(p0, { x: p0.x, y: p0.y + dy * 0.45 }, { x: p1.x, y: p1.y - dy * 0.45 }, p1)); }
-    const p0 = { x: x + r, y }, p1 = { x: ex, y: ey }, dx = p1.x - p0.x;
-    return line(bez(p0, { x: p0.x + dx * 0.45, y: p0.y }, { x: p1.x - dx * 0.45, y: p1.y }, p1));
+    const [x, y] = cur.artists[i], [ex, ey] = ell(entryTh(i));
+    return flow(edge(x, y, cur.artR, 1, 1), { x: ex, y: ey });
   };
   const grpThread = (j) => { // from the ring out to the group
-    const [x, y] = cur.groups[j], r = cur.grpR, [ex, ey] = ell(exitTh(j));
-    if (tall && m < 1.5) { const p1 = { x, y: y - r }, p0 = { x: ex, y: ey }, dy = p1.y - p0.y; return line(bez(p0, { x: p0.x, y: p0.y + dy * 0.45 }, { x: p1.x, y: p1.y - dy * 0.45 }, p1)); }
-    const p1 = { x: x - r, y }, p0 = { x: ex, y: ey }, dx = p1.x - p0.x;
-    return line(bez(p0, { x: p0.x + dx * 0.45, y: p0.y }, { x: p1.x - dx * 0.45, y: p1.y }, p1));
+    const [x, y] = cur.groups[j], [ex, ey] = ell(exitTh(j));
+    return flow({ x: ex, y: ey }, edge(x, y, cur.grpR, -1, -1));
   };
-  const linkThread = (j) => { // from one group down (or along) to the next
+  const linkThread = (j) => { // from one group on to the next, clockwise
     const [x0, y0] = cur.groups[j], [x1, y1] = cur.groups[j + 1], r = cur.grpR;
-    if (tall && m < 1.5) { const p0 = { x: x0 + r, y: y0 }, p1 = { x: x1 - r, y: y1 }, dx = p1.x - p0.x; return line(bez(p0, { x: p0.x + dx * 0.4, y: p0.y + 18 * k }, { x: p1.x - dx * 0.4, y: p1.y + 18 * k }, p1)); }
+    if (upright() > 0.5) { const sx = Math.sign(x1 - x0) || 1, q0 = { x: x0 + sx * r, y: y0 }, q1 = { x: x1 - sx * r, y: y1 }, dx = q1.x - q0.x; return line(bez(q0, { x: q0.x + dx * 0.4, y: q0.y + 18 * k }, { x: q1.x - dx * 0.4, y: q1.y + 18 * k }, q1)); }
     const p0 = { x: x0, y: y0 + r }, p1 = { x: x1, y: y1 - r }, dy = p1.y - p0.y;
     return line(bez(p0, { x: p0.x + 26 * k, y: p0.y + dy * 0.4 }, { x: p1.x + 26 * k, y: p1.y - dy * 0.4 }, p1));
   };
   const chipThread = (i) => {
-    const [x, y, thDeg] = cur.chips[i], [tw, th] = cur.thumb, side = R.chips[i].side;
+    const [x, y, thDeg] = cur.chips[i], [tw, th] = cur.thumb, sd = R.chips[i].side, side = Array.isArray(sd) ? sd[m > 1.5 ? 2 : 0] : sd;
     const th_ = thDeg * RAD, [ax, ay] = ell(th_);
     const end = side === 'b' ? { x, y: y + th / 2 } : side === 'l' ? { x: x - tw / 2, y } : side === 'r' ? { x: x + tw / 2, y } : { x, y: y - th / 2 };
     const out = { x: Math.cos(th_), y: Math.sin(th_) }, reach = Math.hypot(end.x - ax, end.y - ay) * 0.45;
@@ -285,7 +296,7 @@
     }
     if (mo.kind === 'eq') { // a group, round the bottom on the inner lane, back to an artist
       const a = exitTh(mo.b), b = entryTh(mo.a);
-      return join(rev(grpThread(mo.b)), line(arc(a, b < a ? b + TAU : b, -15 * k)), rev(artThread(mo.a)));
+      return join(rev(grpThread(mo.b)), line(arc(a, b < a ? b + TAU : b, -lane())), rev(artThread(mo.a)));
     }
     if (mo.kind === 'hop') return linkThread(mo.b);
     return rev(chipThread(mo.c)); // an initiative's pulse, from its chip into the ring
@@ -355,7 +366,7 @@
     const qr = ease(k01(T.ring, 1.1));
     if (qr > 0) {
       const a0 = Math.PI + turn();
-      [[0, 1.1, 0.62], [-15 * k, 0.7, 0.34]].forEach(([off, w, al]) => {
+      [[0, 1.1, 0.62], [-lane(), 0.7, 0.34]].forEach(([off, w, al]) => {
         for (const dir of [1, -1]) {
           const h = line(arc(a0, a0 + dir * Math.PI * qr, 0).map(([x, y]) => [cx + (x - cx) * (rx + off) / rx, cy + (y - cy) * (ry + off) / ry]));
           stroke(h, 0, h.total, w * LW, THREAD, al * (0.85 + 0.25 * boost + 0.4 * flashes.ring));
@@ -366,7 +377,7 @@
       for (let i = 0; i < nb; i++) {
         const th = (i / nb) * TAU + spin, rel = (((th - a0) % TAU) + TAU) % TAU, reach = Math.min(rel, TAU - rel) / Math.PI;
         if (reach > qr) continue;
-        const [x, y] = ell(th, -15 * k);
+        const [x, y] = ell(th, -lane());
         dot(x, y, 0.9 * Math.max(0.7, k), NODE, (i % 6 === 0 ? 0.7 : 0.32) * bright);
       }
     }
@@ -457,15 +468,14 @@
     put(labels.astrid, lens[0] + 3 * k, lens[1] - lens[3] / 2 - 22 * k, 0.5, 0.5);
     put(labels.artists, cur.artistsLabel[0], cur.artistsLabel[1], 0.5, 0.5);
     cur.groups.forEach(([x, y], j) => {
-      if (tall && m < 1.5) put(labels[`g${j}`], x, y + cur.grpR + 6 * k, 0.5, 0);
+      if (tall) put(labels[`g${j}`], x, y + cur.grpR + 5, 0.5, 0);
       else put(labels[`g${j}`], x + cur.grpR + 16 * k, y, 0, 0.5);
     });
     put(labels.inspire, cur.inspire[0], cur.inspire[1], 0.5, 0.5);
     put(labels.equip, cur.equip[0], cur.equip[1], 0.5, 0.5);
-    for (const key in labels) setOp(labels[key], (key === 'astrid' ? smooth(k01(T.lens + 0.6, 0.5)) : ql));
-    labels.g1.classList.toggle('fw-c', tall && m < 1.5);
-    labels.g0.classList.toggle('fw-c', tall && m < 1.5);
-    labels.g2.classList.toggle('fw-c', tall && m < 1.5);
+    const phoneOpen = tall ? 1 - clamp((m - 1) * 2) : 1; // on a phone the groups' names give way as the ring opens round the words
+    for (const key in labels) setOp(labels[key], key === 'astrid' ? smooth(k01(T.lens + 0.6, 0.5)) : key[0] === 'g' ? ql * phoneOpen : ql);
+    for (const key of ['g0', 'g1', 'g2']) labels[key].classList.toggle('fw-c', tall);
     const [tw, th] = cur.thumb;
     cur.chips.forEach(([x, y], i) => {
       const el = chips[i], thumb = el.firstChild;
@@ -569,10 +579,14 @@
     timers.push(setTimeout(() => { mo.disconnect(); }, 8000));
   };
   const arm = () => {
+    const on = hosts[stageOf()];
+    if (on && arrived.s === on && performance.now() - arrived.t < 80) { whenOpen(begin); return; } // already there (a settle, or reduced motion)
     armed = true;
     timers.push(setTimeout(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
   };
+  let arrived = { s: null, t: -1e9 };
   hosts.forEach((s) => s.addEventListener('dt-arrive', () => {
+    arrived = { s, t: performance.now() };
     if (!s.classList.contains('on')) return;
     if (armed) { armed = false; whenOpen(begin); }
   }));
@@ -602,7 +616,7 @@
     if (still) { m = now; attach = now >= 1 ? { dir: 1, t0: ta - 9 } : { dir: 0, t0: 0 }; boost = now >= 1 ? 1 : 0; lastM = -1; frame(); return; }
     morph = { from: m, to: now, t0: ta, dur: 1.15 + 0.45 * Math.abs(now - m) };
     if (now >= 1 && attach.dir <= 0) attach = { dir: 1, t0: Math.max(ta + 0.9, T.chips) };
-    if (now === 0 && attach.dir > 0) { attach = { dir: -1, t0: ta }; pulsed = [false, false, false]; }
+    if (now === 0 && attach.dir > 0) { attach = { dir: -1, t0: ta, from: chips.map((_, i) => chipQ(i)) }; pulsed = [false, false, false]; }
     start();
   };
   hosts.forEach((s) => new MutationObserver(follow).observe(s, { attributes: true, attributeFilter: ['class'] }));
