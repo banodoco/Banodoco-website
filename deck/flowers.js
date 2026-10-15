@@ -95,8 +95,9 @@
 
   const put = (el, x, y, ax, ay, size) => {
     if (size) el.style.fontSize = `${size.toFixed(1)}px`;
-    const w = el.offsetWidth, h = el.offsetHeight;
-    el.style.transform = `translate(${(x - w * ax).toFixed(1)}px, ${(y - h * ay).toFixed(1)}px)`;
+    const w = el.offsetWidth, h = el.offsetHeight, l = x - w * ax, t = y - h * ay;
+    el.style.transform = `translate(${l.toFixed(1)}px, ${t.toFixed(1)}px)`;
+    return { l, t, r: l + w, b: t + h };
   };
   const layout = () => {
     const b = root.getBoundingClientRect();
@@ -139,12 +140,23 @@
       return { ...p, r: (0.8 + rnd() * 1.1) * Math.max(0.8, k), a: 0.25 + rnd() * 0.35, t0: 1.5 + rnd() * 0.9, th };
     }).filter((h) => apps.every((a) => Math.hypot(a.x - h.x, a.y - h.y) > 70 * k) && h.y > Y(95));
     // Labels.
-    const ls = Math.max(small ? 10 : 12.5, 20 * k);
+    const ls = Math.max(small ? 10 : 12.5, 20 * k), boxes = [];
     apps.forEach((a, i) => {
       labelEls[i].style.display = small && i % 2 ? 'none' : ''; // on a phone, every other name, so they don't collide
       const above = a.y < core.y - 330 * k; // the topmost ones carry their name above
-      put(labelEls[i], a.x, above ? a.y - a.r - 10 * k : a.y + a.r + 12 * k, 0.5, above ? 1 : 0, ls);
+      boxes[i] = put(labelEls[i], a.x, above ? a.y - a.r - 10 * k : a.y + a.r + 12 * k, 0.5, above ? 1 : 0, ls);
+      if (labelEls[i].style.display === 'none') boxes[i] = null;
     });
+    // Keep every community clear of every name: anyone over text moves round to its glyph's other sides.
+    const pad = 9 * k, over = (x, y) => boxes.some((bx) => bx && x > bx.l - pad && x < bx.r + pad && y > bx.t - pad && y < bx.b + pad);
+    apps.forEach((a) => a.people.forEach((p) => {
+      for (let tries = 0; tries < 30 && over(p.hx, p.hy); tries++) {
+        const a2 = a.th + (rnd() - 0.5) * 3.2, d = (40 + rnd() * 44) * k;
+        p.hx = a.x + Math.cos(a2) * d; p.hy = a.y + Math.sin(a2) * d * 0.8;
+      }
+      p.hidden = over(p.hx, p.hy);
+    }));
+    haze = haze.filter((h) => !over(h.x, h.y));
     put(coreLabel, core.x + core.w * 0.75, core.y - core.h * 0.18, 0, 0.5, Math.max(small ? 11 : 13, 22 * k));
     return true;
   };
@@ -266,6 +278,7 @@
       // Its community, gathered round it.
       const qp = smooth(k01(t0 + 0.9, 0.7));
       a.people.forEach((p, j) => {
+        if (p.hidden) return;
         const x = p.hx + Math.sin(ta * p.f + p.ph) * p.w, y = p.hy + Math.cos(ta * p.f * 0.8 + p.ph) * p.w * 0.6;
         let px = x, py = y, al = (p.bright ? 1 : 0.72) * qp;
         if (from && p.src) { // the hosted field's people drift up to gather here
