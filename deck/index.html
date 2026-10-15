@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mycelial Deck</title>
+<script>
+  // Version F opens with the Mycelial mark: hide the slide before first paint (dot-transitions.js takes over).
+  try {
+    const v = new URLSearchParams(location.search).get('v') || localStorage.getItem('deck-ver');
+    if (v === 'f' && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('dt-intro');
+  } catch (e) {}
+</script>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=EB+Garamond:ital,wght@0,400;1,400&display=swap">
@@ -25,6 +32,11 @@
   html[data-ver="b"] { --version-ink: #edb3a7; --version-bg: #3b2423; }
   html[data-ver="c"] { --version-ink: #c7b9ed; --version-bg: #2c2540; }
   html[data-ver="d"] { --version-ink: #a8d9cf; --version-bg: #19352f; }
+  html[data-ver="e"] { --version-ink: #d3e2a4; --version-bg: #2a3219; }
+  html[data-ver="f"] { --version-ink: #f3c9a2; --version-bg: #3a2718; }
+  /* Version E marks what it borrowed from D, for review. */
+  .e-note { margin: 1.2rem 0 0; max-width: 58ch; font: 500 12px/1.45 system-ui, sans-serif; letter-spacing: .03em; color: var(--version-ink); opacity: .8; }
+  .e-note::before { content: "Blend · "; }
   .version-badge {
     position: fixed; top: max(16px, env(safe-area-inset-top)); left: max(16px, 2.4vw);
     z-index: 30; padding: 8px 13px; border-radius: 7px;
@@ -54,6 +66,160 @@
   .body { margin-top: 2.4rem; max-width: 58ch; font-size: clamp(1.05rem, 1.35vw, 1.3rem); line-height: 1.55; color: var(--soft); }
   .body ul { margin: 0.6rem 0 0; padding-left: 1.1em; }
   .body li { margin: 0.25rem 0; }
+  .body > p { margin: 0 0 0.6rem; }
+
+  /* Version E, slide 1: prize recipients as a collage of films in their own shapes (collage.js).
+     Leaving the slide, the collage recedes toward where slide 2's field opens. */
+  .vc { position: relative; width: min(100%, 62vh); aspect-ratio: 1; margin: 0 auto;
+    transition: transform .9s cubic-bezier(.6, 0, .3, 1), opacity .8s ease; }
+  .slide:not(.on) .vc { transform: scale(.32); opacity: 0; }
+  .vc-tile { all: unset; position: absolute; overflow: hidden; border-radius: 4px; cursor: zoom-in; background: #15110d;
+    box-shadow: 0 10px 30px #0008; transition: transform .4s ease, box-shadow .4s ease; }
+  .vc-tile video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .88; transition: opacity .4s ease; }
+  .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
+  .vc-tile:hover video { opacity: 1; }
+  .vc-tile:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  .vc-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.4rem 0.6rem 0.45rem; background: linear-gradient(transparent, #0d0a07cc);
+    font: italic 400 0.85rem "Cormorant Garamond", serif; color: var(--ink); opacity: 0; transition: opacity .3s ease; }
+  .vc-tile:hover .vc-cap, .vc-tile:focus-visible .vc-cap { opacity: 1; }
+  .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; }
+  .vc-label b { font-weight: 400; color: var(--gold); }
+  .vc-box { position: fixed; inset: 0; z-index: 100; background: #0d0a07f2; opacity: 0; pointer-events: none; transition: opacity .45s ease; cursor: zoom-out; }
+  .vc-box.is-on { opacity: 1; pointer-events: auto; }
+  .vc-frame { position: absolute; margin: 0; overflow: hidden; border-radius: 6px; background: #000; box-shadow: 0 30px 90px #000;
+    transform-origin: 0 0; transition: transform .55s cubic-bezier(.3, 0, .2, 1); }
+  .vc-frame video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .vc-meta { position: absolute; left: 0; right: 0; bottom: 4vh; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; }
+  .vc-kicker { font: italic 400 0.95rem "Cormorant Garamond", serif; color: var(--gold); letter-spacing: .04em; }
+  .vc-title { font: 400 1.35rem "Cormorant Garamond", serif; color: var(--ink); }
+  .vc-note { font: italic 400 0.85rem "EB Garamond", serif; color: #b8a98f99; }
+  .vc-close { all: unset; position: absolute; top: 18px; right: 22px; font: 300 2rem/1 system-ui, sans-serif; color: var(--soft); cursor: pointer; }
+  .vc-close:hover, .vc-close:focus-visible { color: var(--ink); }
+  /* Slide 1 → 2: both slides hold still and simply cross while the films come apart into the field. */
+  .slide.vc-dissolve, .slide.sf-arrive { transform: none; transition: opacity .6s ease; }
+  .slide.vc-dissolve .vc { transform: none; opacity: 1; transition: none; }
+  .slide.sf-arrive .sf { transition: none; }
+
+  /* Version F (dot-transitions.js): a dot above the text draws it in and out between slides. */
+  @font-face { font-family: "DM Sans"; font-weight: 400; font-display: swap; src: url(../assets/fonts/mycelial/dm-sans-regular.ttf) format("truetype"); }
+  @font-face { font-family: "DM Sans"; font-weight: 500 600; font-display: swap; src: url(../assets/fonts/mycelial/dm-sans-medium.ttf) format("truetype"); }
+  .dt-name { position: fixed; left: 0; top: 0; z-index: 2; transform-origin: 0 50%; pointer-events: none; white-space: nowrap;
+    font: 400 22px/1 "DM Sans", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #f7ebd7;
+    opacity: 0; transition: opacity .7s ease; }
+  html[data-ver="f"] .dt-name.is-on { opacity: .92; }
+  html[data-ver="f"] .dt-name.is-on.is-resting { opacity: .5; }
+  /* The opening: nothing of the slide shows until the mark lands; then the text is revealed and the rest fades in. */
+  html.dt-intro .slide.on > :not(.split), html.dt-intro .slide.on > .split > * { opacity: 0; }
+  html.dt-unveil .slide.on > :not(.split), html.dt-unveil .slide.on > .split > :not(:first-child) { transition: opacity 1.1s ease; }
+  html[data-ver="f"] .slide { transform: none; }
+  /* The network lies underneath everything, like ground the slides sit on. */
+  .dt-net { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  html[data-ver="f"] body { background: transparent; }
+  .dt-dot { position: fixed; left: 0; top: 0; z-index: 2; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  html[data-ver="f"] .dt-net.is-on, html[data-ver="f"] .dt-dot.is-on { opacity: 1; }
+  .dt-dot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff1cf, #f0c877 55%, #c98f3e); box-shadow: 0 0 10px #ffd99177; transition: opacity .25s ease; }
+  .dt-dot.is-moving i { opacity: 0; }
+  .slide.dt-leaving:not(.dt-release) { opacity: 1; transition: none; }
+  .slide.dt-leaving > :not(.num):not(.split), .slide.dt-leaving > .split > :not(:first-child) { opacity: 0; transition: opacity .45s ease; }
+  .slide.dt-entering > .split > :first-child { opacity: 0; }
+  /* In F the label moves into the text column, directly above the headline. */
+  html[data-ver="f"] .split > :first-child > .num { margin-bottom: 1.1rem; }
+  /* F's slide 2: text wide and centred on top, the field full width beneath. */
+  html[data-ver="f"] .sf-host { justify-content: flex-start; padding-top: max(72px, 12vh); text-align: center; }
+  html[data-ver="f"] .sf-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  html[data-ver="f"] .sf-host h1 { max-width: 26ch; margin: 0 auto; font-size: clamp(2rem, 3.7vw, 3.7rem); }
+  html[data-ver="f"] .sf-host .body { margin: 1.3rem auto 0; }
+  html[data-ver="f"] .sf-host .vis { display: none; }
+  html[data-ver="f"] .sf-stage {
+    -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .16), rgb(0 0 0 / .22) 36%, #000 60%, #000 88%, rgb(0 0 0 / .4)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45));
+    mask-image: linear-gradient(to bottom, rgb(0 0 0 / .16), rgb(0 0 0 / .22) 36%, #000 60%, #000 88%, rgb(0 0 0 / .4)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45)); }
+  html[data-ver="f"] .sf-legend { left: 0; right: 0; margin: 0 auto; width: min(86vw, 760px); }
+
+  /* Version F, slide 3: the tools on hard↔easy and limited↔powerful (gap.js). Chart left, text right. */
+  .gap-host .split { grid-template-columns: minmax(300px, 44vw) minmax(0, 1fr); }
+  .gap-host .split > :first-child { order: 2; text-align: right; }
+  .gap-host .split > :first-child h1, .gap-host .split > :first-child .body { margin-left: auto; }
+  .gp { position: relative; width: min(100%, 64vh); aspect-ratio: 1; margin: 0 auto; }
+  .gp-axes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .gp-axes path { fill: none; stroke: #e0ab5e55; stroke-width: 0.2;
+    stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1s cubic-bezier(.6, 0, .3, 1); }
+  .gp.is-drawn .gp-axes path { stroke-dashoffset: 0; }
+  .gp-ax, .gp-zone { position: absolute; opacity: 0; transition: opacity .7s ease; pointer-events: none; white-space: nowrap;
+    font: italic 400 0.95rem "Cormorant Garamond", serif; color: #b8a98f99; }
+  .gp-zone { font-size: 1.05rem; color: #b8a98f66; letter-spacing: .03em; }
+  .gp.is-labelled .gp-ax, .gp.is-labelled .gp-zone { opacity: 1; }
+  .gp-dot { all: unset; position: absolute; z-index: 1; display: inline-flex; align-items: center; height: 24px; border-radius: 12px; cursor: default;
+    transform: translate(-12px, -50%); background: #15110d; border: 1px solid color-mix(in srgb, var(--c) 65%, transparent);
+    opacity: 0; transition: opacity .35s ease, box-shadow .3s ease, background-color .3s ease; }
+  .gp-dot.is-in { opacity: 1; }
+  .gp-dot i { flex: none; width: 22px; text-align: center; font: 600 8.5px/1 "DM Sans", system-ui, sans-serif; letter-spacing: .03em; font-style: normal; color: var(--c); }
+  .gp-dot b { max-width: 0; overflow: hidden; white-space: nowrap; font: 400 0.92rem/1 "EB Garamond", serif; color: var(--ink);
+    transition: max-width .4s cubic-bezier(.3, 0, .2, 1), padding .4s cubic-bezier(.3, 0, .2, 1); }
+  .gp-dot span { position: absolute; left: 0; top: calc(100% + 7px); width: 15rem; padding: 0.45rem 0.65rem; border-radius: 5px;
+    background: #1a1510f2; border: 1px solid #ffffff1a; border-left: 1px solid var(--c); box-shadow: 0 10px 28px #000a;
+    font: italic 400 0.86rem/1.35 "EB Garamond", serif; color: var(--soft); text-align: left; white-space: normal;
+    opacity: 0; transform: translateY(-4px); transition: opacity .25s ease, transform .25s ease; pointer-events: none; }
+  .gp-dot:hover, .gp-dot:focus-visible, .gp-dot.is-open { z-index: 6; background: #1c1611; box-shadow: 0 0 18px color-mix(in srgb, var(--c) 40%, transparent); }
+  .gp-dot:hover b, .gp-dot:focus-visible b, .gp-dot.is-open b { max-width: 13rem; padding-right: 0.75rem; }
+  .gp-dot:hover span, .gp-dot:focus-visible span, .gp-dot.is-open span { opacity: 1; transform: none; transition-delay: .12s; }
+  .gp-dot.is-flip { flex-direction: row-reverse; transform: translate(calc(-100% + 12px), -50%); }
+  .gp-dot.is-flip:hover b, .gp-dot.is-flip:focus-visible b, .gp-dot.is-flip.is-open b { padding: 0 0 0 0.75rem; }
+  .gp-dot.is-flip span { left: auto; right: 0; }
+  .gp-dot.is-low span { top: auto; bottom: calc(100% + 7px); transform: translateY(4px); }
+  .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0.6rem; cursor: help;
+    opacity: 0; transition: opacity .8s ease .2s; }
+  .gp.is-labelled .gp-empty { opacity: 1; }
+  .gp-empty i { width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e; box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12;
+    animation: gp-breathe 4.5s ease-in-out infinite; }
+  .gp-empty span { font: italic 400 1.1rem "Cormorant Garamond", serif; color: #f0c67e; white-space: nowrap; }
+  .gp-q { position: absolute; left: 50%; top: 16px; margin-left: -0.25em; font: italic 500 1.15rem "Cormorant Garamond", serif; color: #f0c67e;
+    pointer-events: none; animation: gp-rise 1.7s ease-out forwards; }
+  @keyframes gp-rise { 0% { opacity: 0; transform: translate(0, 0) scale(.7); } 20% { opacity: .9; }
+    100% { opacity: 0; transform: translate(var(--dx), -70px) scale(1.15); } }
+  @keyframes gp-breathe { 50% { box-shadow: 0 0 60px #e0ab5e36, inset 0 0 26px #e0ab5e22; } }
+  .gp-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  @media (max-width: 760px) {
+    .gap-host .split { grid-template-columns: minmax(0, 1fr); }
+    .gap-host .split > :first-child { order: 0; text-align: left; }
+    .gp-dot span { width: 12rem; }
+  }
+
+  /* Version E, slide 2: the ecosystem as a quiet orbiting field (scatter-field.js). */
+  .sf { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s ease 0.15s; user-select: none; -webkit-user-select: none; }
+  .slide.on .sf { opacity: 1; }
+  .sf-host > .num, .sf-host > .split { position: relative; z-index: 1; }
+  /* Faint behind the headline, full on the right, softening gently at every edge. */
+  .sf-stage { position: absolute; inset: 0; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / .2), rgb(0 0 0 / .26) 36%, #000 60%), linear-gradient(to bottom, rgb(0 0 0 / .35), #000 16%, #000 84%, rgb(0 0 0 / .35));
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to right, rgb(0 0 0 / .2), rgb(0 0 0 / .26) 36%, #000 60%), linear-gradient(to bottom, rgb(0 0 0 / .35), #000 16%, #000 84%, rgb(0 0 0 / .35));
+    mask-composite: intersect; }
+  .sf-dust { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .sf-card, .sf-whisper { position: absolute; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+  .sf-card { max-width: 17rem; padding: 0.45rem 0.7rem 0.5rem; border-radius: 5px; z-index: 2;
+    background: #1a1510f2; border: 1px solid #ffffff1a; border-left: 1px solid var(--c); box-shadow: 0 10px 30px #000a;
+    font: 400 15px/1.3 "EB Garamond", serif; color: var(--ink); }
+  .sf-card.is-on { opacity: 1; }
+  .sf-card.is-front { max-width: 20rem; }
+  .sf-where { display: block; font: italic 12px/1.2 "Cormorant Garamond", serif; color: var(--c); letter-spacing: .03em; }
+  .sf-name { display: block; }
+  .sf-detail { display: block; margin-top: 0.3rem; font-style: italic; color: var(--soft); }
+  .sf-whisper { max-width: 15rem; z-index: 1; text-align: center; transform-origin: 50% 100%; font: 400 15px/1.25 "EB Garamond", serif; color: #efe6d6d9; transition-duration: .9s; text-shadow: 0 0 12px #0d0a07, 0 0 4px #0d0a07; }
+  .sf-whisper .sf-where { font-size: 11px; opacity: .8; }
+  .sf-whisper.is-on { opacity: 1; }
+  .sf-legend { position: absolute; right: max(16px, 9vw); bottom: 76px; width: min(40vw, 640px); z-index: 2; pointer-events: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem 1rem;
+    font: 400 0.82rem "EB Garamond", serif; color: #b8a98f88; }
+  .sf-key { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45em; transition: color .4s; }
+  .sf-key::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--c); opacity: .7; }
+  .sf-key:hover, .sf-key.is-lit { color: var(--ink); }
+  .sf-key.is-on { text-decoration: underline; text-decoration-color: var(--c); text-underline-offset: 3px; }
+  .sf-key:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  .sf-more { font-style: italic; }
+  @media (max-width: 760px) {
+    .sf-stage { -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); }
+    .sf-legend { left: 16px; right: 16px; width: auto; bottom: 64px; }
+  }
   .body b { color: var(--ink); font-weight: 400; font-style: italic; }
   .split { display: grid; grid-template-columns: 1fr minmax(260px, 40vw); gap: 4vw; align-items: center; }
   .vis { display: flex; flex-direction: column; gap: 0.7rem; color: var(--soft); font-size: 0.95rem; }
@@ -229,6 +395,27 @@
     </div>
   </section>
 
+  <section class="slide vc-host" data-v="e f">
+    <div class="num">01<span class="act">The opportunity</span></div>
+    <div class="split">
+      <div>
+        <h1>Open-source AI has unimaginable creative potential <em>waiting to be unlocked.</em></h1>
+        <div class="body">No closed doors, no ceiling on what can be made, no one deciding what is allowed — a few pieces that could only exist this way.</div>
+      </div>
+      <div class="vis">
+        <div class="vc" data-collage>
+          <button class="vc-tile" type="button" style="left:0;top:4%;width:31%;height:55.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-1.mp4" poster="../assets/cards/arca/poster-1.jpg" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:34%;top:0;width:66%;height:37.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-2.mp4" poster="../assets/cards/arca/poster-2.jpg" style="object-position:50% 38%" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:0;top:62.1%;width:31%;height:31%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-2.mp4" poster="../assets/cards/arca/poster-2.jpg" style="object-position:50% 78%" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:34%;top:40.1%;width:31.5%;height:39.4%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-3.mp4" poster="../assets/cards/arca/poster-3.jpg" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:68.5%;top:40.1%;width:31.5%;height:56%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-4.mp4" poster="../assets/cards/arca/poster-4.jpg" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:34%;top:82.3%;width:31.5%;height:17.7%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video src="../assets/cards/arca/video-1.mp4" poster="../assets/cards/arca/poster-1.jpg" style="object-position:50% 72%" muted loop playsinline preload="auto"></video><span class="vc-cap">[Title] · [artist]</span></button>
+        </div>
+        <p class="vc-label">Recipients of the last <b>Arca Gidan Prize</b></p>
+      </div>
+    </div>
+  </section>
+
   <section class="slide" data-v="a b d">
     <div class="num">02<span class="act">The problem</span></div>
 <div class="split">
@@ -250,7 +437,25 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a">
+  <section class="slide sf-host" data-v="e f">
+    <div class="sf" data-scatter-field aria-label="An orbiting field of open-source models, LoRAs, repos, workflows, threads and guides">
+      <div class="sf-stage"><canvas class="sf-dust" aria-hidden="true"></canvas></div>
+      <div class="sf-whisper" aria-hidden="true"><span class="sf-where"></span><span class="sf-name"></span></div>
+      <div class="sf-whisper" aria-hidden="true"><span class="sf-where"></span><span class="sf-name"></span></div>
+      <div class="sf-card" aria-live="polite"><span class="sf-where"></span><span class="sf-name"></span><span class="sf-detail"></span></div>
+      <div class="sf-legend"></div>
+    </div>
+    <div class="num">02<span class="act">The problem</span></div>
+    <div class="split">
+      <div>
+        <h1>But its capabilities are scattered across thousands of repos and threads — so <em>few artists, creators and everyday people can use them.</em></h1>
+        <div class="body">The sprawl of models, nodes, LoRAs and workflows — and how each breakthrough stays with whoever made it.</div>
+      </div>
+      <div class="vis" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="slide" data-v="a e">
     <div class="num">03<span class="act">The gap</span></div>
 <div class="split">
       <div>
@@ -266,6 +471,53 @@
 <circle cx="240" cy="60" r="30" fill="#e0ab5e" opacity=".12"/><circle cx="240" cy="60" r="9" fill="none" stroke="#f0c67e" stroke-width="1.5" stroke-dasharray="3 3"/>
 <text x="240" y="100" text-anchor="middle" class="lb g">Nothing here — yet</text></svg>
 <p class="cap">The empty corner is where Astrid lands on the next slide.</p></div>
+    </div>
+  </section>
+
+  <section class="slide gap-host" data-v="f">
+    <div class="num">03<span class="act">The gap</span></div>
+    <div class="split">
+      <div>
+        <h1>What's missing isn't another model, technical tool or hub. It's <em>an accessible place to create with all of it.</em></h1>
+        <div class="body">Hubs host the models; node graphs wire them together — both built for engineers. Closed tools are easy but limited. Nothing gives artists the power of open source without the nerd hole.</div>
+      </div>
+      <div class="vis">
+        <div class="gp" data-gap>
+          <svg class="gp-axes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M4 50H96" pathLength="1"/><path d="M50 4V96" pathLength="1"/>
+          </svg>
+          <span class="gp-ax" style="left:51.5%;top:1%">powerful ↑</span>
+          <span class="gp-ax" style="left:51.5%;bottom:1%">limited</span>
+          <span class="gp-ax" style="left:2%;top:51.5%">← hard</span>
+          <span class="gp-ax" style="right:2%;top:51.5%">easy to use →</span>
+          <span class="gp-zone" style="left:3%;top:3%">Open tools</span>
+          <span class="gp-zone" style="right:3%;bottom:3%">Closed tools</span>
+          <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i></i><span>Nothing here — yet</span></button>
+          <button class="gp-dot" type="button" style="left:14%;top:10%;--c:#e0ab5e"><i>Cu</i><b>ComfyUI</b><span>Node graph that runs nearly every open model. Endlessly capable, but you wire it yourself.</span></button>
+          <button class="gp-dot" type="button" style="left:5%;top:20%;--c:#e0ab5e"><i>Df</i><b>Diffusers</b><span>Hugging Face&#x27;s Python library. Anything is possible, in code.</span></button>
+          <button class="gp-dot" type="button" style="left:27%;top:17%;--c:#e0ab5e"><i>AT</i><b>ai-toolkit</b><span>Train your own LoRAs for image and video models. Config files and a big GPU.</span></button>
+          <button class="gp-dot" type="button" style="left:41%;top:12%;--c:#e0ab5e"><i>Sw</i><b>SwarmUI</b><span>A friendlier front end over ComfyUI. Still a power tool.</span></button>
+          <button class="gp-dot" type="button" style="left:36%;top:26%;--c:#e0ab5e"><i>W2</i><b>Wan2GP</b><span>Runs Wan and other open video models on modest GPUs. Install, then many options.</span></button>
+          <button class="gp-dot" type="button" style="left:22%;top:30%;--c:#e0ab5e"><i>FP</i><b>FramePack</b><span>Long, smooth video on smaller GPUs. One model, one job.</span></button>
+          <button class="gp-dot" type="button" style="left:8%;top:36%;--c:#e0ab5e"><i>Ko</i><b>kohya_ss</b><span>The classic LoRA trainer. Dozens of settings.</span></button>
+          <button class="gp-dot" type="button" style="left:30%;top:40%;--c:#e0ab5e"><i>A1</i><b>AUTOMATIC1111</b><span>The original open image web UI, extended by hundreds of plugins.</span></button>
+          <button class="gp-dot" type="button" style="left:44%;top:38%;--c:#e0ab5e"><i>In</i><b>InvokeAI</b><span>A polished open canvas for images. Narrower than a node graph.</span></button>
+          <button class="gp-dot" type="button" style="left:17%;top:46%;--c:#e0ab5e"><i>De</i><b>Deforum</b><span>Animation by keyframed parameters. Powerful, famously fiddly.</span></button>
+          <button class="gp-dot" type="button" style="left:33%;top:56%;--c:#b8a98f"><i>Pi</i><b>Pinokio</b><span>One-click installs for open AI apps. Each app is its own world.</span></button>
+          <button class="gp-dot" type="button" style="left:45%;top:62%;--c:#b8a98f"><i>Fo</i><b>Fooocus</b><span>Simple open image generation. Few knobs to turn.</span></button>
+          <button class="gp-dot" type="button" style="left:14%;top:70%;--c:#b8a98f"><i>Nb</i><b>Colab notebooks</b><span>Someone&#x27;s notebook for one model. Works until a dependency moves.</span></button>
+          <button class="gp-dot is-low" type="button" style="left:36%;top:78%;--c:#b8a98f"><i>HF</i><b>Hugging Face Spaces</b><span>Try one model in the browser. Queue for a GPU; few controls.</span></button>
+          <button class="gp-dot" type="button" style="left:62%;top:55%;--c:#9fb5c8"><i>Rw</i><b>Runway</b><span>Polished video tools. What one team builds.</span></button>
+          <button class="gp-dot" type="button" style="left:57%;top:65%;--c:#9fb5c8"><i>Kl</i><b>Kling</b><span>A strong video model behind an app. Its settings, its limits.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:73%;top:60%;--c:#9fb5c8"><i>MJ</i><b>Midjourney</b><span>Beautiful images in a distinct house style. One team’s model.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:82%;top:60%;--c:#9fb5c8"><i>So</i><b>Sora</b><span>Easy, impressive video. A closed model with its own rules.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:69%;top:72%;--c:#9fb5c8"><i>Lu</i><b>Luma Dream Machine</b><span>Simple video generation from one team’s models.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:86%;top:69%;--c:#9fb5c8"><i>Pk</i><b>Pika</b><span>Playful effects and edits. Easy, and fixed.</span></button>
+          <button class="gp-dot is-low" type="button" style="left:55%;top:79%;--c:#9fb5c8"><i>Kr</i><b>Krea</b><span>Many models wrapped in one slick app. Few deep controls.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:78%;top:83%;--c:#9fb5c8"><i>Hi</i><b>Higgsfield</b><span>Preset camera moves and effects. The presets are the ceiling.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:92%;top:86%;--c:#9fb5c8"><i>CC</i><b>CapCut</b><span>Effortless edits for social. AI features as fixed presets.</span></button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -307,7 +559,7 @@
 <p class="cap">Illustrative — two curves, one window. Real benchmarks if we want them.</p></div>
     </div>
   </section>
-  <section class="slide" data-v="a b">
+  <section class="slide" data-v="a b e f">
     <div class="num">04<span class="act">Astrid</span></div>
 <div class="split">
       <div>
@@ -344,6 +596,25 @@
     </div>
   </section>
 
+  <section class="slide" data-v="e f">
+    <div class="num">05<span class="act">Where it starts</span></div>
+    <div class="split">
+      <div>
+        <h1>It starts as a video editor: describe what you want, and the agent reaches for <em>everything the community has built</em> to help.</h1>
+        <div class="body">No installs, no node graphs, locally or in the cloud. The agent picks the right models and community-made tools, and when nothing fits, it builds what you need. Every result comes back to your timeline for you to change and build on: you stay the artist. We start with video because that's where open models are moving fastest — and where they're hardest to use.</div>
+        <p class="e-note">from D: the artist stays in control.</p>
+      </div>
+      <div class="vis"><div class="m-chain">
+  <div class="m-step"><span class="m-role">You</span><div class="m-art m-ask">“Make this look like 16mm film, and hold the last shot 2s longer”</div><b>Describe the shot</b><span class="m-dim">plain language</span></div>
+  <span class="m-arrow">→</span>
+  <div class="m-step"><span class="m-role">Agent</span><div class="m-art"><div class="m-picks"><i>Film grain <span>by @someone</span></i><i>Wan i2v 14B</i><i>Frame interp.</i></div></div><b>Picks community tools</b><span class="m-dim">no setup</span></div>
+  <span class="m-arrow">→</span>
+  <div class="m-step"><span class="m-role">Result</span><div class="m-art"><img src="../assets/cards/ados/paris-2025-thumb.jpg" alt=""></div><b>Back in your timeline</b><span class="m-dim">editable · share as a template</span></div>
+</div>
+<p class="cap">The user journey in three beats — ideally a short screen recording.</p></div>
+    </div>
+  </section>
+
   <section class="slide" data-v="a">
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
@@ -356,6 +627,30 @@
         <li><b>Then</b> — a platform for every medium, built by everyone who uses it.</li>
       </ul>
     </div>
+      </div>
+      <div class="vis"><div class="m-stages">
+  <div><span class="m-role">Today</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-chat"></div></div><b>Agent-powered video editor</b></div>
+  <div><span class="m-role">Next</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-plug"><i></i><i></i><i></i></div></div><b>Extensible: tools &amp; workflows inside it</b></div>
+  <div><span class="m-role">Then</span><div class="m-thumb m-store"><i></i><i></i><i></i><i></i><i></i><i></i></div><b>A community-built creative platform</b></div>
+</div>
+<p class="cap">Rough UI thumbnails for each stage.</p></div>
+    </div>
+  </section>
+
+  <section class="slide" data-v="e f">
+    <div class="num">06<span class="act">Where it goes</span></div>
+<div class="split">
+      <div>
+        <h1>What you and your agent build can be shared — so the editor grows into <em>a community-built creative platform.</em></h1>
+    <div class="body">
+      <p>One person's solution becomes someone else's starting point: work out a film-grain look, publish it, and the next artist's agent can reach for it, credited to you. Private projects stay private.</p>
+      <ul>
+        <li><b>Today</b> — a video editor with agents built in, that reshapes itself around each artist.</li>
+        <li><b>Next</b> — we open it up: anyone can add tools, models and workflows.</li>
+        <li><b>Then</b> — a platform for every medium, built by everyone who uses it.</li>
+      </ul>
+    </div>
+    <p class="e-note">from D: sharing is a choice and credited; the film-grain example carries on from slide 5.</p>
       </div>
       <div class="vis"><div class="m-stages">
   <div><span class="m-role">Today</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-chat"></div></div><b>Agent-powered video editor</b></div>
@@ -384,7 +679,24 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a">
+  <section class="slide" data-v="e f">
+    <div class="num">07<span class="act">How it pays</span></div>
+    <div class="split">
+      <div>
+        <h1>Nerds run Astrid locally and build on it; <em>the rest of the world pays for an accessible hosted version.</em></h1>
+        <div class="body">Builders push Astrid to its limits and publish what they make. That flows into a polished, hosted Astrid for the far larger audience who'd rather not set anything up. They pay for compute and convenience, and a share goes to the makers of the tools they use, which gives builders a reason to keep building. A competitor would have to copy the community, not just the product.</div>
+        <p class="e-note">from D: who pays, and the share back to toolmakers. Pricing and the split still to confirm.</p>
+      </div>
+      <div class="vis"><div class="d-cards">
+  <div><span class="m-role">Nerds · local</span><b>Make it more capable</b><p>Run Astrid on their own machines, push it further, publish tools and workflows.</p></div>
+  <div><span class="m-role">Everyone else · hosted</span><b>Pay for an easier way to create</b><p>Compute and convenience in a polished workspace, with nothing to set up.</p></div>
+  <div><span class="m-role">Back to builders</span><b>A share of what creators pay</b><p>Goes to the makers of the tools people use: a reason to keep building.</p></div>
+</div>
+<p class="cap">The loop in three steps; could be drawn as a cycle.</p></div>
+    </div>
+  </section>
+
+  <section class="slide" data-v="a e f">
     <div class="num">08<span class="act">A thousand flowers</span></div>
     <div class="split">
       <div>
@@ -462,7 +774,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a b">
+  <section class="slide" data-v="a b e f">
     <div class="num">09<span class="act">The community</span></div>
     <div class="split">
       <div>
@@ -489,7 +801,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a">
+  <section class="slide" data-v="a e f">
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
       <div>
@@ -536,7 +848,7 @@
 <p class="cap">Faces and one proof point each.</p></div>
     </div>
   </section>
-  <section class="slide" data-v="a">
+  <section class="slide" data-v="a e f">
     <div class="num">11<span class="act">The raise</span></div>
     <div class="split">
       <div>
@@ -586,6 +898,19 @@
       <div>
         <h1>A thriving open-source AI art ecosystem can help accelerate <em>a second renaissance.</em></h1>
     <div class="body">Creating with AI stops being one person at a prompt and becomes a collective effort, where every tool, model and piece builds on everyone else's. Tools shaped by a whole community will, in turn, shape what it can imagine.</div>
+      </div>
+      <div class="vis"><img class="m-hero" src="../assets/brand/og-home.jpg" alt="">
+<p class="cap">Full-bleed in the final deck, title only.</p></div>
+    </div>
+  </section>
+
+  <section class="slide" data-v="e f">
+    <div class="num">12<span class="act">The vision</span></div>
+<div class="split">
+      <div>
+        <h1>A thriving open-source AI art ecosystem can help accelerate <em>a second renaissance.</em></h1>
+    <div class="body">Creating with AI stops being one person at a prompt and becomes a collective effort. A painter turns years of her landscapes into a LoRA; elsewhere, an engineer builds a workshop for sculpting in 3D; a year later, in that workshop, a stranger sculpts her paintings into a garden you can walk through. Every finished work, the start of someone else's.</div>
+    <p class="e-note">from D: the Mycelial Manifesto's exchange (in the site's own words) and D's closing line.</p>
       </div>
       <div class="vis"><img class="m-hero" src="../assets/brand/og-home.jpg" alt="">
 <p class="cap">Full-bleed in the final deck, title only.</p></div>
@@ -865,7 +1190,7 @@
 
 <script>
   const all = [...document.querySelectorAll('.slide')];
-  const VERS = { a: 'Yours', b: "Claude's", c: 'Guru', d: 'Codex feedback' };
+  const VERS = { a: 'Yours', b: "Claude's", c: 'Guru', d: 'Codex feedback', e: 'Blend (A + D)', f: 'E + mycelium' };
   let ver = new URLSearchParams(location.search).get('v');
   if (!VERS[ver]) { try { ver = localStorage.getItem('deck-ver'); } catch (e) {} }
   if (!VERS[ver]) ver = 'a';
@@ -939,5 +1264,9 @@
   addEventListener('hashchange', fromHash);
   fromHash();
 </script>
+<script src="scatter-field.js"></script>
+<script src="collage.js"></script>
+<script src="dot-transitions.js"></script>
+<script src="gap.js"></script>
 </body>
 </html>
