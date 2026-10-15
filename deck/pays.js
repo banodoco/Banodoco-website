@@ -5,6 +5,8 @@
 // core reaches out across widening arcs to a great many people, everyone else,
 // on the hosted version. Pulses run from the builders into the core, and from
 // the core outward, wave after wave.
+// Arriving from slide 6, the pixel mink perched on its stack powers up (her eye lights, motes gather into
+// her, a ring of light) and travels across into this slide's lens, which draws in around her.
 // Its core, builders and people are kept as data (window.AstridPays) so the next
 // slide, the foundation, can carry the picture on.
 (() => {
@@ -17,6 +19,7 @@
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
+  const lerp = (a, b, q) => a + (b - a) * q;
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
   const THREAD = '240,200,119', NODE = '255,217,145', CORE = '255,241,214';
   const TAU = Math.PI * 2;
@@ -78,8 +81,11 @@
   // Drawn in the reference's own units (1672 x 941), scaled by k about the middle.
   // The core: a lens centred at (750, 415), 136 wide and 226 tall, in those units.
   const CORE_REF = { cx: 750, cy: 415, w: 136, h: 226 };
-  let W = 0, H = 0, dpr = 1, k = 1, ox = 0, oy = 0, LW = 1, small = false;
-  const X = (rx) => ox + (rx - 836) * k, Y = (ry) => oy + (ry - 415) * k, P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
+  // On a phone the picture is scaled as one (k) above the text. Beside the text on the right, it is laid out
+  // in the room to the left: positions stretch by kx across and ky down, while sizes (circles, the lens,
+  // the mink, dots) scale by k so nothing is squashed.
+  let W = 0, H = 0, dpr = 1, k = 1, kx = 1, ky = 1, ox = 0, oy = 0, LW = 1, small = false;
+  const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
   let machines = [], feeds = [], lens = null, arcs = [], rays = [], boundary = null, cell = 3;
@@ -96,15 +102,28 @@
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     small = W <= 760;
     const num = slide.querySelector('.num'), top = num.getBoundingClientRect().top - b.top;
-    // The picture spans reference y 70..760 and x 150..1600; it sits above the label.
-    // The picture spans reference x 150..1580; keep at least 64 px clear at each side.
-    k = small ? Math.min((W - 24) / 1430, (top - 60) / 690) : Math.min((W - 128) / 1430, (top - 30) / 690, 1.15);
-    ox = W / 2 - 29 * k; // the picture's middle (reference x 865) on the slide's middle
-    oy = small ? Math.max(40 + 345 * k, top * 0.5) : top - 24 * k + (415 - 740) * k; // on a phone, centred in the room above the text
+    if (small) { // above the text, scaled as one; the picture spans reference x 150..1580 and y 70..760
+      k = Math.min((W - 24) / 1430, (top - 60) / 690);
+      ox = W / 2 - 29 * k;
+      oy = Math.max(40 + 345 * k, top * 0.5);
+    } else { // to the left of the text: from 64 px in to 56 px short of the text column, centred down the slide
+      const text = slide.querySelector('.split > :first-child').getBoundingClientRect();
+      const left = 64, right = text.left - b.left - 96; // the hosted band keeps ~96 px of air before the text
+      kx = (right - left - 20) / 1430;
+      ky = Math.min((H - 230) / 690, 1.0);
+      k = Math.min(ky, kx * 1.35, 1.05);
+      ox = left + 52 * k - 63 * kx; // the builders' circles (reference x 213) sit just inside the left edge
+      oy = H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
+    }
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
     // The builders' machines, and their threads into the core's left side.
-    const lensL = P(CORE_REF.cx - CORE_REF.w / 2, CORE_REF.cy), lensR = P(CORE_REF.cx + CORE_REF.w / 2, CORE_REF.cy);
+    // The core: three strands of a lens, nodes at its tips and on its sides.
+    // The mink is this slide's hero: as large a whole-number cell as fits (4 beside the text), the lens widened to hold her.
+    cell = small ? 1 : k >= 0.62 ? 4 : Math.max(2, Math.round(3.4 * k));
+    const lw0 = small ? CORE_REF.w * k : Math.max(CORE_REF.w * k, 23 * cell + 40);
+    lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: lw0, h: Math.max(CORE_REF.h * k, lw0 * 1.66) };
+    const lensL = { x: lens.c.x - lens.w / 2, y: lens.c.y }, lensR = { x: lens.c.x + lens.w / 2, y: lens.c.y };
     machines = [[213, 277, 'term'], [213, 424, 'gpu'], [213, 570, 'graph']].map(([x, y, kind], i) => ({ ...P(x, y), r: 52 * k, kind, i }));
     feeds = machines.map((m, i) => {
       const end = { x: lensL.x + 2 * k, y: lensL.y + (i - 1) * 12 * k };
@@ -114,10 +133,8 @@
       h.nodes = [0.3, 0.68].map((f) => f * h.total);
       return h;
     });
-    // The core: three strands of a lens, nodes at its tips and on its sides.
-    lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: CORE_REF.w * k, h: CORE_REF.h * k };
-    // The boundary: hosted begins past this line.
-    boundary = { x: X(836), y0: Y(120), y1: Y(705) };
+    // The boundary: hosted begins past this line (clear of the lens when the picture is narrowed).
+    boundary = { x: Math.max(X(836), lens.c.x + lens.w / 2 + 16 * k), y0: Y(120), y1: Y(705) };
     // Everyone else: wave fronts of people widening out from the core, as in the reference: each an arc
     // (centre u, radius r, half-height hh, in reference units), the last a dense band.
     arcs = [];
@@ -141,13 +158,12 @@
       const end = P(820 + Math.cos(a) * 760, 415 + Math.sin(a) * 760);
       return Object.assign(line([[start.x, start.y], [end.x, end.y]]), { mark, i });
     });
-    cell = small ? 1 : Math.max(2, Math.round(3 * k));
     // Labels.
     labels.local.style.fontSize = labels.hosted.style.fontSize = `${Math.max(small ? 10.5 : 13, 23 * k).toFixed(1)}px`;
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
     put(labels.local, X(150), Y(168), 0, 0.5);
     put(labels.hosted, X(1170), Y(118), 0.5, 0.5);
-    put(labels.core, X(CORE_REF.cx + 4), Y(CORE_REF.cy - CORE_REF.h / 2 - 40), 0.5, 0.5);
+    put(labels.core, lens.c.x + 4 * k, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5);
     return true;
   };
 
@@ -189,8 +205,32 @@
     if (m.kind === 'graph') [[-13, 4], [-1, -9], [12, 3]].forEach(([dx, dy]) => dot(x + dx * s, y + dy * s, 2.2 * s, CORE, 0.9 * a));
     node(x + m.r, y, 0.9, a);
   };
+  // The mink at any whole-number cell u, her eye lit by `glint` (the profile's glint pose), top-left at (x0, y0).
+  const paintMinkAt = (x0, y0, u, glint = 0) => {
+    const P2 = M.POSES.profile, G2 = M.POSES.glint;
+    x0 = Math.round(x0); y0 = Math.round(y0);
+    for (let j = 0; j < P2.length; j++) for (let i = 0; i < P2[0].length; i++) {
+      const ch = P2[j][i];
+      if (ch === '.') continue;
+      g.fillStyle = M.COLORS[ch];
+      g.fillRect(x0 + i * u, y0 + j * u, u, u);
+    }
+    if (glint > 0) {
+      g.globalAlpha = glint;
+      for (let j = 0; j < G2.length; j++) for (let i = 0; i < G2[0].length; i++) {
+        const ch = G2[j][i];
+        if (ch === '.' || ch === P2[j][i]) continue;
+        g.fillStyle = M.COLORS[ch];
+        g.fillRect(x0 + i * u, y0 + j * u, u, u);
+      }
+      g.globalAlpha = 1;
+    }
+  };
+  // From slide 6: where she starts (her canvas there, in this slide's coordinates) and the motes she gathers.
+  let fly = null;
+  const FLY = { charge: 0.85, travel: 1.25, land: 0.6 }; // seconds: power up, cross, settle
   const paintMink = (x, y, a) => { // the real pixel mink, crisp, centred on (x, y)
-    if (a <= 0) return;
+    if (a <= 0 || (fly && ta < fly.landed)) return;
     const P2 = M.POSES.profile, u = cell, w = P2[0].length * u, h = P2.length * u;
     const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
     g.globalAlpha = a;
@@ -267,6 +307,52 @@
     }
     // The core flares as a wave leaves it.
     for (const w of waves) { const e = ta - w.t0; if (e < 0.6) halo(lens.c.x, lens.c.y, lens.h * (0.35 + 0.4 * e), 0.25 * (1 - e / 0.6)); }
+    if (fly) drawFly();
+  };
+  // The power-up and the flight, in hand-off time h (0 when she leaves slide 6).
+  const drawFly = () => {
+    const f = fly, h = ta - f.t0, u0 = f.c, u1 = cell;
+    const end = { x: lens.c.x + 4 * k, y: lens.c.y + 8 * k }; // her centre in the lens, as paintMink draws her
+    const T1 = FLY.charge, T2 = T1 + FLY.travel;
+    if (h < T1) { // power up where she sits: her eye lights, motes gather into her, a ring of light, a little hop
+      const c = { x: f.x + 11.5 * u0, y: f.y + 10 * u0 }, glint = smooth(clamp(h / 0.25));
+      halo(c.x, c.y, (18 + 30 * smooth(clamp(h / T1))) * Math.max(1, u0 / 2), 0.25 + 0.45 * smooth(clamp(h / T1)));
+      for (const m of f.motes) {
+        const q = clamp((h - m.d) / (T1 - 0.15 - m.d));
+        if (q <= 0 || q >= 1) continue;
+        const e = q * q, x = lerp(m.x, c.x, e), y = lerp(m.y, c.y, e), px = lerp(m.x, c.x, Math.max(0, e - 0.12)), py = lerp(m.y, c.y, Math.max(0, e - 0.12));
+        g.lineWidth = 1.1; g.strokeStyle = `rgba(${NODE},${(0.5 * q).toFixed(3)})`;
+        g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke();
+        halo(x, y, 6, 0.6); dot(x, y, 1.6, CORE, 0.95);
+      }
+      for (const r0 of [0.5, 0.68]) { // rings of light
+        const q = clamp((h - r0) / 0.5);
+        if (q <= 0 || q >= 1) continue;
+        g.lineWidth = 1.4 * (1 - q) + 0.4; g.strokeStyle = `rgba(${NODE},${(0.7 * (1 - q)).toFixed(3)})`;
+        g.beginPath(); g.arc(c.x, c.y, (14 + 80 * ease(q)) * Math.max(1, u0 / 3), 0, TAU); g.stroke();
+      }
+      const lift = h > T1 - 0.2 ? u0 * 2 : h > T1 - 0.3 ? u0 : 0;
+      paintMinkAt(f.x, f.y - lift, u0, glint);
+      return;
+    }
+    if (h < T2) { // the flight: an arc across into the lens, a trail of light behind her
+      const q = 0.5 - 0.5 * Math.cos(Math.PI * clamp((h - T1) / FLY.travel)), u = q < 0.5 ? u0 : u1; // a gentle sine ease
+      const s0 = { x: f.x + 11.5 * u0, y: f.y + 10 * u0 - 2 * u0 }, cp = { x: (s0.x + end.x) / 2, y: Math.min(s0.y, end.y) - 140 * k };
+      const pos = (t) => { const v = 1 - t; return { x: v * v * s0.x + 2 * v * t * cp.x + t * t * end.x, y: v * v * s0.y + 2 * v * t * cp.y + t * t * end.y }; };
+      for (let j = 12; j >= 1; j--) { // the trail
+        const t = Math.max(0, q - j * 0.022), p = pos(t), a = (1 - j / 13) * 0.55;
+        halo(p.x, p.y, (10 - j * 0.5) * Math.max(1, u / 2), a * 0.6); dot(p.x, p.y, 1.8 - j * 0.1, CORE, a);
+      }
+      const p = pos(q);
+      halo(p.x, p.y, 34 * Math.max(1, u / 2), 0.45);
+      paintMinkAt(p.x - 11.5 * u, p.y - 10 * u, u, 1);
+      return;
+    }
+    // Landed: a soft flare in the lens, her eye dimming back to normal.
+    const q = clamp((h - T2) / FLY.land);
+    halo(lens.c.x, lens.c.y, lens.h * (0.3 + 0.5 * ease(q)), 0.45 * (1 - q));
+    paintMinkAt(end.x - 11.5 * u1, end.y - 10 * u1, u1, 1 - smooth(q));
+    if (q >= 1) fly = null;
   };
   const smooth = (q) => q * q * (3 - 2 * q);
 
@@ -293,7 +379,7 @@
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(clearTimeout); timers = [];
-    pulses = []; waves = []; ta = 0;
+    pulses = []; waves = []; ta = 0; fly = null;
     root.classList.remove('is-labelled');
     canvas.style.transition = ''; canvas.style.opacity = ''; Object.values(labels).forEach((el) => { el.style.opacity = ''; });
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
@@ -313,14 +399,49 @@
     timers.push(setTimeout(() => { if (armed) { armed = false; begin(); } }, 1500));
   };
   slide.addEventListener('dt-arrive', () => { if (armed && slide.classList.contains('on')) { armed = false; begin(); } });
+  // From slide 6: its mink (stack.js paints her on .st-mink) powers up and crosses into this slide's lens.
+  // She is read from her canvas at the moment of leaving; slide 6's own copy is hidden while ours flies.
+  const stackSlide = document.querySelector('.st-host');
+  let stMink = null;
+  const showStackMink = () => { if (stMink) { stMink.style.visibility = ''; stMink = null; } };
+  const flyIn = () => {
+    const el = stackSlide && stackSlide.querySelector('.st-mink');
+    if (still || !el) return false;
+    const r = el.getBoundingClientRect(), u0 = Math.round(r.width / 23);
+    if (!r.width || !u0 || getComputedStyle(el).opacity === '0') return false;
+    reset();
+    if (!layout()) return false;
+    const b = root.getBoundingClientRect(), x = r.left - b.left, y = r.top - b.top, c = { x: x + 11.5 * u0, y: y + 10 * u0 };
+    const motes = Array.from({ length: 16 }, () => { const a = Math.random() * TAU, d = (70 + Math.random() * 70) * Math.max(1, u0 / 3); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, d: Math.random() * 0.25 }; });
+    ta = -(FLY.charge + FLY.travel) + 0.95; // the lens finishes tracing as she reaches it
+    fly = { t0: ta, x, y, c: u0, motes, landed: ta + FLY.charge + FLY.travel };
+    stMink = el; el.style.visibility = 'hidden';
+    slide.classList.add('pa-arrive');
+    timers.push(setTimeout(() => slide.classList.remove('pa-arrive'), 900));
+    timers.push(setTimeout(showStackMink, (FLY.charge + FLY.travel) * 1000 + 200)); // slide 6 has faded away by then
+    timers.push(setTimeout(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 400));
+    timers.push(setTimeout(() => root.classList.add('is-labelled'), (FLY.charge + FLY.travel + 0.4) * 1000));
+    nextPulse = AMBIENT + 0.3;
+    start();
+    return true;
+  };
   let wasOn = false;
-  new MutationObserver(() => {
+  const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
-    if (on) { reset(); layout(); draw(); enter(); }
-    else { armed = false; stop(); document.documentElement.classList.remove('pa-quiet'); timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700)); }
-  }).observe(slide, { attributes: true, attributeFilter: ['class'] });
+    if (on) {
+      const fromStack = stackSlide && !stackSlide.classList.contains('on') && records.some((r) => r.target === stackSlide);
+      if (fromStack && flyIn()) return;
+      reset(); layout(); draw(); enter();
+    } else {
+      armed = false; stop(); fly = null; showStackMink(); slide.classList.remove('pa-arrive');
+      document.documentElement.classList.remove('pa-quiet');
+      timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
+    }
+  });
+  watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
+  if (stackSlide) watch.observe(stackSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
   addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) draw(); });
   root.addEventListener('click', (e) => e.stopPropagation());
