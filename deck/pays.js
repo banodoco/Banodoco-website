@@ -97,9 +97,10 @@
     small = W <= 760;
     const num = slide.querySelector('.num'), top = num.getBoundingClientRect().top - b.top;
     // The picture spans reference y 70..760 and x 150..1600; it sits above the label.
-    k = small ? Math.min((W - 16) / 1480, (top - 60) / 690) : Math.min((W - 40) / 1480, (top - 30) / 690, 1.15);
-    ox = W / 2 - 40 * k; // the picture's middle (reference x 876) on the slide's middle
-    oy = top - 24 * k + (415 - 740) * k;
+    // The picture spans reference x 150..1580; keep at least 64 px clear at each side.
+    k = small ? Math.min((W - 24) / 1430, (top - 60) / 690) : Math.min((W - 128) / 1430, (top - 30) / 690, 1.15);
+    ox = W / 2 - 29 * k; // the picture's middle (reference x 865) on the slide's middle
+    oy = small ? Math.max(40 + 345 * k, top * 0.5) : top - 24 * k + (415 - 740) * k; // on a phone, centred in the room above the text
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
     // The builders' machines, and their threads into the core's left side.
@@ -140,7 +141,7 @@
       const end = P(820 + Math.cos(a) * 760, 415 + Math.sin(a) * 760);
       return Object.assign(line([[start.x, start.y], [end.x, end.y]]), { mark, i });
     });
-    cell = small ? 2 : Math.max(2, Math.round(3 * k));
+    cell = small ? 1 : Math.max(2, Math.round(3 * k));
     // Labels.
     labels.local.style.fontSize = labels.hosted.style.fontSize = `${Math.max(small ? 10.5 : 13, 23 * k).toFixed(1)}px`;
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
