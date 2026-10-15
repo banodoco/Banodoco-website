@@ -327,12 +327,12 @@
 
   /* Version F, slide 7: how it pays (pays.js). Text centred at the bottom as on slide 4; above it, in the same
      gold-thread language, the few builders running Astrid locally, the core, and everyone else on the hosted version. */
-  /* The text sits on the right, right-aligned and vertically centred, in the deck's text-right preset (as on slide 3);
-     the picture is laid out in the room to its left. */
-  html[data-ver="f"] .pa-host { padding-right: max(16px, 7vw); }
-  html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr) minmax(300px, 31vw); }
-  html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 2; text-align: right; }
-  html[data-ver="f"] .pa-host h1 { max-width: 10.6em; margin-left: auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
+  /* The text sits on the left, left-aligned and vertically centred; the picture is laid out in the room to its right
+     (builders nearest the text, the hosted fronts out towards the edge). */
+  html[data-ver="f"] .pa-host { padding-left: max(16px, 7vw); }
+  html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(300px, 31vw) minmax(0, 1fr); }
+  html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: left; }
+  html[data-ver="f"] .pa-host h1 { max-width: 10.6em; margin-right: auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
   /* From slide 6 the slide shows at once, so the mink's power-up can play over the stack as it recedes. */
   .slide.pa-arrive { transition: none; }
   html[data-ver="f"] .pa-host .body, html[data-ver="f"] .pa-host .vis, html[data-ver="f"] .pa-host .e-note { display: none; }
@@ -347,7 +347,7 @@
   .pa-side span { display: block; font-size: .78em; color: #b8a98f; font-style: italic; }
   .pa-core { color: #f0c67e; }
   @media (max-width: 760px) {
-    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-right: max(16px, 9vw); padding-bottom: max(70px, 8.5vh); }
+    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-left: max(16px, 9vw); padding-bottom: max(70px, 8.5vh); }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
     html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: center; }
     html[data-ver="f"] .pa-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 20ch; margin: 0 auto; }
