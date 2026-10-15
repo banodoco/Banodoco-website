@@ -1,12 +1,12 @@
-// Version F, slide 8: how it pays. Above the text, in the deck's gold-thread
+// Version F, slide 7: how it pays. Above the text, in the deck's gold-thread
 // language: on the left a few machines running Astrid locally (a terminal, a
 // GPU, a node graph), the nerds who build on it; their threads converge into
 // the core, slide 4's lens with the mink inside; past a dotted boundary, the
 // core reaches out across widening arcs to a great many people, everyone else,
 // on the hosted version. Pulses run from the builders into the core, and from
 // the core outward, wave after wave.
-// The core's position and size are kept as data (window.AstridPays.core()) so
-// slide 7 can end on exactly this core.
+// Its core, builders and people are kept as data (window.AstridPays) so the next
+// slide, the foundation, can carry the picture on.
 (() => {
   const root = document.querySelector('[data-astrid-pays]');
   const M = window.AstridMink;
@@ -295,6 +295,7 @@
     timers.forEach(clearTimeout); timers = [];
     pulses = []; waves = []; ta = 0;
     root.classList.remove('is-labelled');
+    canvas.style.transition = ''; canvas.style.opacity = ''; Object.values(labels).forEach((el) => { el.style.opacity = ''; });
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
   };
   const begin = () => {
@@ -324,13 +325,28 @@
   addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) draw(); });
   root.addEventListener('click', (e) => e.stopPropagation());
 
-  // For slide 7: where this slide's core sits, in viewport pixels, so it can end on exactly this core.
+  // For the next slide: where this slide's core sits, in viewport pixels.
   window.AstridPays = {
     CORE_REF,
     core() {
       if (!lens) layout();
       const b = root.getBoundingClientRect();
       return lens && { x: b.left + lens.c.x, y: b.top + lens.c.y, w: lens.w, h: lens.h, cell };
+    },
+    // Going on to the foundation, this picture carries on: its core, its builders and everyone else, in viewport pixels.
+    snapshot() {
+      if (!lens || ta < END) return null;
+      const b = root.getBoundingClientRect(), v = (p) => ({ x: b.left + p.x, y: b.top + p.y });
+      return {
+        core: { ...v(lens.c), w: lens.w, h: lens.h, cell },
+        machines: machines.map((m) => ({ ...v(m), r: m.r })),
+        people: arcs.flatMap((a) => a.dots).map((d) => ({ ...v(d), r: d.r * Math.max(0.8, k), bright: d.bright })),
+        k, lw: LW,
+      };
+    },
+    hide() { // fade out as the next slide's picture takes over
+      canvas.style.transition = 'opacity .35s ease'; canvas.style.opacity = '0';
+      labels.local.style.opacity = labels.hosted.style.opacity = labels.core.style.opacity = '0';
     },
   };
 
