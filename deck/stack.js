@@ -203,13 +203,10 @@
       for (let t = 0; t <= 1.0001; t += 0.04) pts.push([c.x + dx * Math.sin(t * Math.PI / 2) * (1 + 0.15 * t), c.y + dy * (1 - Math.cos(t * Math.PI / 2))]);
       return { pts, dots: [0.45 + 0.2 * R(), 0.9 + 0.1 * R()] };
     });
-    // The mink perches on the top plane's far edge, near its left corner.
-    const perch = toS(perchW);
-    geo = { corners, colX, callX, roots, arcs, perch };
+    geo = { corners, colX, callX, roots, arcs };
   };
 
   // ---- The mink ----------------------------------------------------------------------------------
-  let minkAt = null; // { x, y, c } of her top-left in screen px and her cell
   const paintMink = (x, y, c, upto = 1) => {
     const u = c * dpr;
     if (minkCv.width !== MW * u) { minkCv.width = MW * u; minkCv.height = MH * u; minkCv.style.width = `${MW * c}px`; minkCv.style.height = `${MH * c}px`; }
@@ -222,9 +219,12 @@
       mg.fillRect(q * u, r * u, u, u);
     }
     minkCv.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-    minkAt = { x, y, c };
   };
-  const perchOf = () => ({ x: geo.perch.x - Math.round(MW * cell * 0.42), y: geo.perch.y - MH * cell + Math.round(cell * 0.5), c: cell });
+  // Her place on the top plane's far edge, as the plane stands now (or settled).
+  const perchOf = (s = settledOf(PL[0])) => {
+    const p = project(s, -s.w / 2 + 0.16 * s.w, -s.h / 2 + 2);
+    return { x: p.x - Math.round(MW * cell * 0.42), y: p.y - MH * cell + Math.round(cell * 0.5), c: cell };
+  };
 
   // ---- Drawing the threads -----------------------------------------------------------------------
   // sh: how far the registration threads have drawn (top down); lb: the labels' leaders, per plane;
@@ -296,7 +296,7 @@
       labs[i].style.opacity = (q * q).toFixed(3);
     });
     vis.cl.forEach((q, j) => {
-      if (q <= 0) return;
+      if (q <= 0 || view.mobile) return; // no callouts on a phone
       const m = C[CALLS[j].at].rm, x0 = m.x + 8 * k, x1 = geo.callX;
       g.lineWidth = 0.8; g.strokeStyle = GOLD(0.5 * q);
       g.beginPath(); g.moveTo(x0, m.y); g.lineTo(lerp(x0, x1, ease(q)), m.y); g.stroke();
@@ -305,13 +305,14 @@
     });
     // The pulse: a bead of light running down a registration thread to the runtime and back.
     const p = vis.pulse;
-    if (p && p.q > 0) {
-      const segs = C.length - 1 - p.from, d = p.q * segs, i = p.from + Math.min(segs - 1, Math.floor(d)), f = d - Math.floor(d) + (d >= segs ? 1 : 0);
-      const a = C[i][p.key], b = C[i + 1][p.key], x = lerp(a.x, b.x, Math.min(1, f)), y = lerp(a.y, b.y, Math.min(1, f));
-      const tail = g.createLinearGradient(x, y - 40 * k * p.dir, x, y);
-      tail.addColorStop(0, GOLD(0)); tail.addColorStop(1, GOLD(0.7 * p.a));
-      g.lineWidth = 1.2; g.strokeStyle = tail;
-      g.beginPath(); g.moveTo(lerp(x, a.x, 0), y - 40 * k * p.dir); g.lineTo(x, y); g.stroke();
+    if (p && p.a > 0.01) {
+      const segs = C.length - 1 - p.from;
+      const along = (q) => { const d = clamp(q) * segs, i = Math.min(segs - 1, Math.floor(d)), a = C[p.from + i][p.key], b = C[p.from + i + 1][p.key]; return [lerp(a.x, b.x, d - i), lerp(a.y, b.y, d - i)]; };
+      const [x, y] = along(p.q), [tx, ty] = along(p.q - 0.09 * p.dir / Math.max(1, segs / 2));
+      const tail = g.createLinearGradient(tx, ty, x, y);
+      tail.addColorStop(0, GOLD(0)); tail.addColorStop(1, GOLD(0.75 * p.a));
+      g.lineWidth = 1.3; g.strokeStyle = tail;
+      g.beginPath(); g.moveTo(tx, ty); g.lineTo(x, y); g.stroke();
       dot(x, y, 2.2, p.a);
       if (p.glow > 0) { const r = C[C.length - 1][p.key]; dot(r.x, r.y, 3, p.glow); }
     }
@@ -373,7 +374,7 @@
       const T = FROM5, src = build.src.planes, sp = easeIO(k01(e, T.spread)), mid = PL[2].cy;
       for (let i = 0; i < 3; i++) { // preview, timeline, agent: from slide 5's panels, tilting into the stack
         const p = PL[i], s = st[i], qa = easeIO(k01(e, T.a[i])), f = src[i];
-        const ty = lerp(mid + (p.cy - mid) * 0.55, p.cy, sp);
+        const ty = lerp(mid + (p.cy - mid) * 0.72, p.cy, sp);
         s.x = lerp(f.x, p.cx, qa); s.y = lerp(f.y, ty, qa); s.w = lerp(f.w, p.w, qa); s.h = lerp(f.h, p.h, qa);
         s.rx = TILT * qa; s.rz = TURN * qa - (i === 2 ? 16 * Math.sin(Math.PI * qa) : 0);
         s.o = seep(clamp((e - T.a[i][0] + 0.05) / T.fade));
@@ -383,10 +384,10 @@
         Object.assign(s, settledOf(p), { y: p.cy + 50 * (1 - q), rx: TILT + 12 * (1 - q), o: seep(q) });
       }
       if (build.src.mink) {
-        const a = build.src.mink, b = perchOf(), q = easeIO(k01(e, T.mink));
+        const a = build.src.mink, b = perchOf(st[0]), q = easeIO(k01(e, T.mink));
         const c = Math.round(lerp(a.c, b.c, q)), lift = Math.sin(Math.PI * q) * 40 * view.k;
         paintMink(lerp(a.x, b.x, q), lerp(a.y, b.y, q) - lift, c);
-      } else if (e >= T.mink[1]) { const m = perchOf(); paintMink(m.x, m.y, m.c); }
+      } else if (e >= T.mink[1]) { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c); }
       minkCv.style.opacity = '1';
       vis.sh = k01(e, T.sh); vis.rt = k01(e, T.rt);
       vis.lb = PL.map((_, i) => clamp((e - T.lb - i * 0.1) / 0.55));
@@ -398,7 +399,7 @@
         Object.assign(st[i], settledOf(p), { y: p.cy + 46 * (1 - q), rx: TILT + 10 * (1 - q), o: seep(q) });
       }
       const qm = (e - T.mink[0]) / T.mink[1];
-      if (qm > 0) { const m = perchOf(); paintMink(m.x, m.y, m.c, clamp(qm)); minkCv.style.opacity = '1'; }
+      if (qm > 0) { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c, clamp(qm)); minkCv.style.opacity = '1'; }
       vis.sh = k01(e, T.sh); vis.rt = k01(e, T.rt);
       vis.lb = PL.map((_, i) => clamp((e - T.lb - i * 0.07) / 0.45));
       vis.cl = CALLS.map((_, j) => clamp((e - T.cl - j * 0.12) / 0.45));
