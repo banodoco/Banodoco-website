@@ -7,8 +7,7 @@
 <script>
   // Version F opens with the Mycelial mark: hide the slide before first paint (dot-transitions.js takes over).
   try {
-    const v = new URLSearchParams(location.search).get('v') || localStorage.getItem('deck-ver');
-    if (v === 'f' && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('dt-intro');
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('dt-intro');
   } catch (e) {}
 </script>
 <meta name="robots" content="noindex">
@@ -29,10 +28,6 @@
   body { font-family: "EB Garamond", Georgia, serif; overflow: hidden; }
 
   :root { --version-ink: #f2ca83; --version-bg: #382a16; }
-  html[data-ver="b"] { --version-ink: #edb3a7; --version-bg: #3b2423; }
-  html[data-ver="c"] { --version-ink: #c7b9ed; --version-bg: #2c2540; }
-  html[data-ver="d"] { --version-ink: #a8d9cf; --version-bg: #19352f; }
-  html[data-ver="e"] { --version-ink: #d3e2a4; --version-bg: #2a3219; }
   html[data-ver="f"] { --version-ink: #f3c9a2; --version-bg: #3a2718; }
   /* Version E marks what it borrowed from D, for review. */
   .e-note { margin: 1.2rem 0 0; max-width: 58ch; font: 500 12px/1.45 system-ui, sans-serif; letter-spacing: .03em; color: var(--version-ink); opacity: .8; }
@@ -383,19 +378,7 @@
 <body>
 <main class="deck" id="deck">
 
-  <section class="slide" data-v="a b d">
-    <div class="num">01<span class="act">The opportunity</span></div>
-<div class="split">
-      <div>
-        <h1>Open-source AI has unimaginable creative potential <em>waiting to be unlocked.</em></h1>
-    <div class="body">No closed doors, no ceiling on what can be made, no one deciding what is allowed — a few pieces that could only exist this way.</div>
-      </div>
-      <div class="vis"><div class="m-grid4"><img src="../assets/cards/arca/poster-1.jpg" alt=""><img src="../assets/cards/arca/poster-2.jpg" alt=""><img src="../assets/cards/arca/poster-3.jpg" alt=""><img src="../assets/cards/arca/poster-4.jpg" alt=""></div>
-<p class="cap">Arca Gidan entries — all made with open models. Ideally these play as video.</p></div>
-    </div>
-  </section>
-
-  <section class="slide vc-host" data-v="e f">
+  <section class="slide vc-host" data-v="f">
     <div class="num">01<span class="act">The opportunity</span></div>
     <div class="split">
       <div>
@@ -416,28 +399,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a b d">
-    <div class="num">02<span class="act">The problem</span></div>
-<div class="split">
-      <div>
-        <h1>But its capabilities are scattered across thousands of repos and threads — so <em>few artists, creators and everyday people can use them.</em></h1>
-    <div class="body">The sprawl of models, nodes, LoRAs and workflows — and how each breakthrough stays with whoever made it.</div>
-      </div>
-      <div class="vis"><div class="m-collage">
-  <div class="m-win w1"><div class="m-bar">workflow_final_v7_FIXED.json</div><svg viewBox="0 0 300 150" class="m-fill">
-<g fill="none" stroke="#e0ab5e" stroke-width="1.2" opacity=".7"><path d="M74,40 C100,40 100,85 120,85"/><path d="M74,110 C100,110 100,95 120,95"/><path d="M194,90 C215,90 215,50 230,50"/><path d="M194,90 C215,90 215,120 230,120"/></g>
-<g><rect x="10" y="10" width="64" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="10" y="10" width="64" height="13" rx="5" fill="#e0ab5e" opacity=".55"/><text x="16" y="20" font-size="8" fill="#0d0a07">Load model</text><circle cx="10" cy="40" r="3" fill="#b8a98f"/><circle cx="74" cy="40" r="3" fill="#b8a98f"/></g><g><rect x="10" y="80" width="64" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="10" y="80" width="64" height="13" rx="5" fill="#9fb5c8" opacity=".55"/><text x="16" y="90" font-size="8" fill="#0d0a07">LoRA x3</text><circle cx="10" cy="110" r="3" fill="#b8a98f"/><circle cx="74" cy="110" r="3" fill="#b8a98f"/></g><g><rect x="120" y="60" width="74" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="120" y="60" width="74" height="13" rx="5" fill="#e0ab5e" opacity=".55"/><text x="126" y="70" font-size="8" fill="#0d0a07">Sampler</text><circle cx="120" cy="90" r="3" fill="#b8a98f"/><circle cx="194" cy="90" r="3" fill="#b8a98f"/></g><g><rect x="230" y="20" width="62" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="230" y="20" width="62" height="13" rx="5" fill="#c89fb5" opacity=".55"/><text x="236" y="30" font-size="8" fill="#0d0a07">Upscale</text><circle cx="230" cy="50" r="3" fill="#b8a98f"/><circle cx="292" cy="50" r="3" fill="#b8a98f"/></g><g><rect x="230" y="92" width="62" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="230" y="92" width="62" height="13" rx="5" fill="#9fc8a6" opacity=".55"/><text x="236" y="102" font-size="8" fill="#0d0a07">Interp.</text><circle cx="230" cy="122" r="3" fill="#b8a98f"/><circle cx="292" cy="122" r="3" fill="#b8a98f"/></g></svg></div>
-  <div class="m-win w2"><div class="m-bar">github.com / someone / video-wrapper</div>
-    <div class="m-pad"><b>video-wrapper</b><span class="m-dim"> ★ 4.2k · 312 issues</span><div class="m-line"></div><div class="m-line s"></div><div class="m-code">pip install -r requirements.txt<br>ERROR: torch 2.4 required…</div></div></div>
-  <div class="m-win w3"><div class="m-bar"># wan-video</div>
-    <div class="m-pad m-chat"><p><b>pom</b> anyone got the new lora working w/ 14B?</p><p><b>kaji</b> use the fp8 branch, set shift to 5, see pinned</p><p><b>pom</b> which pinned 😭</p></div></div>
-  <div class="m-win w4"><div class="m-bar">huggingface.co</div><div class="m-pad"><b>style-lora-v3</b><div class="m-tags"><i>LoRA</i><i>14B</i><i>i2v</i></div><div class="m-line s"></div></div></div>
-</div>
-<p class="cap">The real experience today: graphs, repos, threads and model pages — each holding part of the answer.</p></div>
-    </div>
-  </section>
-
-  <section class="slide sf-host" data-v="e f">
+  <section class="slide sf-host" data-v="f">
     <div class="sf" data-scatter-field aria-label="An orbiting field of open-source models, LoRAs, repos, workflows, threads and guides">
       <div class="sf-stage"><canvas class="sf-dust" aria-hidden="true"></canvas></div>
       <div class="sf-whisper" aria-hidden="true"><span class="sf-where"></span><span class="sf-name"></span></div>
@@ -452,25 +414,6 @@
         <div class="body">The sprawl of models, nodes, LoRAs and workflows — and how each breakthrough stays with whoever made it.</div>
       </div>
       <div class="vis" aria-hidden="true"></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="a e">
-    <div class="num">03<span class="act">The gap</span></div>
-<div class="split">
-      <div>
-        <h1>What's missing isn't another model, technical tool or hub. It's <em>an accessible place to create with all of it.</em></h1>
-    <div class="body">Hubs host the models; node graphs wire them together — both built for engineers. Closed tools are easy but limited. Nothing gives artists the power of open source without the nerd hole.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 320 240" class="m-fill">
-<line x1="40" y1="120" x2="300" y2="120" stroke="#ffffff22"/><line x1="170" y1="15" x2="170" y2="225" stroke="#ffffff22"/>
-<text x="296" y="134" text-anchor="end" class="ax">easy to use →</text><text x="44" y="134" class="ax">← hard</text>
-<text x="176" y="24" class="ax">powerful ↑</text><text x="176" y="222" class="ax">limited</text>
-<circle cx="240" cy="180" r="7" fill="#b8a98f"/><text x="240" y="200" text-anchor="middle" class="lb">Closed tools</text>
-<circle cx="95" cy="60" r="7" fill="#b8a98f"/><text x="95" y="82" text-anchor="middle" class="lb">Open tools</text>
-<circle cx="240" cy="60" r="30" fill="#e0ab5e" opacity=".12"/><circle cx="240" cy="60" r="9" fill="none" stroke="#f0c67e" stroke-width="1.5" stroke-dasharray="3 3"/>
-<text x="240" y="100" text-anchor="middle" class="lb g">Nothing here — yet</text></svg>
-<p class="cap">The empty corner is where Astrid lands on the next slide.</p></div>
     </div>
   </section>
 
@@ -521,45 +464,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="b">
-    <div class="num">03<span class="act">The gap</span></div>
-<div class="split">
-      <div>
-        <h1>What's missing isn't another model, technical tool or hub. It's <em>an accessible place to create with all of it.</em></h1>
-    <div class="body">ComfyUI wires models together and is where much of the community's work gets made — powerful, but built for engineers. Runway and Pika are easy, but only offer what one team builds; Krea and fal-based apps wrap single models. Nothing gives people the whole community's work without the nerd hole.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 320 240" class="m-fill">
-<line x1="40" y1="120" x2="300" y2="120" stroke="#ffffff22"/><line x1="170" y1="15" x2="170" y2="225" stroke="#ffffff22"/>
-<text x="296" y="134" text-anchor="end" class="ax">easy to use →</text><text x="44" y="134" class="ax">← hard</text>
-<text x="176" y="24" class="ax">powerful ↑</text><text x="176" y="222" class="ax">limited</text>
-<circle cx="240" cy="180" r="7" fill="#b8a98f"/><text x="240" y="200" text-anchor="middle" class="lb">Closed tools</text>
-<circle cx="95" cy="60" r="7" fill="#b8a98f"/><text x="95" y="82" text-anchor="middle" class="lb">Open tools</text>
-<circle cx="240" cy="60" r="30" fill="#e0ab5e" opacity=".12"/><circle cx="240" cy="60" r="9" fill="none" stroke="#f0c67e" stroke-width="1.5" stroke-dasharray="3 3"/>
-<text x="240" y="100" text-anchor="middle" class="lb g">Nothing here — yet</text></svg>
-<p class="cap">The empty corner is where Astrid lands on the next slide.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="b">
-    <div class="num">00<span class="act">Why now</span></div>
-    <div class="split">
-      <div>
-        <h1>And it's only now possible: open video models are finally good enough, and <em>agents can use — and build — tools for you.</em></h1>
-        <div class="body">Two curves crossed in the last year. Open video models went from curiosities to work artists actually ship, and agents became reliable enough to operate real software. An editor that reaches for the whole ecosystem needs both.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 320 220" class="m-fill">
-<line x1="36" y1="190" x2="305" y2="190" stroke="#ffffff33"/><line x1="36" y1="20" x2="36" y2="190" stroke="#ffffff33"/>
-<rect x="232" y="20" width="73" height="170" fill="#f0c67e10"/>
-<line x1="232" y1="20" x2="232" y2="190" stroke="#f0c67e66" stroke-dasharray="4 4"/>
-<path d="M36,176 C110,172 170,150 215,100 S275,44 305,36" fill="none" stroke="#f0c67e" stroke-width="2.5"/>
-<path d="M36,184 C130,182 190,170 225,128 S280,58 305,50" fill="none" stroke="#b8a98f" stroke-width="2"/>
-<text x="48" y="150" class="lb g">open video models</text><text x="175" y="176" class="lb">agents using tools</text>
-<text x="268" y="210" text-anchor="middle" class="ax">now</text><text x="36" y="210" class="ax">2023</text>
-<text x="268" y="16" text-anchor="middle" class="hubt">Astrid</text></svg>
-<p class="cap">Illustrative — two curves, one window. Real benchmarks if we want them.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="a b e f">
+  <section class="slide" data-v="f">
     <div class="num">04<span class="act">Astrid</span></div>
 <div class="split">
       <div>
@@ -578,25 +483,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a b">
-    <div class="num">05<span class="act">Where it starts</span></div>
-    <div class="split">
-      <div>
-        <h1>It starts as a video editor: describe what you want, and the agent reaches for <em>everything the community has built</em> to help.</h1>
-        <div class="body">No installs, no node graphs, locally or in the cloud. The agent picks the right models and community-made tools, and when nothing fits, it builds what you need. We start with video because that's where open models are moving fastest — and where they're hardest to use.</div>
-      </div>
-      <div class="vis"><div class="m-chain">
-  <div class="m-step"><span class="m-role">You</span><div class="m-art m-ask">“Make this look like 16mm film, and hold the last shot 2s longer”</div><b>Describe the shot</b><span class="m-dim">plain language</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Agent</span><div class="m-art"><div class="m-picks"><i>Film grain <span>by @someone</span></i><i>Wan i2v 14B</i><i>Frame interp.</i></div></div><b>Picks community tools</b><span class="m-dim">no setup</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Result</span><div class="m-art"><img src="../assets/cards/ados/paris-2025-thumb.jpg" alt=""></div><b>Finished in the timeline</b><span class="m-dim">share as a template</span></div>
-</div>
-<p class="cap">The user journey in three beats — ideally a short screen recording.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="e f">
+  <section class="slide" data-v="f">
     <div class="num">05<span class="act">Where it starts</span></div>
     <div class="split">
       <div>
@@ -615,29 +502,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a">
-    <div class="num">06<span class="act">Where it goes</span></div>
-<div class="split">
-      <div>
-        <h1>All the tools and knowledge you and your agent create are shared — so the editor grows into <em>a community-built creative platform.</em></h1>
-    <div class="body">
-      <ul>
-        <li><b>Today</b> — a video editor with agents built in, that reshapes itself around each artist.</li>
-        <li><b>Next</b> — we open it up: anyone can add tools, models and workflows.</li>
-        <li><b>Then</b> — a platform for every medium, built by everyone who uses it.</li>
-      </ul>
-    </div>
-      </div>
-      <div class="vis"><div class="m-stages">
-  <div><span class="m-role">Today</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-chat"></div></div><b>Agent-powered video editor</b></div>
-  <div><span class="m-role">Next</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-plug"><i></i><i></i><i></i></div></div><b>Extensible: tools &amp; workflows inside it</b></div>
-  <div><span class="m-role">Then</span><div class="m-thumb m-store"><i></i><i></i><i></i><i></i><i></i><i></i></div><b>A community-built creative platform</b></div>
-</div>
-<p class="cap">Rough UI thumbnails for each stage.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="e f">
+  <section class="slide" data-v="f">
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
@@ -661,25 +526,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a">
-    <div class="num">07<span class="act">Who it reaches</span></div>
-<div class="split">
-      <div>
-        <h1>Every builder makes it more capable — and <em>more attractive to broader audiences who just want to create.</em></h1>
-    <div class="body">Builders run Astrid locally and push it to its limits. What they make flows into a polished, hosted Astrid for the far larger audience who'd rather not set anything up — and that audience gives builders a reason to keep building. A competitor would have to copy the community, not just the product.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 320 220" class="m-fill">
-<line x1="36" y1="190" x2="305" y2="190" stroke="#ffffff33"/><line x1="36" y1="20" x2="36" y2="190" stroke="#ffffff33"/>
-<text x="305" y="208" text-anchor="end" class="ax">participants →</text><text x="30" y="24" text-anchor="end" class="ax" transform="rotate(-90 30 24)">capability</text>
-<path d="M36,180 C120,175 180,150 220,110 S290,30 305,22" fill="none" stroke="#f0c67e" stroke-width="2.5"/>
-<path d="M36,150 L305,140" fill="none" stroke="#b8a98f" stroke-width="1.5" stroke-dasharray="5 4"/>
-<text x="236" y="52" text-anchor="end" class="lb g">Astrid + community</text><text x="200" y="160" class="lb">closed tool (one team)</text>
-<g fill="#f0c67e"><circle cx="80" cy="177" r="2.5"/><circle cx="130" cy="170" r="2.5"/><circle cx="175" cy="152" r="2.5"/><circle cx="215" cy="115" r="2.5"/><circle cx="255" cy="70" r="2.5"/><circle cx="290" cy="32" r="2.5"/></g></svg>
-<p class="cap">Illustrative — real data if we can get it (tools published, models supported).</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="e f">
+  <section class="slide" data-v="f">
     <div class="num">07<span class="act">How it pays</span></div>
     <div class="split">
       <div>
@@ -696,7 +543,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a e f">
+  <section class="slide" data-v="f">
     <div class="num">08<span class="act">A thousand flowers</span></div>
     <div class="split">
       <div>
@@ -714,67 +561,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="b">
-    <div class="num">06<span class="act">Where it goes</span></div>
-<div class="split">
-      <div>
-        <h1>All the tools and knowledge you and your agent create are shared — so the editor grows into <em>a foundation for thousands of creative apps.</em></h1>
-    <div class="body">
-      <ul>
-        <li><b>Today</b> — a video editor with agents built in, that reshapes itself around each artist.</li>
-        <li><b>Next</b> — we open it up: anyone can add tools, models and workflows.</li>
-        <li><b>Then</b> — first-class forks: thousands of versions, each focused on its own niche.</li>
-      </ul>
-    </div>
-      </div>
-      <div class="vis"><div class="m-stages">
-  <div><span class="m-role">Today</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-chat"></div></div><b>Agent-powered video editor</b></div>
-  <div><span class="m-role">Next</span><div class="m-thumb"><div class="m-mini-prev"></div><div class="m-mini-tl"><i></i><i></i><i></i></div><div class="m-mini-plug"><i></i><i></i><i></i></div></div><b>Extensible: tools &amp; workflows inside it</b></div>
-  <div><span class="m-role">Then</span><div class="m-thumb m-store"><i></i><i></i><i></i><i></i><i></i><i></i></div><b>Thousands of forks, one shared pool</b></div>
-</div>
-<p class="cap">Rough UI thumbnails for each stage.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="b">
-    <div class="num">00<span class="act">Business model</span></div>
-    <div class="split">
-      <div>
-        <h1>Builders use it free and locally — <em>everyone else pays to create with what they make.</em></h1>
-        <div class="body">Builders run Astrid on their own hardware and push it to its limits. What they make flows into hosted Astrid, for the far larger audience who'd rather not set anything up: they pay for compute and convenience, and toolmakers earn a share whenever their work is used. [Pricing and split to confirm.]</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 400 250" class="m-fill">
-<defs><marker id="bz" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e0ab5e"/></marker></defs>
-<g fill="#15110d" stroke="#ffffff22"><rect x="6" y="80" width="104" height="70" rx="8"/><rect x="148" y="70" width="104" height="90" rx="8" stroke="#f0c67e88"/><rect x="290" y="60" width="104" height="110" rx="8"/></g>
-<text x="58" y="108" text-anchor="middle" class="lb">Builders</text><text x="58" y="128" text-anchor="middle" class="ax">free · local</text>
-<text x="200" y="104" text-anchor="middle" class="hubt">Astrid</text><text x="200" y="124" text-anchor="middle" class="ax">shared pool</text><text x="200" y="140" text-anchor="middle" class="ax">+ hosted runtime</text>
-<text x="342" y="104" text-anchor="middle" class="lb">Broader</text><text x="342" y="122" text-anchor="middle" class="lb">audiences</text><text x="342" y="146" text-anchor="middle" class="lb g">pay</text>
-<g stroke="#e0ab5e" stroke-width="1.6" fill="none" marker-end="url(#bz)"><path d="M112,115 L144,115"/><path d="M254,115 L286,115"/></g>
-<path d="M342,174 C342,226 58,226 58,154" stroke="#e0ab5e" stroke-width="1.4" stroke-dasharray="5 4" fill="none" marker-end="url(#bz)"/>
-<text x="200" y="240" text-anchor="middle" class="lb g">revenue share back to toolmakers</text>
-<text x="128" y="104" text-anchor="middle" class="ax">tools</text><text x="270" y="104" text-anchor="middle" class="ax">use</text></svg>
-<p class="cap">How value flows: builders supply, audiences pay, toolmakers share. Pricing to confirm.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="b">
-    <div class="num">08<span class="act">What we own</span></div>
-    <div class="split">
-      <div>
-        <h1>Every fork grows the same shared pool — so <em>a competitor would have to copy the community, not just the product.</em></h1>
-        <div class="body">Forks are distribution, not leakage: each one brings new builders and audiences into the shared pool, and hosted forks run on our infrastructure. The more versions flourish, the more the pool — and Astrid — is worth. [Confirm what we own: pool, runtime, brand.]</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 400 340" class="m-fill">
-<ellipse cx="200" cy="300" rx="170" ry="22" fill="#e0ab5e" opacity=".08"/><ellipse cx="200" cy="300" rx="170" ry="22" fill="none" stroke="#e0ab5e55" stroke-dasharray="3 4"/>
-<text x="200" y="334" text-anchor="middle" class="ax">shared pool of tools, models &amp; workflows — every fork draws from it and adds to it</text>
-<path d="M200,232 L200,282" stroke="#e0ab5e" stroke-dasharray="2 3" opacity=".6"/>
-<path d="M200,205 Q158,165 92,142" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="92" cy="142" r="5" fill="#f0c67e"/><text x="82" y="134" text-anchor="end" class="lb">Anime studio</text><path d="M200,205 Q194,137 168,84" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="168" cy="84" r="5" fill="#f0c67e"/><text x="158" y="75" text-anchor="end" class="lb">Music videos</text><path d="M200,205 Q240,143 262,97" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="262" cy="97" r="5" fill="#f0c67e"/><text x="272" y="88" text-anchor="start" class="lb">Live VJ sets</text><path d="M200,205 Q268,179 321,173" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="321" cy="173" r="5" fill="#f0c67e"/><text x="331" y="164" text-anchor="start" class="lb">Archive film</text><path d="M200,205 Q262,225 308,268" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="308" cy="268" r="5" fill="#f0c67e"/><text x="318" y="258" text-anchor="start" class="lb">Storytelling</text><path d="M200,205 L197,125" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="197" cy="125" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L161,139" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="161" cy="139" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L79,286" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="79" cy="286" r="2.7" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L294,226" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="294" cy="226" r="1.8" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L133,144" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="133" cy="144" r="2.9" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L177,290" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="177" cy="290" r="2.0" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L65,276" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="65" cy="276" r="2.4" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L101,280" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="101" cy="280" r="2.8" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L310,141" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="310" cy="141" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L153,118" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="153" cy="118" r="2.7" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L269,272" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="269" cy="272" r="2.3" fill="#e0ab5e" opacity=".7"/>
-<circle cx="200" cy="205" r="26" fill="#0d0a07" stroke="#f0c67e"/><text x="200" y="211" text-anchor="middle" class="hubt">Astrid</text>
-</svg>
-<p class="cap">Forks branching from Astrid, all rooted in one shared pool. Named examples are illustrative.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="a b e f">
+  <section class="slide" data-v="f">
     <div class="num">09<span class="act">The community</span></div>
     <div class="split">
       <div>
@@ -801,7 +588,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="a e f">
+  <section class="slide" data-v="f">
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
       <div>
@@ -817,38 +604,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="b">
-    <div class="num">10<span class="act">How we grow</span></div>
-<div class="split">
-      <div>
-        <h1>Prizes, compute and a stage are <em>how we recruit the builders who make Astrid better.</em></h1>
-    <div class="body">Arca Gidan rewards ambition, ArtCompute backs people whose ideas outrun their hardware, and 2RP gives the best work a stage — each one brings ambitious builders into Astrid and keeps them there. [Cost per builder recruited, if we have it.]</div>
-      </div>
-      <div class="vis"><div class="m-cards3">
-  <div><img src="../assets/cards/arca/poster-2.jpg" alt=""><b>Arca Gidan</b><span class="m-dim">open-source AI art prize</span><em>[$ prize pool]</em></div>
-  <div><div class="m-avs"><img src="../assets/cards/artcompute/ashmotv.jpg" alt=""><img src="../assets/cards/artcompute/loreweavr.jpg" alt=""><img src="../assets/cards/artcompute/persoon.jpg" alt=""></div><b>ArtCompute</b><span class="m-dim">micro-grants for compute</span><em>[n grants]</em></div>
-  <div><img src="../assets/cards/tworp/cover.jpg" alt=""><b>2RP</b><span class="m-dim">a stage for the best work</span><em>coming soon</em></div>
-</div>
-<p class="cap">One real figure on each card.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="b">
-    <div class="num">00<span class="act">The team</span></div>
-    <div class="split">
-      <div>
-        <h1>We're the people who built this community — <em>[and what we've shipped].</em></h1>
-        <div class="body">[Founders: name, role, one line each on what they've built and shipped.] Astrid today: [status — what's live, creators, tools published].</div>
-      </div>
-      <div class="vis"><div class="m-team">
-  <div><i></i><b>[Name]</b><span class="m-dim">[Role]</span><em>[Shipped]</em></div>
-  <div><i></i><b>[Name]</b><span class="m-dim">[Role]</span><em>[Shipped]</em></div>
-  <div><i></i><b>[Name]</b><span class="m-dim">[Role]</span><em>[Shipped]</em></div>
-</div>
-<p class="cap">Faces and one proof point each.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="a e f">
+  <section class="slide" data-v="f">
     <div class="num">11<span class="act">The raise</span></div>
     <div class="split">
       <div>
@@ -870,41 +626,7 @@
     </div>
   </section>
 
-  <section class="slide" data-v="b">
-    <div class="num">11<span class="act">The raise</span></div>
-    <div class="split">
-      <div>
-        <h1>Join us: we're raising $1M from angels and small funds to <em>make Astrid the home of open creative AI by [milestone].</em></h1>
-        <div class="body">[What it gets us to — e.g. Astrid opened up as a platform, the first community-built tools, N active creators — and over what timeframe.]</div>
-      </div>
-      <div class="vis">
-        <div class="m-raise">
-          <div class="m-big">$1M</div>
-          <div class="m-use">
-            <div><span>[Product &amp; engineering]</span><i style="width:55%"></i><em>[%]</em></div>
-            <div><span>[Community &amp; initiatives]</span><i style="width:25%"></i><em>[%]</em></div>
-            <div><span>[Compute &amp; infrastructure]</span><i style="width:20%"></i><em>[%]</em></div>
-          </div>
-          <div class="m-miles"><b>[Milestone 1]</b><b>[Milestone 2]</b><b>[Milestone 3]</b></div>
-        </div>
-        <p class="cap">Use of funds and the milestones it buys — real splits and dates needed.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="a b">
-    <div class="num">12<span class="act">The vision</span></div>
-<div class="split">
-      <div>
-        <h1>A thriving open-source AI art ecosystem can help accelerate <em>a second renaissance.</em></h1>
-    <div class="body">Creating with AI stops being one person at a prompt and becomes a collective effort, where every tool, model and piece builds on everyone else's. Tools shaped by a whole community will, in turn, shape what it can imagine.</div>
-      </div>
-      <div class="vis"><img class="m-hero" src="../assets/brand/og-home.jpg" alt="">
-<p class="cap">Full-bleed in the final deck, title only.</p></div>
-    </div>
-  </section>
-
-  <section class="slide" data-v="e f">
+  <section class="slide" data-v="f">
     <div class="num">12<span class="act">The vision</span></div>
 <div class="split">
       <div>
@@ -918,260 +640,7 @@
   </section>
 
 
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">Something new</span></div>
-    <div class="split">
-      <div>
-        <h1>Something new is being made with open-source AI. <em>Almost nobody can see it yet.</em></h1>
-        <div class="body">Every week, artists in our community make work with open models that no closed tool could. It just doesn't leave the room.</div>
-      </div>
-      <div class="vis"><div class="m-grid4"><img src="../assets/cards/arca/poster-1.jpg" alt=""><img src="../assets/cards/arca/poster-2.jpg" alt=""><img src="../assets/cards/arca/poster-3.jpg" alt=""><img src="../assets/cards/arca/poster-4.jpg" alt=""></div>
-<p class="cap">Arca Gidan entries. Let them play; say nothing.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">The wall</span></div>
-    <div class="split">
-      <div>
-        <h1>The tools exist. <em>They're just impossible to hold.</em></h1>
-        <div class="body">Scattered across thousands of repos, graphs and threads. To use them, you first have to become an engineer. Most artists stop there.</div>
-      </div>
-      <div class="vis"><div class="m-collage">
-  <div class="m-win w1"><div class="m-bar">workflow_final_v7_FIXED.json</div><svg viewBox="0 0 300 150" class="m-fill">
-<g fill="none" stroke="#e0ab5e" stroke-width="1.2" opacity=".7"><path d="M74,40 C100,40 100,85 120,85"/><path d="M74,110 C100,110 100,95 120,95"/><path d="M194,90 C215,90 215,50 230,50"/><path d="M194,90 C215,90 215,120 230,120"/></g>
-<g><rect x="10" y="10" width="64" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="10" y="10" width="64" height="13" rx="5" fill="#e0ab5e" opacity=".55"/><text x="16" y="20" font-size="8" fill="#0d0a07">Load model</text><circle cx="10" cy="40" r="3" fill="#b8a98f"/><circle cx="74" cy="40" r="3" fill="#b8a98f"/></g><g><rect x="10" y="80" width="64" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="10" y="80" width="64" height="13" rx="5" fill="#9fb5c8" opacity=".55"/><text x="16" y="90" font-size="8" fill="#0d0a07">LoRA x3</text><circle cx="10" cy="110" r="3" fill="#b8a98f"/><circle cx="74" cy="110" r="3" fill="#b8a98f"/></g><g><rect x="120" y="60" width="74" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="120" y="60" width="74" height="13" rx="5" fill="#e0ab5e" opacity=".55"/><text x="126" y="70" font-size="8" fill="#0d0a07">Sampler</text><circle cx="120" cy="90" r="3" fill="#b8a98f"/><circle cx="194" cy="90" r="3" fill="#b8a98f"/></g><g><rect x="230" y="20" width="62" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="230" y="20" width="62" height="13" rx="5" fill="#c89fb5" opacity=".55"/><text x="236" y="30" font-size="8" fill="#0d0a07">Upscale</text><circle cx="230" cy="50" r="3" fill="#b8a98f"/><circle cx="292" cy="50" r="3" fill="#b8a98f"/></g><g><rect x="230" y="92" width="62" height="46" rx="5" fill="#1c1712" stroke="#ffffff1f"/><rect x="230" y="92" width="62" height="13" rx="5" fill="#9fc8a6" opacity=".55"/><text x="236" y="102" font-size="8" fill="#0d0a07">Interp.</text><circle cx="230" cy="122" r="3" fill="#b8a98f"/><circle cx="292" cy="122" r="3" fill="#b8a98f"/></g></svg></div>
-  <div class="m-win w2"><div class="m-bar">github.com / someone / video-wrapper</div>
-    <div class="m-pad"><b>video-wrapper</b><span class="m-dim"> ★ 4.2k · 312 issues</span><div class="m-line"></div><div class="m-line s"></div><div class="m-code">pip install -r requirements.txt<br>ERROR: torch 2.4 required…</div></div></div>
-  <div class="m-win w3"><div class="m-bar"># wan-video</div>
-    <div class="m-pad m-chat"><p><b>pom</b> anyone got the new lora working w/ 14B?</p><p><b>kaji</b> use the fp8 branch, set shift to 5, see pinned</p><p><b>pom</b> which pinned 😭</p></div></div>
-  <div class="m-win w4"><div class="m-bar">huggingface.co</div><div class="m-pad"><b>style-lora-v3</b><div class="m-tags"><i>LoRA</i><i>14B</i><i>i2v</i></div><div class="m-line s"></div></div></div>
-</div>
-<p class="cap">What an artist actually meets.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">The turn</span></div>
-    <div class="split">
-      <div>
-        <h1>This year, something shifted: <em>software learned to use software.</em></h1>
-        <div class="body">Agents can now find a tool, set it up and run it for you. Point that at the open ecosystem, and it changes who gets to create.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 320 220" class="m-fill">
-<line x1="36" y1="190" x2="305" y2="190" stroke="#ffffff33"/><line x1="36" y1="20" x2="36" y2="190" stroke="#ffffff33"/>
-<rect x="232" y="20" width="73" height="170" fill="#f0c67e10"/>
-<line x1="232" y1="20" x2="232" y2="190" stroke="#f0c67e66" stroke-dasharray="4 4"/>
-<path d="M36,176 C110,172 170,150 215,100 S275,44 305,36" fill="none" stroke="#f0c67e" stroke-width="2.5"/>
-<path d="M36,184 C130,182 190,170 225,128 S280,58 305,50" fill="none" stroke="#b8a98f" stroke-width="2"/>
-<text x="48" y="150" class="lb g">open video models</text><text x="175" y="176" class="lb">agents using tools</text>
-<text x="268" y="210" text-anchor="middle" class="ax">now</text><text x="36" y="210" class="ax">2023</text>
-</svg>
-<p class="cap">Felt, not argued. Illustrative.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">Astrid</span></div>
-    <div class="split">
-      <div>
-        <h1>Astrid is a video editor <em>with the whole community inside it.</em></h1>
-        <div class="body">Describe what you want, and the agent reaches for what everyone has built — and when nothing fits, it builds it. It reshapes itself around whoever is using it.</div>
-      </div>
-      <div class="vis"><div class="m-app">
-  <div class="m-bar"><span class="m-dots"></span>Astrid — untitled project</div>
-  <div class="m-app-body">
-    <div class="m-preview"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt=""><span class="m-tc">00:12:04</span></div>
-    <div class="m-agent"><p class="u">Make shot 3 match the grain of the first two, and extend it by 2s</p><p class="a">Matching grain from shots 1–2 using the film-grain workflow… extending with the i2v model.</p><div class="m-prog"><i></i></div></div>
-    <div class="m-timeline"><div class="m-track"><i style="flex:3"></i><i style="flex:2"></i><i style="flex:4"></i><i style="flex:2"></i><i style="flex:3"></i></div><div class="m-track a"><i style="flex:5"></i><i style="flex:4"></i><i style="flex:5"></i></div><div class="m-head"></div></div>
-  </div>
-</div>
-<p class="cap">Show it, don't explain it: a short screen recording.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">Compounding</span></div>
-    <div class="split">
-      <div>
-        <h1>Every time someone makes something, <em>the next person can make more.</em></h1>
-        <div class="body">The tools, workflows and know-how made in Astrid are shared back. It gets more capable with every user, not every release.</div>
-      </div>
-      <div class="vis"><div class="m-chain">
-  <div class="m-step"><span class="m-role">You</span><div class="m-art m-ask">“Make this look like 16mm film, and hold the last shot 2s longer”</div><b>Describe the shot</b><span class="m-dim">plain language</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Agent</span><div class="m-art"><div class="m-picks"><i>Film grain <span>by @someone</span></i><i>Wan i2v 14B</i><i>Frame interp.</i></div></div><b>Picks community tools</b><span class="m-dim">no setup</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Result</span><div class="m-art"><img src="../assets/cards/ados/paris-2025-thumb.jpg" alt=""></div><b>Finished in the timeline</b><span class="m-dim">share as a template</span></div>
-</div>
-<p class="cap">One request, many hands behind it.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">Two kinds of people</span></div>
-    <div class="split">
-      <div>
-        <h1>The people at the edge build it for the love of it. <em>Everyone else pays to keep up with them.</em></h1>
-        <div class="body">Builders run it locally, because that's where the frontier is. Their work flows into hosted Astrid, for the many who just want to create — and a share flows back to whoever made the tool.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 400 250" class="m-fill">
-<defs><marker id="bzc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e0ab5e"/></marker></defs>
-<g fill="#15110d" stroke="#ffffff22"><rect x="6" y="80" width="104" height="70" rx="8"/><rect x="148" y="70" width="104" height="90" rx="8" stroke="#f0c67e88"/><rect x="290" y="60" width="104" height="110" rx="8"/></g>
-<text x="58" y="108" text-anchor="middle" class="lb">Builders</text><text x="58" y="128" text-anchor="middle" class="ax">free · local</text>
-<text x="200" y="104" text-anchor="middle" class="hubt">Astrid</text><text x="200" y="124" text-anchor="middle" class="ax">shared pool</text><text x="200" y="140" text-anchor="middle" class="ax">+ hosted runtime</text>
-<text x="342" y="104" text-anchor="middle" class="lb">Broader</text><text x="342" y="122" text-anchor="middle" class="lb">audiences</text><text x="342" y="146" text-anchor="middle" class="lb g">pay</text>
-<g stroke="#e0ab5e" stroke-width="1.6" fill="none" marker-end="url(#bzc)"><path d="M112,115 L144,115"/><path d="M254,115 L286,115"/></g>
-<path d="M342,174 C342,226 58,226 58,154" stroke="#e0ab5e" stroke-width="1.4" stroke-dasharray="5 4" fill="none" marker-end="url(#bzc)"/>
-<text x="200" y="240" text-anchor="middle" class="lb g">revenue share back to toolmakers</text>
-<text x="128" y="104" text-anchor="middle" class="ax">tools</text><text x="270" y="104" text-anchor="middle" class="ax">use</text></svg>
-<p class="cap">The business, without saying ‘business model’.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">The scene</span></div>
-    <div class="split">
-      <div>
-        <h1>You can fork the software. <em>You can't fork the scene.</em></h1>
-        <div class="body">Anyone can spin off their own Astrid for their niche — and should. Every fork draws from, and feeds, the same pool. The pool is the thing, and we tend it.</div>
-      </div>
-      <div class="vis"><svg viewBox="0 0 400 340" class="m-fill">
-<ellipse cx="200" cy="300" rx="170" ry="22" fill="#e0ab5e" opacity=".08"/><ellipse cx="200" cy="300" rx="170" ry="22" fill="none" stroke="#e0ab5e55" stroke-dasharray="3 4"/>
-<text x="200" y="334" text-anchor="middle" class="ax">shared pool of tools, models &amp; workflows — every fork draws from it and adds to it</text>
-<path d="M200,232 L200,282" stroke="#e0ab5e" stroke-dasharray="2 3" opacity=".6"/>
-<path d="M200,205 Q158,165 92,142" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="92" cy="142" r="5" fill="#f0c67e"/><text x="82" y="134" text-anchor="end" class="lb">Anime studio</text><path d="M200,205 Q194,137 168,84" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="168" cy="84" r="5" fill="#f0c67e"/><text x="158" y="75" text-anchor="end" class="lb">Music videos</text><path d="M200,205 Q240,143 262,97" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="262" cy="97" r="5" fill="#f0c67e"/><text x="272" y="88" text-anchor="start" class="lb">Live VJ sets</text><path d="M200,205 Q268,179 321,173" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="321" cy="173" r="5" fill="#f0c67e"/><text x="331" y="164" text-anchor="start" class="lb">Archive film</text><path d="M200,205 Q262,225 308,268" stroke="#e0ab5e" stroke-width="1.1" fill="none" opacity=".75"/><circle cx="308" cy="268" r="5" fill="#f0c67e"/><text x="318" y="258" text-anchor="start" class="lb">Storytelling</text><path d="M200,205 L197,125" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="197" cy="125" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L161,139" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="161" cy="139" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L79,286" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="79" cy="286" r="2.7" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L294,226" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="294" cy="226" r="1.8" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L133,144" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="133" cy="144" r="2.9" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L177,290" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="177" cy="290" r="2.0" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L65,276" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="65" cy="276" r="2.4" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L101,280" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="101" cy="280" r="2.8" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L310,141" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="310" cy="141" r="2.2" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L153,118" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="153" cy="118" r="2.7" fill="#e0ab5e" opacity=".7"/><path d="M200,205 L269,272" stroke="#e0ab5e" stroke-width=".6" opacity=".3"/><circle cx="269" cy="272" r="2.3" fill="#e0ab5e" opacity=".7"/>
-<circle cx="200" cy="205" r="26" fill="#0d0a07" stroke="#f0c67e"/><text x="200" y="211" text-anchor="middle" class="hubt">Astrid</text>
-</svg>
-<p class="cap">A thousand flowers, one root system.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">Us</span></div>
-    <div class="split">
-      <div>
-        <h1>We didn't set out to build a company. <em>We built a scene, and it asked for this.</em></h1>
-        <div class="body">Years of Banodoco: the Discord, ADOS, Arca Gidan, ArtCompute — [n] people making things together. [The team, one line each on what they've made.]</div>
-      </div>
-      <div class="vis"><div class="m-montage">
-  <img src="../assets/cards/ados/paris-2026-thumb.jpg" alt=""><img src="../assets/cards/ados/la-2025-thumb.jpg" alt=""><img src="../assets/cards/tworp/cover.jpg" alt="">
-  <div class="m-stat"><b>[n]</b>members</div><div class="m-stat"><b>[n]</b>years</div><div class="m-stat"><b>[n]</b>events</div>
-</div>
-<p class="cap">The room, not the résumé.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">The raise</span></div>
-    <div class="split">
-      <div>
-        <h1>We're raising $1M <em>to open the doors.</em></h1>
-        <div class="body">From angels and small funds who'd like to be early to this. [What it gets to, by when — one sentence.]</div>
-      </div>
-      <div class="vis"><div class="m-raise">
-          <div class="m-big">$1M</div>
-          <div class="m-use">
-            <div><span>[Product &amp; engineering]</span><i style="width:55%"></i><em>[%]</em></div>
-            <div><span>[Community &amp; initiatives]</span><i style="width:25%"></i><em>[%]</em></div>
-            <div><span>[Compute &amp; infrastructure]</span><i style="width:20%"></i><em>[%]</em></div>
-          </div>
-          <div class="m-miles"><b>[Milestone 1]</b><b>[Milestone 2]</b><b>[Milestone 3]</b></div>
-        </div>
-<p class="cap">Plain. Let the number sit.</p></div>
-    </div>
-  </section>
-  <section class="slide" data-v="c">
-    <div class="num">00<span class="act">What's coming</span></div>
-    <div class="split">
-      <div>
-        <h1>A renaissance doesn't come from one studio. <em>It comes from everyone, at once.</em></h1>
-              </div>
-      <div class="vis"><img class="m-hero" src="../assets/brand/og-home.jpg" alt="">
-<p class="cap">Full-bleed. Silence.</p></div>
-    </div>
-  </section>
-
   <!-- Version D: Codex feedback; opening slides are shared above. -->
-  <section class="slide " data-v="d">
-    <div class="num">03<span class="act">The missing connection</span></div>
-    <div class="split">
-      <div><h1>Bring the power of open tools <em>into the act of creating.</em></h1><div class="body">An artist should be able to describe an idea, try it, and keep shaping the result. Astrid brings agents into a creative workspace to connect that intent with the community’s models, tools and knowledge.</div></div>
-      <div class="vis"><div class="d-cards"><div><span class="m-role">Start with intent</span><b>“Make this feel like 16mm.”</b><p>A creative decision, in the artist’s own words.</p></div><div><span class="m-role">Reach for the tools</span><b>Find a way to make it.</b><p>An agent works across models and community workflows.</p></div><div><span class="m-role">Keep the artist involved</span><b>Bring it back to the timeline.</b><p>An editable result to review, change and build on.</p></div></div></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">04<span class="act">Astrid · the starting point</span></div>
-    <div class="split">
-      <div><h1>A video editor with <em>the community’s tools within reach.</em></h1><div class="body">Start with a shot: match its grain to the surrounding footage, then hold it two seconds longer. The agent draws on the relevant tools while the artist keeps working in the timeline. Video is the starting point for a broader creative workspace.</div></div>
-      <div class="vis"><div class="m-app">
-  <div class="m-bar"><span class="m-dots"></span>Astrid — untitled project</div>
-  <div class="m-app-body">
-    <div class="m-preview"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt=""><span class="m-tc">00:12:04</span></div>
-    <div class="m-agent"><p class="u">Make shot 3 match the grain of the first two, and extend it by 2s</p><p class="a">Matching grain from shots 1–2 using the film-grain workflow… extending with the i2v model.</p><div class="m-prog"><i></i></div></div>
-    <div class="m-timeline"><div class="m-track"><i style="flex:3"></i><i style="flex:2"></i><i style="flex:4"></i><i style="flex:2"></i><i style="flex:3"></i></div><div class="m-track a"><i style="flex:5"></i><i style="flex:4"></i><i style="flex:5"></i></div><div class="m-head"></div></div>
-  </div>
-</div>
-<p class="cap">Illustrative editing flow.</p></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">05<span class="act">The sharing model · proposed</span></div>
-    <div class="split">
-      <div><h1>One person’s solution becomes <em>someone else’s starting point.</em></h1><div class="body">The aim is to make useful discoveries reusable. A creator chooses to publish a tool or workflow; another artist’s agent finds it and brings it into a new project. What travels is a reusable capability, with its maker credited—not every private project.</div></div>
-      <div class="vis"><div class="d-cards"><div><span class="m-role">01 · Make</span><b>Solve a creative problem.</b><p>Develop a film-grain workflow while making a scene.</p></div><div><span class="m-role">02 · Publish</span><b>Share the reusable part.</b><p>Package the workflow with instructions, requirements and credit.</p></div><div><span class="m-role">03 · Build on it</span><b>Use it in another project.</b><p>Another artist applies it, adapts it, and can share the improvement.</p></div></div><p class="cap">Proposed contribution journey; the grain example continues from the previous slide.</p></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">06<span class="act">The community · already here</span></div>
-    <div class="split">
-      <div><h1>We’ve spent years bringing <em>these people together.</em></h1><div class="body">Banodoco connects artists, model trainers, builders and toolmakers through Discord, ADOS events and creative initiatives. Astrid grows from that community: a place to carry its exchanges into the work itself.</div></div>
-      <div class="vis"><div class="d-community"><img src="../assets/cards/ados/paris-2026-thumb.jpg" alt="ADOS Paris event artwork"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt="ADOS Los Angeles event artwork"></div><div class="d-pull">Artists · Model trainers · Builders · Toolmakers</div><p class="cap">ADOS Paris and Los Angeles, from the community’s existing event archive.</p></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">07<span class="act">The vision</span></div>
-    <div class="split">
-      <div><h1>People should shape their tools—<em>and expand what each other can imagine.</em></h1><div class="body">Our tools shape how we think and what we create. We want thousands of people to have a hand in making them, so each contribution opens possibilities its maker could never have foreseen.</div></div>
-      <div class="vis"><div class="d-cards"><div><span class="m-role">Imagine a painter</span><b>Her landscapes become a LoRA.</b><p>She shares a new way to see the world.</p></div><div><span class="m-role">An engineer</span><b>Builds a workshop for sculpting.</b><p>The model becomes material for another medium.</p></div><div><span class="m-role">A stranger</span><b>Makes a garden you can walk through.</b><p>Their work begins where the others left off.</p></div></div><p class="cap">An imagined creative exchange from the Mycelial Manifesto.</p></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">08<span class="act">Where it can grow</span></div>
-    <div class="split">
-      <div><h1>A shared foundation. <em>Many ways to create.</em></h1><div class="body">The ambition is to let people shape Astrid around their own practice. Specialist workspaces could draw from—and contribute to—the same pool of tools, models and workflows. Each can go deeper into a medium without starting from zero.</div></div>
-      <div class="vis"><div class="d-cards"><div><span class="m-role">A possible workspace</span><b>Anime studio</b><p>A workflow and interface shaped around a visual language.</p></div><div><span class="m-role">A possible workspace</span><b>Music videos</b><p>Tools organized around the relationship between image and sound.</p></div><div><span class="m-role">A possible workspace</span><b>Live visuals</b><p>A workspace shaped around performance.</p></div></div><div class="m-return">Shared tools, models and workflows beneath them all</div></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">09<span class="act">The business model · proposed</span></div>
-    <div class="split">
-      <div><h1>Build freely. <em>Pay for an easier way to create.</em></h1><div class="body">Builders can run Astrid on their own hardware. The proposed hosted service gives creators access without managing the setup. Revenue would support the service and reward the toolmakers whose work people use; pricing and revenue sharing still need to be defined.</div></div>
-      <div class="vis"><div class="d-cards"><div><span class="m-role">Builders</span><b>Local, extensible tools</b><p>Experiment, adapt the software, and contribute capabilities.</p></div><div><span class="m-role">Creators</span><b>Hosted creation</b><p>Pay for compute and convenience in a polished workspace.</p></div><div><span class="m-role">Toolmakers</span><b>Share in the value</b><p>The proposed model returns a share of revenue to contributors.</p></div></div></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">10<span class="act">How we support the work</span></div>
-    <div class="split">
-      <div><h1>Give people a reason to try—<em>and the means to keep going.</em></h1><div class="body">The work around Astrid matters too: prizes encourage ambition, compute helps ideas outgrow hardware limits, and a stage brings new work to an audience. Together, these initiatives help people discover what is possible and contribute what comes next.</div></div>
-      <div class="vis"><div class="m-cards3"><div><img src="../assets/cards/arca/poster-2.jpg" alt="Arca Gidan artwork"><b>Arca Gidan</b><span>Open-source AI art prize</span><em>Encourage ambition</em></div><div><div class="m-avs"><img src="../assets/cards/artcompute/ashmotv.jpg" alt="ArtCompute community member"><img src="../assets/cards/artcompute/loreweavr.jpg" alt="ArtCompute community member"><img src="../assets/cards/artcompute/persoon.jpg" alt="ArtCompute community member"></div><b>ArtCompute</b><span>Compute micro-grants</span><em>Support experimentation</em></div><div><img src="../assets/cards/tworp/cover.jpg" alt="2RP publication artwork"><b>2RP</b><span>A stage for art and technology</span><em>Coming soon</em></div></div></div>
-    </div>
-  </section>
-
-  <section class="slide " data-v="d">
-    <div class="num">11<span class="act">The raise</span></div>
-    <div class="split">
-      <div><h1>We’re raising $1M <em>to bring this creative world within reach.</em></h1><div class="body">We’re looking for angels and small funds who want the open ecosystem to thrive. The focus is Astrid and the people who make it valuable: the product, shared creative capabilities, and the community around them.</div></div>
-      <div class="vis"><div class="m-raise"><div class="m-big">$1M</div><div class="d-funding"><span class="m-role">Investment focus</span><div>Product &amp; engineering</div><div>Community &amp; initiatives</div><div>Compute &amp; infrastructure</div></div></div></div>
-    </div>
-  </section>
-
-  <section class="slide d-ending" data-v="d">
-    <div class="num">12<span class="act">The world we want</span></div>
-    <div class="split">
-      <div><h1>A world bustling <em>with creative life.</em></h1><div class="body">Artists, technologists and models, building on one another’s discoveries. People shaping their tools and making things none of us could have imagined alone. Every finished work, the start of someone else’s.</div></div>
-      <div class="vis"><div class="m-grid4"><img src="../assets/cards/arca/poster-1.jpg" alt=""><img src="../assets/cards/arca/poster-2.jpg" alt=""><img src="../assets/cards/arca/poster-3.jpg" alt=""><img src="../assets/cards/arca/poster-4.jpg" alt=""></div><p class="cap">Arca Gidan — a glimpse of what people can make with open models.</p></div>
-    </div>
-  </section>
 </main>
 
 <nav class="overview" id="overview" aria-label="All slides">
@@ -1179,21 +648,16 @@
   <ol id="list"></ol>
 </nav>
 
-<div class="version-badge" id="versionBadge" aria-live="polite"></div>
 
 <div class="chrome">
   <span id="count">1 / 12</span>
   <div class="bar"><i id="fill"></i></div>
-  <button id="verBtn" class="ver" type="button"></button>
   <button id="ovBtn" type="button">All titles (O)</button>
 </div>
 
 <script>
   const all = [...document.querySelectorAll('.slide')];
-  const VERS = { a: 'Yours', b: "Claude's", c: 'Guru', d: 'Codex feedback', e: 'Blend (A + D)', f: 'E + mycelium' };
-  let ver = new URLSearchParams(location.search).get('v');
-  if (!VERS[ver]) { try { ver = localStorage.getItem('deck-ver'); } catch (e) {} }
-  if (!VERS[ver]) ver = 'f'; // Version F (the mycelium deck) is the default
+  const ver = 'f'; // the deck is Version F; F-scoped styles and scripts key off html[data-ver="f"]
   let slides = [];
   const count = document.getElementById('count'), fill = document.getElementById('fill');
   const ov = document.getElementById('overview'), list = document.getElementById('list');
@@ -1204,21 +668,14 @@
     slides.forEach((s, k) => s.classList.toggle('on', k === i));
     count.textContent = `${i + 1} / ${slides.length}`;
     fill.style.width = `${((i + 1) / slides.length) * 100}%`;
-    history.replaceState(null, '', `?v=${ver}#${i + 1}`);
+    history.replaceState(null, '', `${location.pathname}#${i + 1}`);
   };
   const toggleOv = (on = !ov.classList.contains('on')) => ov.classList.toggle('on', on);
 
-  const setVer = (v) => {
-    const hadSlides = slides.length > 0;
-    ver = v;
-    try { localStorage.setItem('deck-ver', v); } catch (e) {}
-    document.documentElement.dataset.ver = v;
-    document.getElementById('versionBadge').textContent = `${v.toUpperCase()} · ${VERS[v]}`;
-    slides = all.filter((s) => !s.dataset.v || s.dataset.v.split(' ').includes(v));
-    all.forEach((s) => s.classList.toggle('out', !slides.includes(s)));
-    all.forEach((s) => { if (!slides.includes(s)) s.classList.remove('on'); });
+  const setup = () => {
+    document.documentElement.dataset.ver = ver;
+    slides = all;
     slides.forEach((s, k) => { s.querySelector('.num').firstChild.nodeValue = String(k + 1).padStart(2, '0'); });
-    document.getElementById('verBtn').innerHTML = `Version <b>${v.toUpperCase()}</b> · ${VERS[v]} (V)`;
     list.innerHTML = '';
     slides.forEach((s, k) => {
       const li = document.createElement('li');
@@ -1227,31 +684,19 @@
       li.onclick = () => { go(k); toggleOv(false); };
       list.appendChild(li);
     });
-    // Compare the same slide number across versions; clamp for shorter decks.
-    if (hadSlides) go(i);
   };
-  setVer(ver);
-
-  const cycleVersion = (direction) => {
-    const versions = Object.keys(VERS);
-    setVer(versions[(versions.indexOf(ver) + direction + versions.length) % versions.length]);
-  };
+  setup();
 
   addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault(); cycleVersion(e.key === 'ArrowDown' ? 1 : -1);
-    }
-    else if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
+    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
     else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1); }
     else if (e.key === 'Home') go(0);
     else if (e.key === 'End') go(slides.length - 1);
     else if (e.key === 'o' || e.key === 'O') toggleOv();
     else if (e.key === 'Escape') toggleOv(false);
-    else if (e.key === 'v' || e.key === 'V') cycleVersion(1);
   });
   document.getElementById('deck').addEventListener('click', (e) => go(i + (e.clientX < innerWidth / 3 ? -1 : 1)));
   document.getElementById('ovBtn').onclick = () => toggleOv();
-  document.getElementById('verBtn').onclick = () => cycleVersion(1);
   let tx = null;
   addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
   addEventListener('touchend', (e) => {
