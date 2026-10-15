@@ -1,13 +1,16 @@
-// Version F, slide 5: Astrid herself. Beneath the text, the homepage's two
-// demos side by side, as on slide 4 (the agent left, the interface right):
-// the scripted conversation and the video editor, rebuilt in the homepage's
-// dusk palette with its own example (three light studies arranged into a
-// 28-second sequence). Between them sits the pixel mink, drawn crisp at a
-// whole-number scale from the homepage's own poses. Once the slide settles
-// the demo plays: the request types into the composer and sends, Astrid
-// answers, the editor rearranges the clips and plays the sequence. Hovering
-// the mink flashes her eye; clicking her makes her turn to face you, eyes lit,
-// and turn back, as the homepage avatar does.
+// Version F, slide 5: Astrid herself. Beneath the text the mink presides over
+// the homepage's pieces, rebuilt in its dusk palette: the agent's chat beside
+// the editor's preview, both on the editor's timeline. A calm three-beat loop
+// plays, the chat and the editor changing in step:
+//   1. "Generate three light studies." Three stills appear on the timeline
+//      (a generating shimmer, then the picture).
+//   2. "Animate this, this and this." Each still becomes a moving clip: its
+//      filmstrip fills in and the preview plays it.
+//   3. "Add this effect." A community-made look is applied, and you see it
+//      happen: it sweeps across the playing picture.
+// Then a gentle reset. The media are the homepage's own light studies.
+// Hovering the mink flashes her eye; clicking her turns her to face you, eyes
+// lit, and back, as the homepage avatar does.
 (() => {
   const root = document.querySelector('[data-astrid-demo]');
   const M = window.AstridMink;
@@ -17,44 +20,78 @@
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
+  const now = () => performance.now();
 
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
-  const videos = [...root.querySelectorAll('.as-screen video')];
-  const clips = [...root.querySelectorAll('.as-clip')];
-  const ruler = root.querySelector('.as-ruler');
-  const playhead = root.querySelector('.as-playhead');
+  const videos = [...root.querySelectorAll('.as-media video')];
+  const pic = root.querySelector('.as-pic'), pg = pic.getContext('2d');
+  const tl = root.querySelector('.as-tl');
   const timeEl = root.querySelector('.as-time');
-  const mid = root.querySelector('.as-mid');
-  const minkCv = root.querySelector('.as-mink');
-  const mg = minkCv.getContext('2d');
+  const seat = root.querySelector('.as-seat');
+  const minkCv = root.querySelector('.as-mink'), mg = minkCv.getContext('2d');
 
-  // The homepage's example (content/light-study-v1), verbatim.
-  const USER = 'Arrange these three light studies into a quiet 28-second sequence. Keep the middle scene longer and let the final frame settle.';
-  const ASTRID = 'The example uses an 8-second opening, a 12-second middle scene and an 8-second finish. The last frame holds for two seconds.';
-  const BEFORE = [[0, 8], [8, 8], [16, 8]], AFTER = [[0, 8], [8, 12], [20, 8]]; // [at, length] in seconds
-  const SPAN = 30; // seconds across the timeline
-
-  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-  ruler.innerHTML = Array.from({ length: 7 }, (_, i) => `<span style="left:${((i * 5) / SPAN) * 100}%">${fmt(i * 5)}</span>`).join('');
-  const layClips = (q) => { // q: 0 = as first dropped in, 1 = arranged
-    clips.forEach((el, i) => {
-      const at = BEFORE[i][0] + (AFTER[i][0] - BEFORE[i][0]) * q, len = BEFORE[i][1] + (AFTER[i][1] - BEFORE[i][1]) * q;
-      el.style.left = `calc(${(at / SPAN) * 100}% + 1px)`;
-      el.style.width = `calc(${(len / SPAN) * 100}% - 2px)`;
-    });
+  // ---- The timeline -------------------------------------------------------------
+  const SPAN = 30;
+  const ICON = {
+    film: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',
+    fx: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>',
+    audio: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>',
   };
-  const setHead = (t, total) => {
-    playhead.style.left = `${(t / SPAN) * 100}%`;
-    timeEl.textContent = `${fmt(t)} / ${fmt(total)}`;
-  };
+  const EYE = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+  const LOCK = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const TRACKS = [
+    { id: 'V2', name: 'Effects', icon: 'fx', h: 40 },
+    { id: 'V1', name: 'Video', icon: 'film', h: 60 },
+  ];
+  const CLIPS = [
+    { name: 'first-light', at: 0, len: 8 },
+    { name: 'passing-shapes', at: 8, len: 12 },
+    { name: 'quiet-finish', at: 20, len: 8 },
+  ];
+  const FX = [ // real Astrid pack elements, the kind the community makes and shares
+    { name: 'text-card', sub: 'type-on', at: 0, len: 8 },
+    { name: 'audio-reactive-colour', sub: '', at: 8, len: 20 },
+  ];
+  const TITLE = 'A quiet light study';
+  const lanes = {};
+  {
+    const fmt = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    let rulerHtml = '';
+    for (let t = 0; t <= SPAN; t++) rulerHtml += t % 5 ? `<i style="left:${(t / SPAN) * 100}%"></i>` : `<span style="left:${(t / SPAN) * 100}%">${fmt(t)}</span>`;
+    tl.innerHTML = `<div class="as-ruler-h"></div><div class="as-ruler">${rulerHtml}</div>`
+      + TRACKS.map((tr) => `<div class="as-th" style="height:${tr.h}px">${ICON[tr.icon]}<span>${tr.id}</span><em>${tr.name}</em></div><div class="as-lane" data-track="${tr.id}" style="height:${tr.h}px"></div>`).join('')
+      + '<i class="as-playhead"></i>';
+    tl.querySelectorAll('.as-lane').forEach((el) => { lanes[el.dataset.track] = el; });
+  }
+  const playhead = tl.querySelector('.as-playhead');
+  const place = (el, at, len) => { el.style.left = `calc(${(at / SPAN) * 100}% + 1px)`; el.style.width = `calc(${(len / SPAN) * 100}% - 2px)`; };
+  // Each clip starts as an anchor image and becomes a moving clip in place: its filmstrip fills in over it.
+  const anchorEls = CLIPS.map((c) => {
+    const el = document.createElement('div');
+    place(el, c.at, c.len);
+    el.innerHTML = `<img class="as-still" src="../assets/astrid/${c.name}-anchor.jpg" alt=""><span class="as-film" style="background-image:url(../assets/astrid/${c.name}-strip.jpg)"></span><span class="as-name">${c.name}</span><span class="as-kind">image</span>`;
+    lanes.V1.appendChild(el);
+    return el;
+  });
+  const motionEls = anchorEls;
+  const kind = (el, k) => { el.querySelector('.as-kind').textContent = k; };
+  const fxEls = FX.map((f) => {
+    const el = document.createElement('div');
+    el.className = 'as-fxclip';
+    place(el, f.at, f.len);
+    el.innerHTML = `✦ ${f.name}${f.sub ? ` · ${f.sub}` : ''} <em>community-made</em>`;
+    lanes.V2.appendChild(el);
+    return el;
+  });
+  const anchors = [...root.querySelectorAll('.as-media img')];
 
   // ---- The mink ----------------------------------------------------------------
   // Poses: profile, glint (her eye flash), facing, focus (eyes lit). She is drawn
   // cell by cell at a whole number of CSS pixels per art pixel, never smoothed.
   const HEAD = 3; // spare rows above her for the hop and the float
   let cell = 4, dpr = 1;
-  const mink = { pose: 'profile', lift: 0, glint: 0, seq: null, t: 0, hover: null };
+  const mink = { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null };
   const paint = (pose, lift, glint) => {
     const P = M.POSES[pose], w = P[0].length, h = P.length, u = cell * dpr;
     mg.clearRect(0, 0, minkCv.width, minkCv.height);
@@ -70,11 +107,9 @@
     if (glint > 0 && pose === 'profile') { mg.globalAlpha = glint; fill(M.POSES.glint, true); mg.globalAlpha = 1; }
   };
   const sizeMink = () => {
-    const b = mid.getBoundingClientRect();
-    if (!b.width) return;
     dpr = Math.min(2, Math.round(devicePixelRatio || 1) || 1);
-    const small = innerWidth <= 760;
-    cell = small ? 2 : clamp(Math.floor(Math.min(b.width * 0.9 / 23, b.height * 0.32 / 20)), 2, 6);
+    cell = innerWidth <= 760 ? 2 : innerHeight >= 860 ? 4 : innerHeight >= 660 ? 3 : 2;
+    root.style.setProperty('--as-cell', `${cell}px`);
     minkCv.width = 23 * cell * dpr; minkCv.height = (20 + HEAD) * cell * dpr;
     minkCv.style.width = `${23 * cell}px`; minkCv.style.height = `${(20 + HEAD) * cell}px`;
     minkCv.style.transform = `translateX(-${Math.round(23 * cell / 2)}px)`;
@@ -87,14 +122,14 @@
   const stepMink = (t) => {
     let { pose, lift, glint } = mink;
     if (mink.seq) {
-      const e = t - mink.seq.t0;
-      pose = TURN.filter(([at]) => e >= at).pop()[1];
-      const since = e - TURN.filter(([at]) => e >= at).pop()[0];
+      const e = Math.max(0, t - mink.seq.t0), cur = TURN.filter(([at]) => e >= at).pop();
+      pose = cur[1];
+      const since = e - cur[0];
       lift = pose === 'facing' ? (since < 130 ? 1 : 0) : pose === 'focus' ? ((since % 1100) < 550 ? 1 : 2) : 0;
       if (e >= 2400) mink.seq = null;
     }
     if (mink.hover !== null) { // the glint: up and back over 2.6 s
-      const e = (t - mink.hover) / 2600;
+      const e = Math.max(0, t - mink.hover) / 2600;
       glint = e >= 1 ? 0 : Math.sin(Math.PI * e) ** 2;
       if (e >= 1) mink.hover = null;
     } else glint = 0;
@@ -107,127 +142,429 @@
   minkCv.addEventListener('pointerenter', () => { if (still || mink.seq || mink.pose !== 'profile') return; mink.hover = now(); wake(); });
   minkCv.addEventListener('click', (e) => { e.stopPropagation(); if (!still) turn(); });
 
-  // ---- The demo ---------------------------------------------------------------------
-  const CUE = { type: 0.6, send: 4.9, dots: 5.5, reply: 6.5, arrange: 7.6, result: 8.6, play: 9.0 };
-  const CPS = 34; // characters a second as the request types
-  let td = -1, played = -1, words = [], astridEl = null, active = -1;
-  const reset = () => {
-    td = -1; played = -1; words = []; astridEl = null; active = -1;
-    msgs.innerHTML = ''; typed.textContent = '';
-    root.classList.remove('is-typing', 'has-draft', 'has-result', 'is-playing');
-    layClips(0); setHead(0, 24);
-    videos.forEach((v, i) => { v.pause(); v.classList.toggle('on', i === 0); try { v.currentTime = 0; } catch (e) { /* not loaded yet */ } });
+  // ---- The preview ----------------------------------------------------------------
+  // The playing clip drawn onto a canvas, so the look can be seen arriving: it sweeps
+  // across the picture, warming it and laying film grain over it.
+  // mode: none | still (an anchor image) | play (the motion clips, as a sequence).
+  const view = { mode: 'none', i: -1, seq: -1, rate: 1, title: -1, colour: false, sweep: 0 };
+  const noise = document.createElement('canvas');
+  noise.width = noise.height = 128;
+  {
+    const n = noise.getContext('2d'), d = n.createImageData(128, 128);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (Math.random() - 0.5) * 200; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    n.putImageData(d, 0, 0);
+  }
+  let grain = null, grainAt = 0, gx = 0, gy = 0, pdpr = 1;
+  const LOOKF = 'saturate(1.45) contrast(1.1) sepia(.18) brightness(.98)';
+  const sizePic = () => {
+    const b = pic.getBoundingClientRect();
+    pdpr = Math.min(2, devicePixelRatio || 1);
+    pic.width = Math.max(1, Math.round(b.width * pdpr)); pic.height = Math.max(1, Math.round(b.height * pdpr));
+    grain = pg.createPattern(noise, 'repeat');
   };
-  const bubble = (who, html) => {
+  const drawPic = (t) => {
+    if (Math.abs(pic.clientWidth * pdpr - pic.width) > 1 || Math.abs(pic.clientHeight * pdpr - pic.height) > 1) sizePic();
+    const w = pic.width, h = pic.height;
+    pg.setTransform(1, 0, 0, 1, 0, 0);
+    pg.clearRect(0, 0, w, h);
+    const src = view.mode === 'still' ? anchors[view.i] : view.mode === 'play' ? videos[view.i] : null;
+    root.classList.toggle('has-pic', !!src);
+    if (!src || (src.tagName === 'VIDEO' ? src.readyState < 2 : !src.complete)) return;
+    const s = Math.min(w / 16, h / 9) * 0.86, dw = 16 * s, dh = 9 * s, dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2);
+    pg.drawImage(src, dx, dy, dw, dh);
+    const seqT = view.mode === 'play' ? view.seq : -1;
+    // audio-reactive-colour: a colour look over its span, swept on when it first lands.
+    if (view.colour && seqT >= 8) {
+      const sx = dx + dw * view.sweep, pulse = 0.5 + 0.5 * Math.sin(t / 260);
+      pg.save();
+      pg.beginPath(); pg.rect(dx, dy, sx - dx, dh); pg.clip();
+      pg.filter = LOOKF; pg.drawImage(src, dx, dy, dw, dh); pg.filter = 'none';
+      pg.globalCompositeOperation = 'soft-light';
+      const cg = pg.createLinearGradient(dx, dy, dx + dw, dy + dh);
+      cg.addColorStop(0, `rgba(255,120,60,${(0.42 + 0.12 * pulse).toFixed(3)})`); cg.addColorStop(1, `rgba(120,90,220,${(0.32 + 0.1 * pulse).toFixed(3)})`);
+      pg.fillStyle = cg; pg.fillRect(dx, dy, dw, dh);
+      if (t - grainAt > 70) { grainAt = t; gx = Math.random() * 128; gy = Math.random() * 128; }
+      pg.globalCompositeOperation = 'overlay'; pg.globalAlpha = 0.22;
+      pg.translate(-gx, -gy); pg.fillStyle = grain; pg.fillRect(dx + gx, dy + gy, dw, dh); pg.translate(gx, gy);
+      pg.restore();
+      if (view.sweep < 1) { // the edge of the sweep
+        const e = 18 * pdpr, gr = pg.createLinearGradient(sx - e, 0, sx + 2 * pdpr, 0);
+        gr.addColorStop(0, 'rgba(255,190,110,0)'); gr.addColorStop(1, 'rgba(255,225,160,.9)');
+        pg.fillStyle = gr; pg.fillRect(sx - e, dy, e + 2 * pdpr, dh);
+      }
+    }
+    // text-card, type-on: the title types itself on over its span.
+    if (view.title >= 0 && seqT >= 0 && seqT < 8) {
+      const n = Math.min(TITLE.length, Math.floor(((t - view.title) / 1000) * 16));
+      if (n > 0) {
+        const fs = Math.round(dh * 0.11);
+        pg.font = `italic 500 ${fs}px "Cormorant Garamond", Georgia, serif`;
+        pg.textAlign = 'center'; pg.textBaseline = 'middle';
+        pg.shadowColor = 'rgba(0,0,0,.35)'; pg.shadowBlur = 8 * pdpr;
+        pg.fillStyle = '#fffaf0';
+        const full = pg.measureText(TITLE).width, part = TITLE.slice(0, n);
+        pg.textAlign = 'left';
+        pg.fillText(part, dx + dw / 2 - full / 2, dy + dh * 0.78);
+        pg.shadowBlur = 0;
+      }
+    }
+  };
+  const showStill = (i) => { view.mode = 'still'; view.i = i; view.seq = -1; videos.forEach((v) => v.pause()); };
+  const playFrom = (seqT, rate) => { view.mode = 'play'; view.seq = seqT; view.rate = rate; view.i = -2; };
+  const stepPlay = (dt) => {
+    if (view.mode !== 'play') return;
+    view.seq += dt * view.rate;
+    if (view.seq >= 28) view.seq = 0;
+    const i = view.seq < 8 ? 0 : view.seq < 20 ? 1 : 2, local = view.seq - CLIPS[i].at;
+    if (view.i !== i) {
+      videos.forEach((v, j) => { if (j !== i) v.pause(); });
+      view.i = i;
+      const v = videos[i];
+      try { v.currentTime = local; } catch (e) { /* not loaded */ }
+      v.playbackRate = view.rate;
+    }
+    if (videos[i].paused) videos[i].play().catch(() => {});
+    headTo(view.seq, true);
+  };
+
+  // ---- The playhead and the clock read-outs ---------------------------------------------
+  let headT = 0, headGoal = 0, total = 0;
+  const headTo = (t, now_) => { headGoal = t; if (now_) headT = t; };
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const stepHead = (dt) => {
+    headT += (headGoal - headT) * (1 - Math.exp(-dt / 0.12));
+    playhead.style.left = `${(headT / SPAN) * 100}%`;
+    timeEl.textContent = `${fmt(headT)} / ${fmt(total)}`;
+  };
+
+  // ---- The three beats ------------------------------------------------------------------
+  const BEATS = [
+    { at: 0.4, ask: 'Generate three anchor images for a quiet light study.', reply: 'Here are three anchor images.', step: ['Generating three anchor images', 'qwen_image', '× 3'], dur: 2.1 },
+    { at: 5.9, ask: 'Animate them.', reply: 'Animating each one from its anchor.', step: ['Animating the anchors', 'animated_video', '× 3'], dur: 3.7 },
+    { at: 11.2, ask: 'Add a title and a colour look on top.', reply: 'Layering two community-made effects.', step: ['Adding text-card · type-on and audio-reactive-colour', 'rendering', 'community-made'], dur: 5.2 },
+  ];
+  const CPS = 30, RESET = 20.6, LOOP = 21.6;
+  let td = -1, wait = 0, rows = [];
+  const bubble = (cls, html) => {
     const el = document.createElement('div');
-    el.className = `as-msg is-${who} as-in`;
+    el.className = `${cls} as-in`;
     el.innerHTML = html;
     msgs.appendChild(el);
+    while (msgs.children.length > 9) msgs.firstChild.remove();
     return el;
   };
-  const showVideo = (i, t) => {
-    if (active !== i) {
-      videos.forEach((v, j) => { v.classList.toggle('on', j === i); if (j !== i) v.pause(); });
-      active = i;
-      try { videos[i].currentTime = t; } catch (e) { /* not loaded yet */ }
-    }
-    if (videos[i].paused && !still) videos[i].play().catch(() => {});
+  const clearAll = () => {
+    msgs.innerHTML = ''; typed.textContent = ''; rows = [];
+    root.classList.remove('is-typing', 'has-draft', 'is-working', 'is-playing', 'is-resetting');
+    anchorEls.forEach((el) => { el.className = 'as-clip'; el.style.opacity = '0'; kind(el, 'image'); });
+    fxEls.forEach((el) => el.classList.remove('on'));
+    view.mode = 'none'; view.i = -1; view.seq = -1; view.title = -1; view.colour = false; view.sweep = 0; total = 0;
+    videos.forEach((v) => v.pause());
+    headTo(0, true);
   };
-  const settled = () => { // everything as it ends, for reduced motion
-    msgs.innerHTML = '';
-    bubble('user', USER).classList.remove('as-in');
-    bubble('astrid', ASTRID).classList.remove('as-in');
-    root.classList.add('has-result');
-    layClips(1); setHead(10, 28);
-    videos.forEach((v, j) => v.classList.toggle('on', j === 1));
-    try { videos[1].currentTime = 2; } catch (e) { /* not loaded yet */ }
+  const beatTimes = (b) => {
+    const typeEnd = b.at + b.ask.length / CPS;
+    return { typeEnd, send: typeEnd + 0.25, reply: typeEnd + 0.75, act: typeEnd + 0.95, done: typeEnd + 0.95 + b.dur };
   };
-  const stepDemo = (dt) => {
+  const stepBeats = (dt) => {
     if (td < 0) return false;
+    if (wait > 0) { wait -= dt; return true; }
     const was = td;
     td += dt;
     const passed = (c) => was < c && td >= c;
-    if (td >= CUE.type && td < CUE.send) {
-      root.classList.add('is-typing');
-      const n = Math.min(USER.length, Math.floor((td - CUE.type) * CPS));
-      if (typed.textContent.length !== n) typed.textContent = USER.slice(0, n);
-      root.classList.toggle('has-draft', n > 0);
-    }
-    if (passed(CUE.send)) {
-      typed.textContent = '';
-      root.classList.remove('is-typing', 'has-draft');
-      bubble('user', USER);
-    }
-    if (passed(CUE.dots)) astridEl = bubble('astrid', '<span class="as-dots"><i></i><i></i><i></i></span>');
-    if (passed(CUE.reply) && astridEl) {
-      astridEl.innerHTML = ASTRID.split(' ').map((w) => `<span class="w">${w}</span>`).join(' ');
-      words = [...astridEl.querySelectorAll('.w')];
-    }
-    if (td >= CUE.reply && words.length) {
-      const n = Math.floor(((td - CUE.reply) / 1.3) * words.length);
-      words.forEach((w, i) => { if (i <= n) w.classList.add('on'); });
-      if (n >= words.length) words = [];
-    }
-    if (td >= CUE.arrange && td < CUE.arrange + 1.2) {
-      const q = easeIO(clamp((td - CUE.arrange) / 0.9));
-      layClips(q);
-      setHead(0, 24 + 4 * q);
-    }
-    if (passed(CUE.result)) root.classList.add('has-result');
-    if (td >= CUE.play) {
-      // The sequence plays through and loops, the last frame held a moment before it starts again.
-      const p = (td - CUE.play) % 30, t = Math.min(28, p);
-      if (played < 0) { played = 0; root.classList.add('is-playing'); }
-      const i = t < 8 ? 0 : t < 20 ? 1 : 2, local = t - AFTER[i][0];
-      showVideo(i, local);
-      if (p >= 28) videos[i].pause();
-      setHead(t, 28);
-    }
+    BEATS.forEach((b, bi) => {
+      const T = beatTimes(b);
+      if (td >= b.at && td < T.send) {
+        root.classList.add('is-typing');
+        const n = Math.min(b.ask.length, Math.floor((td - b.at) * CPS));
+        if (typed.textContent.length !== n) typed.textContent = b.ask.slice(0, n);
+        root.classList.toggle('has-draft', n > 0);
+      }
+      if (passed(T.send)) {
+        typed.textContent = '';
+        root.classList.remove('is-typing', 'has-draft');
+        root.classList.add('is-working');
+        bubble('as-msg is-user', b.ask + (b.att ? `<br><span class="as-att">${b.att}</span>` : ''));
+      }
+      if (passed(T.reply)) {
+        bubble('as-msg is-astrid', b.reply);
+        rows[bi] = bubble('as-step is-active', `<i></i><span>${b.step[0]}</span><code><b>${b.step[1]}</b> ${b.step[2]}</code>`);
+      }
+      if (td >= T.act && td < T.done + 0.5) act(bi, td - T.act, was - T.act);
+      if (passed(T.done) && rows[bi]) { rows[bi].classList.remove('is-active'); rows[bi].classList.add('is-done'); root.classList.remove('is-working'); }
+    });
+    if (passed(RESET)) root.classList.add('is-resetting');
+    if (td >= LOOP) { clearAll(); td = 0; }
+    stepPlay(dt);
+    stepHead(dt);
     return true;
+  };
+  // What each beat does to the editor, a seconds into its work (p: where it was last frame).
+  const act = (bi, a, p) => {
+    const at = (x) => p < x && a >= x;
+    const touch = (el, on) => el.classList.toggle('is-touched', on);
+    if (bi === 0) { // three anchor images shimmer in on V1
+      CLIPS.forEach((c, i) => {
+        const el = anchorEls[i];
+        if (at(i * 0.5)) { el.style.opacity = ''; el.classList.add('is-generating'); touch(el, true); headTo(c.at + 0.5); }
+        if (at(0.85 + i * 0.5)) { el.classList.remove('is-generating'); el.classList.add('is-ready'); showStill(i); total = 28; }
+        if (at(1.35 + i * 0.5)) touch(el, false);
+      });
+    }
+    if (bi === 1) { // each anchor becomes a moving clip: its filmstrip fills in, and the preview plays it
+      CLIPS.forEach((c, i) => {
+        const el = motionEls[i];
+        if (at(i * 1.2)) { el.classList.add('is-animated'); kind(el, 'video'); touch(el, true); root.classList.add('is-playing'); playFrom(c.at, 1); }
+        if (at(i * 1.2 + 1.15)) touch(el, false);
+      });
+      if (at(3.6)) { view.mode = 'still'; view.i = 2; videos.forEach((v) => v.pause()); root.classList.remove('is-playing'); }
+    }
+    if (bi === 2) { // effects land on V2, above the clips, and the preview shows each come on
+      if (at(0)) { fxEls[0].classList.add('on'); touch(fxEls[0], true); playFrom(0.3, 1); view.title = now() + 450; root.classList.add('is-playing'); }
+      if (at(1.9)) { touch(fxEls[0], false); fxEls[1].classList.add('on'); touch(fxEls[1], true); playFrom(9, 1); view.colour = true; view.sweep = 0; }
+      if (a >= 2.05) view.sweep = easeIO(clamp((a - 2.05) / 1.6));
+      if (at(3.9)) { touch(fxEls[1], false); playFrom(0, 1.5); view.title = now(); }
+    }
+  };
+  const settledState = () => { // everything as it ends, for reduced motion
+    clearAll();
+    BEATS.forEach((b) => {
+      bubble('as-msg is-user', b.ask);
+      bubble('as-msg is-astrid', b.reply);
+      bubble('as-step is-done', `<i></i><span>${b.step[0]}</span><code><b>${b.step[1]}</b> ${b.step[2]}</code>`);
+    });
+    msgs.querySelectorAll('.as-in').forEach((el) => el.classList.remove('as-in'));
+    anchorEls.forEach((el) => { el.style.opacity = ''; el.classList.add('is-ready', 'is-animated'); kind(el, 'video'); });
+    fxEls.forEach((el) => el.classList.add('on'));
+    total = 28; view.mode = 'play'; view.i = 1; view.seq = 12; view.colour = true; view.sweep = 1;
+    try { videos[1].currentTime = 4; } catch (e) { /* not loaded */ }
+    headTo(12, true); stepHead(0);
+  };
+
+  // ---- From slide 4 ---------------------------------------------------------------------
+  // Going on from slide 4, its picture becomes this one: each ring draws itself out into its
+  // panel's frame, the constellation and the thread panels fly into the panels they stand for,
+  // the extensions and the orbit come apart into motes, and the gold outline of the mink becomes
+  // the real pixel mink between the panels. Then she turns to face you, her eyes light, and she
+  // turns back and settles, and the demo begins.
+  const sky = document.createElement('canvas');
+  sky.className = 'as-flight';
+  sky.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(sky);
+  const sg = sky.getContext('2d');
+  let morph = null;
+  const MORPH = { rings: [0.05, 1.15], fly: [0, 1.1], outline: [0.1, 0.9], pixels: [0.85, 0.45], resolve: 1.05, handoff: 1.35, turn: 1.55, end: 1.75, demo: 4.0 };
+  // A rounded rectangle as n points spaced evenly round it, clockwise from the top centre.
+  const roundRect = (b, rad, n) => {
+    const { left: l, top: t, right: r, bottom: bt } = b, pts = [];
+    const arc = (cx, cy, a0) => { for (let i = 1; i <= 8; i++) { const a = a0 + (i / 8) * (Math.PI / 2); pts.push([cx + Math.cos(a) * rad, cy + Math.sin(a) * rad]); } };
+    const mx = (l + r) / 2;
+    pts.push([mx, t], [r - rad, t]); arc(r - rad, t + rad, -Math.PI / 2);
+    pts.push([r, bt - rad]); arc(r - rad, bt - rad, 0);
+    pts.push([l + rad, bt]); arc(l + rad, bt - rad, Math.PI / 2);
+    pts.push([l, t + rad]); arc(l + rad, t + rad, Math.PI);
+    pts.push([mx, t]);
+    const len = [0];
+    for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = len[len.length - 1], out = [];
+    for (let k = 0, j = 1; k < n; k++) {
+      const d = (k / n) * total;
+      while (len[j] < d) j++;
+      const f = (d - len[j - 1]) / ((len[j] - len[j - 1]) || 1);
+      out.push([pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * f, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * f]);
+    }
+    return out;
+  };
+  const startMorph = (snap) => {
+    const W = innerWidth, H = innerHeight, d = Math.min(2, devicePixelRatio || 1);
+    sky.width = Math.round(W * d); sky.height = Math.round(H * d);
+    sky.style.display = 'block';
+    root.classList.add('is-morphing', 'is-minkless');
+    sizeMink();
+    const chat = root.querySelector('.as-chat').getBoundingClientRect(), edit = root.querySelector('.as-edit').getBoundingClientRect();
+    const mr = minkCv.getBoundingClientRect();
+    const origin = { x: mr.left, y: mr.top + HEAD * cell };
+    const ox = snap.left, oy = snap.top;
+    const N = 180;
+    const frames = [roundRect(chat, 12, N), roundRect(edit, 12, N)];
+    const rings = snap.rings.map((r, side) => ({ ...r, cx: r.x + ox, cy: r.y + oy, target: frames[side],
+      strands: r.strands.map((st) => st.map(([x, y]) => [x + ox, y + oy])) }));
+    // Where the mink's outline (in the 16 x 16 icon's units) lies over her pixels (the 23 x 20 profile).
+    const sprite = ([fx, fy]) => [origin.x + fx * 1.44 * cell, origin.y + ((fy - 1.5) * 1.345 + 0.5) * cell];
+    const outlineTo = M.smooth(M.OUTLINE, 10).map(sprite), throatTo = M.smooth(M.THROAT, 10).map(sprite);
+    const P = M.POSES.profile, cells = [];
+    P.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') cells.push({ x, y, ch, at: 0 }); }));
+    cells.forEach((c) => { c.at = (c.y + (22 - c.x) * 0.35) / (19 + 22 * 0.35); }); // from the head down the neck
+    // The motes: each extension comes apart into a few that drift into its side's panel; the orbit's drift away.
+    const motes = [];
+    const rnd = Math.random;
+    snap.slots.forEach((sl) => {
+      const box = sl.side ? edit : chat;
+      for (let i = 0; i < 5; i++) motes.push({ x: sl.x + ox + (rnd() - 0.5) * 30 * snap.k, y: sl.y + oy + (rnd() - 0.5) * 30 * snap.k,
+        tx: box.left + box.width * (0.15 + 0.7 * rnd()), ty: box.bottom - box.height * (0.05 + 0.3 * rnd()), d: 0.1 + rnd() * 0.3, r: 1 + rnd() * 1.2 });
+    });
+    snap.orbit.forEach((o) => {
+      const dx = o.x - snap.W / 2, dy = o.y - snap.H * 0.4, n = Math.hypot(dx, dy) || 1;
+      motes.push({ x: o.x + ox, y: o.y + oy, tx: o.x + ox + (dx / n) * (40 + rnd() * 60), ty: o.y + oy + (dy / n) * (40 + rnd() * 60) + 30, d: rnd() * 0.3, r: 0.8 + rnd() * 0.6, away: true });
+    });
+    const fit = (src, dst) => { const s = Math.min(dst.width / src.w, dst.height / src.h); return { s, x: dst.left + dst.width / 2, y: dst.top + dst.height / 2 }; };
+    morph = {
+      t0: now(), d, snap, rings, cells, origin, outlineTo, throatTo, motes,
+      outline: snap.outline.map(([x, y]) => [x + ox, y + oy]), throat: snap.throat.map(([x, y]) => [x + ox, y + oy]),
+      eyeFrom: { x: snap.eye.x + ox, y: snap.eye.y + oy }, eyeTo: { x: origin.x + 16 * cell, y: origin.y + 5 * cell },
+      fly: [
+        { img: snap.layers.agent, from: { x: rings[0].cx, y: rings[0].cy }, src: { w: rings[0].r * 2, h: rings[0].r * 2 }, to: fit({ w: rings[0].r * 2, h: rings[0].r * 2 }, chat) },
+        { img: snap.layers.face, from: { x: rings[1].cx, y: rings[1].cy }, src: { w: rings[1].r * 2, h: rings[1].r * 2 }, to: fit({ w: rings[1].r * 2, h: rings[1].r * 2 }, edit) },
+      ],
+      steps: { resolve: false, handoff: false, turn: false },
+    };
+    window.AstridCore.hide();
+  };
+  const lerp = (a, b, q) => a + (b - a) * q;
+  const drawMorph = (t) => {
+    const m = morph, e = Math.max(0, t - m.t0) / 1000, d = m.d;
+    sg.setTransform(d, 0, 0, d, 0, 0);
+    sg.clearRect(0, 0, sky.width / d, sky.height / d);
+    sg.lineCap = 'round'; sg.lineJoin = 'round';
+    const k01 = ([a, b]) => clamp((e - a) / b);
+    // The constellation and the thread panels fly into the panels they stand for, fading as they land.
+    const qf = easeIO(k01(MORPH.fly));
+    for (const f of m.fly) {
+      const s = lerp(1, f.to.s * 0.82, qf), x = lerp(f.from.x, f.to.x, qf), y = lerp(f.from.y, f.to.y, qf);
+      const a = 1 - smoothstep(clamp((e - 0.45) / 0.65));
+      if (a <= 0) continue;
+      sg.save();
+      sg.globalAlpha = a;
+      sg.translate(x, y); sg.scale(s, s); sg.translate(-f.from.x, -f.from.y);
+      sg.drawImage(f.img, m.snap.left, m.snap.top, m.snap.W, m.snap.H);
+      sg.restore();
+    }
+    // The extensions and the orbit: their picture gives way to motes.
+    const qo = 1 - clamp(e / 0.3);
+    if (qo > 0) { sg.globalAlpha = qo; sg.drawImage(m.snap.layers.outer, m.snap.left, m.snap.top, m.snap.W, m.snap.H); sg.globalAlpha = 1; }
+    for (const p of m.motes) {
+      const q = clamp((e - p.d) / 0.9);
+      if (q <= 0 || q >= 1) continue;
+      const qq = p.away ? ease(q) : easeIO(q);
+      const x = lerp(p.x, p.tx, qq), y = lerp(p.y, p.ty, qq), a = Math.sin(Math.PI * q) * (p.away ? 0.55 : 0.85);
+      sg.fillStyle = `rgba(255,217,145,${a.toFixed(3)})`;
+      sg.beginPath(); sg.arc(x, y, p.r, 0, Math.PI * 2); sg.fill();
+    }
+    // The rings draw themselves out into the panels' frames, their strands closing into one.
+    const qr = easeIO(k01(MORPH.rings));
+    const fa = 1 - clamp((e - MORPH.resolve - 0.1) / 0.45);
+    if (fa > 0) {
+      m.rings.forEach((r) => {
+        r.strands.forEach((st, si) => {
+          const spread = 1 - qr;
+          sg.lineWidth = lerp(r.width[si] * m.snap.lw, 1, qr);
+          sg.strokeStyle = `rgba(240,200,119,${(lerp(r.alpha[si], si ? 0 : 0.55, qr) * fa).toFixed(3)})`;
+          sg.beginPath();
+          st.forEach(([x, y], i) => {
+            const [tx, ty] = r.target[i];
+            const px = lerp(x, tx, qr), py = lerp(y, ty, qr);
+            if (spread <= 0 && si) return;
+            i ? sg.lineTo(px, py) : sg.moveTo(px, py);
+          });
+          sg.closePath(); sg.stroke();
+        });
+      });
+    }
+    // The mink: her outline moves to her seat and her pixels fill in from the head down.
+    const qm = easeIO(k01(MORPH.outline));
+    const oa = 1 - clamp((e - MORPH.pixels[0] - 0.15) / 0.35);
+    if (!m.steps.handoff) {
+      if (oa > 0) {
+        for (const [src, dst, w, a] of [[m.outline, m.outlineTo, 1.2, 0.9], [m.throat, m.throatTo, 0.8, 0.45]]) {
+          sg.lineWidth = w;
+          sg.strokeStyle = `rgba(255,217,145,${(a * oa).toFixed(3)})`;
+          sg.beginPath();
+          src.forEach(([x, y], i) => { const px = lerp(x, dst[i][0], qm), py = lerp(y, dst[i][1], qm); i ? sg.lineTo(px, py) : sg.moveTo(px, py); });
+          sg.stroke();
+        }
+        const ex = lerp(m.eyeFrom.x, m.eyeTo.x, qm), ey = lerp(m.eyeFrom.y, m.eyeTo.y, qm);
+        sg.fillStyle = `rgba(255,236,200,${oa.toFixed(3)})`;
+        sg.beginPath(); sg.arc(ex, ey, 3, 0, Math.PI * 2); sg.fill();
+      }
+      const qp = (e - MORPH.pixels[0]) / MORPH.pixels[1];
+      if (qp > 0) {
+        sg.setTransform(1, 0, 0, 1, 0, 0);
+        const u = cell * d, x0 = Math.round(m.origin.x * d), y0 = Math.round(m.origin.y * d);
+        for (const c of m.cells) {
+          if (c.at > qp) continue;
+          sg.fillStyle = M.COLORS[c.ch];
+          sg.fillRect(x0 + c.x * u, y0 + c.y * u, u, u);
+        }
+      }
+    }
+    if (!m.steps.resolve && e >= MORPH.resolve) { m.steps.resolve = true; root.classList.remove('is-morphing'); }
+    if (!m.steps.handoff && e >= MORPH.handoff) { m.steps.handoff = true; root.classList.remove('is-minkless'); }
+    if (!m.steps.turn && e >= MORPH.turn) { m.steps.turn = true; turn(); }
+    if (e >= MORPH.end) { endMorph(); return false; }
+    return true;
+  };
+  const smoothstep = (k) => k * k * (3 - 2 * k);
+  const endMorph = () => {
+    morph = null;
+    sg.setTransform(1, 0, 0, 1, 0, 0);
+    sg.clearRect(0, 0, sky.width, sky.height);
+    sky.style.display = 'none';
+    root.classList.remove('is-morphing', 'is-minkless');
   };
 
   // ---- Clock ----------------------------------------------------------------------------
-  const now = () => performance.now();
   let running = false, raf = 0, last = 0;
   const tick = (t) => {
     raf = 0;
     if (!running) return;
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
-    const busy = stepDemo(dt) | stepMink(t);
+    const busy = (morph ? drawMorph(t) : false) | stepBeats(dt) | stepMink(t);
+    drawPic(t);
     if (busy) raf = requestAnimationFrame(tick);
   };
   const wake = () => { if (running && !raf) { last = 0; raf = requestAnimationFrame(tick); } };
-  const start = () => {
+  const layout = () => { sizeMink(); sizePic(); };
+  const start = (fromCore) => {
     running = true;
-    sizeMink();
-    if (still) { settled(); paint('profile', 0, 0); return; }
-    reset();
-    td = 0;
+    layout();
+    if (still) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
+    clearAll();
+    td = 0; wait = 0;
+    const snap = fromCore && window.AstridCore && window.AstridCore.snapshot();
+    if (snap) { startMorph(snap); wait = MORPH.demo; }
     wake();
   };
   const stop = () => {
     running = false;
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+    if (morph) endMorph();
     mink.seq = null; mink.hover = null;
     Object.assign(mink, { pose: 'profile', lift: 0, glint: 0 });
     videos.forEach((v) => v.pause());
   };
-  window.AstridDemo = { turn, sizeMink, root };
+  window.AstridDemo = { turn, root };
 
+  const coreHost = document.querySelector('[data-astrid-core]');
+  const coreSlide = coreHost && coreHost.closest('.slide');
   let wasOn = false;
-  new MutationObserver(() => {
+  const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
-    if (on) start(); else { stop(); setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700); }
-  }).observe(slide, { attributes: true, attributeFilter: ['class'] });
+    if (on) start(!!coreSlide && !coreSlide.classList.contains('on') && records.some((r) => r.target === coreSlide));
+    else { stop(); setTimeout(() => { if (!slide.classList.contains('on')) clearAll(); }, 700); }
+  });
+  watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
+  if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => { if (document.hidden) videos.forEach((v) => v.pause()); });
-  addEventListener('resize', () => { if (slide.classList.contains('on')) sizeMink(); });
+  let resizing = 0;
+  addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (slide.classList.contains('on')) { layout(); if (still) drawPic(now()); } }, 100); });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink')) e.stopPropagation(); });
+  videos.forEach((v) => v.addEventListener('loadeddata', () => { if (still && slide.classList.contains('on')) drawPic(now()); }));
 
-  reset();
-  if (slide.classList.contains('on')) { wasOn = true; start(); }
+  clearAll();
+  if (slide.classList.contains('on')) { wasOn = true; start(false); }
 })();

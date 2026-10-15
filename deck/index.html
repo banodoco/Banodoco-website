@@ -205,90 +205,123 @@
     box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12; }
   .ac-seed b { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; opacity: 0;
     background: radial-gradient(circle at 40% 35%, #fffaf0, #ffd991 55%, #e0ab5e); box-shadow: 0 0 14px #ffd991aa; }
-  /* Version F, slide 5: Astrid herself (demo.js). Text centred on top; beneath it the homepage's two demos side by
-     side, the agent's conversation and the editor, in the homepage's dusk palette, with the pixel mink between them. */
-  html[data-ver="f"] .as-host { justify-content: flex-start; padding-top: max(48px, 6.5vh); text-align: center; }
+  /* Version F, slide 5: Astrid herself (demo.js). Text centred on top; the mink presiding just beneath it; then the
+     agent's chat beside the editor's preview, on the editor's timeline: the homepage's own pieces, in its dusk palette.
+     The network stays visible behind; the panels are a touch translucent so its threads read around them. */
+  html[data-ver="f"] .as-host { justify-content: flex-start; padding-top: max(44px, 6vh); text-align: center; }
   html[data-ver="f"] .as-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; flex-shrink: 0; }
-  html[data-ver="f"] .as-host h1 { max-width: 22em; margin: 0 auto; text-wrap: balance; font-size: clamp(1.9rem, 3.1vw, 3.2rem); }
+  html[data-ver="f"] .as-host h1 { max-width: 22em; margin: 0 auto; text-wrap: balance; font-size: clamp(1.8rem, 2.9vw, 3rem); }
   html[data-ver="f"] .as-host .body { display: none; }
-  .as { position: relative; flex: 1 1 auto; min-height: 0; margin: clamp(18px, 3.4vh, 40px) 0 max(78px, 10vh); user-select: none; -webkit-user-select: none;
-    --as-panel: #24211b; --as-card: #2c2822; --as-line: #4a4337; --as-field: #1b1915; --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
-    font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif; text-align: left; }
+  .as { position: relative; flex: 1 1 auto; min-height: 0; margin: 4px 0 max(74px, 9.5vh); user-select: none; -webkit-user-select: none;
+    --as-panel: rgb(36 33 27 / .9); --as-card: #2c2822; --as-line: #4a4337; --as-field: rgb(27 25 21 / .9); --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
+    --as-gap: 14px; font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif; text-align: left; }
   .as-stage { position: absolute; left: 50%; top: 0; bottom: 0; width: min(1180px, 100%); transform: translateX(-50%);
-    display: grid; grid-template-columns: 31fr 14fr 55fr; align-items: stretch; }
-  .as-panel { position: relative; min-height: 0; border-radius: 12px; border: 1px solid rgb(240 200 119 / .22); background: var(--as-panel); color: var(--as-ink);
-    box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 24px 60px -24px rgb(0 0 0 / .8), 0 0 0 1px rgb(0 0 0 / .4); overflow: hidden; }
-  /* The agent: the homepage's scripted conversation. */
+    display: grid; grid-template-columns: minmax(0, 31fr) minmax(0, 69fr); grid-template-rows: auto minmax(0, 1fr); column-gap: var(--as-gap); row-gap: 12px; }
+  .as-seat { grid-column: 1 / -1; position: relative; height: calc(var(--as-cell, 4px) * 21 + 6px); }
+  .as-chat { grid-column: 1; grid-row: 2; }
+  .as-edit { grid-column: 2; grid-row: 2; }
+  .as-panel { position: relative; min-height: 0; border-radius: 12px; border: 1px solid rgb(240 200 119 / .2); background: var(--as-panel); color: var(--as-ink);
+    box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 24px 60px -28px rgb(0 0 0 / .85); overflow: hidden; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  /* The mink presides over both, on a fine gold line that runs out to the chat and the preview, with a soft warm glow under her. */
+  .as-seat::before { content: ""; position: absolute; left: 50%; bottom: 0; width: 60%; height: 1px; transform: translateX(-50%);
+    background: linear-gradient(90deg, rgb(240 200 119 / 0), rgb(240 200 119 / .45) 30%, rgb(255 217 145 / .75) 50%, rgb(240 200 119 / .45) 70%, rgb(240 200 119 / 0)); }
+  .as-seat::after { content: ""; position: absolute; left: 50%; bottom: -24px; width: 220px; height: 60px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgb(255 138 58 / .2), rgb(255 138 58 / .06) 55%, rgb(255 138 58 / 0)); pointer-events: none; }
+  .as-mink { position: absolute; left: 50%; bottom: 0; z-index: 1; image-rendering: pixelated; pointer-events: auto; cursor: pointer; }
+  /* The agent: the homepage's conversation surface. */
   .as-chat { display: flex; flex-direction: column; }
-  .as-chat-head { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-bottom: 1px solid var(--as-line); font-size: 13.5px; font-weight: 500; }
-  .as-avatar { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #3a3128; }
+  .as-chat-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--as-line); font-size: 12.5px; font-weight: 500; }
+  .as-avatar { width: 20px; height: 20px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #3a3128; }
   .as-avatar img { width: 23px; height: 20px; image-rendering: pixelated; transform: translate(1px, 2px); }
-  .as-msgs { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 12px 14px; overflow: hidden; }
-  .as-msg { max-width: 86%; padding: 9px 13px; border-radius: 16px; font-size: 13px; line-height: 1.5; box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+  .as-state { margin-left: auto; font: italic 400 11px/1 Inter, system-ui, sans-serif; color: var(--as-muted); opacity: 0; transition: opacity .3s ease; }
+  .as-state::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: #7fbf8f; vertical-align: 1px; }
+  .as.is-working .as-state { opacity: 1; }
+  .as-msgs { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; padding: 10px 12px; overflow: hidden; transition: opacity .6s ease; }
+  .as.is-resetting .as-msgs { opacity: 0; }
+  .as-msg { max-width: 88%; padding: 7px 11px; border-radius: 14px; font-size: 12px; line-height: 1.45; }
   .as-msg.is-user { align-self: flex-end; background: var(--as-orange); color: #25241f; }
   .as-msg.is-astrid { align-self: flex-start; background: var(--as-card); border: 1px solid var(--as-line); color: var(--as-ink); }
-  .as-msg .w { opacity: 0; transition: opacity .25s ease; } .as-msg .w.on { opacity: 1; }
-  .as-dots { display: inline-flex; gap: 4px; padding: 3px 0; } .as-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--as-muted); animation: as-dot 1s ease-in-out infinite; }
-  .as-dots i:nth-child(2) { animation-delay: .15s; } .as-dots i:nth-child(3) { animation-delay: .3s; }
-  @keyframes as-dot { 50% { opacity: .3; transform: translateY(-2px); } }
-  .as-in { animation: as-in .35s cubic-bezier(.2, .7, .2, 1) both; } @keyframes as-in { from { opacity: 0; transform: translateY(8px); } }
-  .as-chat-foot { display: grid; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--as-line); }
-  .as-result { display: flex; align-items: center; gap: 9px; padding: 7px; border-radius: 8px; background: var(--as-card); border: 1px solid var(--as-line);
-    transition: opacity .4s ease, transform .4s cubic-bezier(.2, .7, .2, 1); }
-  .as-result img { width: 56px; height: 32px; object-fit: cover; border-radius: 5px; }
-  .as-result strong { display: block; font-size: 12px; font-weight: 600; } .as-result span { font-size: 11px; color: var(--as-muted); }
-  .as:not(.has-result) .as-result { opacity: 0; transform: translateY(6px); }
-  .as-field { display: flex; align-items: center; gap: 8px; border: 1px solid var(--as-line); border-radius: 10px; background: var(--as-field); padding: 4px 4px 4px 12px; }
-  .as-input { flex: 1; min-width: 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--as-ink); }
+  .as-msg .as-att { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 2px 7px 2px 5px; border-radius: 6px; background: rgb(37 36 31 / .18); font-size: 11px; font-weight: 500; }
+  .as-step { align-self: stretch; display: grid; grid-template-columns: 14px 1fr; column-gap: 8px; align-items: center; padding: 5px 9px; border-radius: 8px;
+    border: 1px solid var(--as-line); background: rgb(27 25 21 / .7); font-size: 11.5px; color: var(--as-ink); transition: border-color .3s ease, background .3s ease; }
+  .as-step code { grid-column: 2; font: 400 10px/1.3 ui-monospace, "SF Mono", Menlo, monospace; color: var(--as-muted); }
+  .as-step code b { font-weight: 400; color: #e7c27c; }
+  .as-step.is-active { border-color: rgb(56 189 248 / .55); background: rgb(14 165 233 / .1); }
+  .as-step i { grid-row: 1 / span 2; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgb(56 189 248 / .3); border-top-color: var(--as-sky); animation: as-spin .8s linear infinite; }
+  .as-step.is-done i { animation: none; border: 0; background: #7fbf8f; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+  @keyframes as-spin { to { transform: rotate(360deg); } }
+  .as-in { animation: as-in .35s cubic-bezier(.2, .7, .2, 1) both; } @keyframes as-in { from { opacity: 0; transform: translateY(6px); } }
+  .as-composer { padding: 8px 10px 10px; border-top: 1px solid var(--as-line); }
+  .as-field { display: flex; align-items: center; gap: 8px; border: 1px solid var(--as-line); border-radius: 10px; background: var(--as-field); padding: 3px 3px 3px 10px; }
+  .as-input { flex: 1; min-width: 0; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--as-ink); }
   .as-ph { color: #8a8174; } .as-typed:not(:empty) + .as-ph { display: none; }
   .as-caret { display: inline-block; width: 1px; height: 1.1em; margin-left: 1px; vertical-align: -2px; background: var(--as-ink); opacity: 0; }
   .as.is-typing .as-caret { opacity: 1; animation: as-blink 1s steps(1) infinite; } @keyframes as-blink { 50% { opacity: 0; } }
-  .as-send { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--as-orange); color: #25241f; opacity: .35; transition: opacity .2s ease; }
+  .as-send { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--as-orange); color: #25241f; opacity: .35; transition: opacity .2s ease; }
   .as.has-draft .as-send { opacity: 1; }
-  /* The interface: the homepage's editor, a player above the timeline. */
-  .as-edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; padding: 10px; background: #1c1a16; }
-  .as-surface { border-radius: 9px; border: 1px solid var(--as-line); background: var(--as-panel); box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 12px 24px -10px rgb(0 0 0 / .45); }
-  .as-player { display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); padding: 8px; min-height: 0; }
-  .as-screen { position: relative; min-height: 0; display: grid; place-items: center; container-type: size; }
-  .as-frame { position: relative; width: min(100cqw, 100cqh * 16 / 9); height: min(100cqh, 100cqw * 9 / 16); border-radius: 6px; background: #000; overflow: hidden; }
-  .as-screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; filter: brightness(.9) saturate(.95); }
-  .as-screen video.on { opacity: 1; }
-  .as-transport { display: flex; align-items: center; gap: 6px; padding: 8px 2px 0; font-size: 11px; color: var(--as-muted); }
-  .as-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: var(--as-ink); }
+  /* The editor, as the homepage mounts it: the player surface above the timeline surface. */
+  .as-edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; padding: 10px; background: rgb(28 26 22 / .88); }
+  .as-surface { border-radius: 9px; border: 1px solid var(--as-line); background: var(--as-panel); box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 12px 24px -10px rgb(0 0 0 / .45); min-height: 0; }
+  .as-player { display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 8px 8px 6px; }
+  .as-screen { position: relative; min-height: 0; border-radius: 6px; background: #12100d; overflow: hidden; }
+  .as-pic { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .as-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; color: #6f675b; transition: opacity .3s ease; }
+  .as.has-pic .as-empty { opacity: 0; }
+  .as-media { display: none; }
+  .as-transport { display: flex; align-items: center; gap: 5px; padding: 6px 2px 0; font-size: 10.5px; color: var(--as-muted); }
+  .as-btn { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; color: var(--as-ink); }
   .as-play { background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); }
   .as-i-pause { display: none; } .as.is-playing .as-i-pause { display: inline; } .as.is-playing .as-i-play { display: none; }
-  .as-time { margin-left: 4px; font-variant-numeric: tabular-nums; }
-  .as-pill { margin-left: auto; padding: 3px 7px; border-radius: 999px; background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); color: var(--as-ink); font-size: 10.5px; }
-  .as-timeline { position: relative; padding: 0 0 10px; overflow: hidden; }
-  .as-ruler { position: relative; height: 22px; margin-left: 118px; border-bottom: 1px solid var(--as-line); }
-  .as-ruler span { position: absolute; top: 5px; font-size: 9.5px; color: #8a8174; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
-  .as-ruler span::after { content: ""; position: absolute; left: 50%; top: 13px; height: 4px; border-left: 1px solid var(--as-line); }
-  .as-track { display: flex; height: 52px; margin-top: 8px; }
-  .as-label { flex: 0 0 118px; display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 11.5px; color: var(--as-ink); border-right: 1px solid var(--as-line); }
-  .as-label i { font-style: normal; font-size: 9.5px; color: var(--as-muted); border: 1px solid var(--as-line); border-radius: 4px; padding: 1px 4px; }
-  .as-lane { position: relative; flex: 1; margin: 0 10px 0 0; }
-  .as-clip { position: absolute; top: 4px; bottom: 4px; display: flex; align-items: center; gap: 6px; overflow: hidden; border-radius: 6px; border: 1px solid #5a5244;
-    background: rgb(44 40 34 / .92); color: var(--as-ink); font-size: 10.5px; white-space: nowrap; }
-  .as-clip img { height: 100%; width: 40px; object-fit: cover; opacity: .8; flex: 0 0 auto; }
-  .as-clip.is-selected { border-color: var(--as-sky); background: rgb(14 165 233 / .2); color: #f0f9ff; }
-  .as-playhead { position: absolute; top: -32px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 6px rgb(56 189 248 / .5); }
+  .as-time { margin-left: 3px; font-variant-numeric: tabular-nums; }
+  .as-pill { margin-left: auto; padding: 2px 7px; border-radius: 999px; background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); color: var(--as-ink); font-size: 10px; }
+  .as-timeline { overflow: hidden; padding-bottom: 6px; }
+  .as-tl { position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-content: start; }
+  .as-tl > .as-th { border-right: 1px solid var(--as-line); display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 11px; color: var(--as-ink); }
+  .as-th svg { color: var(--as-muted); flex: 0 0 auto; } .as-th em { font-style: normal; color: var(--as-muted); font-size: 10.5px; }
+  .as-lane { position: relative; margin-right: 8px; border-bottom: 1px solid rgb(74 67 55 / .45); }
+  .as-ruler-h { border-right: 1px solid var(--as-line); border-bottom: 1px solid var(--as-line); }
+  .as-ruler { position: relative; height: 22px; margin-right: 8px; border-bottom: 1px solid var(--as-line); }
+  .as-ruler span { position: absolute; top: 4px; font-size: 9.5px; color: #8a8174; transform: translateX(3px); font-variant-numeric: tabular-nums; }
+  .as-ruler span::before { content: ""; position: absolute; left: -3px; top: -4px; height: 22px; border-left: 1px solid var(--as-line); }
+  .as-ruler i { position: absolute; bottom: 0; height: 5px; border-left: 1px solid rgb(74 67 55 / .8); }
+  .as-clip { position: absolute; top: 5px; bottom: 5px; border-radius: 6px; border: 1px solid #5a5244; background: rgb(44 40 34 / .95); overflow: hidden;
+    transition: opacity .35s ease, box-shadow .3s ease, border-color .3s ease; }
+  .as-clip .as-film { position: absolute; inset: 0; background-repeat: repeat-x; background-size: auto 100%; opacity: .85; clip-path: inset(0 100% 0 0); }
+  .as-clip.is-animated .as-film { clip-path: inset(0 0 0 0); transition: clip-path .9s cubic-bezier(.4, 0, .2, 1); }
+  .as-clip .as-still { position: absolute; left: 0; top: 0; bottom: 0; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; opacity: 0; transition: opacity .35s ease; }
+  .as-clip.is-ready .as-still { opacity: .9; }
+  .as-clip .as-name { position: absolute; left: 6px; top: 4px; padding: 1px 5px; border-radius: 4px; background: rgb(18 16 13 / .72); font-size: 10px; color: var(--as-ink); white-space: nowrap; }
+  .as-clip .as-kind { position: absolute; right: 6px; bottom: 4px; padding: 1px 5px; border-radius: 4px; background: rgb(18 16 13 / .72); font-size: 9px; color: var(--as-muted); }
+  .as-clip.is-generating { border-color: rgb(56 189 248 / .45); background: linear-gradient(100deg, rgb(44 40 34) 30%, rgb(70 64 54) 50%, rgb(44 40 34) 70%) 0 0 / 300% 100%; animation: as-shimmer 1.1s linear infinite; }
+  @keyframes as-shimmer { to { background-position: -150% 0; } }
+  .as-clip.is-touched { border-color: var(--as-sky); box-shadow: 0 0 0 1px rgb(56 189 248 / .35), 0 0 16px rgb(56 189 248 / .25); }
+  .as-clip .as-fx { position: absolute; right: 6px; top: 4px; padding: 1px 6px; border-radius: 4px; background: rgb(124 95 176 / .85); color: #f3eaff; font-size: 9px; opacity: 0; transform: translateY(-4px); transition: opacity .3s ease, transform .3s ease; }
+  .as-clip.has-fx .as-fx { opacity: 1; transform: none; }
+  .as-fxclip { position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 5px; border: 1px solid rgb(167 139 250 / .6); background: rgb(91 70 140 / .55);
+    color: #efe7ff; font-size: 10px; display: flex; align-items: center; gap: 6px; padding: 0 8px; white-space: nowrap; overflow: hidden; clip-path: inset(0 100% 0 0); }
+  .as-fxclip em { font-style: normal; color: #c9b8f0; font-size: 9px; }
+  .as-fxclip.on { clip-path: inset(0 0 0 0); transition: clip-path .7s cubic-bezier(.4, 0, .2, 1); }
+  .as-clip.is-motion { transform-origin: 50% 100%; transform: scaleY(0); transition: transform .35s cubic-bezier(.2, .7, .2, 1), opacity .35s ease, box-shadow .3s ease, border-color .3s ease; }
+  .as-clip.is-motion.is-grown { transform: none; }
+  .as-playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 6px rgb(56 189 248 / .5); pointer-events: none; z-index: 2; }
   .as-playhead::before { content: ""; position: absolute; top: 0; left: -4px; width: 10px; height: 8px; border-radius: 2px 2px 5px 5px; background: var(--as-sky); }
-  /* The mink sits between them on the panels' baseline. */
-  .as-mid { position: relative; pointer-events: none; }
-  .as-mid::before { content: ""; position: absolute; left: -6px; right: -6px; bottom: 0; height: 1px; background: linear-gradient(90deg, rgb(240 200 119 / .35), rgb(240 200 119 / .12) 50%, rgb(240 200 119 / .35)); }
-  .as-mid::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 180px; height: 150px; transform: translateX(-50%);
-    background: radial-gradient(closest-side at 50% 70%, rgb(255 140 60 / .16), rgb(255 140 60 / 0)); pointer-events: none; }
-  .as-mink { position: absolute; left: 50%; bottom: 0; z-index: 1; image-rendering: pixelated; pointer-events: auto; cursor: pointer; }
+  .as.is-resetting .as-clip, .as.is-resetting .as-fxclip { opacity: 0; }
+  /* Arriving from slide 4 the panels draw out of the rings (demo.js): hidden while the frames form, then the shells and their contents resolve. */
+  .as-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; display: none; }
+  .as-panel { transition: opacity .45s ease; } .as-panel > * { transition: opacity .5s ease .2s; }
+  .as.is-morphing .as-panel, .as.is-morphing .as-panel > * { opacity: 0; transition: none; }
+  .as-seat::before, .as-seat::after { transition: opacity .6s ease; }
+  .as.is-morphing .as-seat::before, .as.is-morphing .as-seat::after, .as.is-minkless .as-mink { opacity: 0; transition: none; }
   @media (max-width: 760px) {
-    html[data-ver="f"] .as-host { padding-top: 56px; }
-    html[data-ver="f"] .as-host h1 { font-size: clamp(1.45rem, 6vw, 1.9rem); max-width: 22ch; }
-    .as { margin: 14px 0 76px; }
-    .as-stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; width: 100%; }
-    .as-mid { order: -1; height: 64px; }
-    .as-label { flex-basis: 74px; } .as-ruler { margin-left: 74px; }
-    .as-msg { font-size: 11.5px; } .as-chat-foot { display: none; }
-    .as-screen { min-height: 110px; } .as-chat { max-height: 230px; }
+    html[data-ver="f"] .as-host { padding-top: 52px; }
+    html[data-ver="f"] .as-host h1 { font-size: clamp(1.4rem, 5.8vw, 1.8rem); max-width: 22ch; }
+    .as { margin: 6px 0 76px; }
+    .as-stage { width: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, .75fr) minmax(0, 1.5fr); }
+    .as-chat { grid-column: 1; grid-row: 2; } .as-edit { grid-column: 1; grid-row: 3; padding: 6px; gap: 6px; }
+    .as-tl { grid-template-columns: 52px minmax(0, 1fr); } .as-th em { display: none; }
+    .as-msg, .as-step { font-size: 10px; } .as-composer { display: none; }
   }
+
   @media (max-width: 760px) {
     html[data-ver="f"] .ac-host { padding-bottom: 92px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); max-width: 22ch; text-wrap: balance; }
@@ -601,31 +634,21 @@
         <div class="body">No installs, no node graphs, locally or in the cloud. The agent picks the right models and community-made tools, and when nothing fits, it builds what you need. Every result comes back to your timeline for you to change and build on: you stay the artist. We start with video because that's where open models are moving fastest — and where they're hardest to use.</div>
       </div>
     </div>
-    <div class="as" data-astrid-demo role="img" aria-label="Astrid: the agent's conversation on the left, the video editor on the right, and the Astrid mink between them">
+    <div class="as" data-astrid-demo role="img" aria-label="Astrid at work: asked in the chat, she generates three anchor images, animates them, and layers community-made effects on top, while the editor's preview and timeline change with each step">
       <div class="as-stage">
+        <div class="as-seat"><canvas class="as-mink" aria-hidden="true"></canvas></div>
         <section class="as-panel as-chat" aria-hidden="true">
-          <header class="as-chat-head"><span class="as-avatar"><img src="../assets/astrid/mink-profile.png" alt=""></span><span>Astrid</span></header>
+          <header class="as-chat-head"><span class="as-avatar"><img src="../assets/astrid/mink-profile.png" alt=""></span><span>Astrid</span><em class="as-state">working</em></header>
           <div class="as-msgs"></div>
-          <footer class="as-chat-foot">
-            <article class="as-result"><img src="../assets/astrid/first-light-thumb.webp" alt=""><div><strong>Light study</strong><span>0:28 · 3 clips</span></div></article>
-            <div class="as-composer"><div class="as-field"><span class="as-input"><span class="as-typed"></span><span class="as-ph">Ask Astrid to edit your project…</span><i class="as-caret"></i></span><b class="as-send"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></b></div></div>
-          </footer>
+          <div class="as-composer"><div class="as-field"><span class="as-input"><span class="as-typed"></span><span class="as-ph">Ask Astrid to edit your project…</span><i class="as-caret"></i></span><b class="as-send"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></b></div></div>
         </section>
-        <div class="as-mid"><canvas class="as-mink" aria-hidden="true"></canvas></div>
         <section class="as-panel as-edit" aria-hidden="true">
           <div class="as-surface as-player">
-            <div class="as-screen"><div class="as-frame"><video src="../assets/astrid/first-light.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/passing-shapes.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/quiet-finish.mp4" muted playsinline preload="auto"></video></div></div>
-            <div class="as-transport"><b class="as-btn" title="Jump to beginning"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></b><b class="as-btn as-play"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path class="as-i-play" d="M7 4.5v15L19.5 12z"/><path class="as-i-pause" d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/></svg></b><span class="as-time">0:00 / 0:24</span><span class="as-pill">1280x720</span></div>
+            <div class="as-screen"><canvas class="as-pic"></canvas><span class="as-empty">Nothing on the timeline yet</span></div>
+            <div class="as-transport"><b class="as-btn"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></b><b class="as-btn as-play"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path class="as-i-play" d="M7 4.5v15L19.5 12z"/><path class="as-i-pause" d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/></svg></b><span class="as-time">0:00 / 0:00</span><span class="as-pill">1280x720</span></div>
           </div>
-          <div class="as-surface as-timeline">
-            <div class="as-ruler"></div>
-            <div class="as-track"><div class="as-label"><i>V1</i>Light study</div><div class="as-lane">
-              <div class="as-clip is-selected"><img src="../assets/astrid/first-light-thumb.webp" alt=""><span>first-light</span></div>
-              <div class="as-clip"><img src="../assets/astrid/passing-shapes-thumb.webp" alt=""><span>passing-shapes</span></div>
-              <div class="as-clip"><img src="../assets/astrid/quiet-finish-thumb.webp" alt=""><span>quiet-finish</span></div>
-              <i class="as-playhead"></i>
-            </div></div>
-          </div>
+          <div class="as-surface as-timeline"><div class="as-tl"></div></div>
+          <div class="as-media"><video src="../assets/astrid/first-light.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/passing-shapes.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/quiet-finish.mp4" muted playsinline preload="auto"></video><img src="../assets/astrid/first-light-anchor.jpg" alt=""><img src="../assets/astrid/passing-shapes-anchor.jpg" alt=""><img src="../assets/astrid/quiet-finish-anchor.jpg" alt=""></div>
         </section>
       </div>
     </div>

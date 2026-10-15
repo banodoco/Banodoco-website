@@ -16,7 +16,7 @@
   if (!root) return;
   const slide = root.closest('.slide');
   const canvas = root.querySelector('.ac-canvas');
-  const g = canvas.getContext('2d');
+  let g = canvas.getContext('2d'); // let: slide 5 borrows the drawing to take this picture's layers
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gapRoot = document.querySelector('[data-gap]');
@@ -779,6 +779,7 @@
     slide.style.cursor = '';
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.style.opacity = '';
   };
   // Everything grown at once: for reduced motion, and after a resize.
   const settle = (states) => {
@@ -925,6 +926,43 @@
     if (inRings) { e.stopPropagation(); if (!still && ta > T.end) use(); return; }
     if (pinned) { e.stopPropagation(); pinned = null; show(); }
   });
+
+  // ---- For slide 5 ---------------------------------------------------------------------
+  // Going on to slide 5, this picture turns into the real product: slide 5 takes its geometry
+  // and its layers (painted on their own canvases) and carries them into its panels.
+  const paintLayer = (which) => {
+    const off = document.createElement('canvas');
+    off.width = canvas.width; off.height = canvas.height;
+    const keep = g;
+    g = off.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    try {
+      if (which === 'agent') drawAgent();
+      else if (which === 'face') drawFace();
+      else { drawSides(); drawOrbit(); grow(feed, T.feed, 0.75 / pace, 0.7 * LW, 0.38); }
+    } finally { g = keep; }
+    return off;
+  };
+  const strandPts = (side, n) => STRANDS[side].map((st) => Array.from({ length: n }, (_, i) => {
+    const a = -Math.PI / 2 + (i / n) * TAU; // clockwise from the top, on screen
+    return ringPt(side, st, side ? Math.PI - a : a);
+  }));
+  window.AstridCore = {
+    snapshot() {
+      if (!rings.length || ta < T.end) return null; // only a picture that has finished growing is carried on
+      const b = root.getBoundingClientRect();
+      return {
+        left: b.left, top: b.top, W, H, dpr, k, lw: LW,
+        rings: [0, 1].map((side) => ({ x: rings[side].c.x, y: rings[side].c.y, r: RR * k, strands: strandPts(side, 180), alpha: STRANDS[side].map((st) => st.a), width: STRANDS[side].map((st) => st.w) })),
+        outline: lens.outline.pts, throat: lens.throat.pts, eye: lens.eye,
+        slots: sides.flatMap((sd) => sd.slots.filter((x) => x.state !== 'none').map((x) => ({ x: x.x, y: x.y, side: x.side }))),
+        orbit: orbit.filter((_, i) => i % 3 === 0).map((o) => ({ x: o.x, y: o.y })),
+        layers: { agent: paintLayer('agent'), face: paintLayer('face'), outer: paintLayer('outer') },
+      };
+    },
+    hide() { canvas.style.opacity = '0'; },
+  };
 
   if (slide.classList.contains('on')) { wasOn = true; enter(false); }
 })();
