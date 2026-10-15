@@ -24,17 +24,17 @@
   const RAD = Math.PI / 180;
 
   // ---- The scene -----------------------------------------------------------------------------
-  // Laid out in the concept's own 1672 x 941 frame and scaled to the screen. Every plane lies at the
-  // same tilt, turned a little about its normal, under one perspective whose origin sits to the right.
-  const WW = 1672, WH = 941;
+  // Laid out in scene px (the concept's own frame) and fitted to the screen beside the text. Every plane
+  // lies at the same tilt, turned a little about its normal, under one perspective whose origin sits to
+  // the right; the planes are stacked down the scene with the same clear air between each pair.
   const PERSP = 2600, PO = { x: 1900, y: 420 };
-  const TILT = 58, TURN = 4.5;
-  const PL = [ // top to bottom; centre and flat size in scene px
-    { id: 'preview', label: 'Preview', cx: 1062, cy: 160, w: 780, h: 350 },
-    { id: 'timeline', label: 'Timeline', cx: 1056, cy: 338, w: 780, h: 262 },
-    { id: 'agent', label: 'Agent', cx: 1052, cy: 502, w: 780, h: 356 },
-    { id: 'tools', label: 'Tools & effects', cx: 1050, cy: 660, w: 780, h: 262 },
-    { id: 'models', label: 'Models / runtime', cx: 1048, cy: 796, w: 780, h: 246 },
+  const TILT = 58, TURN = 4.5, GAP = 34, ROOTS = 100, HEADROOM = 18;
+  const PL = [ // top to bottom; centre x and flat size in scene px (centre y is stacked in layout)
+    { id: 'preview', label: 'Preview', cx: 1062, cy: 150, w: 780, h: 340 },
+    { id: 'timeline', label: 'Timeline', cx: 1058, cy: 0, w: 780, h: 250 },
+    { id: 'agent', label: 'Agent', cx: 1054, cy: 0, w: 780, h: 340 },
+    { id: 'tools', label: 'Tools & effects', cx: 1050, cy: 0, w: 780, h: 240 },
+    { id: 'models', label: 'Models / runtime', cx: 1048, cy: 0, w: 780, h: 230 },
   ];
   const CALLS = [{ at: 2, text: 'build your own' }, { at: 3, text: 'community-made' }];
 
@@ -96,6 +96,7 @@
   const head = planes[1].querySelector('.st-head');
 
   // ---- Plane state and the projection ----------------------------------------------------------
+  const MW = 23, MH = 20;
   const settledOf = (p) => ({ x: p.cx, y: p.cy, w: p.w, h: p.h, rx: TILT, rz: TURN, o: 1 });
   const st = PL.map(settledOf);
   const shown = PL.map(() => ({}));
@@ -108,16 +109,26 @@
     Object.assign(was, s);
   });
   const view = { k: 1, ox: 0, oy: 0, mobile: false };
-  // A point (u, v) from a plane's centre, in its own px, to the screen: exactly what CSS does with
-  // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective, then the scene's scale.
-  const project = (s, u, v) => {
+  // A point (u, v) from a plane's centre, in its own px, into the scene: exactly what CSS does with
+  // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective. project() goes on to the screen.
+  const projW = (s, u, v) => {
     const a = s.rz * RAD, b = s.rx * RAD;
     const x1 = u * Math.cos(a) - v * Math.sin(a), y1 = u * Math.sin(a) + v * Math.cos(a);
     const X = s.x + x1, Y = s.y + y1 * Math.cos(b), Z = y1 * Math.sin(b);
     const f = PERSP / (PERSP - Z);
-    return { x: view.ox + view.k * (PO.x + (X - PO.x) * f), y: view.oy + view.k * (PO.y + (Y - PO.y) * f) };
+    return { x: PO.x + (X - PO.x) * f, y: PO.y + (Y - PO.y) * f };
   };
+  const toS = (p) => ({ x: view.ox + view.k * p.x, y: view.oy + view.k * p.y });
+  const project = (s, u, v) => toS(projW(s, u, v));
   const toWorld = (r) => ({ x: (r.left + r.width / 2 - view.ox) / view.k, y: (r.top + r.height / 2 - view.oy) / view.k, w: r.width / view.k, h: r.height / view.k });
+  // Each plane's far edge sits GAP below the near edge of the one above it.
+  const stackUp = () => {
+    let near = 0;
+    PL.forEach((p, i) => {
+      if (i) for (let n = 0; n < 4; n++) p.cy += near + GAP - projW(settledOf(p), 0, -p.h / 2).y;
+      near = projW(settledOf(p), 0, p.h / 2).y;
+    });
+  };
 
   // ---- Layout ------------------------------------------------------------------------------------
   let dpr = 1, cell = 3, geo = null;
@@ -125,33 +136,42 @@
   const layout = () => {
     const W = innerWidth, H = innerHeight;
     view.mobile = W <= 760;
-    if (view.mobile) { // the stack alone, under the text, above the chrome
-      const x0 = 470, x1 = 1500, y0 = 50, y1 = 900;
-      view.k = Math.min((W - 20) / (x1 - x0), (H * 0.5) / (y1 - y0));
-      view.ox = (W - (x1 - x0) * view.k) / 2 - x0 * view.k + 6;
-      view.oy = H - 84 - y1 * view.k;
-    } else {
-      view.k = Math.min(W / WW, H / WH);
-      view.ox = W - WW * view.k;
-      view.oy = (H - WH * view.k) / 2;
+    stackUp();
+    // The whole picture's extent in scene px: labels to callouts, the mink's head to the roots' ends.
+    const S = PL.map(settledOf);
+    const cw = S.map((s) => ({
+      nl: projW(s, -s.w / 2 + 3, s.h / 2 - 3), nr: projW(s, s.w / 2 - 3, s.h / 2 - 3), fr: projW(s, s.w / 2 - 3, -s.h / 2 + 3), fl: projW(s, -s.w / 2 + 3, -s.h / 2 + 3),
+      lm: projW(s, -s.w / 2, 0), rm: projW(s, s.w / 2, 0),
+    }));
+    labs.concat(calls).forEach((el) => { el.style.fontSize = '22px'; });
+    const labW = Math.max(...labs.map((el) => el.offsetWidth)), callW = Math.max(0, ...calls.map((el) => el.offsetWidth));
+    const colXw = Math.min(...cw.map((c) => c.lm.x)) - 64, callXw = Math.max(...cw.map((c) => c.rm.x)) + 46;
+    const perchW = projW(S[0], -S[0].w / 2 + 0.16 * S[0].w, -S[0].h / 2 + 2);
+    const h1 = slide.querySelector('h1').getBoundingClientRect();
+    const Rg = view.mobile ? { l: 8, r: W - 8, t: h1.bottom + 14, b: H - 70 } : { l: h1.right + 28, r: W - 48, t: 22, b: H - 66 };
+    const fsOf = (k) => Math.max(view.mobile ? 10 : 12, 22 * k);
+    const box = { r: view.mobile ? Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12 : callXw + 14 + callW,
+      t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
+    let k = 1;
+    for (let n = 0; n < 3; n++) { // the labels keep a legible size, so their extent depends on the scale
+      box.l = colXw - (12 + labW) * (fsOf(k) / 22) / k;
+      k = Math.min((Rg.r - Rg.l) / (box.r - box.l), (Rg.b - Rg.t) / (box.b - box.t));
     }
-    world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${view.k.toFixed(4)})`;
+    view.k = k;
+    view.ox = (Rg.l + Rg.r) / 2 - ((box.l + box.r) / 2) * k;
+    view.oy = (Rg.t + Rg.b) / 2 - ((box.t + box.b) / 2) * k;
+    world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
     dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    cell = Math.max(1, Math.round(view.k * 3.4));
+    cell = Math.max(1, Math.round(k * 3.4));
     // Settled geometry, in screen px: the corners the threads tie together, the labels' and callouts' places, the roots.
-    const S = PL.map(settledOf);
-    const corners = S.map((s) => ({
-      nl: project(s, -s.w / 2 + 3, s.h / 2 - 3), nr: project(s, s.w / 2 - 3, s.h / 2 - 3), fr: project(s, s.w / 2 - 3, -s.h / 2 + 3), fl: project(s, -s.w / 2 + 3, -s.h / 2 + 3),
-      lm: project(s, -s.w / 2, 0), rm: project(s, s.w / 2, 0),
-    }));
-    const k = view.k, colX = Math.min(...corners.map((c) => c.lm.x)) - 64 * k;
-    const fs = Math.max(12, 22 * k);
+    const corners = cw.map((c) => Object.fromEntries(Object.entries(c).map(([key, p]) => [key, toS(p)])));
+    const colX = toS({ x: colXw, y: 0 }).x, callX = toS({ x: callXw, y: 0 }).x;
+    const fs = fsOf(k);
     labs.forEach((el, i) => {
       el.style.fontSize = `${fs.toFixed(1)}px`;
       el.style.left = `${(colX - 12 * k).toFixed(1)}px`; el.style.top = `${corners[i].lm.y.toFixed(1)}px`;
     });
-    const callX = Math.max(...corners.map((c) => c.rm.x)) + 46 * k;
     calls.forEach((el, j) => {
       el.style.fontSize = `${fs.toFixed(1)}px`;
       el.style.left = `${(callX + 14 * k).toFixed(1)}px`; el.style.top = `${corners[CALLS[j].at].rm.y.toFixed(1)}px`;
@@ -174,22 +194,21 @@
     };
     for (let j = 0; j < 15; j++) {
       const q = (j + 0.5) / 15, x = lerp(base.nl.x, base.nr.x, q) + (R() - 0.5) * 20 * k, y = lerp(base.nl.y, base.nr.y, q) - 4 * k;
-      grow(x, y, Math.PI / 2 + (q - 0.5) * 1.5 + (R() - 0.5) * 0.5, (50 + R() * 110) * k, 0, R() * 0.35);
+      grow(x, y, Math.PI / 2 + (q - 0.5) * 1.5 + (R() - 0.5) * 0.5, (40 + R() * 62) * k, 0, R() * 0.35);
     }
     // A few long threads arc out to the right from the stack's far corners, into the network.
     const arcs = [0, 1, 2, 3, 4].map((i) => {
       const c = corners[i].fr, pts = [];
-      const dx = (120 + 70 * R()) * k, dy = (90 + 80 * R()) * k;
+      const dx = (90 + 60 * R()) * k, dy = (80 + 70 * R()) * k;
       for (let t = 0; t <= 1.0001; t += 0.04) pts.push([c.x + dx * Math.sin(t * Math.PI / 2) * (1 + 0.15 * t), c.y + dy * (1 - Math.cos(t * Math.PI / 2))]);
       return { pts, dots: [0.45 + 0.2 * R(), 0.9 + 0.1 * R()] };
     });
     // The mink perches on the top plane's far edge, near its left corner.
-    const perch = project(S[0], -S[0].w / 2 + 0.16 * S[0].w, -S[0].h / 2 + 2);
+    const perch = toS(perchW);
     geo = { corners, colX, callX, roots, arcs, perch };
   };
 
   // ---- The mink ----------------------------------------------------------------------------------
-  const MW = 23, MH = 20;
   let minkAt = null; // { x, y, c } of her top-left in screen px and her cell
   const paintMink = (x, y, c, upto = 1) => {
     const u = c * dpr;
