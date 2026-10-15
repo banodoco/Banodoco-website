@@ -1193,7 +1193,7 @@
   const VERS = { a: 'Yours', b: "Claude's", c: 'Guru', d: 'Codex feedback', e: 'Blend (A + D)', f: 'E + mycelium' };
   let ver = new URLSearchParams(location.search).get('v');
   if (!VERS[ver]) { try { ver = localStorage.getItem('deck-ver'); } catch (e) {} }
-  if (!VERS[ver]) ver = 'a';
+  if (!VERS[ver]) ver = 'f'; // Version F (the mycelium deck) is the default
   let slides = [];
   const count = document.getElementById('count'), fill = document.getElementById('fill');
   const ov = document.getElementById('overview'), list = document.getElementById('list');
