@@ -463,6 +463,8 @@
   html[data-ver="f"] .fw-host .cap, html[data-ver="f"] .fw-host .e-note { display: none; }
   html[data-ver="f"] .fw-raise { justify-content: center; padding-bottom: 4vh; }
   html[data-ver="f"] .fw-raise h1 { max-width: 13em; font-size: clamp(2.1rem, 3.7vw, 3.9rem); }
+  /* Slide 10: the text at the very top, the wheel and its initiatives below it (9 bottom, 10 top, 11 middle). */
+  html[data-ver="f"] .fw-top { justify-content: flex-start; padding-top: max(40px, 5.6vh); padding-bottom: 0; }
   /* While the wheel is up, the network the earlier slides left behind steps back, as on slides 4 and 8. */
   html[data-ver="f"].fw-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
   .fw-alt { position: absolute; inset: 0; pointer-events: none; }
@@ -487,6 +489,7 @@
     html[data-ver="f"] .fw-host { padding-bottom: 84px; }
     html[data-ver="f"] .fw-host h1 { font-size: clamp(1.4rem, 5.6vw, 1.8rem); max-width: 20ch; }
     html[data-ver="f"] .fw-raise { justify-content: center; padding: 60px 24px 80px; }
+    html[data-ver="f"] .fw-top { padding: 52px 24px 0; }
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.25rem, 5.6vw, 1.6rem); max-width: 8.6em; }
     .fw-txt i { display: none; }
   }
@@ -912,7 +915,7 @@
     </div>
   </section>
 
-  <section class="slide fw-host" data-v="f">
+  <section class="slide fw-host fw-top" data-v="f">
     <div class="fw-alt" role="img" aria-label="The same flywheel, with three initiatives attached where they act: Arca Gidan, the open-source AI art prize, on the artists’ side; 2RP, a stage for the best work, on the outgoing flow; ArtCompute, micro-grants for compute, on the flow back"></div>
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
