@@ -493,20 +493,31 @@
     .st-card li b { font-size: 14.5px; } .st-card li span { font-size: 13px; }
   }
 
-  /* Version F, slide 8: a thousand flowers (flowers.js). Text centred at the bottom; above it the core on its
-     foundation, with apps growing up out of it, each with its community. */
-  html[data-ver="f"] .fl-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
-  html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
-  html[data-ver="f"] .fl-host h1 { max-width: 25em; margin: 0 auto; font-size: clamp(1.9rem, 3.1vw, 3.2rem); text-wrap: balance; }
+  /* Version F, slide 8: a thousand flowers, as people reached (flowers.js). It reads left to right: the text top left,
+     Astrid under it with a quiet counter, and to the right a crowd of people where app after app lands. */
+  html[data-ver="f"] .fl-host { justify-content: flex-start; padding-top: max(60px, 8.6vh); padding-left: max(16px, 6.2vw); text-align: left; }
+  html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 36vw); }
+  html[data-ver="f"] .fl-host h1 { max-width: 13.6em; font-size: clamp(1.7rem, 2.55vw, 2.9rem); text-wrap: balance; }
   html[data-ver="f"] .fl-host .body, html[data-ver="f"] .fl-host .vis { display: none; }
   html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
   .fl-host > .num, .fl-host > .split { position: relative; z-index: 1; }
   .fl { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .fl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .fl-ax { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; transition: opacity .6s ease; font: italic 400 1.2rem/1.2 "Cormorant Garamond", serif; color: #ecc57e; }
-  .fl.is-labelled .fl-ax { opacity: 1; }
-  .fl-core { color: #f0c67e; }
-  @media (max-width: 760px) { html[data-ver="f"] .fl-host h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); max-width: 22ch; } }
+  .fl-ax { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 1.2rem/1.2 "Cormorant Garamond", serif; color: #ecc57e;
+    text-shadow: 0 0 3px #0d0a07, 0 0 7px #0d0a07, 0 0 14px #0d0a07; }
+  .fl-core { color: #f0c67e; transition: opacity .6s ease; }
+  .fl.is-labelled .fl-core { opacity: 1; }
+  .fl-count { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: .5em; opacity: 0; transition: opacity .8s ease; white-space: nowrap; }
+  .fl.is-counting .fl-count { opacity: 1; }
+  .fl-n { font: 400 2.7em/1 "Cormorant Garamond", serif; font-variant-numeric: lining-nums tabular-nums; letter-spacing: .01em;
+    background: var(--gild); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 .06em .06em 0; }
+  .fl-u { font-style: italic; font-size: .64em; margin-left: .24em; }
+  .fl-cl { font: 400 .68em/1.2 "DM Sans", system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--soft); opacity: .8; }
+  @media (max-width: 760px) {
+    html[data-ver="f"] .fl-host { padding-top: 64px; padding-right: 16px; }
+    html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 1fr); }
+    html[data-ver="f"] .fl-host h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); max-width: 20ch; }
+  }
   /* Version F, slides 9–11: the community's flywheel (flywheel.js), one picture evolving across three slides on a
      fixed layer under the text. 9 and 10 keep the text centred at the bottom, as on slides 4 and 8; 11 centres it,
      with the wheel opened out round it. */
@@ -924,7 +935,7 @@
   </section>
 
   <section class="slide fl-host" data-v="f">
-    <div class="fl" data-astrid-flowers role="img" aria-label="Astrid at the centre, built on its stack, with many apps growing up out of it (an anime studio, a drawing app, music videos and more), each with a community round it"><canvas class="fl-canvas" aria-hidden="true"></canvas></div>
+    <div class="fl" data-astrid-flowers role="img" aria-label="Astrid on the left; one after another, niche apps fire out of it into a growing crowd of people (an anime studio for a niche fandom, storyboards to motion for architects, interactive storytelling, live VJ and DJ sets and more), each lighting up its own community, while an illustrative counter of people who could be reached climbs into the billions"><canvas class="fl-canvas" aria-hidden="true"></canvas></div>
     <div class="num">08<span class="act">A thousand flowers</span></div>
     <div class="split">
       <div>
