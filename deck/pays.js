@@ -78,8 +78,11 @@
   // Drawn in the reference's own units (1672 x 941), scaled by k about the middle.
   // The core: a lens centred at (750, 415), 136 wide and 226 tall, in those units.
   const CORE_REF = { cx: 750, cy: 415, w: 136, h: 226 };
-  let W = 0, H = 0, dpr = 1, k = 1, ox = 0, oy = 0, LW = 1, small = false;
-  const X = (rx) => ox + (rx - 836) * k, Y = (ry) => oy + (ry - 415) * k, P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
+  // On a phone the picture is scaled as one (k) above the text. Beside the text on the right, it is laid out
+  // in the room to the left: positions stretch by kx across and ky down, while sizes (circles, the lens,
+  // the mink, dots) scale by k so nothing is squashed.
+  let W = 0, H = 0, dpr = 1, k = 1, kx = 1, ky = 1, ox = 0, oy = 0, LW = 1, small = false;
+  const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
   let machines = [], feeds = [], lens = null, arcs = [], rays = [], boundary = null, cell = 3;
@@ -96,11 +99,19 @@
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     small = W <= 760;
     const num = slide.querySelector('.num'), top = num.getBoundingClientRect().top - b.top;
-    // The picture spans reference y 70..760 and x 150..1600; it sits above the label.
-    // The picture spans reference x 150..1580; keep at least 64 px clear at each side.
-    k = small ? Math.min((W - 24) / 1430, (top - 60) / 690) : Math.min((W - 128) / 1430, (top - 30) / 690, 1.15);
-    ox = W / 2 - 29 * k; // the picture's middle (reference x 865) on the slide's middle
-    oy = small ? Math.max(40 + 345 * k, top * 0.5) : top - 24 * k + (415 - 740) * k; // on a phone, centred in the room above the text
+    if (small) { // above the text, scaled as one; the picture spans reference x 150..1580 and y 70..760
+      k = Math.min((W - 24) / 1430, (top - 60) / 690);
+      ox = W / 2 - 29 * k;
+      oy = Math.max(40 + 345 * k, top * 0.5);
+    } else { // to the left of the text: from 64 px in to 56 px short of the text column, centred down the slide
+      const text = slide.querySelector('.split > :first-child').getBoundingClientRect();
+      const left = 64, right = text.left - b.left - 56;
+      kx = (right - left - 20) / 1430;
+      ky = Math.min((H - 230) / 690, 1.0);
+      k = Math.min(ky, kx * 1.35, 1.05);
+      ox = left + 52 * k - 63 * kx; // the builders' circles (reference x 213) sit just inside the left edge
+      oy = H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
+    }
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
     // The builders' machines, and their threads into the core's left side.
@@ -116,8 +127,8 @@
     });
     // The core: three strands of a lens, nodes at its tips and on its sides.
     lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: CORE_REF.w * k, h: CORE_REF.h * k };
-    // The boundary: hosted begins past this line.
-    boundary = { x: X(836), y0: Y(120), y1: Y(705) };
+    // The boundary: hosted begins past this line (clear of the lens when the picture is narrowed).
+    boundary = { x: Math.max(X(836), lens.c.x + lens.w / 2 + 16 * k), y0: Y(120), y1: Y(705) };
     // Everyone else: wave fronts of people widening out from the core, as in the reference: each an arc
     // (centre u, radius r, half-height hh, in reference units), the last a dense band.
     arcs = [];
@@ -141,13 +152,13 @@
       const end = P(820 + Math.cos(a) * 760, 415 + Math.sin(a) * 760);
       return Object.assign(line([[start.x, start.y], [end.x, end.y]]), { mark, i });
     });
-    cell = small ? 1 : Math.max(2, Math.round(3 * k));
+    cell = small ? 1 : Math.max(2, Math.round(3.4 * k));
     // Labels.
     labels.local.style.fontSize = labels.hosted.style.fontSize = `${Math.max(small ? 10.5 : 13, 23 * k).toFixed(1)}px`;
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
     put(labels.local, X(150), Y(168), 0, 0.5);
     put(labels.hosted, X(1170), Y(118), 0.5, 0.5);
-    put(labels.core, X(CORE_REF.cx + 4), Y(CORE_REF.cy - CORE_REF.h / 2 - 40), 0.5, 0.5);
+    put(labels.core, lens.c.x + 4 * k, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5);
     return true;
   };
 
