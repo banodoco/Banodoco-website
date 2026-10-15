@@ -339,6 +339,95 @@
   .pa-side span { display: block; font-size: .78em; color: #b8a98f; font-style: italic; }
   .pa-core { color: #f0c67e; }
   @media (max-width: 760px) { html[data-ver="f"] .pa-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 20ch; } }
+  /* Version F, slide 6: where it goes (stack.js). The text on the left; on the right slide 5's product taken apart into
+     one exploded stack of thin planes (preview, timeline, agent, tools & effects, models / runtime), tied by fine gold
+     registration threads and rooted in the network. The planes keep slide 5's dusk palette; the mink perches on top. */
+  html[data-ver="f"] .st-host { padding-left: max(16px, 4.4vw); }
+  html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 30vw); }
+  html[data-ver="f"] .st-host h1 { font-size: clamp(1.9rem, 3.1vw, 3.3rem); max-width: 8.25em; }
+  .st-host .body, .st-host .vis { display: none; }
+  .st-host > .num, .st-host > .split { position: relative; z-index: 1; }
+  .st-host > .split { pointer-events: none; } .st-host > .split > * { pointer-events: auto; } /* the text's row runs across the stack */
+  .slide.st-arrive { transition: none; }
+  .st { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; user-select: none; -webkit-user-select: none;
+    --as-card: #2c2822; --as-line: #4a4337; --as-field: rgb(27 25 21 / .9); --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
+    font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif; text-align: left; }
+  .st-world { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; perspective: 2600px; perspective-origin: 1900px 420px; }
+  .st-plane { position: absolute; left: 0; top: 0; opacity: 0; border-radius: 16px; border: 1px solid rgb(240 200 119 / .42); border-bottom-color: rgb(255 214 150 / .7); color: var(--as-ink); pointer-events: auto; overflow: hidden;
+    background: linear-gradient(180deg, rgb(41 37 31 / .93), rgb(30 27 23 / .93)); backface-visibility: hidden;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -1px 0 rgb(255 220 160 / .18), 0 0 34px rgb(240 200 119 / .1), 0 50px 60px -36px rgb(0 0 0 / .95); }
+  .st-threads { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .st-mink { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: auto; opacity: 0; }
+  .st-lab, .st-call { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 22px/1 "Cormorant Garamond", serif; letter-spacing: .01em; }
+  .st-lab { color: #ecc57e; transform: translate(-100%, -55%); }
+  .st-call { color: #e3c08a; transform: translateY(-55%); }
+  /* The preview, as on slide 5: the light study playing, its title on it, the transport beneath. */
+  .st-preview { display: grid; grid-template-rows: minmax(0, 1fr) 36px; gap: 6px; padding: 12px 14px 8px; }
+  .st-screen { position: relative; border-radius: 10px; background: #12100d; overflow: hidden; }
+  .st-pic { position: absolute; left: 50%; top: 50%; height: 95%; aspect-ratio: 16 / 9; transform: translate(-50%, -50%); }
+  .st-pic video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .st-pic span { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; font: italic 500 30px/1 "Cormorant Garamond", Georgia, serif; color: #fffaf0; text-shadow: 0 1px 3px rgb(70 45 20 / .6), 0 0 18px rgb(60 35 15 / .5); }
+  .st-transport { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--as-muted); }
+  .st-btn { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--as-ink); }
+  .st-btn.is-play { background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); }
+  .st-time { margin-left: 4px; font-variant-numeric: tabular-nums; color: var(--as-ink); }
+  .st-pill { margin-left: auto; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); color: var(--as-ink); font-size: 13px; }
+  /* The timeline: V2 Effects (community-made) over V1 Video. */
+  .st-timeline { display: grid; grid-template-columns: 122px minmax(0, 1fr); grid-template-rows: 34px minmax(0, 1fr) minmax(0, 1.3fr); padding: 0 14px 12px 0; }
+  .st-th { display: flex; align-items: center; gap: 9px; padding: 0 14px; border-right: 1px solid var(--as-line); font-size: 15px; font-weight: 500; }
+  .st-th em { font-style: normal; font-weight: 400; color: var(--as-muted); }
+  .st-th svg { color: var(--as-muted); flex: none; }
+  .st-th:first-child { border-bottom: 1px solid var(--as-line); }
+  .st-ruler { position: relative; border-bottom: 1px solid var(--as-line); }
+  .st-ruler span { position: absolute; top: 8px; font-size: 13px; color: #8a8174; transform: translateX(4px); font-variant-numeric: tabular-nums; }
+  .st-ruler span::before { content: ""; position: absolute; left: -4px; top: -8px; height: 34px; border-left: 1px solid var(--as-line); }
+  .st-lane { position: relative; border-bottom: 1px solid rgb(74 67 55 / .45); }
+  .st-clip, .st-fx { position: absolute; top: 7px; bottom: 7px; border-radius: 8px; overflow: hidden; white-space: nowrap; }
+  .st-clip { border: 1px solid #5a5244; background: rgb(44 40 34 / .95) left / auto 100% repeat-x; }
+  .st-clip img { position: absolute; left: 0; top: 0; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; opacity: .92; }
+  .st-clip b, .st-clip i { position: absolute; padding: 2px 7px; border-radius: 5px; background: rgb(18 16 13 / .72); font-style: normal; }
+  .st-clip b { left: 7px; top: 5px; font-size: 13px; font-weight: 500; color: var(--as-ink); }
+  .st-clip i { right: 7px; bottom: 5px; font-size: 12px; color: var(--as-muted); }
+  .st-fx { display: flex; align-items: center; gap: 5px; padding: 0 7px; border: 1px solid rgb(167 139 250 / .6); background: rgb(91 70 140 / .6); color: #efe7ff; font-size: 13px; font-weight: 500; }
+  .st-fx em { font-style: normal; font-weight: 400; font-size: 11px; color: #c9b8f0; }
+  .st-head { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 8px rgb(56 189 248 / .5); z-index: 2; }
+  .st-head::before { content: ""; position: absolute; top: 0; left: -5px; width: 12px; height: 10px; border-radius: 2px 2px 6px 6px; background: var(--as-sky); }
+  /* The agent: the chat from slide 5, laid out wide. */
+  .st-agent { display: grid; grid-template-rows: 50px minmax(0, 1fr) 64px; }
+  .st-chat-head { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--as-line); font-size: 17px; font-weight: 600; }
+  .st-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #3a3128; }
+  .st-avatar img { width: 30px; height: 26px; image-rendering: pixelated; transform: translate(1px, 3px); }
+  .st-rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 34px; padding: 14px 22px 8px; }
+  .st-rows > div { display: flex; flex-direction: column; gap: 9px; }
+  .st-rows > div + div { padding-top: 38px; }
+  .st-msg { align-self: flex-start; padding: 8px 15px; border-radius: 18px; background: var(--as-orange); color: #25241f; font-size: 15.5px; font-weight: 500; }
+  .st-rows > div + div .st-msg { align-self: flex-end; }
+  .st-step { display: grid; grid-template-columns: 18px 1fr; column-gap: 10px; align-items: center; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--as-line); background: rgb(27 25 21 / .75); font-size: 15px; }
+  .st-step svg { grid-row: 1 / span 2; color: #7fbf8f; }
+  .st-step code { grid-column: 2; font: 400 13px/1.35 ui-monospace, "SF Mono", Menlo, monospace; color: var(--as-muted); }
+  .st-step code b { font-weight: 400; color: #e7c27c; }
+  .st-composer { padding: 0 14px 12px; display: flex; align-items: center; }
+  .st-field { flex: 1; display: flex; align-items: center; gap: 10px; height: 44px; border: 1px solid var(--as-line); border-radius: 12px; background: var(--as-field); padding: 0 6px 0 14px; font-size: 15px; color: #8a8174; }
+  .st-field b { margin-left: auto; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--as-orange); color: #25241f; opacity: .55; }
+  /* Tools & effects, and the models and runtime beneath them. */
+  .st-tools { display: flex; align-items: center; gap: 16px; padding: 0 18px; }
+  .st-tile { flex: none; width: 132px; height: 178px; display: grid; justify-items: center; align-content: center; gap: 16px; border-radius: 14px; border: 1px solid var(--as-line);
+    background: rgb(27 25 21 / .8); font-size: 16px; color: var(--as-ink); }
+  .st-tile svg { color: #e7c27c; }
+  .st-tag { margin-left: auto; padding: 7px 14px; border-radius: 999px; border: 1px solid rgb(240 200 119 / .45); color: #ecc57e; font-size: 14px; white-space: nowrap; }
+  .st-models { display: flex; align-items: center; gap: 0; padding: 0 18px 0 26px; }
+  .st-comfy { flex: none; width: 232px; white-space: nowrap; font: 400 29px/1.05 "Cormorant Garamond", Georgia, serif; color: var(--as-ink); }
+  .st-mod { flex: none; width: 96px; height: 124px; display: grid; justify-items: center; align-content: center; gap: 12px; border-radius: 12px; border: 1px solid var(--as-line); background: rgb(27 25 21 / .8); font-size: 14px; }
+  .st-mod svg { color: var(--as-ink); }
+  .st-link { flex: none; width: 14px; height: 1px; background: var(--as-line); }
+  .st-gpu { flex: none; margin-left: 20px; width: 142px; height: 110px; display: grid; justify-items: center; align-content: center; gap: 10px; border-radius: 12px; border: 1px solid var(--as-line); background: rgb(27 25 21 / .6); font-size: 13.5px; color: var(--as-muted); }
+  @media (max-width: 760px) {
+    html[data-ver="f"] .st-host { padding-left: 24px; }
+    html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr); }
+    html[data-ver="f"] .st-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 16em; }
+    .st-call { display: none; }
+  }
+
   @media (max-width: 760px) {
     html[data-ver="f"] .ac-host { padding-bottom: 92px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); max-width: 22ch; text-wrap: balance; }
@@ -671,7 +760,8 @@
     </div>
   </section>
 
-  <section class="slide" data-v="f">
+  <section class="slide st-host" data-v="f">
+    <div class="st" data-astrid-stack role="img" aria-label="One stack, from the top: the preview, the timeline's effects and video tracks, the agent, community-made tools and effects, and the models and runtime at the foundation, rooted in the community"></div>
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
@@ -885,6 +975,7 @@
 <script src="mink.js"></script>
 <script src="core.js"></script>
 <script src="demo.js"></script>
+<script src="stack.js"></script>
 <script src="pays.js"></script>
 </body>
 </html>
