@@ -1049,7 +1049,8 @@
 
   const go = (n) => {
     i = Math.max(0, Math.min(slides.length - 1, n));
-    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
+    slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
     count.textContent = `${i + 1} / ${slides.length}`;
     fill.style.width = `${((i + 1) / slides.length) * 100}%`;
     history.replaceState(null, '', `${location.pathname}#${i + 1}`);
