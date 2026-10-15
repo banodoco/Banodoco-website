@@ -530,23 +530,50 @@
   .fw-l { text-align: left; } .fw-c { text-align: center; }
   .fw-core { font-size: 1.05em; color: #f0c67e; }
   .fw-verb { font-size: .86em; color: #d4b67f; letter-spacing: .04em; }
-  .fw-chip { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: .6em; opacity: 0; white-space: nowrap; }
-  .fw-thumb { flex: none; display: block; overflow: hidden; border-radius: 3px; border: 1px solid #f0c87750; background: #15110d;
-    box-shadow: 0 0 20px #e0ab5e26, 0 6px 18px #000a; }
-  .fw-thumb > img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .9; }
-  .fw-avs { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-  .fw-avs img { width: 40%; aspect-ratio: 1; object-fit: cover; border-radius: 50%; border: 1px solid #15110d; margin-left: -8%; filter: saturate(.5) sepia(.25) brightness(.92); }
+  /* Slides 10 and 11: our four initiatives as small versions of the homepage's cards, on their own layer above the
+     slides so their links can be clicked (flywheel.js places them and lets them take clicks only while they're out). */
+  .fw-cards { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  html[data-ver="f"] .fw-cards.is-on { opacity: 1; }
+  .fw-card { position: absolute; left: 0; top: 0; opacity: 0; transform-origin: 50% 50%; border-radius: 7px; overflow: hidden; will-change: transform, opacity;
+    background: #14100cf2; border: 1px solid #f0c8772e; box-shadow: 0 0 34px #e0ab5e14, 0 14px 40px #000c; }
+  .fw-media { position: relative; display: block; aspect-ratio: 16 / 8.6; overflow: hidden; background: #0b0907; border-bottom: 1px solid #f0c87722; }
+  .fw-media > img, .fw-media > video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .fw-card:first-child .fw-media > img { object-position: 50% 30%; }
+  /* A slow drift on the cards' pictures while they're out, so they feel alive without the weight of video. */
+  .fw-cards.is-live .fw-media > img { animation: fw-drift 14s ease-in-out infinite alternate; }
+  @keyframes fw-drift { from { transform: scale(1.02); } to { transform: scale(1.08) translateY(-1.5%); } }
+  @media (prefers-reduced-motion: reduce) { .fw-cards.is-live .fw-media > img { animation: none; } }
+  .fw-cbody { display: flex; flex-direction: column; align-items: flex-start; gap: .28em; padding: .7em .85em .8em; text-align: left; }
+  .fw-cbody b { font: 400 1.12em/1.1 "EB Garamond", serif; color: var(--ink); }
+  .fw-cbody span { font: italic 400 .9em/1.28 "Cormorant Garamond", serif; color: #cbbfa9; }
+  .fw-cbody a, .fw-cbody em { margin-top: .2em; font: italic 500 .88em/1.2 "Cormorant Garamond", serif; color: #f0c67e; text-decoration: none; letter-spacing: .02em; }
+  .fw-cbody em { color: #a39684; }
+  .fw-cards.is-live .fw-cbody a { pointer-events: auto; }
+  .fw-cbody a:hover, .fw-cbody a:focus-visible { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; outline: none; }
+  /* ArtCompute's stat band in its own terminal palette (artcompute.org: ground #0a0a0a, neon green, violet). */
+  .fw-ac { display: flex; flex-direction: column; justify-content: center; gap: .6em; height: 100%; padding: .55em .75em; background: #0a0a0a;
+    font: 500 .68em/1.15 ui-monospace, "SF Mono", Menlo, monospace; color: #8a8a8a; letter-spacing: .05em; }
+  .fw-ac-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #ffffff14; }
+  .fw-ac-stats > span { display: flex; flex-direction: column; gap: .35em; padding: .5em .5em; background: #0a0a0a; text-transform: uppercase; font-size: .82em; }
+  .fw-ac-stats b { font-size: 1.6em; font-weight: 600; color: #ededed; }
+  .fw-ac-stats b.g { color: #39ff14; } .fw-ac-stats b.v { color: #a78bfa; }
+  .fw-ac-l { margin-bottom: -.2em; text-transform: uppercase; font-size: .78em; color: #6e6e6e; }
+  .fw-avs { display: flex; align-items: center; }
+  .fw-avs img { width: 2.6em; height: 2.6em; border-radius: 50%; border: 1px solid #0a0a0a; margin-left: -.5em; object-fit: cover; }
   .fw-avs img:first-child { margin-left: 0; }
-  .fw-txt { display: flex; flex-direction: column; gap: .12em; text-align: left; }
-  .fw-txt b { font: 400 .92em/1.15 "EB Garamond", serif; color: var(--ink); }
-  .fw-txt i { font: italic 400 .8em/1.2 "Cormorant Garamond", serif; color: #ecc57e; }
+  /* Slide 9: the community, in one quiet real line under the headline. */
+  .fw-stat { margin: .95rem 0 0; font: italic 400 clamp(1rem, 1.25vw, 1.25rem)/1.3 "Cormorant Garamond", serif; color: #b8a98f; letter-spacing: .02em; }
+  .fw-stat b { font-weight: 500; color: #ecc57e; }
+  .fw-stat a { margin-left: .25em; color: #f0c67e; text-decoration: none; }
+  .fw-stat a:hover, .fw-stat a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
   @media (max-width: 760px) {
     html[data-ver="f"] .fw-host { padding-bottom: 84px; }
     html[data-ver="f"] .fw-host h1 { font-size: clamp(1.4rem, 5.6vw, 1.8rem); max-width: 20ch; }
     html[data-ver="f"] .fw-raise { justify-content: center; padding: 60px 24px 80px; }
     html[data-ver="f"] .fw-top { padding: 52px 24px 0; }
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.25rem, 5.6vw, 1.6rem); max-width: 8.6em; }
-    .fw-txt i { display: none; }
+    .fw-cbody span { display: none; }
+    .fw-stat { margin-top: .6rem; font-size: 1rem; }
   }
 
   @media (max-width: 760px) {
@@ -948,6 +975,7 @@
     <div class="split">
       <div>
         <h1>Astrid launches into a community we’ve spent years cultivating&nbsp;— and is designed to accelerate <em>its collective creative flywheel.</em></h1>
+        <p class="fw-stat"><b>20,000+</b> people · Banodoco Discord · <a href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener">Join →</a></p>
         <div class="body">Banodoco's Discord, events and competitions already connect artists, model trainers, builders and toolmakers — each building on the one before, with the art at the end inspiring the next turn. Astrid gives that loop a home, so every turn is faster. [n] members · [n] years · [n] events.</div>
       </div>
       <svg class="wheel" viewBox="0 0 400 420" role="img" aria-label="Flywheel: artists inspire, model trainers create, infrastructure and workflow builders build, toolmakers make tools, back to artists, with Astrid at the centre">
@@ -971,7 +999,7 @@
   </section>
 
   <section class="slide fw-host fw-top" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The same flywheel, with three initiatives attached where they act: Arca Gidan, the open-source AI art prize, on the artists’ side; 2RP, a stage for the best work, on the outgoing flow; ArtCompute, micro-grants for compute, on the flow back"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel grown bigger round a glowing core, with our four initiatives round it, each plugging energy into the ring: Arca Gidan, an open source AI art competition; 2RP, an art and tech publication; ArtCompute, micro-grants for open AI work; ADOS, events that bring the community together; Astrid sits in the corner"></div>
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
       <div>
@@ -988,7 +1016,7 @@
   </section>
 
   <section class="slide fw-host fw-raise" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a ring round the words: artists, the community’s builders and the three initiatives, still circulating"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a halo round the words, with the four initiatives round it and Astrid in the corner"></div>
     <div class="num">11<span class="act">The raise</span></div>
     <div class="split">
       <div>
@@ -1009,20 +1037,6 @@
       </div>
     </div>
   </section>
-
-  <section class="slide" data-v="f">
-    <div class="num">12<span class="act">The vision</span></div>
-<div class="split">
-      <div>
-        <h1>A thriving open-source AI art ecosystem can help accelerate <em>a second renaissance.</em></h1>
-    <div class="body">Creating with AI stops being one person at a prompt and becomes a collective effort. A painter turns years of her landscapes into a LoRA; elsewhere, an engineer builds a workshop for sculpting in 3D; a year later, in that workshop, a stranger sculpts her paintings into a garden you can walk through. Every finished work, the start of someone else's.</div>
-    <p class="e-note">from D: the Mycelial Manifesto's exchange (in the site's own words) and D's closing line.</p>
-      </div>
-      <div class="vis"><img class="m-hero" src="../assets/brand/og-home.jpg" alt="">
-<p class="cap">Full-bleed in the final deck, title only.</p></div>
-    </div>
-  </section>
-
 
   <!-- Version D: Codex feedback; opening slides are shared above. -->
 </main>
