@@ -6,8 +6,12 @@
 // From slide 5 the product itself becomes the stack: the preview lifts and tilts into the top plane,
 // the timeline follows as the second, and the chat folds and turns under them into the agent plane;
 // the planes part, the tools and runtime come up beneath, then the threads, labels and roots draw in.
-// Any other arrival builds it quickly from the foundation up. Once settled the preview plays a light
-// study and, now and then, a soft pulse runs down a registration thread to the runtime and back.
+// The top three planes begin as exact copies of slide 5's panels as they were at that moment (its own
+// preview frame, timeline and chat, cloned), then dissolve into the stack's planes mid-fold; every plane's
+// content is scaled as one unit, never reflowed. Any other arrival builds it quickly from the foundation
+// up. Once settled the preview plays a light study and, now and then, a soft pulse runs down a
+// registration thread to the runtime and back. Hovering the mink flashes her eye; clicking her turns her
+// to face you, as on slide 5.
 (() => {
   const root = document.querySelector('[data-astrid-stack]');
   const M = window.AstridMink;
@@ -77,11 +81,18 @@
   const planes = PL.map((p, i) => {
     p.i = i;
     const el = document.createElement('div');
-    el.className = `st-plane st-${p.id}`;
-    el.innerHTML = CONTENT[p.id];
+    el.className = 'st-plane';
+    const inner = document.createElement('div'); // the content at its settled size, scaled as one unit to fit the plane
+    inner.className = `st-in st-${p.id}`;
+    inner.style.width = `${p.w - 2}px`; inner.style.height = `${p.h - 2}px`;
+    inner.innerHTML = CONTENT[p.id];
+    el.appendChild(inner);
     return el;
   });
-  [...planes].reverse().forEach((el) => world.appendChild(el)); // the upper planes paint over the lower
+  const inners = planes.map((el) => el.firstChild);
+  // Ghosts: arriving from slide 5, the top three planes first carry exact copies of its panels.
+  const ghosts = [0, 1, 2].map(() => { const el = document.createElement('div'); el.className = 'st-ghost'; return el; });
+  [...planes].reverse().forEach((el, j) => { world.appendChild(el); const i = 4 - j; if (ghosts[i]) world.appendChild(ghosts[i]); }); // the upper planes paint over the lower
   const cv = document.createElement('canvas');
   cv.className = 'st-threads';
   const g = cv.getContext('2d');
@@ -97,15 +108,33 @@
 
   // ---- Plane state and the projection ----------------------------------------------------------
   const MW = 23, MH = 20;
-  const settledOf = (p) => ({ x: p.cx, y: p.cy, w: p.w, h: p.h, rx: TILT, rz: TURN, o: 1 });
+  const settledOf = (p) => ({ x: p.cx, y: p.cy, w: p.w, h: p.h, rx: TILT, rz: TURN, o: 1, c: 1, g: 0 });
   const st = PL.map(settledOf);
   const shown = PL.map(() => ({}));
+  const box = (el, s) => {
+    el.style.width = `${s.w.toFixed(1)}px`; el.style.height = `${s.h.toFixed(1)}px`;
+    el.style.left = `${(s.x - s.w / 2).toFixed(1)}px`; el.style.top = `${(s.y - s.h / 2).toFixed(1)}px`;
+  };
+  // Fit content of natural size (nw, nh) inside a (w, h) box without changing its shape: scale as one unit, centred.
+  const fit = (el, w, h, nw, nh) => {
+    const k = Math.min(w / nw, h / nh);
+    el.style.transform = `translate(${((w - k * nw) / 2).toFixed(2)}px, ${((h - k * nh) / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
+  };
   const apply = () => st.forEach((s, i) => {
-    const el = planes[i], was = shown[i];
-    if (was.w !== s.w || was.h !== s.h) { el.style.width = `${s.w.toFixed(1)}px`; el.style.height = `${s.h.toFixed(1)}px`; }
-    if (was.x !== s.x || was.y !== s.y || was.w !== s.w || was.h !== s.h) { el.style.left = `${(s.x - s.w / 2).toFixed(1)}px`; el.style.top = `${(s.y - s.h / 2).toFixed(1)}px`; }
-    if (was.rx !== s.rx || was.rz !== s.rz) el.style.transform = `rotateX(${s.rx.toFixed(2)}deg) rotateZ(${s.rz.toFixed(2)}deg)`;
+    const el = planes[i], was = shown[i], p = PL[i];
+    const moved = was.x !== s.x || was.y !== s.y || was.w !== s.w || was.h !== s.h, turned = was.rx !== s.rx || was.rz !== s.rz;
+    if (moved) { box(el, s); fit(inners[i], s.w - 2, s.h - 2, p.w - 2, p.h - 2); }
+    if (turned) el.style.transform = `rotateX(${s.rx.toFixed(2)}deg) rotateZ(${s.rz.toFixed(2)}deg)`;
     if (was.o !== s.o) el.style.opacity = s.o.toFixed(3);
+    if (was.c !== s.c) inners[i].style.opacity = s.c.toFixed(3);
+    const gh = ghosts[i];
+    if (gh && (was.g !== s.g || (s.g > 0 && (moved || turned)))) {
+      gh.style.display = s.g > 0 && gh.firstChild ? 'block' : 'none';
+      if (s.g > 0 && gh.firstChild) {
+        box(gh, s); gh.style.transform = el.style.transform; gh.style.opacity = s.g.toFixed(3);
+        fit(gh.firstChild, s.w, s.h, gh.dataset.w, gh.dataset.h);
+      }
+    }
     Object.assign(was, s);
   });
   const view = { k: 1, ox: 0, oy: 0, mobile: false };
@@ -207,19 +236,50 @@
   };
 
   // ---- The mink ----------------------------------------------------------------------------------
+  // Poses as on slide 5: profile, glint (her eye flash), facing, focus (eyes lit); lift raises her a cell or two.
+  const mk = { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null, at: null };
   const paintMink = (x, y, c, upto = 1) => {
     const u = c * dpr;
     if (minkCv.width !== MW * u) { minkCv.width = MW * u; minkCv.height = MH * u; minkCv.style.width = `${MW * c}px`; minkCv.style.height = `${MH * c}px`; }
-    const P = M.POSES.profile;
+    const P = M.POSES[mk.pose];
     mg.clearRect(0, 0, minkCv.width, minkCv.height);
-    for (let r = 0; r < MH; r++) for (let q = 0; q < MW; q++) {
-      const ch = P[r][q];
-      if (ch === '.' || (r + (22 - q) * 0.35) / (19 + 22 * 0.35) > upto) continue; // from the head down the neck
-      mg.fillStyle = M.COLORS[ch];
-      mg.fillRect(q * u, r * u, u, u);
-    }
-    minkCv.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    const fill = (rows, only) => {
+      for (let r = 0; r < MH; r++) for (let q = 0; q < MW; q++) {
+        const ch = rows[r][q];
+        if (ch === '.' || (only && ch === P[r][q]) || (r + (22 - q) * 0.35) / (19 + 22 * 0.35) > upto) continue; // from the head down the neck
+        mg.fillStyle = M.COLORS[ch];
+        mg.fillRect(q * u, r * u, u, u);
+      }
+    };
+    fill(P);
+    if (mk.glint > 0 && mk.pose === 'profile') { mg.globalAlpha = mk.glint; fill(M.POSES.glint, true); mg.globalAlpha = 1; }
+    minkCv.style.transform = `translate(${Math.round(x)}px, ${Math.round(y - mk.lift * c)}px)`;
+    mk.at = { x, y, c, upto };
   };
+  // Her click, as on slide 5 (and the homepage): she turns to face you with a little hop, her eyes light half
+  // a second later and she floats a cell or two, then she hops round and turns back.
+  const TURNS = [[0, 'facing'], [500, 'focus'], [1900, 'facing'], [2400, 'profile']];
+  const stepMink = (t) => {
+    if (!mk.at) return;
+    let pose = 'profile', lift = 0, glint = 0;
+    if (mk.seq) {
+      const e = Math.max(0, t - mk.seq), cur = TURNS.filter(([at]) => e >= at).pop();
+      pose = cur[1];
+      const since = e - cur[0];
+      lift = pose === 'facing' ? (since < 130 ? 1 : 0) : pose === 'focus' ? ((since % 1100) < 550 ? 1 : 2) : 0;
+      if (e >= 2400) mk.seq = null;
+    }
+    if (mk.hover !== null) { // the glint: up and back over 2.6 s
+      const e = Math.max(0, t - mk.hover) / 2600;
+      glint = e >= 1 ? 0 : Math.sin(Math.PI * e) ** 2;
+      if (e >= 1) mk.hover = null;
+    }
+    if (pose !== mk.pose || lift !== mk.lift || Math.abs(glint - mk.glint) > 0.01) {
+      Object.assign(mk, { pose, lift, glint });
+      paintMink(mk.at.x, mk.at.y, mk.at.c, mk.at.upto);
+    }
+  };
+  const restMink = () => Object.assign(mk, { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null });
   // Her place on the top plane's far edge, as the plane stands now (or settled).
   const perchOf = (s = settledOf(PL[0])) => {
     const p = project(s, -s.w / 2 + 0.16 * s.w, -s.h / 2 + 2);
@@ -319,7 +379,9 @@
   };
 
   // ---- States ------------------------------------------------------------------------------------
+  const clearGhosts = () => ghosts.forEach((gh) => { gh.replaceChildren(); gh.style.display = 'none'; });
   const hideAll = () => {
+    clearGhosts();
     st.forEach((s, i) => Object.assign(s, settledOf(PL[i]), { o: 0 }));
     apply();
     vis.sh = 0; vis.lb = PL.map(() => 0); vis.cl = CALLS.map(() => 0); vis.rt = 0; vis.pulse = null;
@@ -330,6 +392,7 @@
   const settleAll = () => {
     st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
     apply();
+    clearGhosts();
     vis.sh = 1; vis.lb = PL.map(() => 1); vis.cl = CALLS.map(() => 1); vis.rt = 1; vis.pulse = null;
     const m = perchOf(); paintMink(m.x, m.y, m.c); minkCv.style.opacity = '1';
     draw();
@@ -338,15 +401,31 @@
   // ---- Arriving ----------------------------------------------------------------------------------
   // build: { t0, from5, src } while the stack is assembling; ambient afterwards.
   let build = null, amb = null;
-  const FROM5 = { a: [[0.05, 1.3], [0.12, 1.42], [0.2, 1.62]], spread: [1.0, 2.1], low: [[1.3, 2.2], [1.5, 2.4]], fade: 0.35,
+  const FROM5 = { a: [[0.05, 1.3], [0.12, 1.42], [0.2, 1.62]], spread: [1.0, 2.1], low: [[1.3, 2.2], [1.5, 2.4]], fade: [0.25, 0.45, 0.72, 0.56, 0.86],
     mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, cl: 2.55, rt: [2.0, 3.4], end: 3.4 };
   const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, cl: 1.45, rt: [1.0, 2.25], end: 2.25 };
   const demo = document.querySelector('[data-astrid-demo]');
   const slide5 = demo && demo.closest('.slide');
   const snapFrom5 = () => {
     const q = (sel) => { const el = demo.querySelector(sel); const r = el && el.getBoundingClientRect(); return r && r.width > 4 && r.height > 4 ? r : null; };
-    const rects = [q('.as-player'), q('.as-timeline'), q('.as-chat')];
+    const SEL = ['.as-player', '.as-timeline', '.as-chat'], rects = SEL.map(q);
     if (rects.some((r) => !r)) return null;
+    // Each panel exactly as it stands: a deep copy styled by slide 5's own rules (its root's classes and
+    // custom properties), its canvas pixels copied, its entry animations not replayed.
+    SEL.forEach((sel, i) => {
+      const src = demo.querySelector(sel), r = rects[i], gh = ghosts[i];
+      const wrap = document.createElement('div');
+      wrap.className = demo.className;
+      wrap.style.cssText = `position:absolute;left:0;top:0;margin:0;flex:none;transform-origin:0 0;width:${r.width}px;height:${r.height}px`;
+      const c = src.cloneNode(true);
+      c.style.width = `${r.width}px`; c.style.height = `${r.height}px`;
+      c.querySelectorAll('.as-in').forEach((n) => n.classList.remove('as-in'));
+      const from = src.querySelectorAll('canvas'), to = c.querySelectorAll('canvas');
+      from.forEach((cs, j) => { to[j].width = cs.width; to[j].height = cs.height; try { to[j].getContext('2d').drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
+      wrap.appendChild(c);
+      gh.replaceChildren(wrap);
+      gh.dataset.w = r.width; gh.dataset.h = r.height;
+    });
     const mr = q('.as-mink');
     const c5 = mr ? Math.max(1, Math.round(mr.width / MW)) : cell;
     return { planes: rects.map(toWorld), mink: mr ? { x: mr.left, y: mr.top + 3 * c5, c: c5 } : null }; // slide 5 keeps 3 spare rows above her
@@ -355,10 +434,10 @@
     layout();
     const t0 = now();
     if (from5) {
+      hideAll();
       const src = snapFrom5();
       if (src) {
         build = { t0, from5: true, src };
-        hideAll();
         step(t0);
         return;
       }
@@ -377,7 +456,12 @@
         const ty = lerp(mid + (p.cy - mid) * 0.72, p.cy, sp);
         s.x = lerp(f.x, p.cx, qa); s.y = lerp(f.y, ty, qa); s.w = lerp(f.w, p.w, qa); s.h = lerp(f.h, p.h, qa);
         s.rx = TILT * qa; s.rz = TURN * qa - (i === 2 ? 16 * Math.sin(Math.PI * qa) : 0);
-        s.o = seep(clamp((e - T.a[i][0] + 0.05) / T.fade));
+        // Slide 5's own panel (the ghost) holds while the plane's frame fades in beneath it; then it dissolves
+        // away as the plane's content comes in, overlapping only briefly so the two layouts never stack up.
+        const [f0, f1, g1, c0, c1] = T.fade;
+        s.o = seep(clamp((qa - f0) / (f1 - f0)));
+        s.g = 1 - seep(clamp((qa - f1) / (g1 - f1)));
+        s.c = seep(clamp((qa - c0) / (c1 - c0)));
       }
       for (let j = 0; j < 2; j++) { // the tools and the runtime come up beneath
         const p = PL[3 + j], s = st[3 + j], q = ease(k01(e, T.low[j]));
@@ -443,7 +527,7 @@
   let running = false, raf = 0;
   const step = (t) => {
     if (build) stepBuild(t);
-    else stepAmbient(t);
+    else { stepAmbient(t); stepMink(t); }
     stepHead();
   };
   const tick = (t) => {
@@ -500,6 +584,7 @@
     raf = 0;
     clearTimers();
     build = null; amb = null; vis.pulse = null;
+    restMink();
     slide.classList.remove('st-arrive');
     softenNet(false);
     video.pause();
@@ -529,6 +614,9 @@
   });
   // Clicks on the stack stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.st-plane, .st-mink')) e.stopPropagation(); });
+  // The mink, as on slide 5: hovering flashes her eye; clicking turns her to face you and back.
+  minkCv.addEventListener('pointerenter', () => { if (still || build || mk.seq || mk.pose !== 'profile') return; mk.hover = now(); });
+  minkCv.addEventListener('click', (e) => { e.stopPropagation(); if (!still && !build && !mk.seq) { mk.hover = null; mk.seq = now(); } });
   video.addEventListener('loadeddata', () => { if (still) stepHead(); });
 
   layout();
