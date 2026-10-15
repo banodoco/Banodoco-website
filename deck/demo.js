@@ -50,7 +50,7 @@
     { name: 'quiet-finish', at: 20, len: 8 },
   ];
   const FX = [ // real Astrid pack elements, the kind the community makes and shares
-    { name: 'text-card', sub: 'type-on', at: 0, len: 8 },
+    { name: 'type-on', sub: '', at: 0, len: 8 }, // a text-card title, typed on
     { name: 'audio-reactive-colour', sub: '', at: 8, len: 20 },
   ];
   const TITLE = 'A quiet light study';
@@ -233,7 +233,7 @@
   const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   const stepHead = (dt) => {
     headT += (headGoal - headT) * (1 - Math.exp(-dt / 0.12));
-    playhead.style.left = `${(headT / SPAN) * 100}%`;
+    playhead.style.left = `calc(var(--as-hcol) + (100% - var(--as-hcol) - 8px) * ${(headT / SPAN).toFixed(4)})`;
     timeEl.textContent = `${fmt(headT)} / ${fmt(total)}`;
   };
 
@@ -524,7 +524,19 @@
     if (busy) raf = requestAnimationFrame(tick);
   };
   const wake = () => { if (running && !raf) { last = 0; raf = requestAnimationFrame(tick); } };
-  const layout = () => { sizeMink(); sizePic(); };
+  // The network stays visible behind this slide; only where its threads pass behind the headline are they
+  // softened, so the text reads cleanly.
+  const net = document.querySelector('.dt-net');
+  const softenNet = (on) => {
+    if (!net) return;
+    if (!on) { net.style.maskImage = net.style.webkitMaskImage = ''; net.style.maskMode = ''; return; }
+    const b = slide.querySelector('.split').getBoundingClientRect(), W = innerWidth, H = innerHeight, pad = 14;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><filter id='f'><feGaussianBlur stdDeviation='12'/></filter><rect width='${W}' height='${H}' fill='white'/><rect x='${Math.round(b.left - pad)}' y='${Math.round(b.top - pad)}' width='${Math.round(b.width + 2 * pad)}' height='${Math.round(b.height + 2 * pad)}' rx='18' fill='black' fill-opacity='.75' filter='url(%23f)'/></svg>`;
+    net.style.maskImage = `url("data:image/svg+xml,${svg.replace(/"/g, "'").replace(/</g, '%3C').replace(/>/g, '%3E')}")`;
+    net.style.maskMode = 'luminance';
+    net.style.maskSize = '100% 100%';
+  };
+  const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
   const start = (fromCore) => {
     running = true;
     layout();
@@ -540,6 +552,7 @@
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     if (morph) endMorph();
+    softenNet(false);
     mink.seq = null; mink.hover = null;
     Object.assign(mink, { pose: 'profile', lift: 0, glint: 0 });
     videos.forEach((v) => v.pause());

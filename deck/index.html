@@ -275,7 +275,7 @@
   .as-time { margin-left: 3px; font-variant-numeric: tabular-nums; }
   .as-pill { margin-left: auto; padding: 2px 7px; border-radius: 999px; background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); color: var(--as-ink); font-size: 10px; }
   .as-timeline { overflow: hidden; padding-bottom: 6px; }
-  .as-tl { position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-content: start; }
+  .as-tl { --as-hcol: 112px; position: relative; display: grid; grid-template-columns: var(--as-hcol) minmax(0, 1fr); align-content: start; }
   .as-tl > .as-th { border-right: 1px solid var(--as-line); display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 11px; color: var(--as-ink); }
   .as-th svg { color: var(--as-muted); flex: 0 0 auto; } .as-th em { font-style: normal; color: var(--as-muted); font-size: 10.5px; }
   .as-lane { position: relative; margin-right: 8px; border-bottom: 1px solid rgb(74 67 55 / .45); }
@@ -318,7 +318,7 @@
     .as { margin: 6px 0 76px; }
     .as-stage { width: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, .75fr) minmax(0, 1.5fr); }
     .as-chat { grid-column: 1; grid-row: 2; } .as-edit { grid-column: 1; grid-row: 3; padding: 6px; gap: 6px; }
-    .as-tl { grid-template-columns: 52px minmax(0, 1fr); } .as-th em { display: none; }
+    .as-tl { --as-hcol: 52px; } .as-th em { display: none; }
     .as-msg, .as-step { font-size: 10px; } .as-composer { display: none; }
   }
 
