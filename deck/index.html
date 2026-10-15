@@ -221,8 +221,9 @@
   .as-stage { position: absolute; left: 50%; top: 0; bottom: 0; width: min(1180px, 100%); transform: translateX(-50%);
     display: grid; grid-template-columns: minmax(0, 31fr) minmax(0, 69fr); grid-template-rows: auto minmax(0, 1fr); column-gap: var(--as-gap); row-gap: 12px; }
   .as-seat { grid-column: 1 / -1; position: relative; height: calc(var(--as-cell, 4px) * 21 + 6px); }
-  /* A quiet way to go and try it: under the editor, right-aligned, in the deck's small-label voice. Opens in a new tab. */
-  .as-try { position: absolute; right: 4px; top: calc(100% + 14px); z-index: 1; font: italic 400 1.05rem/1.2 "Cormorant Garamond", serif;
+  /* A quiet way to go and try it: just above the editor's top-right corner, level with the mink's seat, in the deck's
+     small-label voice (clear of the deck's chrome bar at the bottom). Opens in a new tab. */
+  .as-try { position: absolute; right: 4px; top: calc(var(--as-cell, 4px) * 21 + 6px - 1.6em); z-index: 1; font: italic 400 1.05rem/1.2 "Cormorant Garamond", serif;
     color: #ecc57e; text-decoration: none; letter-spacing: .02em; pointer-events: auto; transition: opacity .5s ease .3s, color .2s ease; }
   .as-try span { display: inline-block; transition: transform .2s ease; }
   .as-try:hover, .as-try:focus-visible { color: #ffd991; }
