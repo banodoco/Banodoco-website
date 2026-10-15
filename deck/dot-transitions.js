@@ -523,6 +523,7 @@
     nameRest();
     if (!on) return;
     place(anchor);
+    current.dispatchEvent(new CustomEvent('dt-arrive'));
     if (still) return;
     bloom(anchor);
     if (!grow) { hyphae.forEach((h) => { h.age = 0; h.grown = h.total; h.done = true; h.after = 5; h.glow = target(h); }); blooms = []; }
@@ -572,6 +573,7 @@
       place(to);
       if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - 36, age: 0 }); crown(to); }
       else { dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to); }
+      next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
       const shown = reveal(next, to, 60);
       tweens.push(...shown);
       prev.classList.add('dt-release'); // the old slide may fade now; its parts stay hidden

@@ -1,14 +1,16 @@
-// Version F, slide 4: Astrid, as an abstract picture. Above the headline, an
-// arch. At its crown two things grow into one: on the left the agent, a
-// breathing nucleus of motes; on the right the interface, a window drawn in
-// thread whose open side is woven out of the agent's own threads. From the
-// agent, hyphae run down to the left and bud round abilities; from the
-// interface, down to the right, budding small square panels. Faint motes
-// around the outside are the community: every few seconds one sends a bright
-// mote along a fresh thread, and a new extension buds where it lands; now and
-// then a pulse runs from an extension up into the core, as it is used.
+// Version F, slide 4: Astrid, as an abstract picture. Two thin gold rings
+// overlap above the headline: the agent on the left, a constellation of
+// nodes on curved threads; the interface on the right, three small panels
+// drawn in thread. Where they overlap, the lens is the core: a lattice
+// radiating from one bright node. Extensions hang on threads below each ring
+// (round constellation glyphs for the agent, panel glyphs for the interface),
+// each side with one empty dashed socket. A faint dotted orbit, the
+// community, encloses it all and feeds in down its lower arcs: every few
+// seconds a mote runs round it into a side and fills the socket, and a new
+// socket appears next in line; now and then an extension is used and a pulse
+// runs up into the core. Slide 4's own network node feeds the lens from below.
 // Arriving from slide 3, the empty "Nothing here — yet" ring flies up and
-// becomes the core's seed. Hovering (or tapping) an extension names it.
+// becomes the core's bright node. Hovering (or tapping) an extension names it.
 (() => {
   const root = document.querySelector('[data-astrid-core]');
   if (!root) return;
@@ -21,49 +23,43 @@
   const gapSlide = gapRoot && gapRoot.closest('.slide');
   const ring = gapRoot && gapRoot.querySelector('.gp-empty i');
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
-  const ease = (k) => 1 - Math.pow(1 - k, 2.2); // quick to start, long to settle, like a growing tip
+  const ease = (k) => 1 - Math.pow(1 - k, 3);
   const smooth = (k) => k * k * (3 - 2 * k);
-  const pop = (k) => 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2); // a bud: swells a touch past full
-  const THREAD = '240,200,119', NODE = '255,217,145', INK = '239,230,214';
-  const TAU = Math.PI * 2;
+  const THREAD = '240,200,119', NODE = '255,217,145', CORE = '255,241,214', LINE = '246,226,190';
+  const TAU = Math.PI * 2, DEG = Math.PI / 180;
 
-  // Illustrative community-made extensions, in the order they bud.
+  // Illustrative community-made extensions, in the order they fill.
   const NAMES = [
-    ['Film grain look', 'Wan i2v', 'Lip-sync', 'Upscaler', 'Depth map', 'Style LoRA', 'Beat detection', 'Frame interpolation',
-      'Relight', 'Rotoscope', 'Colour match', 'Motion transfer', 'Background removal', 'Face restore', 'Sound effects', 'Inpainting'],
-    ['Grade wheels', 'Storyboard view', 'Shot list', 'Mask brush', 'Keyframe curves', 'Audio waveform', 'Camera path', 'Compare wipe',
-      'Reference board', 'Onion skin', 'Colour scopes', 'Subtitle track', 'Loop region', 'Lens picker', 'Depth view', 'Shot notes'],
+    ['Film grain look', 'Lip-sync', 'Style LoRA', 'Upscaler', 'Depth map', 'Beat detection'],
+    ['Storyboard view', 'Shot list', 'Mask brush', 'Keyframe curves', 'Compare wipe', 'Grade wheels'],
   ];
 
   // ---- Labels and the card ------------------------------------------------
-  const tag = (text) => {
+  const tag = (text, cls) => {
     const el = document.createElement('span');
-    el.className = 'ac-ax';
+    el.className = `ac-ax ${cls}`;
     el.textContent = text;
     root.appendChild(el);
     return el;
   };
-  const labels = {
-    agent: tag('agent'), face: tag('interface'),
-    extA: tag('extends the agent'), extF: tag('extends the interface'),
-    comA: tag('community'), comF: tag('community'),
-  };
+  const labels = { agent: tag('agent', 'ac-lobe'), face: tag('interface', 'ac-lobe'), com: tag('community', 'ac-com') };
   const card = document.createElement('div');
   card.className = 'ac-card';
   card.setAttribute('aria-hidden', 'true');
-  card.innerHTML = '<span class="ac-where">community-made</span><span class="ac-name"></span>';
+  card.innerHTML = '<span class="ac-where"></span><span class="ac-name"></span>';
   root.appendChild(card);
 
   // A soft light, drawn once and stamped wherever something glows.
   const glow = document.createElement('canvas');
-  glow.width = glow.height = 256;
+  glow.width = glow.height = 128;
   {
     const sg = glow.getContext('2d');
-    const rg = sg.createRadialGradient(128, 128, 0, 128, 128, 128);
+    const rg = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
     rg.addColorStop(0, `rgba(${NODE},1)`);
+    rg.addColorStop(0.35, `rgba(${NODE},0.35)`);
     rg.addColorStop(1, `rgba(${NODE},0)`);
     sg.fillStyle = rg;
-    sg.fillRect(0, 0, 256, 256);
+    sg.fillRect(0, 0, 128, 128);
   }
   const halo = (x, y, r, a) => {
     if (a <= 0.003 || r <= 0) return;
@@ -72,10 +68,7 @@
     g.globalAlpha = 1;
   };
 
-  // ---- Geometry ------------------------------------------------------------
-  // Seeded, so the picture has the same shape on every visit.
-  let seed = 1;
-  const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  // ---- Paths ------------------------------------------------------------------
   const line = (pts) => {
     const len = [0];
     for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
@@ -87,9 +80,8 @@
     while (lo < hi) { const m = (lo + hi) >> 1; if (h.len[m] < d) lo = m + 1; else hi = m; }
     const l0 = h.len[lo - 1], t = (d - l0) / ((h.len[lo] - l0) || 1);
     const [x0, y0] = h.pts[lo - 1], [x1, y1] = h.pts[lo];
-    return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, ang: Math.atan2(y1 - y0, x1 - x0), i: lo };
+    return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, i: lo };
   };
-  // The stretch of a line between two distances along it.
   const trace = (h, d0, d1) => {
     if (d1 <= d0) return;
     const a = at(h, d0), b = at(h, d1);
@@ -97,69 +89,86 @@
     for (let i = a.i; i < b.i; i++) g.lineTo(h.pts[i][0], h.pts[i][1]);
     g.lineTo(b.x, b.y);
   };
-  const bez = (p0, c0, c1, p1, n) => Array.from({ length: n + 1 }, (_, i) => {
+  const bez = (p0, c0, c1, p1, n = 24) => Array.from({ length: n + 1 }, (_, i) => {
     const t = i / n, u = 1 - t;
     return [u * u * u * p0.x + 3 * u * u * t * c0.x + 3 * u * t * t * c1.x + t * t * t * p1.x,
       u * u * u * p0.y + 3 * u * u * t * c0.y + 3 * u * t * t * c1.y + t * t * t * p1.y];
   });
-  const quarter = (cx, cy, r, a0) => Array.from({ length: 5 }, (_, i) => {
-    const a = a0 + (i / 4) * (Math.PI / 2);
-    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
-  });
-  const box = (x, y, w, h, r) => [...quarter(x + w - r, y + r, r, -Math.PI / 2), ...quarter(x + w - r, y + h - r, r, 0),
-    ...quarter(x + r, y + h - r, r, Math.PI / 2), ...quarter(x + r, y + r, r, Math.PI), [x + w - r, y]];
-  const inside = (x, y, r) => x > r.l && x < r.r && y > r.t && y < r.b;
+  // A thread from a to b that bows sideways by `bend` of its length.
+  const bow = (a, b, bend, n = 24) => {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const nx = -dy * bend, ny = dx * bend;
+    return line(bez(a, { x: a.x + dx / 3 + nx, y: a.y + dy / 3 + ny }, { x: a.x + (2 * dx) / 3 + nx, y: a.y + (2 * dy) / 3 + ny }, b, n));
+  };
+  const join = (...hs) => line(hs.flatMap((h, i) => (i ? h.pts.slice(1) : h.pts)));
+  const rev = (h) => line(h.pts.slice().reverse());
 
-  let W = 0, H = 0, dpr = 1, s = 1, small = false;
-  let C, J, A, Ra, F, text, keep, yB, fade = null, play = null;
-  let motes = [], web = [], lumps = [0, 0], frame = null, inner = [], weave = [], sides = [], boxes = [];
+  // ---- Geometry ---------------------------------------------------------------
+  // Drawn in the reference picture's own units (1672 × 941, the core at
+  // 836, 290), then scaled by k about the middle of the slide.
+  let W = 0, H = 0, dpr = 1, k = 1, ox = 0, oy = 0, small = false;
+  const X = (rx) => ox + (rx - 836) * k, Y = (ry) => oy + (ry - 290) * k;
+  const P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
 
-  // A wandering path through waypoints: a random walk that steers harder as
-  // it nears each one, and turns aside from the text.
-  const wander = (a, way, o) => {
-    const step = o.step, pts = [[a.x, a.y]];
-    let x = a.x, y = a.y, k = 0;
-    let ang = o.ang ?? Math.atan2(way[0].y - y, way[0].x - x) + (o.rand() - 0.5);
-    for (let i = 0; i < 900; i++) {
-      const b = way[k], end = k === way.length - 1;
-      const dx = b.x - x, dy = b.y - y, d = Math.hypot(dx, dy);
-      if (d < step * (end ? 1.5 : 5)) { if (end) { pts.push([b.x, b.y]); break; } k++; continue; }
-      const diff = ((Math.atan2(dy, dx) - ang + Math.PI * 3) % TAU) - Math.PI;
-      ang += diff * (0.06 + (end ? 0.5 : 0.12) * clamp(1 - d / (240 * s))) + (o.rand() - 0.5) * o.noise;
-      if (o.avoid) {
-        const nx = x + Math.cos(ang) * 16 * s, ny = y + Math.sin(ang) * 16 * s;
-        if (inside(nx, ny, keep)) {
-          const away = Math.atan2(ny - (keep.t + keep.b) / 2, nx - (keep.l + keep.r) / 2);
-          ang += (((away - ang + Math.PI * 3) % TAU) - Math.PI) * 0.4;
-        }
-      }
-      x += Math.cos(ang) * step; y += Math.sin(ang) * step;
-      pts.push([x, y]);
+  const RR = 188, DX = 110, LH = Math.sqrt(RR * RR - DX * DX); // ring radius, half the gap between centres, lens half-height
+  const TM = Math.atan2(LH, DX); // where the rings meet, as an angle on the left ring
+  // Each ring is a few slightly irregular strands, like hand-drawn thread.
+  const STRANDS = [
+    [{ dr: 0, amp: 1.6, n: 2, ph: 0.4, cx: 0, cy: 0, a: 0.78, w: 1 }, { dr: -3.2, amp: 2.4, n: 3, ph: 2.1, cx: 1.2, cy: -0.8, a: 0.42, w: 0.8 },
+      { dr: 3.4, amp: 2.0, n: 5, ph: 4.0, cx: -1.4, cy: 1.1, a: 0.26, w: 0.7 }],
+    [{ dr: 0, amp: 1.5, n: 2, ph: 1.7, cx: 0, cy: 0, a: 0.78, w: 1 }, { dr: 3.0, amp: 2.2, n: 3, ph: 5.2, cx: -1.0, cy: 1.0, a: 0.42, w: 0.8 },
+      { dr: -3.4, amp: 2.1, n: 4, ph: 0.9, cx: 1.5, cy: -1.2, a: 0.26, w: 0.7 }],
+  ];
+  // Positions on the rings (left ring's angles; the right ring mirrors them).
+  const RIM = { ul: 222.5 * DEG, ll: 150 * DEG, bot: 103 * DEG };
+  // How far round its arc the tracing has to get to reach an angle on the left ring's outer side.
+  const reachRim = (th) => (th <= Math.PI ? (th - TM) : (TAU - TM - th)) / (Math.PI - TM);
+
+  // Extension places, in fill order: [centre x, centre y, rim it hangs from, glyph].
+  const SLOTS = [
+    [[462, 525, 'll', 'tri'], [548, 532, 'll', 'line'], [632, 540, 'll', 'diamond'], [716, 543, 'bot', 'fork'], [378, 506, 'll', 'zig'], [302, 470, 'll', 'arc']],
+    [[956, 543, 'bot', 'grid'], [1040, 542, 'll', 'list'], [1123, 535, 'll', 'frame'], [1208, 521, 'll', 'curve'], [1290, 500, 'll', 'split'], [1368, 470, 'll', 'wheel']],
+  ];
+  const START = 4; // places shown on arrival: three filled and one empty socket
+  const CAP = 5; // most a side grows to
+  const ER = 31; // extension circle radius
+
+  const ORB = { cx: 836, cy: 322, a: 507, b: 265, from: 148 * DEG, to: 392 * DEG };
+  const orbAt = (phi, da = 0, db = 0) => P(ORB.cx + (ORB.a + da) * Math.cos(phi), ORB.cy + (ORB.b + db) * Math.sin(phi));
+
+  // Built by layout().
+  let C0, rings = [], lens = null, cons = null, panels = null, sides = [], orbit = [], streams = [], feed = null, nodeAt = null;
+  let seed = 1;
+  const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+
+  const put = (el, x, y, size) => {
+    el.style.fontSize = `${size.toFixed(1)}px`;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    el.style.transform = `translate(${(x - w / 2).toFixed(1)}px, ${(y - h / 2).toFixed(1)}px)`;
+  };
+
+  // A point on a ring strand at angle th (left-ring angles; mirrored for the right).
+  const ringPt = (side, st, th) => {
+    const r = rings[side], a = side ? Math.PI - th : th;
+    const rr = (RR + st.dr + st.amp * Math.sin(st.n * th + st.ph)) * k;
+    return [r.c.x + st.cx * k + Math.cos(a) * rr, r.c.y + st.cy * k + Math.sin(a) * rr];
+  };
+  const ringArc = (side, st, t0, t1) => {
+    const n = Math.max(2, Math.ceil(Math.abs(t1 - t0) / (2.5 * DEG)));
+    return Array.from({ length: n + 1 }, (_, i) => ringPt(side, st, t0 + ((t1 - t0) * i) / n));
+  };
+
+  const glyphPts = (type) => {
+    switch (type) {
+      case 'tri': return { nodes: [[0, -15], [-14, 8], [14, 8]], edges: [[0, 1], [1, 2], [2, 0]] };
+      case 'line': return { nodes: [[-14, 8], [0, 0], [14, -8]], edges: [[0, 1], [1, 2]] };
+      case 'diamond': return { nodes: [[-2, -13], [13, -1], [2, 14], [-13, 3]], edges: [[0, 1], [1, 2], [2, 3], [3, 0]] };
+      case 'fork': return { nodes: [[0, 2], [0, -14], [-13, 11], [13, 11]], edges: [[0, 1], [0, 2], [0, 3]] };
+      case 'zig': return { nodes: [[-15, 6], [-5, -8], [5, 8], [15, -6]], edges: [[0, 1], [1, 2], [2, 3]] };
+      case 'arc': return { nodes: [[-14, 6], [-7, -6], [7, -6], [14, 6]], edges: [[0, 1], [1, 2], [2, 3]] };
+      default: return null;
     }
-    return pts;
   };
-  // A free side-branch: sets off at an angle and curls as it goes.
-  const curl = (x, y, ang, length) => {
-    const pts = [[x, y]];
-    const bend = (rnd() - 0.5) * 0.14, step = 3.5 * s;
-    for (let d = 0; d < length; d += step) {
-      ang += bend + (rnd() - 0.5) * 0.3;
-      x += Math.cos(ang) * step; y += Math.sin(ang) * step;
-      pts.push([x, y]);
-    }
-    return pts;
-  };
-  const put = (el, x, y, align) => {
-    const w = el.offsetWidth, h = el.offsetHeight, l = x - w * align, t = y - h / 2;
-    el.style.transform = `translate(${l.toFixed(1)}px, ${t.toFixed(1)}px)`;
-    el.style.visibility = '';
-    const r = { l: l - 10 * s, t: t - 8 * s, r: l + w + 10 * s, b: t + h + 8 * s };
-    boxes.push(r);
-    return r;
-  };
-
-  // When a trunk's growing tip passes a point d along it (inverse of ease).
-  const reach = (h, d) => h.t0 + h.dur * (1 - Math.pow(1 - clamp(d / h.total), 1 / 2.2));
 
   const layout = () => {
     const b = root.getBoundingClientRect();
@@ -168,540 +177,543 @@
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    const col = slide.querySelector(':scope > .split > :first-child');
-    const tb = col.getBoundingClientRect();
-    text = { l: tb.left - b.left, t: tb.top - b.top, r: tb.right - b.left, b: tb.bottom - b.top };
     small = W <= 760;
-    s = small ? clamp(W / 560, 0.56, 0.86) : clamp(Math.min(W / 1440, H / 900), 0.62, 1.3);
+    const num = slide.querySelector('.num');
+    const nb = num.getBoundingClientRect();
+    const fs = parseFloat(getComputedStyle(slide.querySelector('h1')).fontSize) || 40;
+    const top = nb.top - b.top; // the label's top: the picture sits above it
+    if (small) {
+      k = Math.min((W / 2 - 4) / 520, (top - 70) / 560);
+      const ph = (590 - 30) * k;
+      oy = Math.max(40, (top - 10 - ph) / 2 + 10) + (290 - 30) * k;
+    } else {
+      k = Math.min(fs / 46, (W / 2 - 14) / 560, (top - 26) / (612 - 34));
+      oy = top + (290 - 612) * k;
+    }
+    ox = W / 2;
     seed = 20261015;
-    boxes = [];
-    Object.values(labels).forEach((el) => { el.style.visibility = 'hidden'; }); // shown once placed
-    keep = small ? { l: -1e4, t: text.t - 24 * s, r: 1e4, b: 1e4 } : { l: text.l - 26 * s, t: text.t - 22 * s, r: text.r + 26 * s, b: 1e4 };
-    yB = small ? text.t - 40 * s : H - 118;
+    const lw = Math.max(0.75, Math.min(1.15, k * 1.1)); // base line width
 
-    // The crown of the arch, centred over the text.
-    C = { x: W / 2, y: small ? Math.max(70 + 80 * s, text.t * 0.3) : Math.max(160 * s, text.t * 0.43) };
-    Ra = 72 * s;
-    A = { x: C.x - 84 * s, y: C.y + 4 * s };
-    F = { w: 184 * s, h: 120 * s };
-    F.l = C.x - 26 * s; F.r = F.l + F.w; F.t = C.y - F.h / 2 - 2 * s; F.b = F.t + F.h;
-    F.x = (F.l + F.r) / 2; F.y = (F.t + F.b) / 2;
-    J = { x: C.x - 19 * s, y: C.y };
+    C0 = P(836, 290);
+    rings = [{ c: P(836 - DX, 290) }, { c: P(836 + DX, 290) }];
+    rings.forEach((r, side) => {
+      r.rim = {};
+      for (const [key, th] of Object.entries(RIM)) {
+        const [x, y] = ringPt(side, STRANDS[side][0], th);
+        r.rim[key] = { x, y, th };
+      }
+    });
 
-    // The agent: motes gathered in a soft nucleus, densest at its heart, a few straying past its rim.
-    motes = [];
-    const count = small ? 120 : 175;
-    for (let i = 0; i < count; i++) {
-      const th = rnd() * TAU, stray = i < count * 0.08, heart = !stray && i < count * 0.12;
-      const u = stray ? 1.0 + rnd() * 0.32 : heart ? 0.05 + rnd() * 0.3 : 0.08 + Math.pow(rnd(), 0.8) * 0.86;
-      const hx = A.x + Math.cos(th) * Ra * u, hy = A.y + Math.sin(th) * Ra * u * 0.94;
-      motes.push({
-        hx, hy, u, heart,
-        size: (heart ? 1.7 + rnd() * 0.7 : 0.7 + rnd() * 0.9) * Math.max(0.85, s),
-        lum: stray ? 0.18 + rnd() * 0.18 : heart ? 0.9 : (0.34 + 0.5 * (1 - u)) * (0.65 + rnd() * 0.35),
-        wx: (1 + rnd() * 3) * s, wy: (1 + rnd() * 3) * s, fx: 0.35 + rnd() * 0.7, fy: 0.35 + rnd() * 0.7, ph: rnd() * TAU,
-        t0: 0.08 + 0.5 * clamp(Math.hypot(hx - J.x, hy - J.y) / (Ra * 2.2)) + rnd() * 0.16, x: hx, y: hy, k: 0,
-      });
-    }
-    // The motes keep loose company: threads between close neighbours.
-    web = [];
-    const links = new Map();
-    for (let i = 0; i < motes.length; i++) {
-      for (let j = i + 1; j < motes.length; j++) {
-        const d = Math.hypot(motes[i].hx - motes[j].hx, motes[i].hy - motes[j].hy);
-        if (d > 15 * s || (links.get(i) || 0) > 1 || (links.get(j) || 0) > 1 || rnd() < 0.4) continue;
-        web.push([motes[i], motes[j]]);
-        links.set(i, (links.get(i) || 0) + 1); links.set(j, (links.get(j) || 0) + 1);
+    // The lens is the core: in it, the Astrid mink drawn in one thread, its neck rising from the bottom left.
+    const top0 = P(836, 290 - LH), bot0 = P(836, 290 + LH);
+    const M = window.AstridMink, MS = 8.7; // reference units per pixel of the icon
+    const mp = ([px, py]) => P(836 + (px - M.BOX.cx) * MS - 2, 290 + (py - M.BOX.cy) * MS + 4);
+    const onOutline = (px, py) => mp([px, py]);
+    lens = {
+      top: top0, bot: bot0,
+      outline: line(M.smooth(M.OUTLINE, 10).map((q) => { const v = mp(q); return [v.x, v.y]; })),
+      throat: line(M.smooth(M.THROAT, 10).map((q) => { const v = mp(q); return [v.x, v.y]; })),
+      eye: mp(M.EYE), nose: mp(M.NOSE), ear: mp(M.EAR), mark: mp(M.EARMARK),
+    };
+    // The outline traces up both sides from the neck and meets on top of the head.
+    let hi = 0;
+    lens.outline.pts.forEach((q, i) => { if (q[1] < lens.outline.pts[hi][1]) hi = i; });
+    lens.crown = lens.outline.len[hi];
+    lens.tipL = onOutline(3.9, 9.0); lens.tipR = onOutline(12.4, 8.1);
+    // The agent: a constellation on curved threads, flowing right into the core.
+    const N = {
+      ul: rings[0].rim.ul, n1: P(629, 207), n2: P(702, 247), n3: P(622, 276), n4: P(579, 298), n5: P(686, 296),
+      n6: P(632, 353), n7: P(719, 353), n8: P(673, 373), n9: P(681, 411), bot: rings[0].rim.bot,
+      ear: lens.ear, back: onOutline(3.95, 9.0), low: onOutline(2.95, 12.2),
+    };
+    const E = [['ear', 'n2', 0.12], ['back', 'n5', -0.06], ['low', 'n7', -0.1], ['n2', 'n1', 0.12], ['n5', 'n3', 0.16], ['n2', 'n5', -0.12],
+      ['n1', 'ul', -0.16], ['n3', 'n1', -0.1], ['n3', 'n4', 0.12], ['n4', 'n6', 0.16], ['n7', 'n8', -0.1], ['n6', 'n8', -0.1],
+      ['n8', 'n9', 0.06], ['n9', 'bot', -0.08]];
+    // Growth runs outward from the core: each thread starts when its first end is reached.
+    const when = { ear: 0, back: 0, low: 0 };
+    cons = { nodes: [], edges: [] };
+    for (const [a, z, bend] of E) {
+      const h = bow(N[a], N[z], bend, 20);
+      const t0 = when[a] ?? 0;
+      const dur = clamp(h.total / (190 * k), 0.25, 0.6);
+      when[z] = Math.min(when[z] ?? 9, t0 + dur);
+      cons.edges.push({ h, t0, dur, a: 0.46 });
+      if (a === 'ear' || a === 'back' || a === 'low') { // the flows into the core are bundles of two or three strands
+        cons.edges.push({ h: bow(N[a], N[z], bend + 0.07, 20), t0: t0 + 0.05, dur, a: 0.24 });
+        cons.edges.push({ h: bow(N[a], N[z], bend - 0.06, 20), t0: t0 + 0.1, dur, a: 0.18 });
       }
     }
-    lumps = [rnd() * TAU, rnd() * TAU];
+    for (const key of ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9']) {
+      cons.nodes.push({ ...N[key], r: key === 'n1' || key === 'n2' || key === 'n4' || key === 'n9' || key === 'n6' ? 1.15 : 0.95, t0: when[key] ?? 1 });
+    }
 
-    // The interface: a window drawn in one thread, which leaves the agent,
-    // runs round the frame and goes back in. Its open side is the join.
-    const R = 7 * s;
-    const P0 = { x: A.x + 26 * s, y: A.y - 26 * s }, P1 = { x: A.x + 22 * s, y: A.y + 30 * s };
-    const lt = { x: F.l + 22 * s, y: F.t }, lb = { x: F.l + 22 * s, y: F.b };
-    frame = line([
-      ...bez(P0, { x: P0.x + 10 * s, y: F.t + 6 * s }, { x: lt.x - 26 * s, y: F.t }, lt, 14),
-      ...quarter(F.r - R, F.t + R, R, -Math.PI / 2),
-      ...quarter(F.r - R, F.b - R, R, 0),
-      ...bez(lb, { x: lb.x - 26 * s, y: F.b }, { x: P1.x + 10 * s, y: F.b - 6 * s }, P1, 14),
-    ]);
-    fade = g.createLinearGradient(A.x + 8 * s, 0, F.l + 30 * s, 0);
-    fade.addColorStop(0, `rgba(${THREAD},0.08)`);
-    fade.addColorStop(1, `rgba(${THREAD},1)`);
-    // Inside it, only a hint: a preview, a short list, two rows of clips.
-    const ix = F.l + 34 * s, ir = F.r - 12 * s;
-    inner = [
-      { h: line([[F.l + 30 * s, F.t + 13 * s], [F.r - 10 * s, F.t + 13 * s]]), a: 0.24, w: 0.6, t0: 1.0 },
-      { h: line(box(ix, F.t + 24 * s, 92 * s, 52 * s, 3 * s)), a: 0.42, w: 0.7, t0: 1.08 },
+    // The interface: three panels drawn in thread, each tied to the core.
+    const pan = (l, t, r, bm, extra) => ({ l: X(l), t: Y(t), r: X(r), b: Y(bm), mid: P(l, (t + bm) / 2), extra });
+    panels = [
+      pan(969, 188, 1050, 238, 'split'),
+      pan(1026, 267, 1105, 321, 'list'),
+      pan(970, 354, 1050, 402, 'media'),
     ];
-    [1, 0.72, 0.86, 0.5].forEach((f, k) => {
-      const x0 = ix + 104 * s;
-      inner.push({ h: line([[x0, F.t + (27 + k * 8) * s], [x0 + (ir - x0) * f, F.t + (27 + k * 8) * s]]), a: 0.24, w: 0.6, t0: 1.2 + k * 0.05 });
+    panels.forEach((p, i) => {
+      const from = [lens.nose, onOutline(12.4, 8.1), onOutline(9.95, 12.2)][i];
+      p.links = [bow(from, p.mid, [-0.1, 0.06, 0.12][i], 20), bow(from, p.mid, [-0.04, 0.12, 0.06][i], 20)];
+      p.t0 = 0.08 * i;
+      // The frame, drawn from its left middle node both ways round.
+      p.up = line([[p.l, p.mid.y], [p.l, p.t], [p.r, p.t], [p.r, p.mid.y]]);
+      p.down = line([[p.l, p.mid.y], [p.l, p.b], [p.r, p.b], [p.r, p.mid.y]]);
+      p.corners = [[p.l, p.t], [p.r, p.t], [p.l, p.b], [p.r, p.b], [p.l, p.mid.y]];
     });
-    [F.b - 27 * s, F.b - 18 * s].forEach((y, row) => {
-      let x = ix, k = 0;
-      while (x < ir - 6 * s) {
-        const w = Math.min(ir - x, (row ? 14 : 9) * s + rnd() * 20 * s);
-        inner.push({ h: line([[x + 1.2 * s, y], [x + w - 1.2 * s, y]]), a: row ? 0.16 : 0.22, w: 2.4 * s, t0: 1.32 + row * 0.08 + k * 0.025 });
-        x += w + 3 * s; k++;
-      }
-    });
-    play = { x0: ix, x1: ir, y0: F.b - 32 * s, y1: F.b - 10 * s };
-    // The join: threads from the agent woven into the window's open side.
-    weave = [];
-    for (let i = 0; i < 18; i++) {
-      const th = (rnd() - 0.5) * 2.0, rr = Ra * (0.3 + rnd() * 0.6);
-      const p0 = { x: A.x + Math.cos(th) * rr, y: A.y + Math.sin(th) * rr };
-      const p1 = { x: F.l + (6 + rnd() * 46) * s, y: F.t + (12 + rnd() * (F.h / s - 24)) * s };
-      const k = p1.x - p0.x;
-      weave.push({
-        h: line(bez(p0, { x: p0.x + k * (0.45 + rnd() * 0.3), y: p0.y + (rnd() - 0.5) * 24 * s },
-          { x: p1.x - k * (0.45 + rnd() * 0.3), y: p1.y + (rnd() - 0.5) * 24 * s }, p1, 16)),
-        a: 0.12 + rnd() * 0.2, ph: rnd() * TAU, t0: 0.55 + i * 0.04,
+    panels[0].out = bow(P(1050, 213), rings[1].rim.ul, 0.22, 20);
+
+    // Extensions on threads below each ring.
+    sides = [0, 1].map((side) => {
+      const sd = { side, slots: [], n: 0, filled: 0 };
+      SLOTS[side].forEach(([rx, ry, rim, glyph], i) => {
+        const c = P(rx, ry), node = P(rx, ry - ER - 4), from = rings[side].rim[rim];
+        const dx = node.x - from.x, dy = node.y - from.y;
+        const h = line(bez(from, { x: from.x + dx * 0.12, y: from.y + dy * 0.6 }, { x: node.x - dx * 0.08, y: node.y - dy * 0.55 }, node, 24));
+        const h2 = line(bez(from, { x: from.x + dx * 0.3, y: from.y + dy * 0.45 }, { x: node.x - dx * 0.2, y: node.y - dy * 0.6 }, node, 24));
+        sd.slots.push({
+          side, i, x: c.x, y: c.y, node, from, rimKey: rim, glyph, h, h2, name: NAMES[side][i],
+          state: i < START - 1 ? 'full' : i < START ? 'socket' : 'none', // none → socket → full
+          shown: i < START ? 0 : null, filledAt: i < START - 1 ? 0 : null, flash: 0,
+        });
       });
+      sd.n = START;
+      return sd;
+    });
+
+    // The community: a dotted orbit round everything, open at the bottom, its lower arcs denser where they feed in.
+    orbit = [];
+    const gapX = 92;
+    for (let phi = ORB.from; phi <= ORB.to; phi += 0.0125) {
+      const p = orbAt(phi), rx = ORB.cx + ORB.a * Math.cos(phi);
+      if (Math.abs(rx - 836) < gapX && Math.sin(phi) < 0) continue; // the break for the label
+      const low = clamp((Math.sin(phi) + 0.05) / 0.5); // 0 at the sides' middles, 1 at the open ends
+      const endFade = smooth(clamp(Math.min(phi - ORB.from, ORB.to - phi) / 0.12));
+      const nearGap = smooth(clamp((Math.abs(rx - 836) - gapX) / 60));
+      const bright = rnd() < 0.05 + 0.12 * low;
+      orbit.push({ ...p, phi, a: (bright ? 0.85 : 0.3 + 0.2 * low) * endFade * (0.5 + 0.5 * nearGap), r: bright ? 1.35 : 0.75, bright,
+        t0: 2.5 + 0.9 * (Math.abs(phi - 270 * DEG) / (122 * DEG)) });
+    }
+    // Two or three fine streams down each lower arc, beaded with motes.
+    streams = [];
+    for (const side of [0, 1]) {
+      for (const [da, db, a0, a1, al] of [[-14, -10, 152, 190, 0.3], [-28, -20, 154, 182, 0.22], [10, 7, 158, 176, 0.14]]) {
+        const s0 = (side ? 180 - a0 : a0) * DEG, s1 = (side ? 180 - a1 : a1) * DEG;
+        const pts = Array.from({ length: 25 }, (_, i) => { const p = orbAt(s0 + ((s1 - s0) * i) / 24, da, db); return [p.x, p.y]; });
+        const h = rev(line(pts)); // from up the arc down to its end
+        const beads = Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => ({ d: (0.1 + 0.85 * rnd()) * h.total, r: 0.9 + rnd() * 0.7, a: 0.5 + rnd() * 0.45 }));
+        streams.push({ h, a: al, beads, t0: 3.0 + rnd() * 0.3 });
+      }
     }
 
-    // Labels for the two halves of the core.
-    put(labels.agent, A.x - Ra - 18 * s, A.y - Ra * 0.5, 1);
-    put(labels.face, F.r + 18 * s, F.t + F.h * 0.26, 0);
-    sides = [grow(0), grow(1)];
+    // Slide 4's own node feeds the core: one fine thread from above the label up into the lens's bottom point.
+    const tr = num.querySelector('.act') ? num : num;
+    const range = document.createRange();
+    range.selectNodeContents(tr);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+    const lineR = rects.filter((r) => Math.abs(r.top - rects[0].top) < 6);
+    const nx = lineR.length ? (Math.min(...lineR.map((r) => r.left)) + Math.max(...lineR.map((r) => r.right))) / 2 - b.left : W / 2;
+    const ny = (rects.length ? rects[0].top : nb.top) - 13 - b.top;
+    nodeAt = { x: nx, y: ny };
+    const up = bot0.y - ny;
+    feed = line(bez({ x: nx, y: ny - 3 }, { x: nx + 9 * k, y: ny + up * 0.35 }, { x: bot0.x - 8 * k, y: bot0.y - up * 0.6 }, { x: bot0.x, y: bot0.y }, 32));
+
+    // Labels.
+    const ls = Math.max(small ? 11 : 13, 21 * k);
+    put(labels.agent, X(684), Y(143), ls);
+    put(labels.face, X(990), Y(143), ls);
+    put(labels.com, X(836), orbAt(270 * DEG).y, Math.max(small ? 10.5 : 12, 20 * k));
+    root.style.setProperty('--ac-lw', lw);
+    LW = lw;
     return true;
   };
+  let LW = 1;
 
-  // Each side's growth: two tapering primaries out of its lobe, one down past
-  // the text's shoulder and one out to the side; branches off them that end
-  // in buds; and the community gathered round the outside.
-  const grow = (i) => {
-    const agent = i === 0;
-    const X = (x) => (agent ? x : W - x); // written for the left; the right is its mirror
-    const sd = { i, agent, trunks: [], curls: [], slots: [], queue: [], n: 0, people: [] };
-    const noise = 0.26;
-    const rim = (deg) => { const a = (deg * Math.PI) / 180; return { x: A.x + Math.cos(a) * Ra * 0.9, y: A.y + Math.sin(a) * Ra * 0.9, ang: a }; };
-    const roots = agent ? [rim(112), rim(152)] : [{ x: F.r - 44 * s, y: F.b, ang: 1.25 }, { x: F.r, y: F.b - 36 * s, ang: 0.45 }];
-    // Between the screen's edge and the text's shoulder; on a phone, between the edge and the middle.
-    const edge = small ? W / 2 - 30 * s : (agent ? text.l : W - text.r) - 36 * s;
-    const xo = small ? 46 * s : clamp(Math.max(80 * s, W * 0.11), 30, edge - 120 * s);
-    const ways = small
-      ? [[{ x: edge - 0.5 * (edge - xo), y: yB }], [{ x: xo + 0.1 * (edge - xo), y: C.y + 0.62 * (yB - C.y) }]]
-      : [[{ x: edge, y: text.t - 46 * s }, { x: edge - 0.22 * (edge - xo), y: yB }],
-        [{ x: xo + 0.5 * (edge - xo), y: C.y + 0.36 * (yB - C.y) }, { x: xo, y: C.y + 0.7 * (yB - C.y) }]];
-    roots.forEach((r, k) => {
-      const h = line(wander(r, ways[k].map((p) => ({ x: X(Math.min(p.x, keep.l - 8 * s + (small ? 1e4 : 0))), y: p.y })), { step: 5 * s, noise, ang: r.ang, rand: rnd, avoid: true }));
-      h.t0 = 1.05 + k * 0.16 + (agent ? 0 : 0.08);
-      h.dur = clamp(h.total / (400 * s), 0.9, 1.5);
-      h.primary = true;
-      sd.trunks.push(h);
-    });
-
-    // Places for extensions: branches set off forward from the primaries,
-    // alternating sides, each ending in a bud; and the primaries' own tips.
-    const crowd = small ? 30 * s : 38 * s;
-    const core = { l: F.l - 16 * s, t: F.t - 16 * s, r: F.r + 16 * s, b: F.b + 20 * s };
-    const ok = (x, y, slots) => x > 16 && x < W - 16 && y > C.y + 24 * s && y < yB + 10 * s && !inside(x, y, keep)
-      && Math.hypot(x - A.x, y - A.y) > Ra + 22 * s && !inside(x, y, core)
-      && !boxes.some((r) => inside(x, y, r)) && slots.every((o) => Math.hypot(o.x - x, o.y - y) > crowd);
-    sd.trunks.forEach((tr) => {
-      let flip = agent ? 1 : -1;
-      for (let d = (46 + rnd() * 16) * s; d < tr.total - 26 * s; d += (34 + rnd() * 20) * s) {
-        const p = at(tr, d);
-        flip = -flip;
-        for (const len of [(36 + rnd() * 38) * s, 28 * s]) {
-          const a = p.ang + flip * (0.5 + rnd() * 0.45);
-          const q = { x: p.x + Math.cos(a) * len, y: p.y + Math.sin(a) * len };
-          if (!ok(q.x, q.y, sd.slots)) continue;
-          const conn = line(wander(p, [q], { step: 3.4 * s, noise: noise * 0.7, ang: a - flip * 0.25, rand: rnd }));
-          sd.slots.push({ side: i, agent, x: q.x, y: q.y, trunk: tr, d, conn, born: null, flash: 0 });
-          break;
-        }
-      }
-      const e = at(tr, tr.total);
-      if (ok(e.x, e.y, sd.slots)) sd.slots.push({ side: i, agent, x: e.x, y: e.y, trunk: tr, d: tr.total, conn: null, born: null, flash: 0 });
-    });
-    // The side's label: under the arch beside its inner primary (on a phone, below
-    // the side), at the first place that is clear of every thread and bud.
-    {
-      const el = agent ? labels.extA : labels.extF, lw = el.offsetWidth, lh = el.offsetHeight;
-      const lines = sd.trunks.flatMap((h) => h.pts).concat(sd.slots.flatMap((x) => (x.conn ? x.conn.pts : [[x.x, x.y]])));
-      const fits = (x, y) => { // x: the label's inner end, y: its middle
-        const l = agent ? x : x - lw, t = y - lh / 2, pad = 7 * s;
-        return l > 10 && l + lw < W - 10 && t + lh < keep.t && !boxes.some((r) => l < r.r && l + lw > r.l && t < r.b && t + lh > r.t)
-          && lines.every(([px, py]) => px < l - pad || px > l + lw + pad || py < t - pad || py > t + lh + pad);
-      };
-      let spot = null;
-      if (small) spot = { x: X(14), y: yB + 16 * s };
-      for (let f = 0.24; !spot && f < 0.7; f += 0.04) {
-        const p = at(sd.trunks[0], sd.trunks[0].total * f);
-        for (let o = 16; o < 90; o += 10) { const x = p.x + (agent ? 1 : -1) * o * s; if (fits(x, p.y)) { spot = { x, y: p.y }; break; } }
-      }
-      if (spot) put(el, spot.x, spot.y, agent ? 0 : 1);
-    }
-    // A little fuzz along the primaries, away from the buds.
-    sd.trunks.forEach((tr) => {
-      for (let d = (30 + rnd() * 30) * s; d < tr.total - 14 * s; d += (44 + rnd() * 50) * s) {
-        if (sd.slots.some((x) => x.trunk === tr && Math.abs(x.d - d) < 14 * s)) continue;
-        const p = at(tr, d);
-        const h = line(curl(p.x, p.y, p.ang + (rnd() < 0.5 ? -1 : 1) * (0.7 + rnd() * 0.6), (6 + rnd() * 14) * s));
-        h.t0 = reach(tr, d); h.dur = h.total / (90 * s); h.knot = p; h.tip = rnd() < 0.5;
-        sd.curls.push(h);
-      }
-    });
-    // Order of growth: nearest the lobe first; five come up on arrival, spread along the side.
-    const far = (x) => x.d + (x.conn ? x.conn.total * 0.5 : 0);
-    sd.slots.sort((a, b) => far(a) - far(b));
-    const cap = small ? 9 : 15;
-    while (sd.slots.length > cap) sd.slots.splice(1 + Math.floor((sd.slots.length - 2) * rnd()), 1);
-    const n = sd.slots.length;
-    const first = [...new Set(Array.from({ length: Math.min(5, n) }, (_, k) => sd.slots[Math.round((k * (n - 1) * 0.86) / 4)]))];
-    sd.queue = [...first, ...sd.slots.filter((x) => !first.includes(x))];
-    sd.queue.forEach((x, k) => { x.name = NAMES[i][k % NAMES[i].length]; });
-    first.forEach((x) => {
-      const t = reach(x.trunk, x.d) + 0.04;
-      if (x.conn) { x.conn.t0 = t; x.conn.dur = clamp(x.conn.total / (220 * s), 0.25, 0.5); x.born = t + x.conn.dur; } else x.born = t;
-    });
-    sd.n = first.length;
-    sd.slots.forEach((x) => {
-      if (x.conn && x.conn.t0 === undefined) x.conn.t0 = null;
-      // The way home: back along the bud's own branch and its primary into the lobe.
-      const back = [];
-      if (x.conn) for (let k = x.conn.pts.length - 1; k >= 0; k--) back.push(x.conn.pts[k]);
-      const p = at(x.trunk, x.d);
-      back.push([p.x, p.y]);
-      for (let k = p.i - 1; k >= 0; k--) back.push(x.trunk.pts[k]);
-      x.home = line(back);
-    });
-
-    // The community: faint motes round the outside of the arch, mostly low.
-    const pts = sd.trunks.flatMap((h) => h.pts.filter((_, k) => k % 3 === 0))
-      .concat(sd.slots.flatMap((x) => (x.conn ? x.conn.pts.filter((_, k) => k % 3 === 0) : [[x.x, x.y]])));
-    const clear = (x, y, r) => pts.every((p) => Math.hypot(p[0] - x, p[1] - y) > r);
-    const want = small ? 8 : 14, reachMax = Math.hypot(W / 2, H);
-    const free = (x, y) => {
-      const out = Math.hypot(x - C.x, (y - C.y) * 1.25) / reachMax; // how far outside the arch
-      return x > 12 && x < W - 12 && y > 24 && y < (small ? text.t - 24 * s : H - 92) && out > (small ? 0.12 : 0.4)
-        && clear(x, y, 30 * s) && !inside(x, y, keep) && !boxes.some((r) => inside(x, y, r))
-        && !(!small && agent && x < 210 && y > H - 110) && sd.people.every((o) => Math.hypot(o.x - x, o.y - y) > 15 * s);
-    };
-    // Small gatherings, a few people each, mostly low.
-    for (let tries = 0; sd.people.length < want && tries < 600; tries++) {
-      const cx = X(16 + rnd() * (W / 2 - (small ? 60 * s : 16))), cy = small ? 40 + rnd() * (C.y - 60 * s - 40) : 30 + rnd() * (H - 30);
-      if ((!small && cy < C.y && rnd() < 0.7) || !free(cx, cy) || sd.people.some((o) => Math.hypot(o.x - cx, o.y - cy) < 70 * s)) continue;
-      const n = 2 + Math.floor(rnd() * 3);
-      for (let k = 0, made = 0; k < 12 && made < n && sd.people.length < want; k++) {
-        const a = rnd() * TAU, d = k ? (14 + rnd() * 18) * s : 0, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
-        if (k && !free(x, y)) continue;
-        made++;
-        sd.people.push({ x, y, r: (1.3 + rnd() * 0.9) * Math.max(0.85, s), a: y < C.y ? 0.2 + rnd() * 0.1 : 0.3 + rnd() * 0.2,
-          ph: rnd() * TAU, f: 0.4 + rnd() * 0.6, lit: -9, t0: 2.2 + rnd() * 0.9 });
-      }
-    }
-    const low = small ? sd.people : sd.people.filter((p) => p.y > C.y + 0.3 * (yB - C.y));
-    if (low.length) {
-      const top = low.reduce((a, b) => (b.y < a.y ? b : a));
-      if (small) put(agent ? labels.comA : labels.comF, X(14), top.y - 18 * s, agent ? 0 : 1); // in the corners
-      else put(agent ? labels.comA : labels.comF, Math.min(W - 16, Math.max(16, top.x + (agent ? -6 : 6) * s)), top.y - 18 * s, agent ? 0 : 1);
-    }
-    return sd;
-  };
-
-  // ---- Time ---------------------------------------------------------------
-  // One clock, ta, in seconds from the moment the core blooms. The arrival
-  // runs faster on revisits; after it, everything runs in real time.
-  const END = 3.6, AMBIENT = 4.2, LABELS = 2.8;
+  // ---- Time -------------------------------------------------------------------
+  // One clock, ta, in seconds from the moment the network reaches the slide's node.
+  const T = { rings: 0.05, ringDur: 1.3, core: 0.75, feed: 1.15, cons: 1.25, panels: 1.3, drop: 2.15, orbit: 2.5, end: 3.9 };
+  const AMBIENT = 4.6;
   let ta = 0, pace = 1, visits = 0, running = false, loop = 0, last = 0, timers = [];
-  let sends = [], pulses = [], sparks = [], flare = [0, 0], nextSend = 0, nextUse = 0, nextSpark = 0, turn = 0;
-  let hot = null, pinned = null, pointer = null, touched = false, seedEl = null, labelled = false;
+  let motes = [], pulses = [], flare = 0, nextMote = 0, nextUse = 0, turn = 0;
+  let hot = null, pinned = null, touched = false, seedEl = null, labelled = 0;
 
-  const born = (x) => x.born !== null && ta >= x.born;
-  const send = () => {
-    // Alternate sides, now and then twice running; land on the next free place.
-    turn = Math.random() < 0.75 ? 1 - turn : turn;
+  const k01 = (t0, dur) => clamp((ta - t0) / dur);
+  const isFull = (x) => x.state === 'full';
+
+  // ---- Ambient: the community grows the sides, and the extensions get used ------
+  const orbitPath = (side, to) => {
+    const s = side ? -1 : 1; // the left side runs anticlockwise from the top
+    const p0 = 270 * DEG - s * 0.2, p1 = side ? ORB.to - 0.02 : ORB.from + 0.02;
+    const n = 60, pts = [];
+    for (let i = 0; i <= n; i++) { const p = orbAt(p0 + ((p1 - p0) * i) / n, -14, -10); pts.push([p.x, p.y]); }
+    const end = { x: pts[n][0], y: pts[n][1] };
+    // From the arc's end, skim along the tops of the row to the place, then drop in.
+    const above = { x: to.node.x, y: to.node.y - 16 * k };
+    const dx = above.x - end.x;
+    const leg = bez(end, { x: end.x + dx * 0.35, y: end.y + 40 * k }, { x: above.x - dx * 0.3, y: above.y - 6 * k }, above, 28);
+    const drop = [[to.node.x, to.node.y], [to.x, to.y]];
+    return line([...pts, ...leg.slice(1), ...drop]);
+  };
+  const sendMote = () => {
+    turn = Math.random() < 0.8 ? 1 - turn : turn;
     let sd = sides[turn];
-    let x = sd.queue[sd.n];
-    if (!x) { sd = sides[1 - turn]; x = sd.queue[sd.n]; }
+    let x = sd.slots.find((o) => o.state === 'socket');
+    if (!x) { sd = sides[1 - turn]; x = sd.slots.find((o) => o.state === 'socket'); }
     const fresh = !!x;
-    if (!x) { // all grown: the community keeps improving what is there
-      const all = sides.flatMap((o) => o.slots.filter(born));
+    if (!x) { // all grown: the community keeps feeding what is there
+      const all = sides[turn].slots.filter(isFull);
       x = all[Math.floor(Math.random() * all.length)];
       if (!x) return;
-      sd = sides[x.side];
-    } else sd.n++;
-    const near = sd.people.slice().sort((a, b) => Math.hypot(a.x - x.x, a.y - x.y) - Math.hypot(b.x - x.x, b.y - x.y)).slice(0, 4);
-    const p = near[Math.floor(Math.random() * near.length)];
-    if (!p) return;
-    const path = line(wander(p, [x], { step: 5 * s, noise: 0.4, rand: Math.random, avoid: true }));
-    p.lit = ta;
-    sends.push({ p, x, fresh, path, t0: ta + 0.45, dur: clamp(path.total / (150 * s), 1.1, 2.6) });
+    }
+    const path = orbitPath(x.side, x);
+    motes.push({ x, fresh, path, t0: ta, dur: clamp(path.total / (300 * k), 2.2, 3.6) });
+  };
+  const fill = (x) => {
+    x.state = 'full';
+    x.filledAt = ta;
+    const sd = sides[x.side];
+    const filled = sd.slots.filter(isFull).length;
+    const next = sd.slots.find((o) => o.state === 'none');
+    if (next && filled < CAP) timers.push(setTimeout(() => { if (running && next.state === 'none') { next.state = 'socket'; next.shown = ta; } }, 1300));
+    timers.push(setTimeout(() => use(x), 2200));
+  };
+  // A pulse: from an extension up its thread, round its ring to where the rings meet below, and up into the core.
+  const homeOf = (x) => {
+    const side = x.side, st = STRANDS[side][0];
+    const arc = ringArc(side, st, x.from.th, TM);
+    const E = lens.eye;
+    const lift = line([[lens.bot.x, lens.bot.y], ...bez(lens.bot, { x: lens.bot.x + 6 * k, y: lens.bot.y - LH * 0.5 * k }, { x: E.x - 30 * k, y: E.y + 40 * k }, E, 16).slice(1)]);
+    return join(line([[x.x, x.y], [x.node.x, x.node.y]]), rev(x.h), line(arc), lift);
   };
   const use = (x) => {
-    if (!x) {
-      const all = sides.flatMap((o) => o.slots.filter(born));
-      x = all[Math.floor(Math.random() * all.length)];
-    }
-    if (x && pulses.length < 3) pulses.push({ h: x.home, t0: ta, side: x.side });
+    if (!x) { const all = sides.flatMap((o) => o.slots.filter(isFull)); x = all[Math.floor(Math.random() * all.length)]; }
+    if (!x || pulses.length > 1) return;
+    x.flash = 1;
+    pulses.push({ h: homeOf(x), t0: ta });
   };
 
   const advance = (dt) => {
-    ta += ta >= 0 && ta < END ? dt / pace : dt;
-    flare = flare.map((f) => f * Math.exp(-dt / 0.9));
-    if (!labelled && ta >= LABELS) { labelled = true; root.classList.add('is-labelled'); }
+    ta += ta < T.end ? dt / pace : dt;
+    flare *= Math.exp(-dt / 0.9);
+    if (labelled < 1 && ta >= 1.0) { labelled = 1; root.classList.add('is-labelled'); }
+    if (labelled < 2 && ta >= 2.9) { labelled = 2; root.classList.add('is-community'); }
     if (seedEl && ta >= 0) { seedEl.remove(); seedEl = null; if (ring) ring.style.visibility = ''; }
+    sides.forEach((sd) => sd.slots.forEach((x) => { if (x.flash) x.flash = Math.max(0, x.flash - dt / 1.2); }));
     if (ta < AMBIENT) return;
-    if (ta >= nextSend) { send(); nextSend = ta + (sides.some((o) => o.n < o.queue.length) ? 3.4 + Math.random() * 1.8 : 8 + Math.random() * 4); }
-    if (ta >= nextUse) { use(); nextUse = ta + 4.2 + Math.random() * 3.4; }
-    if (ta >= nextSpark) { sparks.push({ w: weave[Math.floor(Math.random() * weave.length)], t0: ta, back: Math.random() < 0.4 }); nextSpark = ta + 0.9 + Math.random() * 1.3; }
-    sends = sends.filter((sn) => {
-      const end = sn.t0 + sn.dur;
-      if (!sn.landed && ta >= end) {
-        sn.landed = true;
-        const x = sn.x;
-        if (sn.fresh) {
-          x.born = ta;
-          if (x.conn) { x.conn.t0 = ta + 0.12; x.conn.dur = 0.55; x.conn.rev = true; }
-        } else x.flash = 1;
-        timers.push(setTimeout(() => use(x), 900));
+    if (ta >= nextMote) {
+      sendMote();
+      const growing = sides.some((sd) => sd.slots.some((o) => o.state === 'socket'));
+      nextMote = ta + (growing ? 5.2 + Math.random() * 1.6 : 7 + Math.random() * 3);
+    }
+    if (ta >= nextUse) { use(); nextUse = ta + 5.5 + Math.random() * 3.5; }
+    motes = motes.filter((m) => {
+      if (!m.landed && ta >= m.t0 + m.dur) {
+        m.landed = true;
+        if (m.fresh && m.x.state === 'socket') fill(m.x); else { m.x.flash = 1; timers.push(setTimeout(() => use(m.x), 900)); }
       }
-      return ta < end + 2.8;
+      return ta < m.t0 + m.dur + 1.2;
     });
     pulses = pulses.filter((pl) => {
-      if ((ta - pl.t0) * 230 * s < pl.h.total) return true;
-      flare[pl.side] = 1;
+      if ((ta - pl.t0) * 320 * k < pl.h.total) return true;
+      flare = 1;
       return false;
     });
-    sparks = sparks.filter((sp) => ta - sp.t0 < 1.2);
-    sides.forEach((sd) => sd.slots.forEach((x) => { if (x.flash) x.flash = Math.max(0, x.flash - dt / 1.4); }));
   };
 
-  // ---- Drawing --------------------------------------------------------------
+  // ---- Drawing ------------------------------------------------------------------
   const stroke = (h, d0, d1, width, color, a) => {
     if (a <= 0.003 || d1 <= d0) return;
     g.lineWidth = width;
     g.strokeStyle = `rgba(${color},${Math.min(1, a).toFixed(3)})`;
     g.beginPath(); trace(h, d0, d1); g.stroke();
   };
-  // A hypha growing out from its start (or back from its end), its tip lit,
-  // glowing a moment after it arrives and then settling.
-  const hypha = (h, width, alpha, big) => {
-    if (h.t0 === null || h.t0 === undefined) return;
-    const k = clamp((ta - h.t0) / h.dur);
-    if (k <= 0) return;
-    const grown = h.total * ease(k);
-    const fresh = k < 1 ? 1 : Math.exp(-(ta - h.t0 - h.dur) / 0.8);
-    const d0 = h.rev ? h.total - grown : 0, d1 = h.rev ? h.total : grown;
-    if (h.primary) { // thick at the lobe, fine at the tip
-      g.lineCap = 'butt';
-      for (let d = 0, step = 24 * s; d < grown; d += step) {
-        const u = (d + step / 2) / h.total;
-        stroke(h, d, Math.min(grown, d + step), width * (1.75 - 1.1 * u), THREAD, alpha * (1 + 0.5 * fresh) * (1.3 - 0.6 * u));
-      }
-      g.lineCap = 'round';
-    } else stroke(h, d0, d1, width, THREAD, alpha * (1 + 0.5 * fresh));
-    if (k >= 1) return;
-    const tip = h.rev ? d0 : d1;
-    stroke(h, h.rev ? tip : Math.max(0, tip - 40 * s), h.rev ? Math.min(h.total, tip + 40 * s) : tip, width + 0.5, NODE, alpha * 1.7);
-    const p = at(h, tip);
-    halo(p.x, p.y, (big ? 9 : 4.5) * s, big ? 0.75 : 0.5);
+  const poly = (pts, width, color, a) => {
+    if (a <= 0.003 || pts.length < 2) return;
+    g.lineWidth = width;
+    g.strokeStyle = `rgba(${color},${Math.min(1, a).toFixed(3)})`;
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.stroke();
   };
   const dot = (x, y, r, color, a) => {
-    if (a <= 0.003) return;
+    if (a <= 0.003 || r <= 0) return;
     g.fillStyle = `rgba(${color},${Math.min(1, a).toFixed(3)})`;
     g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  };
+  // A node: a warm-white bead with a soft gold glow; `pop` swells it in.
+  const node = (x, y, size, a, pop = 1) => {
+    if (a <= 0.003 || pop <= 0) return;
+    const r = 3 * size * Math.max(0.7, k) * pop;
+    halo(x, y, r * 4.4, 0.45 * a);
+    dot(x, y, r, NODE, 0.95 * a);
+    dot(x - r * 0.15, y - r * 0.2, r * 0.62, CORE, 0.9 * a);
+  };
+  const popIn = (t0, dur = 0.35) => { const q = clamp((ta - t0) / dur); return q <= 0 ? 0 : 1 + 0.25 * Math.sin(Math.PI * q) * (1 - q); };
+  // A thread drawn from its start, its growing tip lit.
+  const grow = (h, t0, dur, width, a, color = THREAD) => {
+    const q = clamp((ta - t0) / dur);
+    if (q <= 0) return 0;
+    const d = h.total * ease(q);
+    stroke(h, 0, d, width, color, a);
+    if (q < 1) { const p = at(h, d); halo(p.x, p.y, 7 * k, 0.55 * (1 - q * 0.5)); }
+    return q;
+  };
+
+  const drawRings = () => {
+    const q = ease(k01(T.rings, T.ringDur / pace));
+    if (q <= 0) return;
+    const span = (Math.PI - TM) * q, inner = TM * q;
+    for (const side of [0, 1]) {
+      // A faint wide glow under the main strand.
+      const st0 = STRANDS[side][0];
+      const arcs = (st) => [ringArc(side, st, TM, TM + span), ringArc(side, st, TAU - TM, TAU - TM - span), ringArc(side, st, -TM, -TM + inner), ringArc(side, st, TM, TM - inner)];
+      g.lineCap = 'round';
+      for (const pts of arcs(st0)) poly(pts, 6 * LW, THREAD, 0.06);
+      for (const st of STRANDS[side]) for (const pts of arcs(st)) poly(pts, st.w * LW, THREAD, st.a * (1 + 0.25 * flare));
+      if (q < 1) {
+        for (const th of [TM + span, TAU - TM - span, -TM + inner, TM - inner]) { const [x, y] = ringPt(side, st0, th); halo(x, y, 9 * k, 0.6); }
+      }
+      // The rim nodes light as the tracing passes them.
+      for (const [key, r] of Object.entries(rings[side].rim)) {
+        const at0 = T.rings + (T.ringDur / pace) * clamp(reachRim(r.th)) * 0.7;
+        node(r.x, r.y, key === 'ul' ? 1.25 : 1.05, 1, popIn(at0));
+      }
+    }
+    // Where the rings meet.
+    node(lens.top.x, lens.top.y, 1, 1, popIn(T.rings + 0.05));
+    node(lens.bot.x, lens.bot.y, 1, 1, popIn(T.rings + 0.05));
+  };
+
+  const drawCore = () => {
+    const q = ease(k01(T.core, 1.1 / pace));
+    const breath = Math.sin(ta * 1.1);
+    const E = lens.eye;
+    // The eye is the seed: lit first, and what slide 3's empty ring becomes.
+    const seedA = clamp((ta + 0.25) / 0.35);
+    halo(C0.x, C0.y, (70 + 5 * breath + 20 * flare) * k, (0.1 + 0.06 * q + 0.12 * flare) * seedA);
+    halo(E.x, E.y, (13 + 6 * flare) * k, (0.7 + 0.25 * flare) * seedA);
+    dot(E.x, E.y, 3.4 * Math.max(0.7, k), NODE, seedA);
+    dot(E.x, E.y, 2.2 * Math.max(0.7, k), '255,250,236', seedA);
+    if (q <= 0) return;
+    // The outline: up both sides from the neck, meeting on the head.
+    const o = lens.outline, up = lens.crown * q, down = (o.total - lens.crown) * q;
+    const lit = 1 + 0.5 * flare;
+    const fadeLen = 26 * k; // the neck's two ends fade out where it rises from below
+    for (const [w, a] of [[5 * LW, 0.06], [1.15 * LW, 0.85]]) {
+      const col = a > 0.5 ? NODE : THREAD;
+      stroke(o, fadeLen, Math.max(fadeLen, up), w, col, a * lit);
+      stroke(o, Math.min(o.total - down, o.total - fadeLen), o.total - fadeLen, w, col, a * lit);
+      for (let j = 0; j < 6; j++) { // segment j runs from the faded tip (j = 0) towards the body
+        const f = (j + 0.5) / 6, d0 = (fadeLen * j) / 6, d1 = (fadeLen * (j + 1)) / 6;
+        stroke(o, d0, Math.min(d1, up), w, col, a * lit * f);
+        stroke(o, Math.max(o.total - d1, o.total - down), o.total - d0, w, col, a * lit * f);
+      }
+    }
+    if (q < 1) { for (const d of [up, o.total - down]) { const p = at(o, d); halo(p.x, p.y, 8 * k, 0.6); } }
+    // Its ends fade where the neck leaves the lens.
+    const qt = ease(k01(T.core + 0.6 / pace, 0.9 / pace));
+    if (qt > 0) stroke(lens.throat, 0, lens.throat.total * qt, 0.8 * LW, THREAD, 0.42 * lit);
+    node(lens.nose.x, lens.nose.y, 0.85, 1, popIn(T.core + 0.75 / pace));
+    node(lens.ear.x, lens.ear.y, 0.85, 1, popIn(T.core + 0.55 / pace));
+    dot(lens.mark.x, lens.mark.y, 1.3 * Math.max(0.7, k), NODE, 0.5 * smooth(k01(T.core + 0.9 / pace, 0.4)));
+  };
+
+  const drawAgent = () => {
+    for (const e of cons.edges) grow(e.h, T.cons + e.t0 / pace, e.dur / pace, 0.85 * LW, e.a);
+    for (const n of cons.nodes) node(n.x, n.y, n.r, 1, popIn(T.cons + n.t0 / pace));
+  };
+
+  const drawFace = () => {
+    for (const p of panels) {
+      const t0 = T.panels + p.t0 / pace;
+      p.links.forEach((h, i) => grow(h, t0 + i * 0.06, 0.45 / pace, 0.8 * LW, i ? 0.22 : 0.42));
+      const tf = t0 + 0.4 / pace, qf = ease(k01(tf, 0.55 / pace));
+      if (qf <= 0) continue;
+      g.lineCap = 'round';
+      stroke(p.up, 0, p.up.total * qf, 1.1 * LW, LINE, 0.8);
+      stroke(p.down, 0, p.down.total * qf, 1.1 * LW, LINE, 0.8);
+      const qc = smooth(k01(tf + 0.35 / pace, 0.45 / pace));
+      if (qc > 0) {
+        const xm = (p.l + p.r) / 2, w = p.r - p.l, hh = p.b - p.t;
+        g.lineWidth = 1 * LW;
+        g.strokeStyle = `rgba(${LINE},${(0.75 * qc).toFixed(3)})`;
+        g.beginPath();
+        if (p.extra === 'split') {
+          const vx = p.l + w * 0.65;
+          g.moveTo(vx, p.t); g.lineTo(vx, p.t + hh * qc);
+          g.moveTo(vx, p.mid.y); g.lineTo(vx + (p.r - vx) * qc, p.mid.y);
+        } else if (p.extra === 'media') {
+          const vx = p.l + w * 0.48;
+          g.moveTo(vx, p.t); g.lineTo(vx, p.t + hh * qc);
+        }
+        g.stroke();
+        if (p.extra === 'list') {
+          for (let i = 0; i < 3; i++) {
+            const y = p.t + hh * (0.28 + 0.22 * i), x0 = p.l + w * 0.22;
+            dot(x0, y, 2 * Math.max(0.7, k), CORE, 0.85 * qc);
+            const grad = g.createLinearGradient(x0 + 6 * k, 0, p.l + w * 0.82, 0);
+            grad.addColorStop(0, `rgba(${LINE},${(0.7 * qc).toFixed(3)})`);
+            grad.addColorStop(1, `rgba(${LINE},0)`);
+            g.strokeStyle = grad;
+            g.beginPath(); g.moveTo(x0 + 7 * k, y); g.lineTo(p.l + w * 0.86, y); g.stroke();
+          }
+        }
+        if (p.extra === 'media') {
+          g.strokeStyle = `rgba(${LINE},${(0.6 * qc).toFixed(3)})`;
+          g.beginPath(); g.arc(p.l + w * 0.74, p.mid.y, 8 * k, 0, TAU); g.stroke();
+        }
+      }
+      for (const [x, y] of p.corners) node(x, y, 0.8, 1, popIn(tf + 0.1 / pace, 0.3));
+    }
+    if (panels[0].out) grow(panels[0].out, T.panels + 0.9 / pace, 0.5 / pace, 0.75 * LW, 0.34);
+  };
+
+  const drawGlyph = (x, type, cx, cy, q) => {
+    if (q <= 0) return;
+    const s = k;
+    const gp = glyphPts(type);
+    if (gp) { // the agent's: a tiny constellation
+      g.lineWidth = 0.8 * LW;
+      g.strokeStyle = `rgba(${LINE},${(0.55 * q).toFixed(3)})`;
+      g.beginPath();
+      for (const [a, b] of gp.edges) { g.moveTo(cx + gp.nodes[a][0] * s, cy + gp.nodes[a][1] * s); g.lineTo(cx + gp.nodes[b][0] * s, cy + gp.nodes[b][1] * s); }
+      g.stroke();
+      for (const [nx, ny] of gp.nodes) node(cx + nx * s, cy + ny * s, 0.72, q, 1);
+      return;
+    }
+    // The interface's: small panel icons in line.
+    g.lineWidth = 1 * LW;
+    g.strokeStyle = `rgba(${LINE},${(0.78 * q).toFixed(3)})`;
+    g.beginPath();
+    const sq = (w) => g.rect(cx - (w / 2) * s, cy - (w / 2) * s, w * s, w * s);
+    if (type === 'grid') { sq(24); g.moveTo(cx, cy - 12 * s); g.lineTo(cx, cy + 12 * s); g.moveTo(cx - 12 * s, cy); g.lineTo(cx + 12 * s, cy); }
+    if (type === 'frame') { sq(25); g.moveTo(cx + 6 * s, cy); g.arc(cx, cy, 6 * s, 0, TAU); }
+    if (type === 'split') { g.rect(cx - 14 * s, cy - 10 * s, 28 * s, 20 * s); g.moveTo(cx + 2 * s, cy - 10 * s); g.lineTo(cx + 2 * s, cy + 10 * s); }
+    if (type === 'wheel') { g.moveTo(cx + 12 * s, cy); g.arc(cx, cy, 12 * s, 0, TAU); g.moveTo(cx + 3 * s, cy); g.arc(cx, cy, 3 * s, 0, TAU); }
+    if (type === 'curve') { sq(24); g.moveTo(cx - 12 * s, cy + 8 * s); g.bezierCurveTo(cx - 2 * s, cy + 8 * s, cx + 2 * s, cy - 8 * s, cx + 12 * s, cy - 8 * s); }
+    if (type === 'list') {
+      for (let i = -1; i <= 1; i++) { g.moveTo(cx - 6 * s, cy + i * 9 * s); g.lineTo(cx + 15 * s, cy + i * 9 * s); }
+    }
+    g.stroke();
+    if (type === 'list') for (let i = -1; i <= 1; i++) dot(cx - 12 * s, cy + i * 9 * s, 2 * Math.max(0.7, k), CORE, 0.85 * q);
+    if (type === 'curve') { dot(cx - 12 * s, cy + 8 * s, 1.8 * Math.max(0.7, k), CORE, 0.85 * q); dot(cx + 12 * s, cy - 8 * s, 1.8 * Math.max(0.7, k), CORE, 0.85 * q); }
+  };
+
+  const drawSides = () => {
+    const shown = pinned || hot;
+    for (const sd of sides) {
+      sd.slots.forEach((x, i) => {
+        if (x.state === 'none') return;
+        // On arrival they come in order out from the middle; later ones when the community adds them.
+        const t0 = x.shown === 0 ? T.drop + (sd.side ? i : START - 1 - i) * 0.12 / pace : x.shown;
+        const lit = 1 + 0.6 * x.flash + (x === shown ? 0.5 : 0);
+        const r = ER * k;
+        if (x.state === 'socket') {
+          // A faint thread down to an empty dashed socket.
+          const q = grow(x.h, t0, 0.6 / pace, 0.7 * LW, 0.26 * lit);
+          if (q >= 1) node(x.node.x, x.node.y, 0.7, 0.75, popIn(t0 + 0.6 / pace));
+          const qs = smooth(k01(t0 + 0.45 / pace, 0.6));
+          for (let j = 0; j < 28; j++) {
+            const th = (j / 28) * TAU;
+            const a = (0.22 + 0.3 * Math.max(0, Math.sin(th))) * qs * lit;
+            dot(x.x + Math.cos(th) * r, x.y + Math.sin(th) * r, 0.8 * Math.max(0.75, k), NODE, a);
+          }
+          return;
+        }
+        // A full place: its threads, its circle (open at the top), its node and glyph.
+        const tf = x.filledAt > 0 ? x.filledAt : t0;
+        const fresh = x.filledAt > 0;
+        if (fresh) { // filled by the community: the old faint thread, and a bright one drawing up to the ring
+          stroke(x.h, 0, x.h.total, 0.7 * LW, THREAD, 0.26);
+          grow(rev(x.h), tf + 0.35, 0.7, 0.85 * LW, 0.5 * lit);
+          if (ta >= tf + 1.05) stroke(x.h2, 0, x.h2.total, 0.6 * LW, THREAD, 0.2 * smooth(k01(tf + 1.05, 0.6)));
+        } else {
+          grow(x.h, tf, 0.6 / pace, 0.85 * LW, 0.5 * lit);
+          grow(x.h2, tf + 0.08, 0.65 / pace, 0.6 * LW, 0.2 * lit);
+        }
+        const qc = ease(k01(tf + (fresh ? 0 : 0.45 / pace), fresh ? 0.6 : 0.5 / pace));
+        if (qc > 0) {
+          const g0 = -90 * DEG + 32 * DEG, g1 = 270 * DEG - 32 * DEG, segs = 36;
+          for (let j = 0; j < segs; j++) {
+            const a0 = g0 + ((g1 - g0) * j) / segs, a1 = a0 + (g1 - g0) / segs, mid = (a0 + a1) / 2;
+            // drawn from the bottom outwards both ways
+            if (Math.abs(mid - 90 * DEG) > (180 * DEG - 32 * DEG) * qc) continue;
+            const a = (0.2 + 0.55 * Math.max(0, Math.sin(mid))) * lit;
+            g.lineWidth = 1.05 * LW;
+            g.strokeStyle = `rgba(${THREAD},${Math.min(1, a).toFixed(3)})`;
+            g.beginPath(); g.arc(x.x, x.y, r, a0, a1 + 0.004); g.stroke();
+          }
+          g.lineWidth = 0.7 * LW; g.strokeStyle = `rgba(${THREAD},${(0.08 * qc).toFixed(3)})`;
+          g.beginPath(); g.arc(x.x, x.y, r, 0, TAU); g.stroke();
+          halo(x.x, x.y + r * 0.6, r * 1.1, 0.05 * qc * lit);
+          if (fresh && ta - tf < 1) halo(x.x, x.y, r * (0.6 + 1.2 * (ta - tf)), 0.4 * (1 - (ta - tf)));
+        }
+        node(x.node.x, x.node.y, 1.05, 1, popIn(tf + (fresh ? 0 : 0.55 / pace)));
+        if (x.flash) halo(x.x, x.y, r * 1.4, 0.3 * x.flash);
+        drawGlyph(x, x.glyph, x.x, x.y + 2 * k, smooth(k01(tf + (fresh ? 0.3 : 0.75 / pace), 0.5)));
+        if (x === shown) { g.lineWidth = 0.8; g.strokeStyle = `rgba(${NODE},0.5)`; g.beginPath(); g.arc(x.x, x.y, r + 5 * k, 0, TAU); g.stroke(); }
+      });
+    }
+    // A hovered socket shows its ring a little brighter.
+    if (shown && shown.state === 'socket') { g.lineWidth = 0.8; g.strokeStyle = `rgba(${NODE},0.35)`; g.beginPath(); g.arc(shown.x, shown.y, ER * k + 5 * k, 0, TAU); g.stroke(); }
+  };
+
+  const drawOrbit = () => {
+    if (ta < T.orbit) return;
+    for (const o of orbit) {
+      const q = smooth(k01(o.t0, 0.9));
+      if (q <= 0) continue;
+      if (o.bright) halo(o.x, o.y, 6 * k, 0.28 * q * o.a);
+      dot(o.x, o.y, o.r * Math.max(0.8, k), NODE, o.a * q);
+    }
+    for (const s of streams) {
+      const q = smooth(k01(s.t0, 0.9));
+      if (q <= 0) continue;
+      stroke(s.h, 0, s.h.total, 0.65 * LW, THREAD, s.a * q);
+      for (const bd of s.beads) {
+        const p = at(s.h, bd.d);
+        halo(p.x, p.y, 6 * k, 0.3 * bd.a * q);
+        dot(p.x, p.y, bd.r * Math.max(0.8, k), CORE, bd.a * q);
+      }
+    }
   };
 
   const draw = () => {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
-    if (!sides.length) return;
+    if (!rings.length) return;
     g.lineCap = 'round';
     g.lineJoin = 'round';
-    const breath = Math.sin(ta * 1.14);
-    const core = clamp(ta / 1.4);
-
-    // The warmth of the core, and the seed it grew from.
-    halo(C.x + 10 * s, C.y, 200 * s, (0.05 + 0.012 * breath) * core);
-    halo(J.x, J.y, 58 * s, (0.1 + 0.035 * breath + 0.05 * (flare[0] + flare[1])) * core);
-    if (ta > -0.3 && ta < 1.2) {
-      const a = ta < 0 ? (seedEl ? 0 : clamp((ta + 0.3) / 0.3)) : 1 - clamp((ta - 0.25) / 0.8);
-      halo(J.x, J.y, 11 * s, 0.6 * a);
-      dot(J.x, J.y, 3 * s, NODE, a);
-    }
-    if (ta >= 0 && ta < 1) {
-      const e = clamp(ta / 1);
-      halo(J.x, J.y, (8 + 56 * (1 - Math.pow(1 - e, 3))) * s, 0.32 * (1 - e));
-    }
+    if (ta > -0.4) drawCore();
     if (ta <= 0) return;
-
-    // The join: threads woven between the two, swaying a little.
-    g.lineWidth = 0.55;
-    for (const w of weave) {
-      const k = clamp((ta - w.t0) / 0.7);
-      if (k <= 0) continue;
-      const n = w.h.pts.length - 1, upto = Math.round(smooth(k) * n), sway = Math.sin(ta * 0.8 + w.ph) * 2.6 * s;
-      g.strokeStyle = `rgba(${THREAD},${(w.a * (1 + 0.4 * (flare[0] + flare[1]))).toFixed(3)})`;
-      g.beginPath();
-      for (let j = 0; j <= upto; j++) {
-        const [x, y] = w.h.pts[j], off = Math.sin((Math.PI * j) / n) * sway;
-        j ? g.lineTo(x, y + off) : g.moveTo(x, y + off);
-      }
-      g.stroke();
-    }
-    for (const sp of sparks) {
-      const k = clamp((ta - sp.t0) / 1.2), e = smooth(sp.back ? 1 - k : k);
-      const n = sp.w.h.pts.length - 1, j = Math.min(n, Math.floor(e * n)), [x, y] = sp.w.h.pts[j];
-      const off = Math.sin((Math.PI * j) / n) * Math.sin(ta * 0.8 + sp.w.ph) * 2.6 * s;
-      halo(x, y + off, 5 * s, 0.5 * Math.sin(Math.PI * k));
-    }
-
-    // The interface: its frame in one thread, then the hints inside.
-    const fl = 1 + 0.6 * flare[1];
-    const kf = clamp((ta - 0.35) / 1.1);
-    if (kf > 0) {
-      g.strokeStyle = fade;
-      g.lineWidth = 0.95;
-      g.globalAlpha = Math.min(1, 0.58 * fl);
-      const d = frame.total * smooth(kf);
-      g.beginPath(); trace(frame, 0, d); g.stroke();
-      for (const it of inner) {
-        const k = clamp((ta - it.t0) / 0.5);
-        if (k <= 0) continue;
-        g.globalAlpha = Math.min(1, it.a * fl);
-        g.lineWidth = it.w;
-        g.beginPath(); trace(it.h, 0, it.h.total * smooth(k)); g.stroke();
-      }
-      g.globalAlpha = 1;
-      if (kf < 1) { const p = at(frame, d); halo(p.x, p.y, 8 * s, 0.7); }
-      const u = (ta * 0.05 + 0.18) % 1, pa = 0.5 * clamp((ta - 1.6) / 0.6) * smooth(clamp(u / 0.06)) * smooth(clamp((1 - u) / 0.06));
-      if (pa > 0) {
-        const x = play.x0 + (play.x1 - play.x0) * u;
-        g.strokeStyle = `rgba(${NODE},${(pa * fl).toFixed(3)})`;
-        g.lineWidth = 0.9;
-        g.beginPath(); g.moveTo(x, play.y0); g.lineTo(x, play.y1); g.stroke();
-      }
-    }
-
-    // The agent: a nucleus of motes that gathers out of the seed and breathes,
-    // held in a soft membrane that lies open towards the window.
-    const fa = 1 + 0.7 * flare[0];
-    halo(A.x, A.y, Ra * 1.25, (0.09 + 0.02 * breath) * core * fa);
-    const km = clamp((ta - 0.3) / 1.1);
-    if (km > 0) {
-      const br = 1 + 0.035 * Math.sin(ta * 1.14), open = 0.66, span = Math.PI - open, N = 64, grown = smooth(km) * span;
-      const rad = (th) => Ra * 1.07 * br * (1 + 0.05 * Math.sin(3 * th + lumps[0] + 0.3 * Math.sin(ta * 0.4)) + 0.03 * Math.sin(5 * th - lumps[1] + ta * 0.17));
-      g.lineCap = 'butt';
-      g.lineWidth = 0.85;
-      for (let k = 0; k < N; k++) {
-        const t0 = -span + (2 * span * k) / N, t1 = t0 + (2 * span) / N, mid = (t0 + t1) / 2;
-        if (span - Math.abs(mid) > grown) continue;
-        const a = 0.4 * fa * smooth(clamp((span - Math.abs(mid)) / 0.7));
-        if (a < 0.004) continue;
-        g.strokeStyle = `rgba(${THREAD},${a.toFixed(3)})`;
-        g.beginPath();
-        for (let j = 0; j <= 3; j++) {
-          const th = Math.PI + t0 + ((t1 - t0) * j) / 3, r = rad(th);
-          const x = A.x + Math.cos(th) * r, y = A.y + Math.sin(th) * r * 0.94;
-          j ? g.lineTo(x, y) : g.moveTo(x, y);
-        }
-        g.stroke();
-      }
-      g.lineCap = 'round';
-    }
+    drawRings();
+    // The network feeds in: slide 4's node to the lens's bottom point.
+    grow(feed, T.feed, 0.75 / pace, 0.7 * LW, 0.38);
+    drawAgent();
+    drawFace();
+    drawSides();
+    drawOrbit();
     for (const m of motes) {
-      const k = clamp((ta - m.t0) / 0.9);
-      const br = 1 + 0.045 * Math.sin(ta * 1.14 - m.u * 1.8);
-      const hx = A.x + (m.hx - A.x) * br + m.wx * Math.sin(ta * m.fx + m.ph);
-      const hy = A.y + (m.hy - A.y) * br + m.wy * Math.cos(ta * m.fy + m.ph * 1.3);
-      const e = 1 - Math.pow(1 - k, 3);
-      m.x = J.x + (hx - J.x) * e; m.y = J.y + (hy - J.y) * e; m.k = k;
-    }
-    g.lineWidth = 0.5;
-    for (const [a, b] of web) {
-      const d = Math.hypot(a.x - b.x, a.y - b.y), al = 0.16 * clamp(1 - d / (24 * s)) * Math.min(a.k, b.k) * fa;
-      if (al <= 0.004) continue;
-      g.strokeStyle = `rgba(${THREAD},${al.toFixed(3)})`;
-      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
-    }
-    for (const m of motes) {
-      if (m.k <= 0) continue;
-      const tw = m.heart ? 0.85 + 0.15 * Math.sin(ta * 1.7 + m.ph) : 1;
-      if (m.heart) halo(m.x, m.y, 7 * s, 0.22 * m.k * fa);
-      dot(m.x, m.y, m.size, NODE, m.lum * tw * m.k * fa);
-    }
-
-    // The extensions' hyphae: trunks, fuzz, and each bud's own thread.
-    for (const sd of sides) {
-      for (const h of sd.trunks) hypha(h, 0.95, 0.5, true);
-      for (const h of sd.curls) {
-        hypha(h, 0.6, 0.3, false);
-        if (h.tip && ta > h.t0 + h.dur) { const p = h.pts[h.pts.length - 1]; dot(p[0], p[1], 1.1, NODE, 0.4); }
-        if (ta > h.t0) dot(h.knot.x, h.knot.y, 1.15, NODE, 0.45);
-      }
-      for (const x of sd.slots) if (x.conn) hypha(x.conn, 0.75, 0.42, false);
-    }
-    // A hovered extension shows its way into the core.
-    const shown = pinned || hot;
-    if (shown) stroke(shown.home, 0, shown.home.total, 1, NODE, 0.42);
-
-    // The community, and what it sends.
-    for (const sd of sides) {
-      for (const p of sd.people) {
-        const lit = clamp(1 - Math.abs(ta - p.lit - 0.3) / 0.6);
-        const a = p.a * (0.8 + 0.2 * Math.sin(ta * p.f + p.ph)) * clamp((ta - p.t0) / 1.1);
-        halo(p.x, p.y, 7 * s, a * 0.3);
-        dot(p.x, p.y, p.r, INK, a + lit * 0.6);
-        if (lit > 0) halo(p.x, p.y, 11 * s, 0.5 * lit);
+      const q = clamp((ta - m.t0) / m.dur);
+      const d = m.path.total * smooth(q);
+      if (q < 1) {
+        stroke(m.path, Math.max(0, d - 70 * k), d, 0.9 * LW, NODE, 0.35);
+        const p = at(m.path, d);
+        halo(p.x, p.y, 10 * k, 0.7);
+        dot(p.x, p.y, 1.8 * Math.max(0.8, k), CORE, 1);
       }
     }
-    for (const sn of sends) {
-      if (ta < sn.t0) continue;
-      const k = clamp((ta - sn.t0) / sn.dur), d = sn.path.total * smooth(k);
-      const a = k < 1 ? 1 : clamp(1 - (ta - sn.t0 - sn.dur) / 2.6);
-      stroke(sn.path, 0, d, 0.6, THREAD, 0.3 * a);
-      if (k < 1) {
-        stroke(sn.path, Math.max(0, d - 36 * s), d, 1, NODE, 0.6);
-        const p = at(sn.path, d);
-        halo(p.x, p.y, 9 * s, 0.75);
-        dot(p.x, p.y, 1.6 * s, NODE, 0.95);
-      }
-    }
-
-    // The extensions themselves: round abilities on the left, square panels on the right.
-    for (const sd of sides) {
-      for (const x of sd.slots) {
-        if (!born(x)) continue;
-        const k = clamp((ta - x.born) / 0.55), sc = k < 1 ? Math.max(0.01, pop(k)) : 1;
-        const lit = 1 + 0.35 * flare[x.side] + (x === shown ? 0.6 : 0) + x.flash;
-        if (k < 1) halo(x.x, x.y, (6 + 26 * k) * s, 0.5 * (1 - k));
-        if (x.flash) halo(x.x, x.y, (10 + 20 * (1 - x.flash)) * s, 0.4 * x.flash);
-        halo(x.x, x.y, 12 * s, 0.2 * lit);
-        if (sd.agent) {
-          const r = 3.1 * s * sc;
-          dot(x.x, x.y, r, NODE, 0.92);
-          dot(x.x - r * 0.25, x.y - r * 0.3, r * 0.45, '255,241,207', 0.8);
-        } else {
-          const q = 8.6 * s * sc, rr = 2 * s * sc;
-          g.beginPath(); g.roundRect(x.x - q / 2, x.y - q / 2, q, q, rr);
-          g.fillStyle = `rgba(${NODE},${(0.3 * lit).toFixed(3)})`; g.fill();
-          g.strokeStyle = `rgba(${NODE},0.9)`; g.lineWidth = 1; g.stroke();
-        }
-        if (x === shown) {
-          g.strokeStyle = `rgba(${NODE},0.7)`; g.lineWidth = 0.8;
-          g.beginPath();
-          if (sd.agent) g.arc(x.x, x.y, 8 * s, 0, TAU); else g.roundRect(x.x - 8 * s, x.y - 8 * s, 16 * s, 16 * s, 3.5 * s);
-          g.stroke();
-        }
-      }
-    }
-    // Being used: a pulse runs from an extension home into the core.
     for (const pl of pulses) {
-      const d = (ta - pl.t0) * 230 * s;
-      stroke(pl.h, Math.max(0, d - 30 * s), d, 1.1, NODE, 0.55);
+      const d = (ta - pl.t0) * 320 * k;
+      stroke(pl.h, Math.max(0, d - 46 * k), d, 1.1 * LW, NODE, 0.6);
       const p = at(pl.h, d);
-      halo(p.x, p.y, 7 * s, 0.6);
+      halo(p.x, p.y, 8 * k, 0.6);
     }
   };
 
-  // ---- Coming and going -------------------------------------------------------
+  // ---- Coming and going -----------------------------------------------------------
   const frameLoop = (id) => {
     const tick = (now) => {
       if (id !== loop || !running) return;
@@ -714,7 +726,7 @@
     requestAnimationFrame(tick);
   };
   const start = () => {
-    if (running || still || waiting || document.hidden || !slide.classList.contains('on')) return;
+    if (running || still || waiting || document.hidden || !slide.classList.contains('on') || !rings.length) return;
     running = true; last = 0;
     frameLoop(++loop);
   };
@@ -724,15 +736,15 @@
     if (seedEl) { seedEl.remove(); seedEl = null; }
     if (ring) ring.style.visibility = '';
   };
-  // From slide 3: the empty ring lifts off the chart and flies up to become the seed.
-  const FLIGHT = 1.0;
+  // From slide 3: the empty ring lifts off the chart and flies up to become the core's bright node.
+  const FLIGHT = 1.1;
   const launch = () => {
     if (!ring) return false;
     const r = ring.getBoundingClientRect(), b = root.getBoundingClientRect();
     if (!r.width) return false;
-    const from = { x: r.left + r.width / 2, y: r.top + r.height / 2 }, to = { x: b.left + J.x, y: b.top + J.y };
+    const from = { x: r.left + r.width / 2, y: r.top + r.height / 2 }, to = { x: b.left + lens.eye.x, y: b.top + lens.eye.y };
     const d = Math.hypot(to.x - from.x, to.y - from.y) || 1;
-    const c = { x: (from.x + to.x) / 2 + ((to.y - from.y) / d) * d * 0.22, y: (from.y + to.y) / 2 - ((to.x - from.x) / d) * d * 0.22 };
+    const c = { x: (from.x + to.x) / 2 + ((to.y - from.y) / d) * d * 0.2, y: (from.y + to.y) / 2 - ((to.x - from.x) / d) * d * 0.2 };
     seedEl = document.createElement('div');
     seedEl.className = 'ac-seed';
     seedEl.setAttribute('aria-hidden', 'true');
@@ -740,29 +752,29 @@
     document.body.appendChild(seedEl);
     ring.style.visibility = 'hidden';
     const steps = 24;
-    seedEl.animate(Array.from({ length: steps + 1 }, (_, k) => {
-      const t = smooth(k / steps), u = 1 - t;
+    seedEl.animate(Array.from({ length: steps + 1 }, (_, i) => {
+      const t = smooth(i / steps), u = 1 - t;
       const x = u * u * from.x + 2 * u * t * c.x + t * t * to.x, y = u * u * from.y + 2 * u * t * c.y + t * t * to.y;
       return { transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)` };
     }), { duration: FLIGHT * 1000, fill: 'forwards' });
     seedEl.querySelector('i').animate([
       { transform: 'scale(1) rotate(0deg)', opacity: 1 },
-      { transform: 'scale(.55) rotate(50deg)', opacity: 0.9, offset: 0.55 },
-      { transform: 'scale(.12) rotate(90deg)', opacity: 0 },
+      { transform: 'scale(.5) rotate(50deg)', opacity: 0.9, offset: 0.6 },
+      { transform: 'scale(.1) rotate(90deg)', opacity: 0 },
     ], { duration: FLIGHT * 1000, easing: 'ease-in', fill: 'forwards' });
-    seedEl.querySelector('b').animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.45 }, { opacity: 1, transform: 'scale(1)' }],
+    seedEl.querySelector('b').animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.45 }, { opacity: 1, transform: 'scale(1.3)' }],
       { duration: FLIGHT * 1000, fill: 'forwards' });
     return true;
   };
 
   const reset = () => {
     timers.forEach(clearTimeout);
-    if (!slide.classList.contains('on')) html.classList.remove('ac-quiet');
     timers = [];
+    if (!slide.classList.contains('on')) html.classList.remove('ac-quiet');
     dropSeed();
-    sends = []; pulses = []; sparks = []; flare = [0, 0];
-    labelled = false;
-    root.classList.remove('is-labelled');
+    motes = []; pulses = []; flare = 0;
+    labelled = 0;
+    root.classList.remove('is-labelled', 'is-community');
     hot = pinned = null;
     card.classList.remove('is-on');
     slide.style.cursor = '';
@@ -770,33 +782,44 @@
     g.clearRect(0, 0, canvas.width, canvas.height);
   };
   // Everything grown at once: for reduced motion, and after a resize.
-  const settle = (n) => {
+  const settle = (states) => {
     ta = Math.max(ta, AMBIENT);
     sides.forEach((sd, i) => {
-      sd.n = Math.min(sd.queue.length, n[i]);
-      sd.queue.forEach((x, k) => {
-        if (k >= sd.n) return;
-        x.born = -100;
-        if (x.conn) { x.conn.t0 = -100; x.conn.dur = 0.5; }
-      });
+      if (states) sd.slots.forEach((x, j) => { x.state = states[i][j]; });
+      sd.slots.forEach((x) => { if (x.state !== 'none') x.shown = -50; if (x.filledAt > 0 || x.state === 'full') x.filledAt = -50; });
     });
-    labelled = true;
-    root.classList.add('is-labelled');
+    motes = []; pulses = [];
+    labelled = 2;
+    root.classList.add('is-labelled', 'is-community');
   };
 
-  let waiting = null;
-  const begin = (fromGap) => {
+  let waiting = null, armed = false;
+  const prepare = (fromGap) => {
     reset();
-    if (!layout()) return;
+    if (!layout()) return false;
     visits++;
-    if (still) { ta = 0; settle([9, 9]); draw(); return; }
-    pace = visits > 1 ? 0.65 : 1;
-    if (fromGap && launch()) { pace = 1; ta = -FLIGHT; } else ta = -(visits > 1 ? 0.2 : 0.4);
-    nextSend = AMBIENT + 0.5; nextUse = AMBIENT + 2.2; nextSpark = 1.6;
-    // Once the network has reached this slide's node, the threads it left behind quieten under the picture.
-    timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, (fromGap ? 1.5 : 1.3) * 1000));
+    if (still) { ta = 0; settle(); draw(); return false; }
+    pace = visits > 1 ? 0.7 : 1;
+    ta = -9; // dark until the network arrives
+    if (fromGap && launch()) pace = 1;
+    draw();
+    armed = true;
+    if (!fromGap && performance.now() - lastArrive < 400) { arrive(); return true; } // the network got here first (a jump)
+    // If the network never says it has arrived (e.g. it was interrupted), grow anyway.
+    timers.push(setTimeout(() => arrive(), fromGap ? 1700 : 1500));
+    return true;
+  };
+  const arrive = () => {
+    if (!armed || !slide.classList.contains('on')) return;
+    armed = false;
+    ta = seedEl ? -0.15 : -0.3;
+    nextMote = AMBIENT + 0.4; nextUse = AMBIENT + 3.2;
+    // The network that brought us here steps back so the picture reads.
+    timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, 150));
     start();
   };
+  let lastArrive = -1e9;
+  slide.addEventListener('dt-arrive', () => { lastArrive = performance.now(); arrive(); });
   const enter = (fromGap) => {
     // On a first load the Mycelial mark plays first; grow once it has landed.
     if (html.classList.contains('dt-intro')) {
@@ -804,20 +827,21 @@
       waiting = new MutationObserver(() => {
         if (html.classList.contains('dt-intro')) return;
         waiting.disconnect(); waiting = null;
-        if (slide.classList.contains('on')) begin(false);
+        if (slide.classList.contains('on') && prepare(false)) arrive();
       });
       waiting.observe(html, { attributes: true, attributeFilter: ['class'] });
       return;
     }
     // Labels and the text are measured, so lay out once the fonts are in (the ring cannot wait).
     if (document.fonts && document.fonts.status !== 'loaded' && !fromGap) {
-      document.fonts.ready.then(() => { if (slide.classList.contains('on') && !running) begin(false); });
+      document.fonts.ready.then(() => { if (slide.classList.contains('on') && !running && prepare(false)) arrive(); });
       return;
     }
-    begin(fromGap);
+    prepare(fromGap);
   };
   const leave = () => {
     stop();
+    armed = false;
     html.classList.remove('ac-quiet');
     dropSeed();
     if (waiting) { waiting.disconnect(); waiting = null; }
@@ -845,25 +869,26 @@
   addEventListener('resize', () => {
     clearTimeout(resizing);
     resizing = setTimeout(() => {
-      if (!slide.classList.contains('on') || !sides.length) return;
-      const n = sides.map((sd) => sd.n);
-      sends = []; pulses = []; sparks = [];
+      if (!slide.classList.contains('on') || !rings.length) return;
+      const states = sides.map((sd) => sd.slots.map((x) => x.state));
       dropSeed();
       if (!layout()) return;
-      settle(n);
+      settle(states);
+      armed = false;
       hot = pinned = null;
       card.classList.remove('is-on');
       draw();
+      start();
     }, 120);
   });
 
-  // ---- Hovering ------------------------------------------------------------
+  // ---- Hovering ---------------------------------------------------------------------
   const local = (e) => { const b = root.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
-  const pick = (p, r) => {
-    let best = null, bd = r * r;
+  const pick = (p, pad) => {
+    let best = null, bd = (ER * k + pad) ** 2;
     for (const sd of sides) {
       for (const x of sd.slots) {
-        if (!born(x)) continue;
+        if (x.state === 'none' || (x.shown !== null && x.shown > ta)) continue;
         const d = (x.x - p.x) ** 2 + (x.y - p.y) ** 2;
         if (d < bd) { bd = d; best = x; }
       }
@@ -874,31 +899,31 @@
     const x = pinned || hot;
     card.classList.toggle('is-on', !!x);
     slide.style.cursor = hot ? 'pointer' : '';
-    if (still) draw();
+    if (still || !running) draw();
     if (!x) return;
-    card.querySelector('.ac-name').textContent = x.name;
-    card.style.setProperty('--c', x.agent ? '#e0ab5e' : '#f3d9a8');
-    // Open toward the middle, clear of the edge.
-    const gap = 14 * s, left = x.agent;
-    const px = left ? x.x + gap : x.x - gap;
-    card.style.transform = `translate(${px.toFixed(1)}px, ${x.y.toFixed(1)}px) translate(${left ? 0 : -100}%, -50%)`;
+    const empty = x.state === 'socket';
+    card.querySelector('.ac-where').textContent = empty ? '' : 'community-made';
+    card.querySelector('.ac-name').textContent = empty ? 'next: built by the community' : x.name;
+    card.classList.toggle('is-empty', empty);
+    card.style.setProperty('--c', x.side ? '#f3d9a8' : '#e0ab5e');
+    // Below the place, clear of the picture.
+    card.style.transform = `translate(${x.x.toFixed(1)}px, ${(x.y + ER * k + 10).toFixed(1)}px) translate(-50%, 0)`;
   };
   slide.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch' || !sides.length || !slide.classList.contains('on')) return;
-    pointer = local(e);
-    const h = pick(pointer, 15 * Math.max(1, s));
+    if (e.pointerType === 'touch' || !rings.length || !slide.classList.contains('on')) return;
+    const h = pick(local(e), 4);
     if (h !== hot) { hot = h; show(); }
   });
-  slide.addEventListener('pointerleave', () => { pointer = null; if (hot) { hot = null; show(); } });
+  slide.addEventListener('pointerleave', () => { if (hot) { hot = null; show(); } });
   slide.addEventListener('pointerdown', (e) => { touched = e.pointerType === 'touch'; });
-  // Clicks and taps on an extension (or the core) stay here; they never turn the slide.
+  // Clicks and taps on the picture stay here; they never turn the slide.
   slide.addEventListener('click', (e) => {
-    if (!sides.length) return;
+    if (!rings.length) return;
     const p = local(e);
-    const x = pick(p, (touched ? 26 : 15) * Math.max(1, s));
+    const x = pick(p, touched ? 12 : 4);
     if (x) { e.stopPropagation(); pinned = pinned === x ? null : x; show(); return; }
-    const inCore = Math.hypot(p.x - A.x, p.y - A.y) < Ra || inside(p.x, p.y, { l: F.l, t: F.t, r: F.r, b: F.b });
-    if (inCore) { e.stopPropagation(); if (!still && ta > END) { const all = sides.flatMap((o) => o.slots.filter(born)); use(all[Math.floor(Math.random() * all.length)]); } return; }
+    const inRings = rings.some((r) => Math.hypot(p.x - r.c.x, p.y - r.c.y) < RR * k);
+    if (inRings) { e.stopPropagation(); if (!still && ta > T.end) use(); return; }
     if (pinned) { e.stopPropagation(); pinned = null; show(); }
   });
 
