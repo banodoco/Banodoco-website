@@ -1,13 +1,12 @@
-// Version F, slide 8: a thousand flowers. Astrid isn't just one app: it is a
-// foundation. Above the text the core sits on the stack it is built from (a
-// few thin plates), and from it, on rising threads like stems, app after app
-// grows up and out: an anime studio, a drawing app, music videos and so on,
-// each with a small community gathered round it, and beyond them a haze of
-// thousands more. Now and then the core feeds an app (a pulse up its stem)
-// and its community brightens.
-// Going on from slide 7 the picture carries on: the core glides to the
-// middle, the builders' machines settle under it as its foundation, and the
-// many people of the hosted field drift up to gather round the apps.
+// Version F, slide 8: a thousand flowers, as people reached. It reads left to right: Astrid (the lens core with
+// the mink) under the text on the left; to the right, a crowd of people, sparse at first, running on past the
+// edge of the screen. One after another, specific niche apps fire out of the core along fine threads and land in
+// the crowd; where each lands, a community of people lights up round it, and a quiet counter under Astrid climbs:
+// people who could be reached. The apps and the number are illustrative, a vision rather than a metric. The crowd
+// fills for about seventeen seconds and then rests at a calm density, with now and then a pulse out to one of the
+// communities.
+// From slide 7 the picture carries on: its core glides into place, its builders fold into it and its people drift
+// out to become the first of the crowd. Going on to slide 9 it hands over its core and its communities.
 (() => {
   const root = document.querySelector('[data-astrid-flowers]');
   const M = window.AstridMink;
@@ -22,21 +21,34 @@
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
   const smooth = (q) => q * q * (3 - 2 * q);
   const lerp = (a, b, q) => a + (b - a) * q;
-  const THREAD = '240,200,119', NODE = '255,217,145', CORE = '255,241,214';
+  const fly = (u) => 1 - Math.pow(1 - u, 2.6); // fired out fast, slowing as it lands
+  const THREAD = '240,200,119', NODE = '255,217,145', CORE = '255,241,214', CROWD = '205,188,156'; // CROWD: people not yet reached
   const TAU = Math.PI * 2;
 
-  // Illustrative apps, the kinds of niche the community could build on Astrid.
+  // Illustrative: the kinds of app people could build on Astrid, each for its own niche, in the order they fire.
+  // u and v place each one in the crowd (0–1 across and down the open ground to the right of Astrid).
   const APPS = [
-    { name: 'Anime studio', glyph: 'anime' },
-    { name: 'Drawing to motion', glyph: 'pencil' },
-    { name: 'Music videos', glyph: 'note' },
-    { name: 'Live VJ sets', glyph: 'bars' },
-    { name: 'Storytelling', glyph: 'book' },
-    { name: 'Archive film', glyph: 'reel' },
-    { name: 'Game cinematics', glyph: 'pad' },
-    { name: 'Explainers', glyph: 'bulb' },
-    { name: 'Brand content', glyph: 'tag' },
+    { name: 'Anime studio for a niche fandom', glyph: 'anime', u: 0.17, v: 0.66 },
+    { name: 'Storyboards → motion for architects', glyph: 'columns', u: 0.56, v: 0.29 },
+    { name: 'Interactive storytelling', glyph: 'book', u: 0.64, v: 0.97 },
+    { name: 'Live VJ / DJ sets', glyph: 'bars', u: 0.72, v: 0.66 },
+    { name: 'Music videos for indie bands', glyph: 'note', u: 0.38, v: 0.06 },
+    { name: 'Tabletop RPG campaign recaps', glyph: 'die', u: 0.09, v: 0.97 },
+    { name: 'Archive film restoration', glyph: 'reel', u: 0.93, v: 0.08 },
+    { name: 'Classroom explainers', glyph: 'bulb', u: 0.99, v: 0.27 },
+    { name: 'Game cinematics', glyph: 'pad', u: 0.92, v: 0.93 },
+    { name: 'Comics → animated panels', glyph: 'bubble', u: 0.45, v: 0.6 },
+    { name: 'Brand content for small shops', glyph: 'tag', u: 0.3, v: 0.355 },
+    { name: 'Animated bedtime stories', glyph: 'moon', u: 0.37, v: 0.92 },
+    { name: 'Wedding films', glyph: 'rings', u: 0.65, v: 0.03 },
+    { name: 'Fashion lookbooks', glyph: 'hanger', u: 0.97, v: 0.6 },
+    { name: 'Lo-fi loops for streamers', glyph: 'phones', u: 0.79, v: 0.44 },
   ];
+  // People who could be reached once each has landed: rounded, rising to billions. A vision, not a count.
+  const REACH = [2e6, 5e6, 10e6, 20e6, 35e6, 60e6, 100e6, 150e6, 230e6, 350e6, 500e6, 750e6, 1.1e9, 1.5e9, 2e9];
+  // When each fires (s): the first four inside four seconds, then calmer.
+  const LAUNCH = [0.5, 1.3, 2.05, 2.75, 3.9, 5.0, 6.1, 7.2, 8.3, 9.5, 10.7, 11.9, 13.1, 14.3, 15.5];
+
   const labelEls = APPS.map((a) => {
     const el = document.createElement('span');
     el.className = 'fl-ax';
@@ -48,6 +60,11 @@
   coreLabel.className = 'fl-ax fl-core';
   coreLabel.textContent = 'Astrid';
   root.appendChild(coreLabel);
+  const count = document.createElement('div');
+  count.className = 'fl-count';
+  count.innerHTML = '<b class="fl-n"><span class="fl-v">0</span><span class="fl-u"></span></b><span class="fl-cl">people who could be reached</span>';
+  root.appendChild(count);
+  const countV = count.querySelector('.fl-v'), countU = count.querySelector('.fl-u'), countL = count.querySelector('.fl-cl');
 
   const glow = document.createElement('canvas');
   glow.width = glow.height = 128;
@@ -86,19 +103,29 @@
     return [u * u * u * p0.x + 3 * u * u * t * c0.x + 3 * u * t * t * c1.x + t * t * t * p1.x, u * u * u * p0.y + 3 * u * u * t * c0.y + 3 * u * t * t * c1.y + t * t * t * p1.y];
   });
 
-  // ---- Geometry: reference units (1672 x 941), the core at (836, 610), scaled by k about it ----------
-  let W = 0, H = 0, dpr = 1, k = 1, ox = 0, oy = 0, LW = 1, small = false, cell = 3;
-  const X = (rx) => ox + (rx - 836) * k, Y = (ry) => oy + (ry - 610) * k, P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
+  // ---- Geometry ------------------------------------------------------------------------------------------------
+  let W = 0, H = 0, dpr = 1, k = 1, LW = 1, small = false, cell = 3;
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  let core = null, plates = [], apps = [], haze = [];
+  let core = null, field = null, apps = [], dots = [], countBox = null, textBox = null, lim = null;
 
   const put = (el, x, y, ax, ay, size) => {
     if (size) el.style.fontSize = `${size.toFixed(1)}px`;
     const w = el.offsetWidth, h = el.offsetHeight, l = x - w * ax, t = y - h * ay;
     el.style.transform = `translate(${l.toFixed(1)}px, ${t.toFixed(1)}px)`;
-    return { l, t, r: l + w, b: t + h };
+    return { l, t, r: l + w, b: t + h, w, h };
   };
+  const hit = (b, x, y, pad = 0) => b && x > b.l - pad && x < b.r + pad && y > b.t - pad && y < b.b + pad;
+  const overlap = (a, b, pad = 0) => a.l < b.r + pad && a.r > b.l - pad && a.t < b.b + pad && a.b > b.t - pad;
+  // Soft value noise over the crowd, so it gathers in loose towns rather than spreading evenly.
+  let noiseGrid = [], NX = 7, NY = 5;
+  const noise = (x, y) => {
+    const gx = clamp((x - field.x0) / (W - field.x0)) * (NX - 1), gy = clamp((y - field.y0) / (field.y1 - field.y0)) * (NY - 1);
+    const i = Math.min(NX - 2, Math.floor(gx)), j = Math.min(NY - 2, Math.floor(gy)), fx = smooth(gx - i), fy = smooth(gy - j);
+    const n = (a, b) => noiseGrid[b * NX + a];
+    return lerp(lerp(n(i, j), n(i + 1, j), fx), lerp(n(i, j + 1), n(i + 1, j + 1), fx), fy);
+  };
+
   const layout = () => {
     const b = root.getBoundingClientRect();
     if (!b.width || !b.height) return false;
@@ -106,70 +133,143 @@
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     small = W <= 760;
-    const top = slide.querySelector('.num').getBoundingClientRect().top - b.top;
-    // The picture spans reference x 230..1442 (with labels) and y 70..760; keep 40 px clear above it.
-    k = small ? Math.min((W - 24) / 1212, (top - 50) / 690) : Math.min((W - 128) / 1212, (top - 64) / 690, 1.15);
-    ox = W / 2;
-    oy = small ? top / 2 + 160 * k : top - 34 * k - (760 - 610) * k;
+    k = small ? clamp(W / 430, 0.72, 1) : clamp(Math.min(W / 1440, H / 900), 0.6, 1.3);
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
-    cell = small ? 1 : Math.max(2, Math.round(3 * k));
+    cell = small ? 2 : Math.max(2, Math.round(3 * k));
     seed = 20261016;
-    core = { ...P(836, 610), w: 118 * k, h: 190 * k };
-    // The foundation: the stack it is built from, a few thin plates under the core.
-    plates = [0, 1, 2, 3].map((i) => ({ y: Y(712 + i * 15), w: (158 - i * 4) * k, t0: 0.25 + (3 - i) * 0.08 }));
-    // The apps, on rising stems.
-    const ANG = [-166, -146, -126, -107, -90, -73, -54, -34, -14], RAD = [500, 430, 500, 415, 470, 415, 500, 430, 500];
+    noiseGrid = Array.from({ length: NX * NY }, () => rnd());
+    // The text, top left.
+    const rel = (r) => ({ l: r.left - b.left, t: r.top - b.top, r: r.right - b.left, b: r.bottom - b.top });
+    const h1 = slide.querySelector('h1'), num = slide.querySelector('.num');
+    const th = rel(h1.getBoundingClientRect()), tn = rel(num.getBoundingClientRect());
+    textBox = { l: Math.min(th.l, tn.l), t: Math.min(th.t, tn.t), r: Math.max(th.r, tn.r), b: th.b };
+    // The counter's size, to stack Astrid and it under the text.
+    count.style.fontSize = `${(small ? 13 : 16 * k).toFixed(1)}px`;
+    const ch = count.offsetHeight;
+    coreLabel.style.fontSize = `${Math.max(small ? 13 : 14, 21 * k).toFixed(1)}px`;
+    const lh = coreLabel.offsetHeight;
+    const bottom = H - (small ? 34 : 78) * k;
+    if (!small) {
+      // Astrid's column: its name, the lens, then the counter, in the space under the text.
+      let h = 176 * k;
+      const top = textBox.b + 34 * k, need = lh + 10 * k + h + 26 * k + ch, slack = bottom - top - need;
+      if (slack < 0) h = Math.max(100 * k, h + slack);
+      const y0 = top + Math.max(0, slack) * 0.5 + lh + 10 * k;
+      core = { x: textBox.l + Math.max(countL.offsetWidth / 2, 62 * k), y: y0 + h / 2, w: h * 0.62, h };
+      countBox = put(count, core.x, core.y + h / 2 + 26 * k, 0.5, 0);
+      field = { x0: core.x + core.w / 2 + 120 * k, x1: W - 140 * k, y0: 92 * k, y1: H - 232 * k };
+    } else {
+      const h = clamp((H - textBox.b) * 0.2, 86, 120);
+      core = { x: 16 + h * 0.31 + 4, y: textBox.b + (bottom - ch - 30 - textBox.b) * 0.45, w: h * 0.62, h };
+      countBox = put(count, W / 2, bottom - ch, 0.5, 0);
+      field = { x0: core.x + core.w / 2 + 40, x1: W - 44, y0: textBox.b + 50, y1: countBox.t - 50 };
+    }
+    put(coreLabel, core.x, core.y - core.h / 2 - 10 * k, 0.5, 1);
+    // Margins: nothing of the crowd within ~48 px of the right edge, and it ends well above the deck's footer.
+    lim = small ? { l: 4, r: W - 14, t: textBox.b + 18, b: countBox.t - 18 } : { l: 4, r: W - 48 * k, t: 34 * k, b: H - 158 * k };
+    const coreBox = { l: core.x - core.w / 2, r: core.x + core.w / 2, t: core.y - core.h / 2 - lh - 12 * k, b: core.y + core.h / 2 };
+    const S = { x: core.x + core.w / 2, y: core.y };
+
+    // The apps: where each lands, its thread out of the core, its name.
+    const ls = small ? 12.5 : Math.max(13, 16.5 * k), boxes = [];
     apps = APPS.map((a, i) => {
-      const th = (ANG[i] * Math.PI) / 180, r = RAD[i];
-      const p = P(836 + Math.cos(th) * r, 610 + Math.sin(th) * r * 0.97);
-      const start = { x: core.x + Math.cos(th) * core.w * 0.12, y: core.y - core.h * 0.42 };
-      const dx = p.x - start.x, dy = p.y - start.y;
-      const stem = line(bez(start, { x: start.x + dx * 0.05, y: start.y + dy * 0.55 }, { x: p.x - dx * 0.45, y: p.y - dy * 0.05 }, { x: p.x, y: p.y + 24 * k * Math.sign(dy || -1) * -1 }, 40));
-      stem.knot = 0.35 + rnd() * 0.25;
-      // Its community: people gathered round it, a little further out.
-      const people = Array.from({ length: 12 + Math.floor(rnd() * 6) }, () => {
-        const a2 = th + (rnd() - 0.5) * 1.6, d = (44 + rnd() * 46) * k;
-        return { hx: p.x + Math.cos(a2) * d, hy: p.y + Math.sin(a2) * d * 0.8, r: (1.1 + rnd() * 0.9) * Math.max(0.8, k), ph: rnd() * TAU, f: 0.3 + rnd() * 0.5, w: (2 + rnd() * 4) * k, bright: rnd() < 0.2 };
-      });
-      return { ...a, i, x: p.x, y: p.y, th, r: 25 * k, stem, people, t0: 0.7 + Math.abs(i - 4) * 0.09, lit: 0 };
+      let x = lerp(field.x0, field.x1, a.u), y = lerp(field.y0, field.y1, a.v);
+      if (!small && hit(textBox, x, y, 40 * k)) x = textBox.r + 60 * k + (x - field.x0) * 0.4; // never under the text
+      const r = (small ? 9 : 13) * k;
+      const dx = x - S.x, dy = y - S.y;
+      const thread = line(bez(S, { x: S.x + dx * 0.42, y: S.y + dy * 0.04 }, { x: x - dx * 0.4, y }, { x: x - r, y }, 44));
+      thread.total = Math.max(thread.total, 1);
+      return { ...a, i, x, y, r, thread, L: LAUNCH[i], F: clamp(0.82 + Math.hypot(dx, dy) / Math.max(W, 900) * 0.45, 0.9, 1.25), R: (small ? 30 : 46 + 2.2 * i) * k, glow: 0, glint: [0, 4, 8, 12].includes(i) };
     });
-    // Thousands more: a faint haze of small apps further out, each on a hair-fine thread.
-    haze = Array.from({ length: small ? 30 : 64 }, () => {
-      const th = -Math.PI * (0.04 + rnd() * 0.92), r = 300 + rnd() * 330;
-      const p = P(836 + Math.cos(th) * r, 610 + Math.sin(th) * r * 0.97);
-      return { ...p, r: (0.8 + rnd() * 1.1) * Math.max(0.8, k), a: 0.25 + rnd() * 0.35, t0: 1.5 + rnd() * 0.9, th };
-    }).filter((h) => apps.every((a) => Math.hypot(a.x - h.x, a.y - h.y) > 70 * k) && h.y > Y(95));
-    // Labels.
-    const ls = Math.max(small ? 10 : 12.5, 20 * k), boxes = [];
+    apps.forEach((a) => { a.T = a.L + a.F; });
+    // Names: right of the glyph, else below or above it, and only as a last resort on its left (where its own thread
+    // comes in); clear of the text, the counter, the other glyphs and each other. On a phone, under the glyph.
     apps.forEach((a, i) => {
-      labelEls[i].style.display = small && i % 2 ? 'none' : ''; // on a phone, every other name, so they don't collide
-      const above = a.y < core.y - 330 * k; // the topmost ones carry their name above
-      boxes[i] = put(labelEls[i], a.x, above ? a.y - a.r - 10 * k : a.y + a.r + 12 * k, 0.5, above ? 1 : 0, ls);
-      if (labelEls[i].style.display === 'none') boxes[i] = null;
+      const el = labelEls[i];
+      el.style.fontSize = `${ls.toFixed(1)}px`;
+      const w = el.offsetWidth, h = el.offsetHeight, gap = 7 * k;
+      const cands = [
+        { l: a.x + a.r + gap, t: a.y - h / 2 }, { l: a.x - w / 2, t: a.y + a.r + 3 * k },
+        { l: a.x - w / 2, t: a.y - a.r - 3 * k - h }, { l: a.x - a.r - gap - w, t: a.y - h / 2 },
+      ].map((c) => ({ ...c, r: c.l + w, b: c.t + h }));
+      const ok = (c) => c.l > 10 && c.r < lim.r && c.t > 8 && c.b < (small ? H - 10 : lim.b) && (small || (!overlap(c, textBox, 14 * k) && !overlap(c, countBox, 14 * k)))
+        && (small || boxes.every((o) => !overlap(c, o, 6 * k))) && (small || apps.every((o) => o === a || !hit(c, o.x, o.y, o.r + 6 * k)));
+      let box = cands.find(ok) || cands[0];
+      if (small) { box = cands[1]; const sh = clamp(box.l, 10, W - 10 - w) - box.l; box = { ...box, l: box.l + sh, r: box.r + sh }; }
+      a.box = box; a.off = { x: box.l - a.x, y: box.t - a.y };
+      boxes.push(box);
+      el.style.transform = `translate(${box.l.toFixed(1)}px, ${box.t.toFixed(1)}px)`;
+      a.drawn = { x: box.l, y: box.t, o: -1 };
     });
-    // Keep every community clear of every name: anyone over text moves round to its glyph's other sides.
-    const pad = 9 * k, over = (x, y) => boxes.some((bx) => bx && x > bx.l - pad && x < bx.r + pad && y > bx.t - pad && y < bx.b + pad);
-    apps.forEach((a) => a.people.forEach((p) => {
-      for (let tries = 0; tries < 30 && over(p.hx, p.hy); tries++) {
-        const a2 = a.th + (rnd() - 0.5) * 3.2, d = (40 + rnd() * 44) * k;
-        p.hx = a.x + Math.cos(a2) * d; p.hy = a.y + Math.sin(a2) * d * 0.8;
+
+    // ---- The crowd ----
+    dots = [];
+    const sp = small ? 5 : 6 * k, grid = new Map();
+    const key = (x, y) => `${Math.floor(x / sp)},${Math.floor(y / sp)}`;
+    const near = (x, y, d) => {
+      const n = Math.ceil(d / sp), cx = Math.floor(x / sp), cy = Math.floor(y / sp);
+      for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
+        const cl = grid.get(`${cx + i},${cy + j}`);
+        if (cl) for (const o of cl) if (Math.hypot(o.x - x, o.y - y) < d) return true;
       }
-      p.hidden = over(p.hx, p.hy);
-    }));
-    haze = haze.filter((h) => !over(h.x, h.y));
-    put(coreLabel, core.x + core.w * 0.75, core.y - core.h * 0.18, 0, 0.5, Math.max(small ? 11 : 13, 22 * k));
+      return false;
+    };
+    const clear = (x, y) => x > lim.l && x < lim.r && y > lim.t && y < lim.b
+      && !hit(textBox, x, y, 22 * k) && !hit(countBox, x, y, 14 * k) && !hit(coreBox, x, y, 26 * k)
+      && (small || apps.every((a) => !hit(a.box, x, y, 4 * k))) && apps.every((a) => Math.hypot(a.x - x, a.y - y) > a.r + 5 * k);
+    const add = (d) => { dots.push(d); const kk = key(d.x, d.y); (grid.get(kk) || grid.set(kk, []).get(kk)).push(d); return d; };
+    const person = (x, y, extra) => ({
+      x, y, r: (small ? 0.9 : 1.0) * Math.max(0.8, k) * (0.85 + rnd() * 0.55), a0: 0.27 + rnd() * 0.2, app: -1, lt: Infinity,
+      ph: rnd() * TAU, f: 0.35 + rnd() * 0.6, w: (1 + rnd() * 2.2) * k, bright: rnd() < 0.14, ...extra,
+    });
+    // How thick the crowd is here: loose towns, thinning towards Astrid and softly towards the margins.
+    const edge = (x, y) => smooth(clamp((lim.r - x) / (70 * k))) * smooth(clamp((y - lim.t) / (60 * k))) * smooth(clamp((lim.b - y) / (60 * k)));
+    const density = (x, y) => smooth(clamp((x - field.x0 + 90 * k) / (300 * k))) * edge(x, y) * (0.18 + 0.82 * noise(x, y));
+    const scatter = (n, minD, t0, upto = -1) => {
+      for (let tries = 0, got = 0; got < n && tries < n * 60; tries++) {
+        const x = lerp(field.x0 - 90 * k, lim.r, rnd()), y = lerp(lim.t, lim.b, rnd());
+        if (rnd() > density(x, y) || !clear(x, y) || near(x, y, minD)) continue;
+        if (apps.some((a, j) => j <= upto && Math.hypot((x - a.x) / 1.25, (y - a.y) / 0.9) < a.R * 1.1)) continue;
+        add(person(x, y, { t0: t0(x) }));
+        got++;
+      }
+    };
+    // The world before any app reaches it: sparse, fading in from Astrid outwards.
+    const span = W - field.x0;
+    scatter(small ? 200 : 520, (small ? 9 : 10) * k, (x) => 0.1 + clamp((x - field.x0) / span) * 0.9 + rnd() * 0.3);
+    // Each app's community: the people already near lighting up as a ripple spreads, and new people joining.
+    apps.forEach((a, i) => {
+      const R = a.R, light = (d) => a.T + 0.12 + 0.9 * clamp(d / R);
+      for (const d of dots) {
+        if (d.app >= 0) continue;
+        const dd = Math.hypot((d.x - a.x) / 1.25, (d.y - a.y) / 0.9);
+        if (dd < R * 1.08) { d.app = i; d.lt = Math.max(light(dd), d.t0 + 0.4); }
+      }
+      const n = Math.round((34 + 4 * i) * (small ? 0.5 : 1)), lobe = rnd() * TAU;
+      for (let tries = 0, got = 0; got < n && tries < n * 40; tries++) {
+        const an = rnd() * TAU, rr = R * Math.sqrt(rnd()) * (0.82 + 0.26 * Math.sin(an * 3 + lobe));
+        const x = a.x + Math.cos(an) * rr * 1.25, y = a.y + Math.sin(an) * rr * 0.9;
+        if (rnd() > (1 - 0.5 * (rr / R) ** 2) * (0.25 + 0.75 * edge(x, y)) || !clear(x, y) || near(x, y, (small ? 3.6 : 4.6) * k)) continue;
+        const lt = light(rr);
+        add(person(x, y, { t0: lt - 0.05, lt, app: i, bright: rnd() < 0.16 }));
+        got++;
+      }
+      // And the crowd beyond keeps growing a little with each.
+      scatter(small ? 12 : 40, (small ? 7 : 8) * k, () => a.T + 0.3 + rnd() * 1.8, i);
+    });
     return true;
   };
 
-  // ---- Drawing ---------------------------------------------------------------------------
+  // ---- Drawing -------------------------------------------------------------------------------------------------
   const lensPts = (c, w, h, side, n, inset) => {
     const hw = w / 2 - inset, hh = h / 2 - inset * 0.6, cc = (hw * hw - hh * hh) / (2 * hw), R = hw - cc;
     return Array.from({ length: n + 1 }, (_, i) => { const y = -hh + (2 * hh * i) / n; return [c.x + side * (cc + Math.sqrt(Math.max(0, R * R - y * y))), c.y + y]; });
   };
-  const drawCore = (c, w, h, q, cellNow, a = 1) => {
+  const drawCore = (c, w, h, q, cellNow, a = 1, pose = 'profile') => {
     if (q <= 0) return;
+    const kk = h / 176;
     halo(c.x, c.y, h * 0.6, 0.14 * q * a);
-    [[0, 1.2, 0.95], [6 * k, 0.9, 0.55], [-4 * k, 0.8, 0.35]].forEach(([inset, lw, al]) => {
+    [[0, 1.2, 0.95], [6 * kk, 0.9, 0.55], [-4 * kk, 0.8, 0.35]].forEach(([inset, lw, al]) => {
       for (const side of [-1, 1]) {
         const ln = line(lensPts(c, w, h, side, 40, inset)), mid = ln.total / 2, half = mid * q;
         stroke(ln, mid - half, mid + half, lw * LW, THREAD, al * a);
@@ -177,7 +277,7 @@
     });
     node(c.x, c.y - h / 2, 1, q * a); node(c.x, c.y + h / 2, 1, q * a);
     // The mink, crisp, at a whole number of pixels per art pixel.
-    const P2 = M.POSES.profile, u = cellNow, mw = P2[0].length * u, mh = P2.length * u;
+    const P2 = M.POSES[pose] || M.POSES.profile, u = cellNow, mw = P2[0].length * u, mh = P2.length * u;
     const x0 = Math.round(c.x + 3 * k - mw / 2), y0 = Math.round(c.y + 6 * k - mh / 2);
     g.globalAlpha = smooth(clamp(q * 1.6 - 0.4)) * a;
     for (let j = 0; j < P2.length; j++) for (let i = 0; i < P2[0].length; i++) {
@@ -188,155 +288,269 @@
     }
     g.globalAlpha = 1;
   };
-  const glyph = (a, q) => {
+  // Through-the-middle arc helper: from angle a0 to a1 round the side that passes through angle mid.
+  const arcVia = (cx, cy, r, a0, a1, mid) => {
+    const n = (t) => ((t % TAU) + TAU) % TAU;
+    g.arc(cx, cy, r, a0, a1, !(n(mid - a0) < n(a1 - a0)));
+  };
+  const glyph = (a, x, y, r, q, lit) => {
     if (q <= 0) return;
-    const s = a.r / 25, x = a.x, y = a.y, lit = a.lit;
-    halo(x, y, a.r * (1.6 + 0.6 * lit), (0.08 + 0.25 * lit) * q);
-    g.lineWidth = 1.3 * LW;
-    g.strokeStyle = `rgba(${THREAD},${(0.9 * q).toFixed(3)})`;
-    g.beginPath(); g.arc(x, y, a.r * (0.6 + 0.4 * ease(q)), 0, TAU); g.stroke();
-    g.lineWidth = 1.25 * LW;
-    g.strokeStyle = `rgba(${CORE},${(0.85 * q).toFixed(3)})`;
+    const s = r / 19;
+    halo(x, y, r * (1.7 + 0.8 * lit), (0.1 + 0.4 * lit) * q);
+    g.fillStyle = `rgba(13,10,7,${(0.85 * q).toFixed(3)})`;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    g.lineWidth = 1.2 * LW;
+    g.strokeStyle = `rgba(${THREAD},${(0.92 * q).toFixed(3)})`;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
+    g.lineWidth = 1.1 * LW;
+    g.strokeStyle = `rgba(${CORE},${(0.9 * q).toFixed(3)})`;
     g.beginPath();
     const L = (x0, y0, x1, y1) => { g.moveTo(x + x0 * s, y + y0 * s); g.lineTo(x + x1 * s, y + y1 * s); };
+    const O = (cx, cy, rr) => { g.moveTo(x + (cx + rr) * s, y + cy * s); g.arc(x + cx * s, y + cy * s, rr * s, 0, TAU); };
     switch (a.glyph) {
-      case 'anime': // a face with a big star-lit eye
-        g.moveTo(x + 10 * s, y); g.arc(x, y, 10 * s, 0, TAU);
-        g.moveTo(x - 1 * s, y - 2 * s); g.arc(x - 4 * s, y - 2 * s, 3 * s, 0, TAU);
-        g.moveTo(x + 7 * s, y - 2 * s); g.arc(x + 4 * s, y - 2 * s, 3 * s, 0, TAU);
-        L(-3, 5, 3, 5); break;
-      case 'pencil': L(-9, 9, 6, -6); L(-6, 12, 9, -3); L(6, -6, 9, -3); L(-9, 9, -11, 13); L(-11, 13, -6, 12); break;
-      case 'note': L(-4, 8, -4, -9); L(-4, -9, 8, -12); L(8, -12, 8, 5); g.moveTo(x - 4 * s, y + 8 * s); g.arc(x - 7 * s, y + 8 * s, 3 * s, 0, TAU); g.moveTo(x + 8 * s, y + 5 * s); g.arc(x + 5 * s, y + 5 * s, 3 * s, 0, TAU); break;
-      case 'bars': [-8, -4, 0, 4, 8].forEach((bx, j) => { const hh = [4, 9, 12, 7, 3][j]; L(bx, hh, bx, -hh); }); break;
+      case 'anime': O(0, 0, 10); O(-4, -2, 3); O(4, -2, 3); L(-3, 5, 3, 5); break;
+      case 'columns': L(-11, -4, 0, -11); L(0, -11, 11, -4); L(-11, -4, 11, -4); L(-7, -4, -7, 7); L(0, -4, 0, 7); L(7, -4, 7, 7); L(-11, 8, 11, 8); break;
       case 'book': L(0, -8, 0, 9); L(0, -8, -10, -10); L(-10, -10, -10, 7); L(-10, 7, 0, 9); L(0, -8, 10, -10); L(10, -10, 10, 7); L(10, 7, 0, 9); break;
-      case 'reel': g.moveTo(x + 10 * s, y); g.arc(x, y, 10 * s, 0, TAU); [0, 1, 2, 3, 4].forEach((j) => { const an = (j / 5) * TAU - Math.PI / 2; g.moveTo(x + Math.cos(an) * 6 * s + 2 * s, y + Math.sin(an) * 6 * s); g.arc(x + Math.cos(an) * 6 * s, y + Math.sin(an) * 6 * s, 2 * s, 0, TAU); }); break;
-      case 'pad': g.roundRect(x - 12 * s, y - 6 * s, 24 * s, 12 * s, 5 * s); L(-7, -3, -7, 3); L(-10, 0, -4, 0); g.moveTo(x + 7 * s, y - 2 * s); g.arc(x + 6 * s, y - 2 * s, 1 * s, 0, TAU); g.moveTo(x + 9 * s, y + 2 * s); g.arc(x + 8 * s, y + 2 * s, 1 * s, 0, TAU); break;
-      case 'bulb': g.moveTo(x + 7 * s, y - 3 * s); g.arc(x, y - 3 * s, 7 * s, 0, TAU); L(-3, 5, 3, 5); L(-3, 8, 3, 8); break;
-      case 'tag': g.moveTo(x - 9 * s, y - 9 * s); g.lineTo(x + 2 * s, y - 9 * s); g.lineTo(x + 10 * s, y); g.lineTo(x + 1 * s, y + 9 * s); g.lineTo(x - 9 * s, y + 9 * s); g.closePath(); g.moveTo(x - 3 * s, y - 4 * s); g.arc(x - 5 * s, y - 4 * s, 2 * s, 0, TAU); break;
+      case 'bars': [-8, -4, 0, 4, 8].forEach((bx, j) => { const hh = [4, 9, 12, 7, 3][j]; L(bx, hh, bx, -hh); }); break;
+      case 'note': L(-4, 8, -4, -9); L(-4, -9, 8, -12); L(8, -12, 8, 5); O(-7, 8, 3); O(5, 5, 3); break;
+      case 'die': {
+        const hx = [0, 1, 2, 3, 4, 5].map((n) => [Math.cos(-Math.PI / 2 + n * Math.PI / 3) * 11, Math.sin(-Math.PI / 2 + n * Math.PI / 3) * 11]);
+        hx.forEach((p, n) => L(p[0], p[1], hx[(n + 1) % 6][0], hx[(n + 1) % 6][1]));
+        L(0, -5, 5, 3.5); L(5, 3.5, -5, 3.5); L(-5, 3.5, 0, -5); L(0, -5, 0, -11); L(5, 3.5, hx[2][0], hx[2][1]); L(-5, 3.5, hx[4][0], hx[4][1]);
+        break;
+      }
+      case 'reel': O(0, 0, 10); [0, 1, 2, 3, 4].forEach((j) => { const an = (j / 5) * TAU - Math.PI / 2; O(Math.cos(an) * 6, Math.sin(an) * 6, 2); }); break;
+      case 'bulb': O(0, -3, 7); L(-3, 5, 3, 5); L(-3, 8, 3, 8); break;
+      case 'pad': g.roundRect(x - 12 * s, y - 6 * s, 24 * s, 12 * s, 5 * s); L(-7, -3, -7, 3); L(-10, 0, -4, 0); O(6, -2, 1); O(8, 2, 1); break;
+      case 'bubble': g.roundRect(x - 11 * s, y - 9 * s, 22 * s, 14 * s, 4 * s); L(-5, 5, -8, 11); L(-8, 11, 1, 5); break;
+      case 'tag': g.moveTo(x - 9 * s, y - 9 * s); g.lineTo(x + 2 * s, y - 9 * s); g.lineTo(x + 10 * s, y); g.lineTo(x + 1 * s, y + 9 * s); g.lineTo(x - 9 * s, y + 9 * s); g.closePath(); O(-5, -4, 2); break;
+      case 'moon': { // a crescent: the outer circle's far side, the inner circle's near side
+        const c0 = [-1, 1], r0 = 10, c1 = [4, -3], r1 = 8.5, dx = c1[0] - c0[0], dy = c1[1] - c0[1], d = Math.hypot(dx, dy);
+        const aa = (r0 * r0 - r1 * r1 + d * d) / (2 * d), hh = Math.sqrt(r0 * r0 - aa * aa), mx = c0[0] + (aa * dx) / d, my = c0[1] + (aa * dy) / d;
+        const p = [mx + (hh * dy) / d, my - (hh * dx) / d], p2 = [mx - (hh * dy) / d, my + (hh * dx) / d];
+        const A = (c, pt) => Math.atan2(pt[1] - c[1], pt[0] - c[0]), away = Math.atan2(-dy, -dx);
+        g.moveTo(x + p[0] * s, y + p[1] * s);
+        arcVia(x + c0[0] * s, y + c0[1] * s, r0 * s, A(c0, p), A(c0, p2), away);
+        arcVia(x + c1[0] * s, y + c1[1] * s, r1 * s, A(c1, p2), A(c1, p), away);
+        O(7, 5, 0.9);
+        break;
+      }
+      case 'rings': O(-4.5, 1, 6.5); O(4.5, 1, 6.5); L(-1, -9, 1, -11); L(1, -11, 3, -9); break;
+      case 'hanger': g.moveTo(x - 3 * s, y - 8 * s); g.arc(x, y - 8 * s, 3 * s, Math.PI, Math.PI * 2.5); L(0, -5, 0, -3); L(0, -3, -11, 7); L(-11, 7, 11, 7); L(11, 7, 0, -3); break;
+      case 'phones': g.moveTo(x - 9 * s, y + 2 * s); g.arc(x, y + 2 * s, 9 * s, Math.PI, TAU); g.moveTo(x - 7 * s, y + 1 * s); g.roundRect(x - 12 * s, y + 1 * s, 5 * s, 9 * s, 2 * s); g.moveTo(x + 12 * s, y + 1 * s); g.roundRect(x + 7 * s, y + 1 * s, 5 * s, 9 * s, 2 * s); break;
       default: break;
     }
     g.stroke();
   };
 
-  // ---- Time -------------------------------------------------------------------------------
-  const END = 3.0, AMBIENT = 3.4;
-  let ta = 0, running = false, raf = 0, last = 0, armed = false, timers = [], from = null;
-  let pulses = [], nextPulse = 0;
+  // ---- Time ----------------------------------------------------------------------------------------------------
+  const END = 2.2, GROWN = LAUNCH[LAUNCH.length - 1] + 3.5;
+  let ta = 0, off = 0, running = false, raf = 0, last = 0, armed = false, timers = [], from = null, handed = false;
+  let pulses = [], nextPulse = 0, counted = '';
   const k01 = (t0, d) => clamp((ta - t0) / d);
+  // The apps and the crowd run on their own clock, which starts a little later when slide 7's picture is carried on.
+  let tc = 0;
+  const c01 = (t0, d) => clamp((tc - t0) / d);
+  const LEV = 24, lvDim = Array.from({ length: LEV + 1 }, () => []), lvLit = Array.from({ length: LEV + 1 }, () => []);
+  const flush = (lv, color) => {
+    for (let l = 1; l <= LEV; l++) {
+      const b = lv[l];
+      if (!b.length) continue;
+      g.fillStyle = `rgba(${color},${(l / LEV).toFixed(3)})`;
+      g.beginPath();
+      for (let j = 0; j < b.length; j += 3) { g.moveTo(b[j] + b[j + 2], b[j + 1]); g.arc(b[j], b[j + 1], b[j + 2], 0, TAU); }
+      g.fill();
+      b.length = 0;
+    }
+  };
+  const pos = (d) => [d.x + Math.sin(ta * d.f * 0.6 + d.ph) * d.w, d.y + Math.cos(ta * d.f * 0.5 + d.ph) * d.w * 0.6];
+  // The count so far: each app's reach rolls in as it lands.
+  const reach = () => {
+    let v = 0;
+    apps.forEach((a, i) => { const q = c01(a.T, 1.5); if (q > 0) v += (REACH[i] - (REACH[i - 1] || 0)) * ease(q); });
+    return v;
+  };
+  const sig2 = (x) => { if (x <= 0) return 0; const p = Math.pow(10, Math.floor(Math.log10(x)) - 1); return Math.round(x / p) * p; };
+  const fmt = (v) => {
+    if (v < 1e6) return [Math.round(sig2(v)).toLocaleString('en-US'), ''];
+    if (v < 1e9) { const m = v / 1e6; return [m < 10 ? m.toFixed(1).replace(/\.0$/, '') : String(Math.round(sig2(m))), 'million']; }
+    return [(v / 1e9).toFixed(1).replace(/\.0$/, ''), 'billion'];
+  };
+  const showCount = () => {
+    const [n, u] = fmt(reach()), s = `${n} ${u}`;
+    if (s === counted) return;
+    counted = s; countV.textContent = n; countU.textContent = u;
+  };
 
   const draw = () => {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     if (!core) return;
+    tc = ta - off;
     g.lineCap = 'round'; g.lineJoin = 'round';
-    const handoff = from && ta < 2.6;
-    // The core: from slide 7's place, or tracing itself.
+    // The threads, behind everything: drawn out as each app flies, then settling to a fine trace.
+    for (const a of apps) {
+      const q = fly(c01(a.L, a.F));
+      if (q <= 0) continue;
+      const settle = smooth(c01(a.T, 2.4));
+      stroke(a.thread, 0, a.thread.total * q, 0.9 * LW, THREAD, lerp(0.62, 0.2, settle) + 0.25 * a.glow);
+      if (q >= 1) { const m = at(a.thread, a.thread.total * 0.55); node(m.x, m.y, 0.55, 0.7 * smooth(c01(a.T, 0.5))); }
+    }
+    // Pulses: the core feeding a community.
+    for (const p of pulses) {
+      const a = apps[p.i], q = easeIO(clamp((ta - p.t0) / 1.3)), d = a.thread.total * q;
+      stroke(a.thread, Math.max(0, d - 40 * k), d, 1.2 * LW, NODE, 0.7);
+      const q2 = at(a.thread, d); halo(q2.x, q2.y, 9 * k, 0.7); dot(q2.x, q2.y, 1.7 * Math.max(0.8, k), CORE, 1);
+    }
+    // Threads pass behind the names: cut them away under each name that shows.
+    g.globalCompositeOperation = 'destination-out';
+    apps.forEach((a, i) => {
+      const l = labelAt(a, i);
+      if (l.o <= 0.01) return;
+      g.fillStyle = `rgba(0,0,0,${Math.min(1, l.o * 1.3).toFixed(3)})`;
+      g.beginPath(); g.roundRect(l.x - 5 * k, l.y - 1 * k, a.box.w + 10 * k, a.box.h + 2 * k, 6 * k); g.fill();
+    });
+    g.globalCompositeOperation = 'source-over';
+    // The crowd.
+    const hk = Math.max(0.7, k);
+    for (const d of dots) {
+      if (handed && d.app >= 0 && tc >= d.lt) continue; // handed on to slide 9, which draws these itself
+      let x, y, qa, srcLit = 0;
+      if (d.src) {
+        const q = easeIO(clamp((ta - d.src.d) / 1.4)), [hx, hy] = pos(d);
+        x = lerp(d.src.x, hx, q); y = lerp(d.src.y, hy, q); qa = 1; srcLit = 1 - q;
+      } else {
+        qa = smooth(c01(d.t0, 0.6));
+        if (qa <= 0) continue;
+        [x, y] = pos(d);
+      }
+      const lit = tc >= d.lt ? smooth(clamp((tc - d.lt) / 0.4)) : 0, fl = tc >= d.lt ? Math.exp(-(tc - d.lt) * 2.6) : 0;
+      const tw = 0.78 + 0.22 * Math.sin(ta * d.f * 1.7 + d.ph), gb = d.app >= 0 ? apps[d.app].glow : 0;
+      const aDim = qa * d.a0 * tw * (1 - lit) * (1 - srcLit);
+      const aLit = qa * Math.max(lit * (d.bright ? 1 : 0.72) * (0.86 + 0.14 * tw) * (1 + 0.4 * gb) + 0.35 * fl, srcLit * (d.bright ? 0.9 : 0.62));
+      const r = d.r * (1 + 0.45 * Math.max(lit, srcLit) + 0.7 * fl);
+      if (aDim > 0.02) lvDim[Math.min(LEV, Math.round(aDim * LEV))].push(x, y, r);
+      if (aLit > 0.02) lvLit[Math.min(LEV, Math.round(Math.min(1, aLit) * LEV))].push(x, y, r);
+      if (fl > 0.05) halo(x, y, 7 * hk * (1 + fl), 0.45 * fl * qa);
+      else if (d.bright && aLit > 0.3) halo(x, y, 5 * hk, 0.22 * aLit);
+    }
+    flush(lvDim, CROWD); flush(lvLit, CORE);
+    // Slide 7's leftover people, fading where they are.
+    if (from && from.rest.length && ta < 1.2) { const a = 1 - k01(0.05, 0.9); for (const p of from.rest) dot(p.x, p.y + 20 * k * (1 - a), p.r, CORE, 0.55 * a); }
+    // Ripples where each lands.
+    for (const a of apps) {
+      const u = c01(a.T, 1.3);
+      if (u <= 0 || u >= 1) continue;
+      g.lineWidth = 0.8 * LW; g.strokeStyle = `rgba(${THREAD},${(0.24 * (1 - u) * smooth(clamp(u * 5))).toFixed(3)})`;
+      g.beginPath(); g.ellipse(a.x, a.y, a.R * 1.3 * ease(u), a.R * 0.95 * ease(u), 0, 0, TAU); g.stroke();
+    }
+    // The core: from slide 7's place, or tracing itself. The builders' machines fold into it.
+    const launching = apps.find((a) => a.glint && tc >= a.L - 0.05 && tc < a.L + 0.22);
+    const pose = launching ? 'glint' : 'profile';
     if (from) {
       const q = easeIO(k01(0, 1.1));
       const c = { x: lerp(from.core.x, core.x, q), y: lerp(from.core.y, core.y, q) };
-      drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell);
-    } else drawCore(core, core.w, core.h, ease(k01(0, 0.8)), cell);
-    // The foundation under it: plates settling into place (slide 7's machines sink into them).
-    // Drawn from the bottom up, each slab hiding the one beneath, so they read as a stack.
-    for (let i = plates.length - 1; i >= 0; i--) {
-      const pl = plates[i], q = from ? easeIO(k01(0.55 + pl.t0, 0.6)) : ease(k01(pl.t0, 0.5));
-      if (q <= 0) continue;
-      const hw = pl.w / 2, d = 13 * k, th = 3.5 * k, y = pl.y + (1 - q) * 14 * k;
-      g.globalAlpha = q;
-      g.beginPath(); g.moveTo(core.x - hw, y); g.lineTo(core.x, y - d); g.lineTo(core.x + hw, y); g.lineTo(core.x + hw, y + th); g.lineTo(core.x, y + d + th); g.lineTo(core.x - hw, y + th); g.closePath();
-      g.fillStyle = '#16120d'; g.fill();
-      g.lineWidth = 0.9 * LW; g.strokeStyle = `rgba(${THREAD},${i ? 0.42 : 0.6})`; g.stroke();
-      g.beginPath(); g.moveTo(core.x - hw, y); g.lineTo(core.x, y + d); g.lineTo(core.x + hw, y); g.stroke();
-      g.globalAlpha = 1;
-    }
-    if (from) {
+      drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose);
       from.machines.forEach((m, i) => {
-        const q = easeIO(k01(0.1 + i * 0.08, 1.0)), tgt = plates[1 + i];
-        const x = lerp(m.x, core.x, q), y = lerp(m.y, tgt.y, q), r = lerp(m.r, tgt.w / 2, q) * (1 - 0.4 * q), a = 1 - q;
+        const qm = easeIO(k01(0.1 + i * 0.08, 0.9)), a = 1 - qm;
         if (a <= 0) return;
+        const x = lerp(m.x, c.x, qm), y = lerp(m.y, c.y, qm), r = Math.max(0.1, lerp(m.r, core.w * 0.12, ease(qm)));
         g.lineWidth = 1.4 * LW; g.strokeStyle = `rgba(${THREAD},${(0.9 * a).toFixed(3)})`;
-        g.beginPath(); g.ellipse(x, y, r, r * lerp(1, 0.12, q), 0, 0, TAU); g.stroke();
+        g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
       });
-    }
-    // Faint haze: thousands more.
-    for (const h of haze) {
-      const q = smooth(k01(h.t0 + (from ? 0.3 : 0), 0.8));
-      if (q <= 0) continue;
-      g.lineWidth = 0.45 * LW; g.strokeStyle = `rgba(${THREAD},${(0.08 * q).toFixed(3)})`;
-      g.beginPath(); g.moveTo(core.x, core.y - core.h * 0.42); g.lineTo(h.x, h.y); g.stroke();
-      dot(h.x, h.y, h.r, NODE, h.a * q);
-    }
-    // The apps on their stems.
+    } else drawCore(core, core.w, core.h, ease(k01(0, 0.8)), cell, 1, pose);
+    // The door the apps leave by, on the core's right side; it flares as each one fires.
+    const S = { x: core.x + core.w / 2, y: core.y }, qS = from ? smooth(k01(0.8, 0.4)) : ease(k01(0.3, 0.5));
+    let flare = 0;
+    for (const a of apps) { const u = tc - a.L; if (u > -0.1 && u < 0.6) flare = Math.max(flare, Math.exp(-Math.max(0, u) * 5)); }
+    node(S.x, S.y, 0.8 + 0.4 * flare, qS);
+    halo(S.x, S.y, 16 * k, 0.5 * flare * qS);
+    // The apps: in flight along their threads, then at home in their communities.
     for (const a of apps) {
-      const t0 = a.t0 + (from ? 0.5 : 0), qs = ease(k01(t0, 0.8));
-      if (qs > 0) {
-        stroke(a.stem, 0, a.stem.total * qs, 1 * LW, THREAD, 0.6 + 0.3 * a.lit);
-        if (qs < 1) { const p = at(a.stem, a.stem.total * qs); halo(p.x, p.y, 7 * k, 0.6); }
-        if (qs > a.stem.knot) { const p = at(a.stem, a.stem.total * a.stem.knot); node(p.x, p.y, 0.8, 1); }
-      }
-      glyph(a, ease(k01(t0 + 0.65, 0.45)));
-      // Its community, gathered round it.
-      const qp = smooth(k01(t0 + 0.9, 0.7));
-      a.people.forEach((p, j) => {
-        if (p.hidden) return;
-        const x = p.hx + Math.sin(ta * p.f + p.ph) * p.w, y = p.hy + Math.cos(ta * p.f * 0.8 + p.ph) * p.w * 0.6;
-        let px = x, py = y, al = (p.bright ? 1 : 0.72) * qp;
-        if (from && p.src) { // the hosted field's people drift up to gather here
-          const q = easeIO(clamp((ta - p.src.d) / 1.5));
-          px = lerp(p.src.x, x, q); py = lerp(p.src.y, y, q); al = (p.bright ? 0.95 : 0.65) * (0.6 + 0.4 * q);
-        }
-        al *= 1 + 0.5 * a.lit;
-        if (p.bright) halo(px, py, 6 * k, 0.3 * al);
-        dot(px, py, p.r, CORE, al);
-      });
+      const u = c01(a.L, a.F);
+      if (u <= 0) continue;
+      if (u < 1) {
+        const p = at(a.thread, a.thread.total * fly(u)), sc = 0.5 + 0.5 * ease(clamp(u * 3));
+        halo(p.x, p.y, 12 * k, 0.55);
+        glyph(a, p.x + a.r * fly(u), p.y, a.r * sc, smooth(clamp(u * 4)), 0.4);
+      } else glyph(a, a.x, a.y, a.r, 1, Math.max(Math.exp(-(tc - a.T) * 2), a.glow));
     }
-    // Leftover people from slide 7 that don't join a community fade where they are.
-    if (handoff && from.rest) {
-      const a = 1 - k01(0.1, 0.9);
-      for (const p of from.rest) dot(p.x, p.y + 30 * k * (1 - a), p.r, CORE, 0.55 * a);
+  };
+  // The names ride with their apps; the newest is brightest. On a phone only the newest shows.
+  const labelAt = (a, i) => {
+    const u = c01(a.L, a.F);
+    let o = 0, x = a.box.l, y = a.box.t;
+    if (u > 0) {
+      const later = apps[i + 1] ? smooth(c01(apps[i + 1].L, 0.8)) : 0;
+      const rest = small ? 0 : tc > GROWN ? 0.78 : 0.6;
+      if (u < 1) { const p = at(a.thread, a.thread.total * fly(u)); x = p.x + a.r * fly(u) + a.off.x; y = p.y + a.off.y; }
+      // In flight, a name shows only once it is clear of Astrid.
+      const clearOf = smooth(clamp((x - (core.x + core.w / 2 + 14 * k)) / (70 * k)));
+      o = clearOf * lerp(1, rest, later);
+      if (i === apps.length - 1 && tc > GROWN) o = Math.max(o, 0.78);
     }
-    // Pulses: the core feeds an app.
-    for (const p of pulses) {
-      const a = apps[p.i], q = easeIO(clamp((ta - p.t0) / 1.2)), d = a.stem.total * q;
-      stroke(a.stem, Math.max(0, d - 38 * k), d, 1.3 * LW, NODE, 0.75);
-      const q2 = at(a.stem, d); halo(q2.x, q2.y, 9 * k, 0.75); dot(q2.x, q2.y, 1.8 * Math.max(0.8, k), CORE, 1);
-    }
+    return { x, y, o };
+  };
+  const labels = () => {
+    tc = ta - off;
+    apps.forEach((a, i) => {
+      const el = labelEls[i], { x, y, o } = labelAt(a, i), dr = a.drawn;
+      if (Math.abs(dr.x - x) > 0.05 || Math.abs(dr.y - y) > 0.05) { el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; dr.x = x; dr.y = y; }
+      if (Math.abs(dr.o - o) > 0.004) { el.style.opacity = o.toFixed(3); dr.o = o; }
+    });
+    showCount();
+    if (tc >= apps[0].T - 0.3) root.classList.add('is-counting');
   };
 
   const advance = (dt) => {
     ta += dt;
-    apps.forEach((a) => { a.lit = Math.max(0, a.lit - dt / 1.6); });
-    if (ta < AMBIENT) return;
-    if (ta >= nextPulse) { pulses.push({ i: Math.floor(Math.random() * apps.length), t0: ta }); nextPulse = ta + 1.6 + Math.random() * 1.6; }
-    pulses = pulses.filter((p) => { if (ta - p.t0 >= 1.2) { apps[p.i].lit = 1; return false; } return true; });
+    apps.forEach((a) => { a.glow = Math.max(0, a.glow - dt / 1.8); });
+    if (ta - off < GROWN) return;
+    if (ta >= nextPulse) { pulses.push({ i: Math.floor(Math.random() * apps.length), t0: ta }); nextPulse = ta + 2.2 + Math.random() * 2; }
+    pulses = pulses.filter((p) => { if (ta - p.t0 >= 1.3) { apps[p.i].glow = 1; return false; } return true; });
   };
 
-  // ---- Coming and going --------------------------------------------------------------------
+  // ---- Coming and going ----------------------------------------------------------------------------------------
   const tick = (now) => {
     raf = 0;
     if (!running) return;
     const dt = Math.min(0.05, (now - (last || now)) / 1000);
     last = now;
     advance(dt);
-    draw();
+    draw(); labels();
     raf = requestAnimationFrame(tick);
   };
   const start = () => { if (running || still) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
+    gen++;
     timers.forEach(clearTimeout); timers = [];
-    pulses = []; ta = 0; from = null;
-    root.classList.remove('is-labelled');
-    apps.forEach((a) => a.people.forEach((p) => { delete p.src; }));
-    canvas.style.transition = ''; canvas.style.opacity = ''; [...labelEls, coreLabel].forEach((el) => { el.style.opacity = ''; });
+    pulses = []; ta = 0; off = 0; from = null; handed = false; counted = '';
+    root.classList.remove('is-labelled', 'is-counting');
+    dots.forEach((d) => { delete d.src; });
+    apps.forEach((a) => { a.glow = 0; if (a.drawn) a.drawn.o = -1; });
+    canvas.style.transition = ''; canvas.style.opacity = '';
+    labelEls.forEach((el) => { el.style.opacity = '0'; el.style.transition = ''; });
+    coreLabel.style.opacity = ''; count.style.opacity = '';
+    countV.textContent = '0'; countU.textContent = '';
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  // Start once the fonts are in (everything is measured from the text) and, on a first load, once the Mycelial mark
+  // has landed and the slide shows. A visit that has since ended (gen moved on) never starts.
+  let waiting = null, gen = 0;
+  const whenOpen = (fn) => {
+    const my = gen, go = () => document.fonts.ready.then(() => { if (my === gen && slide.classList.contains('on')) fn(); });
+    if (!html.classList.contains('dt-intro')) { go(); return; }
+    if (waiting) waiting.disconnect();
+    waiting = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waiting.disconnect(); waiting = null; go(); } });
+    waiting.observe(html, { attributes: true, attributeFilter: ['class'] });
   };
   const quiet = () => timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
   const begin = () => {
     if (!layout()) return;
-    if (still) { ta = 9; root.classList.add('is-labelled'); draw(); return; }
-    ta = -0.15; nextPulse = AMBIENT + 0.4;
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), 1500));
+    if (still) { ta = GROWN + 6; root.classList.add('is-labelled'); draw(); labels(); return; }
+    ta = -0.15; nextPulse = GROWN + 0.8;
+    timers.push(setTimeout(() => root.classList.add('is-labelled'), 900));
     quiet();
     start();
   };
@@ -344,19 +558,24 @@
   const handoff = (snap) => {
     if (!layout()) return;
     const b = root.getBoundingClientRect(), v = (p) => ({ ...p, x: p.x - b.left, y: p.y - b.top });
-    from = { core: v(snap.core), machines: snap.machines.map(v), rest: [] };
-    const people = snap.people.map(v), slots = apps.flatMap((a) => a.people);
-    // The nearest of the hosted field's people (in order of how far right) go to the communities; the rest fade.
-    people.forEach((p, i) => { if (i < slots.length) slots[i].src = { x: p.x, y: p.y, d: 0.35 + (i % 13) * 0.04 }; else from.rest.push(p); });
+    off = 0.9;
+    from = { core: v(snap.core), machines: (snap.machines || []).map(v), rest: [] };
+    // Its people drift out to the nearest places in the crowd, the rest fade; the crowd's own people come in after.
+    const free = new Set(dots.filter((d) => d.t0 < 1.4));
+    (snap.people || []).map(v).forEach((p, i) => {
+      let best = null, bd = Infinity;
+      for (const d of free) { const dd = Math.hypot(d.x - p.x, d.y - p.y); if (dd < bd) { bd = dd; best = d; } }
+      if (best) { free.delete(best); best.src = { x: p.x, y: p.y, d: 0.2 + (i % 17) * 0.035 }; } else from.rest.push(p);
+    });
     window.AstridPays.hide();
-    ta = 0; nextPulse = AMBIENT + 0.6;
+    ta = 0; nextPulse = GROWN + off + 0.8;
     html.classList.add('fl-quiet');
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), 2000));
+    timers.push(setTimeout(() => root.classList.add('is-labelled'), 1400));
     start();
   };
   const paysHost = document.querySelector('[data-astrid-pays]');
   const paysSlide = paysHost && paysHost.closest('.slide');
-  slide.addEventListener('dt-arrive', () => { if (armed && slide.classList.contains('on')) { armed = false; begin(); } });
+  slide.addEventListener('dt-arrive', () => { if (armed && slide.classList.contains('on')) { armed = false; whenOpen(begin); } });
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
@@ -368,35 +587,39 @@
       const snap = fromPays && window.AstridPays && window.AstridPays.snapshot();
       if (snap) { handoff(snap); return; }
       layout(); draw(); armed = true;
-      timers.push(setTimeout(() => { if (armed) { armed = false; begin(); } }, 1500));
+      timers.push(setTimeout(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
-      armed = false; stop(); html.classList.remove('fl-quiet');
+      armed = false; gen++; stop(); html.classList.remove('fl-quiet');
+      if (waiting) { waiting.disconnect(); waiting = null; }
       timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
     }
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (paysSlide) watch.observe(paysSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
-  addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) { from = null; draw(); } });
+  addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) { from = null; draw(); if (ta > 0) labels(); } });
 
-  // For slide 9: this picture's core and the apps' communities, in viewport pixels, so the wheel can grow out of them.
+  // For slide 9: the core and the communities' people, in viewport pixels, so the wheel can grow out of them.
   window.AstridFlowers = {
     snapshot() {
-      if (!core || ta < END) return null;
+      if (!core || ta - off < END) return null;
+      tc = ta - off;
       const b = root.getBoundingClientRect(), v = (x, y) => ({ x: b.left + x, y: b.top + y });
       const people = [];
-      apps.forEach((a) => a.people.forEach((p) => {
-        if (p.hidden) return;
-        const x = p.hx + Math.sin(ta * p.f + p.ph) * p.w, y = p.hy + Math.cos(ta * p.f * 0.8 + p.ph) * p.w * 0.6;
-        people.push({ ...v(x, y), r: p.r, bright: p.bright, app: a.i });
-      }));
-      return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, apps: apps.map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
+      for (const d of dots) {
+        if (d.app < 0 || tc < d.lt + 0.2 || tc < d.t0 + 0.3) continue;
+        const [x, y] = pos(d);
+        people.push({ ...v(x, y), r: d.r * 1.45, bright: d.bright, app: d.app });
+      }
+      return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, apps: apps.filter((a) => tc >= a.T).map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
     },
-    hide() { // fade out as the next slide's picture takes over
+    hide() { // fade out as the next slide's picture takes over; its people are drawn there from now on
+      handed = true; draw();
       canvas.style.transition = 'opacity .5s ease'; canvas.style.opacity = '0';
-      [...labelEls, coreLabel].forEach((el) => { el.style.opacity = '0'; });
+      labelEls.forEach((el) => { el.style.transition = 'opacity .4s ease'; el.style.opacity = '0'; });
+      coreLabel.style.opacity = '0'; count.style.opacity = '0';
     },
   };
 
-  if (slide.classList.contains('on')) { wasOn = true; begin(); }
+  if (slide.classList.contains('on')) { wasOn = true; layout(); whenOpen(begin); }
 })();
