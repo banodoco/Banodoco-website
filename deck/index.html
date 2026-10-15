@@ -47,6 +47,9 @@
     transition: opacity 0.6s ease, transform 0.6s ease; transform: translateY(12px);
   }
   .slide.on { opacity: 1; pointer-events: auto; transform: none; }
+  /* Only the slide on screen takes clicks: inactive slides are merely transparent, so anything inside them that
+     turns its own clicks back on (a mink, a plane, a headline) would otherwise catch clicks meant for this one. */
+  .slide:not(.on), .slide:not(.on) * { pointer-events: none !important; }
   .num { font: italic 400 1rem/1 "Cormorant Garamond", serif; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 2.2rem; }
   .act { color: var(--soft); font-style: normal; margin-left: 0.8em; opacity: 0.7; }
   h1 {
