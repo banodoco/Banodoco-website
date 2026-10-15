@@ -148,7 +148,7 @@
     const ch = count.offsetHeight;
     coreLabel.style.fontSize = `${Math.max(small ? 13 : 14, 21 * k).toFixed(1)}px`;
     const lh = coreLabel.offsetHeight;
-    const bottom = H - (small ? 34 : 78) * k;
+    const bottom = small ? H - 100 : H - 78 * k; // on a phone, clear of the deck's footer (name, progress, titles)
     if (!small) {
       // Astrid's column: its name, the lens, then the counter, in the space under the text.
       let h = 176 * k;
@@ -265,7 +265,7 @@
     const hw = w / 2 - inset, hh = h / 2 - inset * 0.6, cc = (hw * hw - hh * hh) / (2 * hw), R = hw - cc;
     return Array.from({ length: n + 1 }, (_, i) => { const y = -hh + (2 * hh * i) / n; return [c.x + side * (cc + Math.sqrt(Math.max(0, R * R - y * y))), c.y + y]; });
   };
-  const drawCore = (c, w, h, q, cellNow, a = 1, pose = 'profile') => {
+  const drawCore = (c, w, h, q, cellNow, a = 1, pose = 'profile', mo = { x: 3 * k, y: 6 * k }) => {
     if (q <= 0) return;
     const kk = h / 176;
     halo(c.x, c.y, h * 0.6, 0.14 * q * a);
@@ -278,7 +278,7 @@
     node(c.x, c.y - h / 2, 1, q * a); node(c.x, c.y + h / 2, 1, q * a);
     // The mink, crisp, at a whole number of pixels per art pixel.
     const P2 = M.POSES[pose] || M.POSES.profile, u = cellNow, mw = P2[0].length * u, mh = P2.length * u;
-    const x0 = Math.round(c.x + 3 * k - mw / 2), y0 = Math.round(c.y + 6 * k - mh / 2);
+    const x0 = Math.round(c.x + mo.x - mw / 2), y0 = Math.round(c.y + mo.y - mh / 2); // slide 9 expects (3k, 6k)
     g.globalAlpha = smooth(clamp(q * 1.6 - 0.4)) * a;
     for (let j = 0; j < P2.length; j++) for (let i = 0; i < P2[0].length; i++) {
       const ch = P2[j][i];
@@ -450,7 +450,8 @@
     if (from) {
       const q = easeIO(k01(0, 1.1));
       const c = { x: lerp(from.core.x, core.x, q), y: lerp(from.core.y, core.y, q) };
-      drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose);
+      const mo = { x: lerp(from.mink.x, 3 * k, q), y: lerp(from.mink.y, 6 * k, q) };
+      drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose, mo);
       from.machines.forEach((m, i) => {
         const qm = easeIO(k01(0.1 + i * 0.08, 0.9)), a = 1 - qm;
         if (a <= 0) return;
@@ -499,7 +500,7 @@
       if (Math.abs(dr.o - o) > 0.004) { el.style.opacity = o.toFixed(3); dr.o = o; }
     });
     showCount();
-    if (tc >= apps[0].T - 0.3) root.classList.add('is-counting');
+    if (tc >= apps[0].T + 0.05) root.classList.add('is-counting'); // fades in as the first reach rolls up
   };
 
   const advance = (dt) => {
@@ -559,7 +560,9 @@
     if (!layout()) return;
     const b = root.getBoundingClientRect(), v = (p) => ({ ...p, x: p.x - b.left, y: p.y - b.top });
     off = 0.9;
-    from = { core: v(snap.core), machines: (snap.machines || []).map(v), rest: [] };
+    // Slide 7 paints its mink at its lens centre + (4, 8) × its k; she eases to this slide's (3, 6) × k.
+    const sk = snap.k || k, mink = snap.mink ? { x: snap.mink.x - snap.core.x, y: snap.mink.y - snap.core.y } : { x: 4 * sk, y: 8 * sk };
+    from = { core: v(snap.core), machines: (snap.machines || []).map(v), mink, rest: [] };
     // Its people drift out to the nearest places in the crowd, the rest fade; the crowd's own people come in after.
     const free = new Set(dots.filter((d) => d.t0 < 1.4));
     (snap.people || []).map(v).forEach((p, i) => {
