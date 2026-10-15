@@ -52,7 +52,7 @@
   const chips = [
     chip('Arca Gidan', 'open-source AI art prize', '<img src="../assets/cards/arca/poster-2.jpg" alt="">'),
     chip('2RP', 'a stage for the best work', '<img src="../assets/cards/tworp/cover.jpg" alt="">'),
-    chip('ArtCompute', 'micro-grants for compute', '<span class="fw-avs"><img src="../assets/cards/artcompute/ashmotv.jpg" alt=""><img src="../assets/cards/artcompute/loreweavr.jpg" alt=""><img src="../assets/cards/artcompute/persoon.jpg" alt=""></span>'),
+    chip('ArtCompute', 'micro-grants for compute', '<span class="fw-avs"><img src="../assets/cards/artcompute/persoon.jpg" alt=""><img src="../assets/cards/artcompute/ashmotv.jpg" alt=""><img src="../assets/cards/artcompute/loreweavr.jpg" alt=""></span>'),
   ];
 
   // A soft light, stamped wherever something glows.
@@ -240,7 +240,11 @@
   let ta = 0, m = 0, morph = null, begun = false, running = false, raf = 0, last = 0, armed = false, timers = [];
   let attach = { dir: 0, t0: 0 }, boost = 0, spin = 0, motes = [], nextMote = 0, flashes = { art: [0, 0, 0, 0, 0, 0, 0], grp: [0, 0, 0], ring: 0 };
   let cur = null, lastM = -1, pulsed = [false, false, false];
-  const T = { lens: 0.05, ring: 0.25, art: 0.35, artT: 0.75, grpT: 1.05, grp: 1.3, link: 1.8, labels: 1.5, motes: 2.0, chips: 2.3 };
+  const T_FRESH = { lens: 0.05, ring: 0.25, art: 0.35, artT: 0.75, grpT: 1.05, grp: 1.3, link: 1.8, labels: 1.5, motes: 2.0, chips: 2.3 };
+  // From slide 8 the core is already there: it glides up into the hub, the apps' communities drift out to become the
+  // artists and the builders' groups, and the ring draws round the core as they arrive.
+  const T_HAND = { lens: 0, ring: 0.85, art: 1.15, artT: 1.5, grpT: 1.55, grp: 1.4, link: 2.0, labels: 1.8, motes: 2.4, chips: 2.6 };
+  let T = T_FRESH, hand = null;
   const k01 = (t0, d) => clamp((ta - t0) / d);
   const stageOf = () => hosts.findIndex((s) => s.classList.contains('on'));
   const chipQ = (i) => {
@@ -300,6 +304,27 @@
     }
     if (mo.kind === 'hop') return linkThread(mo.b);
     return rev(chipThread(mo.c)); // an initiative's pulse, from its chip into the ring
+  };
+
+  // Where a drifting dot from slide 8 is headed: a point on an artist's circle, or one of a group's dots.
+  const target = (t) => {
+    if (t.kind === 'art') { const [x, y] = cur.artists[t.i], r = cur.artR; return [x + Math.cos(t.a) * r, y + Math.sin(t.a) * r]; }
+    const [x, y] = cur.groups[t.j], r = cur.grpR, cl = clouds[t.j];
+    if (t.rim !== undefined) { const d = cl.rim[t.rim]; return [x + Math.cos(d.a) * r * d.r, y + Math.sin(d.a) * r * d.r]; }
+    const d = cl.core[t.core]; return [x + d.x * r, y + d.y * r];
+  };
+  const assign = (people, cx) => { // the nearest of the apps' people, side by side, go to each artist and each group
+    const tg = [];
+    cur.artists.forEach((_, i) => { for (let n = 0; n < 9; n++) tg.push({ kind: 'art', i, a: -Math.PI / 2 + (n / 9) * TAU, side: -1 }); });
+    clouds.forEach((cl, j) => { cl.rim.forEach((_, n) => tg.push({ kind: 'grp', j, rim: n, side: 1 })); cl.core.forEach((_, n) => tg.push({ kind: 'grp', j, core: n, side: 1 })); });
+    const pool = people.map((p) => ({ ...p, side: p.x < cx ? -1 : 1, tgt: null }));
+    for (const t of tg) {
+      const [tx, ty] = target(t);
+      let best = null, bd = Infinity;
+      for (const p of pool) { if (p.tgt || (!tall && p.side !== t.side)) continue; const d = Math.hypot(p.x - tx, p.y - ty); if (d < bd) { bd = d; best = p; } }
+      if (best) best.tgt = t;
+    }
+    return pool.map((p) => ({ x: p.x, y: p.y, r: p.r, bright: p.bright, tgt: p.tgt, d: 0.1 + Math.random() * 0.35, swing: (Math.random() - 0.5) * 60 }));
   };
 
   // ---- Drawing ----------------------------------------------------------------------------------
@@ -383,8 +408,9 @@
     }
 
     // Astrid at the hub: the lens traces from its tips, the mink inside; faint spokes out to the ring.
-    const ql = ease(k01(T.lens, 1.0));
-    const lens = cur.lens;
+    const hq = hand ? easeIO(clamp(ta / 1.25)) : 1;
+    const ql = hand ? 1 : ease(k01(T.lens, 1.0));
+    const lens = hq < 1 ? [lerp(hand.core.x, cur.lens[0], hq), lerp(hand.core.y, cur.lens[1], hq), lerp(hand.core.w, cur.lens[2], hq), lerp(hand.core.h, cur.lens[3], hq)] : cur.lens;
     if (ql > 0) {
       halo(lens[0], lens[1], lens[3] * 0.55, 0.12 * ql * bright);
       [[0, 1.2, 0.95], [5 * k, 0.9, 0.55], [-3.5 * k, 0.8, 0.35]].forEach(([inset, w, a]) => {
@@ -400,8 +426,9 @@
           node(lp[0], lp[1], 0.55, spokes * ql);
         }
       }
-      const u = m > 1.5 ? Math.max(tall ? 1 : 2, cell - 1) : cell;
-      paintMink(lens[0] + 2 * k, lens[1] + 6 * k * (lens[3] / (176 * k)), smooth(k01(T.lens + 0.45, 0.5)), u);
+      const u = hq < 0.5 ? hand.core.cell : m > 1.5 ? Math.max(tall ? 1 : 2, cell - 1) : cell;
+      const mx = lerp(hand ? 3 * hand.k : 2 * k, 2 * k, hq), my = lerp(hand ? 6 * hand.k : 0, 6 * k * (lens[3] / (176 * k)), hq);
+      paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u);
     }
 
     // The artists: their circles and glyphs, and threads into the ring.
@@ -436,6 +463,26 @@
     });
     const qk = ease(k01(T.link, 0.6));
     if (qk > 0) for (let j = 0; j < 2; j++) { const h = linkThread(j); stroke(h, 0, h.total * qk, 0.7 * LW, THREAD, 0.4); if (qk >= 1) node(at(h, h.total / 2).x, at(h, h.total / 2).y, 0.7, 1); }
+
+    // From slide 8: the apps' communities drifting out to become the artists and the groups.
+    if (hand && !hand.done) {
+      let live = 0;
+      for (const d of hand.dots) {
+        const q = easeIO(clamp((ta - d.d) / 1.1));
+        let x, y, a;
+        if (d.tgt) {
+          const [tx, ty] = target(d.tgt), sw = Math.sin(Math.PI * q) * d.swing * k;
+          x = lerp(d.x, tx, q) - sw * (ty - d.y) / (Math.hypot(tx - d.x, ty - d.y) || 1);
+          y = lerp(d.y, ty, q) + sw * (tx - d.x) / (Math.hypot(tx - d.x, ty - d.y) || 1);
+          a = (d.bright ? 1 : 0.75) * (1 - smooth(clamp((ta - d.d - 1.1) / 0.4)));
+        } else { x = d.x; y = d.y - 14 * k * q; a = (d.bright ? 0.9 : 0.6) * (1 - smooth(clamp((ta - 0.1) / 0.7))); }
+        if (a <= 0.003) continue;
+        live++;
+        if (d.bright) halo(x, y, 6 * Math.max(0.6, k), 0.3 * a);
+        dot(x, y, d.r, CORE, a);
+      }
+      if (!live && ta > 1) hand.done = true;
+    }
 
     // The initiatives: a thread from the ring out to each chip.
     cur.chips.forEach((c, i) => {
@@ -551,6 +598,7 @@
     if (waiting) { waiting.disconnect(); waiting = null; }
     stop();
     begun = false; armed = false; morph = null; motes = []; ta = 0; boost = 0; attach = { dir: 0, t0: 0 }; lastM = -1; pulsed = [false, false, false];
+    T = T_FRESH; hand = null;
     flashes = { art: [0, 0, 0, 0, 0, 0, 0], grp: [0, 0, 0], ring: 0 };
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
     for (const key in labels) labels[key].style.opacity = '0';
@@ -592,8 +640,20 @@
     if (armed) { armed = false; whenOpen(begin); }
   }));
 
+  // Slide 8 hands its core and its communities on (window.AstridFlowers), as slide 7 hands its own to slide 8.
+  const flHost = document.querySelector('[data-astrid-flowers]'), flSlide = flHost && flHost.closest('.slide');
+  const handoff = (snap) => {
+    begun = true; T = T_HAND; ta = 0; nextMote = T.motes; lastM = -1;
+    hand = { core: snap.core, k: snap.k, dots: [], done: false };
+    settleCur();
+    hand.dots = assign(snap.people, snap.core.x);
+    window.AstridFlowers.hide();
+    root.style.transition = 'none'; root.classList.add('is-on'); void root.offsetWidth; root.style.transition = ''; // at full strength at once
+    frame();
+    start();
+  };
   let shown = -1;
-  const follow = () => {
+  const follow = (records) => {
     const now = stageOf();
     if (now === shown) return;
     const was = shown;
@@ -606,13 +666,18 @@
       return;
     }
     html.classList.add('fw-quiet');
-    root.classList.add('is-on');
-    if (was < 0 || !begun) { // arriving from elsewhere: draw in once the network reaches the node
+    if (was < 0 || !begun) { // arriving from elsewhere: draw in once the network reaches the node (from slide 8, carry its picture on)
       reset();
-      layout(); m = now; settleCur(); draw();
+      layout(); m = now; settleCur();
+      const fromFlowers = now === 0 && was < 0 && !still && flSlide && !flSlide.classList.contains('on') && (records || []).some((r) => r.target === flSlide);
+      const snap = fromFlowers && window.AstridFlowers && window.AstridFlowers.snapshot();
+      if (snap) { handoff(snap); return; }
+      root.classList.add('is-on');
+      draw();
       arm();
       return;
     }
+    root.classList.add('is-on');
     // From one of these slides to another: the same picture moves.
     if (still) { m = now; attach = now >= 1 ? { dir: 1, t0: ta - 9 } : { dir: 0, t0: 0 }; boost = now >= 1 ? 1 : 0; lastM = -1; frame(); return; }
     morph = { from: m, to: now, t0: ta, dur: 1.15 + 0.45 * Math.abs(now - m) };
@@ -620,7 +685,8 @@
     if (now === 0 && attach.dir > 0) { attach = { dir: -1, t0: ta, from: chips.map((_, i) => chipQ(i)) }; pulsed = [false, false, false]; }
     start();
   };
-  hosts.forEach((s) => new MutationObserver(follow).observe(s, { attributes: true, attributeFilter: ['class'] }));
+  const watch = new MutationObserver(follow);
+  [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : stageOf() >= 0 && begun && start()));
   addEventListener('resize', () => { if (stageOf() >= 0 && layout()) { lastM = -1; frame(); } });
 

@@ -328,6 +328,7 @@
     pulses = []; ta = 0; from = null;
     root.classList.remove('is-labelled');
     apps.forEach((a) => a.people.forEach((p) => { delete p.src; }));
+    canvas.style.transition = ''; canvas.style.opacity = ''; [...labelEls, coreLabel].forEach((el) => { el.style.opacity = ''; });
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
   };
   const quiet = () => timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
@@ -377,6 +378,25 @@
   if (paysSlide) watch.observe(paysSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
   addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) { from = null; draw(); } });
+
+  // For slide 9: this picture's core and the apps' communities, in viewport pixels, so the wheel can grow out of them.
+  window.AstridFlowers = {
+    snapshot() {
+      if (!core || ta < END) return null;
+      const b = root.getBoundingClientRect(), v = (x, y) => ({ x: b.left + x, y: b.top + y });
+      const people = [];
+      apps.forEach((a) => a.people.forEach((p) => {
+        if (p.hidden) return;
+        const x = p.hx + Math.sin(ta * p.f + p.ph) * p.w, y = p.hy + Math.cos(ta * p.f * 0.8 + p.ph) * p.w * 0.6;
+        people.push({ ...v(x, y), r: p.r, bright: p.bright, app: a.i });
+      }));
+      return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, apps: apps.map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
+    },
+    hide() { // fade out as the next slide's picture takes over
+      canvas.style.transition = 'opacity .5s ease'; canvas.style.opacity = '0';
+      [...labelEls, coreLabel].forEach((el) => { el.style.opacity = '0'; });
+    },
+  };
 
   if (slide.classList.contains('on')) { wasOn = true; begin(); }
 })();
