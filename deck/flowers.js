@@ -35,7 +35,7 @@
     { name: 'Music videos for indie bands', glyph: 'note', u: 0.38, v: 0.06 },
     { name: 'Tabletop RPG campaign recaps', glyph: 'die', u: 0.09, v: 0.97 },
     { name: 'Archive film restoration', glyph: 'reel', u: 0.93, v: 0.08 },
-    { name: 'Classroom explainers', glyph: 'bulb', u: 0.99, v: 0.27 },
+    { name: 'Classroom explainers', glyph: 'bulb', u: 0.99, v: 0.33 },
     { name: 'Game cinematics', glyph: 'pad', u: 0.92, v: 0.93 },
     { name: 'Comics → animated panels', glyph: 'bubble', u: 0.45, v: 0.6 },
     { name: 'Brand content for small shops', glyph: 'tag', u: 0.3, v: 0.355 },
@@ -371,10 +371,11 @@
     return v;
   };
   const sig2 = (x) => { if (x <= 0) return 0; const p = Math.pow(10, Math.floor(Math.log10(x)) - 1); return Math.round(x / p) * p; };
-  const fmt = (v) => {
-    if (v < 1e6) return [Math.round(sig2(v)).toLocaleString('en-US'), ''];
-    if (v < 1e9) { const m = v / 1e6; return [m < 10 ? m.toFixed(1).replace(/\.0$/, '') : String(Math.round(sig2(m))), 'million']; }
-    return [(v / 1e9).toFixed(1).replace(/\.0$/, ''), 'billion'];
+  const fmt = (v) => { // two significant figures, then the unit: 720,000 · 7.5 million · 140 million · 1.5 billion
+    const r = sig2(v), one = (x) => x.toFixed(1).replace(/\.0$/, '');
+    if (r < 1e6) return [Math.round(r).toLocaleString('en-US'), ''];
+    if (r < 1e9) return [r < 1e7 ? one(r / 1e6) : String(Math.round(r / 1e6)), 'million'];
+    return [one(r / 1e9), 'billion'];
   };
   const showCount = () => {
     const [n, u] = fmt(reach()), s = `${n} ${u}`;
