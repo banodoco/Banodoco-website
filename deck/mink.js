@@ -24,7 +24,7 @@ window.AstridMink = (() => {
     'ooooocccck......',
     'ooooocccck......',
   ];
-  const COLORS = { o: '#FF7A2E', c: '#F7E6CF', k: '#151311' };
+  const COLORS = { o: '#FF7A2E', c: '#F7E6CF', k: '#151311', t: '#D9531E', y: '#FFD678' };
 
   // The silhouette, traced along the middle of the icon's dark outline and open at the bottom where the
   // neck leaves the frame: up the back from the bottom left, over the ear and the flat top of the head,
@@ -43,6 +43,100 @@ window.AstridMink = (() => {
   ];
   const EYE = [10, 5], NOSE = [15.6, 3.4], EAR = [2.75, 4.85], EARMARK = [4.5, 6.5];
   const BOX = { x0: -0.2, y0: 1.5, x1: 15.65, y1: 16, cx: 7.55, cy: 8.75 }; // the silhouette's bounds
+
+  // The homepage avatar's four poses, read off its 128px sprites (3px art pixels) into one 23 x 20 frame:
+  // profile (astrid-mink-provisional.webp), glint (its eye flash), facing (astrid-mink-front.png) and
+  // focus (astrid-mink-focus.png, eyes lit). Same palette keys as GRID, plus t (tail tip #D9531E) and y (lit eye #FFD678).
+  const POSES = {
+    profile: [
+      '.............kkkk......',
+      '..........kkkkkkkkk....',
+      '.........kkkooooookk...',
+      '........kkoooooooookkk.',
+      '.......kkoooookkkoookkk',
+      '......kkooooookkkoookkk',
+      '.....kokoooooooooooocck',
+      '.....kokkooooooooccckk.',
+      '.....kooooooooccccckk..',
+      '.....kkooooooccccck....',
+      '......kooooocccckk.....',
+      '......koooooccckk......',
+      '......koooocccckk......',
+      '.....kkoooocccckk......',
+      '....kkooooccccckk......',
+      '...kkoooooccccckk......',
+      '..kktoooooccccckk......',
+      '..kkooooocccccck.......',
+      '.ktooooooccccck........',
+      'kooooooooccccck........',
+    ],
+    glint: [
+      '.............kkkk......',
+      '..........kkkkkkkkk....',
+      '.........kkkooooookk...',
+      '........kkoooooooookkk.',
+      '.......kkoooooyccoookkk',
+      '......kkooooooycyoookkk',
+      '.....kokoooooooooooocck',
+      '.....kokkooooooooccckk.',
+      '.....kooooooooccccckk..',
+      '.....kkooooooccccck....',
+      '......kooooocccckk.....',
+      '......koooooccckk......',
+      '......koooocccckk......',
+      '.....kkoooocccckk......',
+      '....kkooooccccckk......',
+      '...kkoooooccccckk......',
+      '..kktoooooccccckk......',
+      '..kkooooocccccck.......',
+      '.ktooooooccccck........',
+      'kooooooooccccck........',
+    ],
+    facing: [
+      '........kkkkkkkk.......',
+      '...kk.kkooooooookk.kk..',
+      '..kttkooooooooooookttk.',
+      '..kttoooooooooooooottk.',
+      '...ktoookkooookkoootk..',
+      '...ktoookkooookkoootk..',
+      '...ktoooooccccoooootk..',
+      '...ktoooccckkcccoootk..',
+      '....ktoccccccccccotk...',
+      '.....ktoccccccccotk....',
+      '......ktooccccootk.....',
+      '......koooccccoook.....',
+      '......ktooccccootk.....',
+      '......ktooccccootk.....',
+      '.....ktoooccccoootk....',
+      '.....ktoooccccoootk....',
+      '....kttoooccccooottk...',
+      '...kktoooccccccoootkk..',
+      '..kttooooccccccoooottk.',
+      '.kktooooccccccccooootkk',
+    ],
+    focus: [
+      '........kkkkkkkk.......',
+      '...kk.kkooooooookk.kk..',
+      '..kttkooooooooooookttk.',
+      '..kttoooooooooooooottk.',
+      '...ktoooccooooccoootk..',
+      '...ktoooyyooooyyoootk..',
+      '...ktoooooccccoooootk..',
+      '...ktoooccckkcccoootk..',
+      '....ktoccccccccccotk...',
+      '.....ktoccccccccotk....',
+      '......ktooccccootk.....',
+      '......koooccccoook.....',
+      '......ktooccccootk.....',
+      '......ktooccccootk.....',
+      '.....ktoooccccoootk....',
+      '.....ktoooccccoootk....',
+      '....kttoooccccooottk...',
+      '...kktoooccccccoootkk..',
+      '..kttooooccccccoooottk.',
+      '.kktooooccccccccooootkk',
+    ],
+  };
 
   // Centripetal Catmull–Rom through the key points: `per` samples per span.
   const smooth = (pts, per = 8) => {
@@ -63,5 +157,5 @@ window.AstridMink = (() => {
     out.push(pts[pts.length - 1].slice());
     return out;
   };
-  return { GRID, COLORS, OUTLINE, THROAT, EYE, NOSE, EAR, EARMARK, BOX, smooth };
+  return { GRID, COLORS, POSES, OUTLINE, THROAT, EYE, NOSE, EAR, EARMARK, BOX, smooth };
 })();

@@ -12,7 +12,7 @@
 </script>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=EB+Garamond:ital,wght@0,400;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=EB+Garamond:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap">
 <style>
   /* Text-only working draft of the investment deck (2026-10-06). The story
      first; visual language to follow the homepage later. */
@@ -205,6 +205,90 @@
     box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12; }
   .ac-seed b { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; opacity: 0;
     background: radial-gradient(circle at 40% 35%, #fffaf0, #ffd991 55%, #e0ab5e); box-shadow: 0 0 14px #ffd991aa; }
+  /* Version F, slide 5: Astrid herself (demo.js). Text centred on top; beneath it the homepage's two demos side by
+     side, the agent's conversation and the editor, in the homepage's dusk palette, with the pixel mink between them. */
+  html[data-ver="f"] .as-host { justify-content: flex-start; padding-top: max(48px, 6.5vh); text-align: center; }
+  html[data-ver="f"] .as-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; flex-shrink: 0; }
+  html[data-ver="f"] .as-host h1 { max-width: 22em; margin: 0 auto; text-wrap: balance; font-size: clamp(1.9rem, 3.1vw, 3.2rem); }
+  html[data-ver="f"] .as-host .body { display: none; }
+  .as { position: relative; flex: 1 1 auto; min-height: 0; margin: clamp(18px, 3.4vh, 40px) 0 max(78px, 10vh); user-select: none; -webkit-user-select: none;
+    --as-panel: #24211b; --as-card: #2c2822; --as-line: #4a4337; --as-field: #1b1915; --as-ink: #f3eee4; --as-muted: #aca395; --as-orange: #ed6b23; --as-sky: #38bdf8;
+    font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif; text-align: left; }
+  .as-stage { position: absolute; left: 50%; top: 0; bottom: 0; width: min(1180px, 100%); transform: translateX(-50%);
+    display: grid; grid-template-columns: 31fr 14fr 55fr; align-items: stretch; }
+  .as-panel { position: relative; min-height: 0; border-radius: 12px; border: 1px solid rgb(240 200 119 / .22); background: var(--as-panel); color: var(--as-ink);
+    box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 24px 60px -24px rgb(0 0 0 / .8), 0 0 0 1px rgb(0 0 0 / .4); overflow: hidden; }
+  /* The agent: the homepage's scripted conversation. */
+  .as-chat { display: flex; flex-direction: column; }
+  .as-chat-head { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-bottom: 1px solid var(--as-line); font-size: 13.5px; font-weight: 500; }
+  .as-avatar { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #3a3128; }
+  .as-avatar img { width: 23px; height: 20px; image-rendering: pixelated; transform: translate(1px, 2px); }
+  .as-msgs { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 12px 14px; overflow: hidden; }
+  .as-msg { max-width: 86%; padding: 9px 13px; border-radius: 16px; font-size: 13px; line-height: 1.5; box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+  .as-msg.is-user { align-self: flex-end; background: var(--as-orange); color: #25241f; }
+  .as-msg.is-astrid { align-self: flex-start; background: var(--as-card); border: 1px solid var(--as-line); color: var(--as-ink); }
+  .as-msg .w { opacity: 0; transition: opacity .25s ease; } .as-msg .w.on { opacity: 1; }
+  .as-dots { display: inline-flex; gap: 4px; padding: 3px 0; } .as-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--as-muted); animation: as-dot 1s ease-in-out infinite; }
+  .as-dots i:nth-child(2) { animation-delay: .15s; } .as-dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes as-dot { 50% { opacity: .3; transform: translateY(-2px); } }
+  .as-in { animation: as-in .35s cubic-bezier(.2, .7, .2, 1) both; } @keyframes as-in { from { opacity: 0; transform: translateY(8px); } }
+  .as-chat-foot { display: grid; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--as-line); }
+  .as-result { display: flex; align-items: center; gap: 9px; padding: 7px; border-radius: 8px; background: var(--as-card); border: 1px solid var(--as-line);
+    transition: opacity .4s ease, transform .4s cubic-bezier(.2, .7, .2, 1); }
+  .as-result img { width: 56px; height: 32px; object-fit: cover; border-radius: 5px; }
+  .as-result strong { display: block; font-size: 12px; font-weight: 600; } .as-result span { font-size: 11px; color: var(--as-muted); }
+  .as:not(.has-result) .as-result { opacity: 0; transform: translateY(6px); }
+  .as-field { display: flex; align-items: center; gap: 8px; border: 1px solid var(--as-line); border-radius: 10px; background: var(--as-field); padding: 4px 4px 4px 12px; }
+  .as-input { flex: 1; min-width: 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--as-ink); }
+  .as-ph { color: #8a8174; } .as-typed:not(:empty) + .as-ph { display: none; }
+  .as-caret { display: inline-block; width: 1px; height: 1.1em; margin-left: 1px; vertical-align: -2px; background: var(--as-ink); opacity: 0; }
+  .as.is-typing .as-caret { opacity: 1; animation: as-blink 1s steps(1) infinite; } @keyframes as-blink { 50% { opacity: 0; } }
+  .as-send { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--as-orange); color: #25241f; opacity: .35; transition: opacity .2s ease; }
+  .as.has-draft .as-send { opacity: 1; }
+  /* The interface: the homepage's editor, a player above the timeline. */
+  .as-edit { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; padding: 10px; background: #1c1a16; }
+  .as-surface { border-radius: 9px; border: 1px solid var(--as-line); background: var(--as-panel); box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 12px 24px -10px rgb(0 0 0 / .45); }
+  .as-player { display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); padding: 8px; min-height: 0; }
+  .as-screen { position: relative; min-height: 0; display: grid; place-items: center; container-type: size; }
+  .as-frame { position: relative; width: min(100cqw, 100cqh * 16 / 9); height: min(100cqh, 100cqw * 9 / 16); border-radius: 6px; background: #000; overflow: hidden; }
+  .as-screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; filter: brightness(.9) saturate(.95); }
+  .as-screen video.on { opacity: 1; }
+  .as-transport { display: flex; align-items: center; gap: 6px; padding: 8px 2px 0; font-size: 11px; color: var(--as-muted); }
+  .as-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: var(--as-ink); }
+  .as-play { background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); }
+  .as-i-pause { display: none; } .as.is-playing .as-i-pause { display: inline; } .as.is-playing .as-i-play { display: none; }
+  .as-time { margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .as-pill { margin-left: auto; padding: 3px 7px; border-radius: 999px; background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); color: var(--as-ink); font-size: 10.5px; }
+  .as-timeline { position: relative; padding: 0 0 10px; overflow: hidden; }
+  .as-ruler { position: relative; height: 22px; margin-left: 118px; border-bottom: 1px solid var(--as-line); }
+  .as-ruler span { position: absolute; top: 5px; font-size: 9.5px; color: #8a8174; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+  .as-ruler span::after { content: ""; position: absolute; left: 50%; top: 13px; height: 4px; border-left: 1px solid var(--as-line); }
+  .as-track { display: flex; height: 52px; margin-top: 8px; }
+  .as-label { flex: 0 0 118px; display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 11.5px; color: var(--as-ink); border-right: 1px solid var(--as-line); }
+  .as-label i { font-style: normal; font-size: 9.5px; color: var(--as-muted); border: 1px solid var(--as-line); border-radius: 4px; padding: 1px 4px; }
+  .as-lane { position: relative; flex: 1; margin: 0 10px 0 0; }
+  .as-clip { position: absolute; top: 4px; bottom: 4px; display: flex; align-items: center; gap: 6px; overflow: hidden; border-radius: 6px; border: 1px solid #5a5244;
+    background: rgb(44 40 34 / .92); color: var(--as-ink); font-size: 10.5px; white-space: nowrap; }
+  .as-clip img { height: 100%; width: 40px; object-fit: cover; opacity: .8; flex: 0 0 auto; }
+  .as-clip.is-selected { border-color: var(--as-sky); background: rgb(14 165 233 / .2); color: #f0f9ff; }
+  .as-playhead { position: absolute; top: -32px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 6px rgb(56 189 248 / .5); }
+  .as-playhead::before { content: ""; position: absolute; top: 0; left: -4px; width: 10px; height: 8px; border-radius: 2px 2px 5px 5px; background: var(--as-sky); }
+  /* The mink sits between them on the panels' baseline. */
+  .as-mid { position: relative; pointer-events: none; }
+  .as-mid::before { content: ""; position: absolute; left: -6px; right: -6px; bottom: 0; height: 1px; background: linear-gradient(90deg, rgb(240 200 119 / .35), rgb(240 200 119 / .12) 50%, rgb(240 200 119 / .35)); }
+  .as-mid::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 180px; height: 150px; transform: translateX(-50%);
+    background: radial-gradient(closest-side at 50% 70%, rgb(255 140 60 / .16), rgb(255 140 60 / 0)); pointer-events: none; }
+  .as-mink { position: absolute; left: 50%; bottom: 0; z-index: 1; image-rendering: pixelated; pointer-events: auto; cursor: pointer; }
+  @media (max-width: 760px) {
+    html[data-ver="f"] .as-host { padding-top: 56px; }
+    html[data-ver="f"] .as-host h1 { font-size: clamp(1.45rem, 6vw, 1.9rem); max-width: 22ch; }
+    .as { margin: 14px 0 76px; }
+    .as-stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; width: 100%; }
+    .as-mid { order: -1; height: 64px; }
+    .as-label { flex-basis: 74px; } .as-ruler { margin-left: 74px; }
+    .as-msg { font-size: 11.5px; } .as-chat-foot { display: none; }
+    .as-screen { min-height: 110px; } .as-chat { max-height: 230px; }
+  }
   @media (max-width: 760px) {
     html[data-ver="f"] .ac-host { padding-bottom: 92px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); max-width: 22ch; text-wrap: balance; }
@@ -509,21 +593,41 @@
     </div>
   </section>
 
-  <section class="slide" data-v="f">
+  <section class="slide as-host" data-v="f">
     <div class="num">05<span class="act">Astrid</span></div>
     <div class="split">
       <div>
         <h1>This is Astrid. It starts as a new kind of video editor: describe what you want, and the agent reaches for <em>everything the community has built</em> to make it.</h1>
         <div class="body">No installs, no node graphs, locally or in the cloud. The agent picks the right models and community-made tools, and when nothing fits, it builds what you need. Every result comes back to your timeline for you to change and build on: you stay the artist. We start with video because that's where open models are moving fastest — and where they're hardest to use.</div>
       </div>
-      <div class="vis"><div class="m-chain">
-  <div class="m-step"><span class="m-role">You</span><div class="m-art m-ask">“Make this look like 16mm film, and hold the last shot 2s longer”</div><b>Describe the shot</b><span class="m-dim">plain language</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Agent</span><div class="m-art"><div class="m-picks"><i>Film grain <span>by @someone</span></i><i>Wan i2v 14B</i><i>Frame interp.</i></div></div><b>Picks community tools</b><span class="m-dim">no setup</span></div>
-  <span class="m-arrow">→</span>
-  <div class="m-step"><span class="m-role">Result</span><div class="m-art"><img src="../assets/cards/ados/paris-2025-thumb.jpg" alt=""></div><b>Back in your timeline</b><span class="m-dim">editable · share as a template</span></div>
-</div>
-<p class="cap">The user journey in three beats — ideally a short screen recording.</p></div>
+    </div>
+    <div class="as" data-astrid-demo role="img" aria-label="Astrid: the agent's conversation on the left, the video editor on the right, and the Astrid mink between them">
+      <div class="as-stage">
+        <section class="as-panel as-chat" aria-hidden="true">
+          <header class="as-chat-head"><span class="as-avatar"><img src="../assets/astrid/mink-profile.png" alt=""></span><span>Astrid</span></header>
+          <div class="as-msgs"></div>
+          <footer class="as-chat-foot">
+            <article class="as-result"><img src="../assets/astrid/first-light-thumb.webp" alt=""><div><strong>Light study</strong><span>0:28 · 3 clips</span></div></article>
+            <div class="as-composer"><div class="as-field"><span class="as-input"><span class="as-typed"></span><span class="as-ph">Ask Astrid to edit your project…</span><i class="as-caret"></i></span><b class="as-send"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></b></div></div>
+          </footer>
+        </section>
+        <div class="as-mid"><canvas class="as-mink" aria-hidden="true"></canvas></div>
+        <section class="as-panel as-edit" aria-hidden="true">
+          <div class="as-surface as-player">
+            <div class="as-screen"><div class="as-frame"><video src="../assets/astrid/first-light.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/passing-shapes.mp4" muted playsinline preload="auto"></video><video src="../assets/astrid/quiet-finish.mp4" muted playsinline preload="auto"></video></div></div>
+            <div class="as-transport"><b class="as-btn" title="Jump to beginning"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></b><b class="as-btn as-play"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path class="as-i-play" d="M7 4.5v15L19.5 12z"/><path class="as-i-pause" d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/></svg></b><span class="as-time">0:00 / 0:24</span><span class="as-pill">1280x720</span></div>
+          </div>
+          <div class="as-surface as-timeline">
+            <div class="as-ruler"></div>
+            <div class="as-track"><div class="as-label"><i>V1</i>Light study</div><div class="as-lane">
+              <div class="as-clip is-selected"><img src="../assets/astrid/first-light-thumb.webp" alt=""><span>first-light</span></div>
+              <div class="as-clip"><img src="../assets/astrid/passing-shapes-thumb.webp" alt=""><span>passing-shapes</span></div>
+              <div class="as-clip"><img src="../assets/astrid/quiet-finish-thumb.webp" alt=""><span>quiet-finish</span></div>
+              <i class="as-playhead"></i>
+            </div></div>
+          </div>
+        </section>
+      </div>
     </div>
   </section>
 
@@ -739,5 +843,6 @@
 <script src="gap.js"></script>
 <script src="mink.js"></script>
 <script src="core.js"></script>
+<script src="demo.js"></script>
 </body>
 </html>
