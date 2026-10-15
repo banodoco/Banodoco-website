@@ -137,7 +137,7 @@
   const orbAt = (phi, da = 0, db = 0) => P(ORB.cx + (ORB.a + da) * Math.cos(phi), ORB.cy + (ORB.b + db) * Math.sin(phi));
 
   // Built by layout().
-  let C0, rings = [], lens = null, cons = null, panels = null, sides = [], orbit = [], streams = [], feed = null, nodeAt = null;
+  let C0, rings = [], lens = null, cons = null, panels = null, sides = [], orbit = [], feed = null, nodeAt = null;
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
 
@@ -272,7 +272,7 @@
         const h = line(bez(from, { x: from.x + dx * 0.12, y: from.y + dy * 0.6 }, { x: node.x - dx * 0.08, y: node.y - dy * 0.55 }, node, 24));
         const h2 = line(bez(from, { x: from.x + dx * 0.3, y: from.y + dy * 0.45 }, { x: node.x - dx * 0.2, y: node.y - dy * 0.6 }, node, 24));
         sd.slots.push({
-          side, i, x: c.x, y: c.y, node, from, rimKey: rim, glyph, h, h2, name: NAMES[side][i],
+          side, i, x: c.x, y: c.y, node, from, rimKey: rim, glyph, h, h2, hr: rev(h), name: NAMES[side][i],
           state: i < START - 1 ? 'full' : i < START ? 'socket' : 'none', // none → socket → full
           shown: i < START ? 0 : null, filledAt: i < START - 1 ? 0 : null, flash: 0,
         });
@@ -281,29 +281,17 @@
       return sd;
     });
 
-    // The community: a dotted orbit round everything, open at the bottom, its lower arcs denser where they feed in.
+    // The community: a dotted orbit round everything, open at the bottom, with a few brighter motes on it.
     orbit = [];
     const gapX = 92;
     for (let phi = ORB.from; phi <= ORB.to; phi += 0.0125) {
       const p = orbAt(phi), rx = ORB.cx + ORB.a * Math.cos(phi);
       if (Math.abs(rx - 836) < gapX && Math.sin(phi) < 0) continue; // the break for the label
-      const low = clamp((Math.sin(phi) + 0.05) / 0.5); // 0 at the sides' middles, 1 at the open ends
       const endFade = smooth(clamp(Math.min(phi - ORB.from, ORB.to - phi) / 0.12));
       const nearGap = smooth(clamp((Math.abs(rx - 836) - gapX) / 60));
-      const bright = rnd() < 0.05 + 0.12 * low;
-      orbit.push({ ...p, phi, a: (bright ? 0.85 : 0.3 + 0.2 * low) * endFade * (0.5 + 0.5 * nearGap), r: bright ? 1.35 : 0.75, bright,
-        t0: T.orbit + 0.8 * (Math.abs(phi - 270 * DEG) / (122 * DEG)) });
-    }
-    // Two or three fine streams down each lower arc, beaded with motes.
-    streams = [];
-    for (const side of [0, 1]) {
-      for (const [da, db, a0, a1, al] of [[-14, -10, 152, 190, 0.3], [-28, -20, 154, 182, 0.22], [10, 7, 158, 176, 0.14]]) {
-        const s0 = (side ? 180 - a0 : a0) * DEG, s1 = (side ? 180 - a1 : a1) * DEG;
-        const pts = Array.from({ length: 25 }, (_, i) => { const p = orbAt(s0 + ((s1 - s0) * i) / 24, da, db); return [p.x, p.y]; });
-        const h = rev(line(pts)); // from up the arc down to its end
-        const beads = Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => ({ d: (0.1 + 0.85 * rnd()) * h.total, r: 0.9 + rnd() * 0.7, a: 0.5 + rnd() * 0.45 }));
-        streams.push({ h, a: al, beads, t0: T.orbit + 0.5 + rnd() * 0.3 });
-      }
+      const bright = rnd() < 0.06;
+      orbit.push({ ...p, phi, a: (bright ? 0.9 : 0.5) * endFade * (0.55 + 0.45 * nearGap), r: bright ? 1.45 : 0.9, bright,
+        t0: T.orbit + 0.6 * (Math.abs(phi - 270 * DEG) / (122 * DEG)) });
     }
 
     // Slide 4's own node feeds the core: one fine thread from above the label up into the lens's bottom point.
@@ -334,48 +322,47 @@
   const T = { rings: 0.05, ringDur: 1.1, core: 0.6, feed: 1.1, cons: 1.0, panels: 1.05, drop: 1.8, orbit: 2.2, end: 3.4 };
   const AMBIENT = 4.0;
   let ta = 0, pace = 1, visits = 0, running = false, loop = 0, last = 0, timers = [];
-  let motes = [], pulses = [], flare = 0, nextMote = 0, nextUse = 0, turn = 0;
+  let gifts = [], pend = [], plan = 0, pulses = [], flare = 0, nextGift = 0, nextUse = 0;
   let hot = null, pinned = null, touched = false, seedEl = null, labelled = 0;
 
   const k01 = (t0, dur) => clamp((ta - t0) / dur);
   const isFull = (x) => x.state === 'full';
 
   // ---- Ambient: the community grows the sides, and the extensions get used ------
-  const orbitPath = (side, to) => {
-    const s = side ? -1 : 1; // the left side runs anticlockwise from the top
-    const p0 = 270 * DEG - s * 0.2, p1 = side ? ORB.to - 0.02 : ORB.from + 0.02;
-    const n = 60, pts = [];
-    for (let i = 0; i <= n; i++) { const p = orbAt(p0 + ((p1 - p0) * i) / n, -14, -10); pts.push([p.x, p.y]); }
-    const end = { x: pts[n][0], y: pts[n][1] };
-    // From the arc's end, skim along the tops of the row to the place, then drop in.
-    const above = { x: to.node.x, y: to.node.y - 16 * k };
-    const dx = above.x - end.x;
-    const leg = bez(end, { x: end.x + dx * 0.35, y: end.y + 40 * k }, { x: above.x - dx * 0.3, y: above.y - 6 * k }, above, 28);
-    const drop = [[to.node.x, to.node.y], [to.x, to.y]];
-    return line([...pts, ...leg.slice(1), ...drop]);
-  };
-  const sendMote = () => {
-    turn = Math.random() < 0.8 ? 1 - turn : turn;
-    let sd = sides[turn];
-    let x = sd.slots.find((o) => o.state === 'socket');
-    if (!x) { sd = sides[1 - turn]; x = sd.slots.find((o) => o.state === 'socket'); }
-    const fresh = !!x;
-    if (!x) { // all grown: the community keeps feeding what is there
-      const all = sides[turn].slots.filter(isFull);
-      x = all[Math.floor(Math.random() * all.length)];
-      if (!x) return;
+  // A contribution: a mote brightens on the orbit, a thread draws ahead of it to the side's empty
+  // socket, the mote follows it in with a confident ease and lands with a small bloom, and the socket
+  // fills. Two per side, taking turns, then the picture rests.
+  const PLAN = [0, 1, 0, 1], GAP = 3.2, LIFT = 0.35;
+  const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
+  const giftPath = (x) => {
+    const side = x.side, s = side ? -1 : 1; // written for the left; the right mirrors it
+    const o = orbAt((side ? 12 : 168) * DEG);
+    let pts;
+    if (Math.hypot(x.x - o.x, x.y - o.y) > 260 * k) { // along the row: pass under it and rise into the socket
+      const low = { x: x.x, y: x.y + ER * k };
+      pts = bez(o, { x: o.x + s * 40 * k, y: o.y + 210 * k }, { x: low.x - s * 140 * k, y: low.y + 46 * k }, low, 44);
+    } else { // close by: drop in through the socket's node
+      pts = bez(o, { x: o.x + s * 8 * k, y: o.y + 60 * k }, { x: x.node.x - s * 36 * k, y: x.node.y - 46 * k }, x.node, 32);
     }
-    const path = orbitPath(x.side, x);
-    motes.push({ x, fresh, path, t0: ta, dur: clamp(path.total / (300 * k), 2.2, 3.6) });
+    return { o, h: line(pts) }; // it lands on the ring's bottom, or on the socket's node
+  };
+  const give = () => {
+    while (plan < PLAN.length) {
+      const sd = sides[PLAN[plan++]];
+      const x = sd.slots.find((v) => v.state === 'socket' && v.shown !== null && v.shown <= ta);
+      if (!x) continue;
+      const { o, h } = giftPath(x);
+      gifts.push({ x, o, h, t0: ta, D: clamp(h.total / (420 * k), 1.2, 1.6) });
+      return;
+    }
   };
   const fill = (x) => {
     x.state = 'full';
     x.filledAt = ta;
     const sd = sides[x.side];
-    const filled = sd.slots.filter(isFull).length;
     const next = sd.slots.find((o) => o.state === 'none');
-    if (next && filled < CAP) timers.push(setTimeout(() => { if (running && next.state === 'none') { next.state = 'socket'; next.shown = ta; } }, 1300));
-    timers.push(setTimeout(() => use(x), 2200));
+    if (next && sd.slots.filter(isFull).length < CAP) pend.push({ at: ta + 1.1, f: () => { if (next.state === 'none') { next.state = 'socket'; next.shown = ta; } } });
+    pend.push({ at: ta + 1.5, f: () => use(x) });
   };
   // A pulse: from an extension up its thread, round its ring to where the rings meet below, and up into the core.
   const homeOf = (x) => {
@@ -400,18 +387,13 @@
     if (seedEl && ta >= 0) { seedEl.remove(); seedEl = null; if (ring) ring.style.visibility = ''; }
     sides.forEach((sd) => sd.slots.forEach((x) => { if (x.flash) x.flash = Math.max(0, x.flash - dt / 1.2); }));
     if (ta < AMBIENT) return;
-    if (ta >= nextMote) {
-      sendMote();
-      const growing = sides.some((sd) => sd.slots.some((o) => o.state === 'socket'));
-      nextMote = ta + (growing ? 5.2 + Math.random() * 1.6 : 7 + Math.random() * 3);
-    }
-    if (ta >= nextUse) { use(); nextUse = ta + 5.5 + Math.random() * 3.5; }
-    motes = motes.filter((m) => {
-      if (!m.landed && ta >= m.t0 + m.dur) {
-        m.landed = true;
-        if (m.fresh && m.x.state === 'socket') fill(m.x); else { m.x.flash = 1; timers.push(setTimeout(() => use(m.x), 900)); }
-      }
-      return ta < m.t0 + m.dur + 1.2;
+    if (plan < PLAN.length && ta >= nextGift) { give(); nextGift = ta + GAP; }
+    if (ta >= nextUse) { use(); nextUse = ta + 7 + Math.random() * 3; }
+    pend = pend.filter((p) => { if (ta < p.at) return true; p.f(); return false; });
+    gifts = gifts.filter((m) => {
+      const land = m.t0 + LIFT + m.D;
+      if (!m.landed && ta >= land) { m.landed = true; if (m.x.state === 'socket') { const e = m.h.pts[m.h.pts.length - 1]; m.x.landAt = { x: e[0], y: e[1] }; fill(m.x); } }
+      return ta < land + 1.0;
     });
     pulses = pulses.filter((pl) => {
       if ((ta - pl.t0) * 320 * k < pl.h.total) return true;
@@ -573,22 +555,28 @@
     if (panels[0].out) grow(panels[0].out, T.panels + 0.9 / pace, 0.5 / pace, 0.75 * LW, 0.34);
   };
 
+  // A glyph draws itself: the agent's constellations thread node to node; the interface's icons snap in.
   const drawGlyph = (x, type, cx, cy, q) => {
     if (q <= 0) return;
-    const s = k;
     const gp = glyphPts(type);
-    if (gp) { // the agent's: a tiny constellation
+    if (gp) {
+      const e = ease(q), n = gp.edges.length;
       g.lineWidth = 0.8 * LW;
-      g.strokeStyle = `rgba(${LINE},${(0.55 * q).toFixed(3)})`;
+      g.strokeStyle = `rgba(${LINE},0.6)`;
       g.beginPath();
-      for (const [a, b] of gp.edges) { g.moveTo(cx + gp.nodes[a][0] * s, cy + gp.nodes[a][1] * s); g.lineTo(cx + gp.nodes[b][0] * s, cy + gp.nodes[b][1] * s); }
+      gp.edges.forEach(([a, b], i) => {
+        const f = clamp(e * n - i);
+        if (f <= 0) return;
+        const [ax, ay] = gp.nodes[a], [bx, by] = gp.nodes[b];
+        g.moveTo(cx + ax * k, cy + ay * k); g.lineTo(cx + (ax + (bx - ax) * f) * k, cy + (ay + (by - ay) * f) * k);
+      });
       g.stroke();
-      for (const [nx, ny] of gp.nodes) node(cx + nx * s, cy + ny * s, 0.72, q, 1);
+      gp.nodes.forEach(([nx, ny], j) => node(cx + nx * k, cy + ny * k, 0.72, 1, clamp((q * 1.4 - (j / gp.nodes.length) * 0.9) * 3)));
       return;
     }
-    // The interface's: small panel icons in line.
+    const a = clamp(q * 3), s = k * (0.86 + 0.14 * ease(clamp(q * 2)));
     g.lineWidth = 1 * LW;
-    g.strokeStyle = `rgba(${LINE},${(0.78 * q).toFixed(3)})`;
+    g.strokeStyle = `rgba(${LINE},${(0.8 * a).toFixed(3)})`;
     g.beginPath();
     const sq = (w) => g.rect(cx - (w / 2) * s, cy - (w / 2) * s, w * s, w * s);
     if (type === 'grid') { sq(24); g.moveTo(cx, cy - 12 * s); g.lineTo(cx, cy + 12 * s); g.moveTo(cx - 12 * s, cy); g.lineTo(cx + 12 * s, cy); }
@@ -596,12 +584,11 @@
     if (type === 'split') { g.rect(cx - 14 * s, cy - 10 * s, 28 * s, 20 * s); g.moveTo(cx + 2 * s, cy - 10 * s); g.lineTo(cx + 2 * s, cy + 10 * s); }
     if (type === 'wheel') { g.moveTo(cx + 12 * s, cy); g.arc(cx, cy, 12 * s, 0, TAU); g.moveTo(cx + 3 * s, cy); g.arc(cx, cy, 3 * s, 0, TAU); }
     if (type === 'curve') { sq(24); g.moveTo(cx - 12 * s, cy + 8 * s); g.bezierCurveTo(cx - 2 * s, cy + 8 * s, cx + 2 * s, cy - 8 * s, cx + 12 * s, cy - 8 * s); }
-    if (type === 'list') {
-      for (let i = -1; i <= 1; i++) { g.moveTo(cx - 6 * s, cy + i * 9 * s); g.lineTo(cx + 15 * s, cy + i * 9 * s); }
-    }
+    if (type === 'list') for (let i = -1; i <= 1; i++) { g.moveTo(cx - 6 * s, cy + i * 9 * s); g.lineTo(cx + 15 * s, cy + i * 9 * s); }
     g.stroke();
-    if (type === 'list') for (let i = -1; i <= 1; i++) dot(cx - 12 * s, cy + i * 9 * s, 2 * Math.max(0.7, k), CORE, 0.85 * q);
-    if (type === 'curve') { dot(cx - 12 * s, cy + 8 * s, 1.8 * Math.max(0.7, k), CORE, 0.85 * q); dot(cx + 12 * s, cy - 8 * s, 1.8 * Math.max(0.7, k), CORE, 0.85 * q); }
+    const r = 2 * Math.max(0.7, k);
+    if (type === 'list') for (let i = -1; i <= 1; i++) dot(cx - 12 * s, cy + i * 9 * s, r, CORE, 0.9 * a);
+    if (type === 'curve') { dot(cx - 12 * s, cy + 8 * s, r * 0.9, CORE, 0.9 * a); dot(cx + 12 * s, cy - 8 * s, r * 0.9, CORE, 0.9 * a); }
   };
 
   const drawSides = () => {
@@ -614,36 +601,38 @@
         const lit = 1 + 0.6 * x.flash + (x === shown ? 0.5 : 0);
         const r = ER * k;
         if (x.state === 'socket') {
-          // A faint thread down to an empty dashed socket.
-          const q = grow(x.h, t0, 0.6 / pace, 0.7 * LW, 0.26 * lit);
-          if (q >= 1) node(x.node.x, x.node.y, 0.7, 0.75, popIn(t0 + 0.6 / pace));
-          const qs = smooth(k01(t0 + 0.45 / pace, 0.6));
+          // A fine thread down to an empty socket, then its dashed ring closing round from the top.
+          const q = grow(x.h, t0, 0.5 / pace, 0.7 * LW, 0.34 * lit);
+          if (q >= 1) node(x.node.x, x.node.y, 0.7, 0.85, popIn(t0 + 0.5 / pace));
+          const qs = ease(k01(t0 + 0.4 / pace, 0.35));
           for (let j = 0; j < 28; j++) {
-            const th = (j / 28) * TAU;
-            const a = (0.22 + 0.3 * Math.max(0, Math.sin(th))) * qs * lit;
-            dot(x.x + Math.cos(th) * r, x.y + Math.sin(th) * r, 0.8 * Math.max(0.75, k), NODE, a);
+            const th = -Math.PI / 2 + (j / 28) * TAU, from = Math.min(j, 28 - j) / 14; // 0 at the top, 1 at the bottom
+            if (from > qs) continue;
+            dot(x.x + Math.cos(th) * r, x.y + Math.sin(th) * r, 0.85 * Math.max(0.75, k), NODE, (0.42 + 0.2 * from) * lit);
           }
           return;
         }
         // A full place: its threads, its circle (open at the top), its node and glyph.
         const tf = x.filledAt > 0 ? x.filledAt : t0;
         const fresh = x.filledAt > 0;
-        if (fresh) { // filled by the community: the old faint thread, and a bright one drawing up to the ring
-          stroke(x.h, 0, x.h.total, 0.7 * LW, THREAD, 0.26);
-          grow(rev(x.h), tf + 0.35, 0.7, 0.85 * LW, 0.5 * lit);
-          if (ta >= tf + 1.05) stroke(x.h2, 0, x.h2.total, 0.6 * LW, THREAD, 0.2 * smooth(k01(tf + 1.05, 0.6)));
+        if (fresh) { // filled by the community: the ring closes, the glyph draws, then a bright thread runs up to the ring
+          stroke(x.h, 0, x.h.total, 0.7 * LW, THREAD, 0.34);
+          grow(x.hr, tf + 0.35, 0.5, 0.85 * LW, 0.55 * lit);
+          if (ta >= tf + 0.85) stroke(x.h2, 0, x.h2.total, 0.6 * LW, THREAD, 0.2 * smooth(k01(tf + 0.85, 0.3)));
+          const qd = 1 - k01(tf, 0.2); // the dashes give way to the solid ring
+          if (qd > 0) for (let j = 0; j < 28; j++) { const th = (j / 28) * TAU; dot(x.x + Math.cos(th) * r, x.y + Math.sin(th) * r, 0.85 * Math.max(0.75, k), NODE, 0.5 * qd); }
         } else {
           grow(x.h, tf, 0.6 / pace, 0.85 * LW, 0.5 * lit);
           grow(x.h2, tf + 0.08, 0.65 / pace, 0.6 * LW, 0.2 * lit);
         }
-        const qc = ease(k01(tf + (fresh ? 0 : 0.45 / pace), fresh ? 0.6 : 0.5 / pace));
+        const qc = ease(k01(tf + (fresh ? 0 : 0.45 / pace), fresh ? 0.3 : 0.45 / pace));
         if (qc > 0) {
           const g0 = -90 * DEG + 32 * DEG, g1 = 270 * DEG - 32 * DEG, segs = 36;
           for (let j = 0; j < segs; j++) {
             const a0 = g0 + ((g1 - g0) * j) / segs, a1 = a0 + (g1 - g0) / segs, mid = (a0 + a1) / 2;
             // drawn from the bottom outwards both ways
             if (Math.abs(mid - 90 * DEG) > (180 * DEG - 32 * DEG) * qc) continue;
-            const a = (0.2 + 0.55 * Math.max(0, Math.sin(mid))) * lit;
+            const a = (0.36 + 0.5 * Math.max(0, Math.sin(mid))) * lit;
             g.lineWidth = 1.05 * LW;
             g.strokeStyle = `rgba(${THREAD},${Math.min(1, a).toFixed(3)})`;
             g.beginPath(); g.arc(x.x, x.y, r, a0, a1 + 0.004); g.stroke();
@@ -651,11 +640,15 @@
           g.lineWidth = 0.7 * LW; g.strokeStyle = `rgba(${THREAD},${(0.08 * qc).toFixed(3)})`;
           g.beginPath(); g.arc(x.x, x.y, r, 0, TAU); g.stroke();
           halo(x.x, x.y + r * 0.6, r * 1.1, 0.05 * qc * lit);
-          if (fresh && ta - tf < 1) halo(x.x, x.y, r * (0.6 + 1.2 * (ta - tf)), 0.4 * (1 - (ta - tf)));
+          if (fresh && ta - tf < 0.5) { // the landing: a small bloom where the mote touched, and a brief glow in the ring
+            const b = (ta - tf) / 0.5, L = x.landAt || x;
+            halo(L.x, L.y, (8 + 22 * ease(b)) * k, 0.8 * (1 - b));
+            halo(x.x, x.y, r * 0.9, 0.22 * (1 - b));
+          }
         }
-        node(x.node.x, x.node.y, 1.05, 1, popIn(tf + (fresh ? 0 : 0.55 / pace)));
+        node(x.node.x, x.node.y, 1.05, 1, popIn(tf + (fresh ? 0.25 : 0.55 / pace), 0.25));
         if (x.flash) halo(x.x, x.y, r * 1.4, 0.3 * x.flash);
-        drawGlyph(x, x.glyph, x.x, x.y + 2 * k, smooth(k01(tf + (fresh ? 0.3 : 0.75 / pace), 0.5)));
+        drawGlyph(x, x.glyph, x.x, x.y + 2 * k, k01(tf + (fresh ? 0.12 : 0.7 / pace), 0.4));
         if (x === shown) { g.lineWidth = 0.8; g.strokeStyle = `rgba(${NODE},0.5)`; g.beginPath(); g.arc(x.x, x.y, r + 5 * k, 0, TAU); g.stroke(); }
       });
     }
@@ -666,20 +659,10 @@
   const drawOrbit = () => {
     if (ta < T.orbit) return;
     for (const o of orbit) {
-      const q = smooth(k01(o.t0, 0.9));
+      const q = smooth(k01(o.t0, 0.25));
       if (q <= 0) continue;
-      if (o.bright) halo(o.x, o.y, 6 * k, 0.28 * q * o.a);
+      if (o.bright) halo(o.x, o.y, 6 * k, 0.3 * q * o.a);
       dot(o.x, o.y, o.r * Math.max(0.8, k), NODE, o.a * q);
-    }
-    for (const s of streams) {
-      const q = smooth(k01(s.t0, 0.9));
-      if (q <= 0) continue;
-      stroke(s.h, 0, s.h.total, 0.65 * LW, THREAD, s.a * q);
-      for (const bd of s.beads) {
-        const p = at(s.h, bd.d);
-        halo(p.x, p.y, 6 * k, 0.3 * bd.a * q);
-        dot(p.x, p.y, bd.r * Math.max(0.8, k), CORE, bd.a * q);
-      }
     }
   };
 
@@ -698,14 +681,25 @@
     drawFace();
     drawSides();
     drawOrbit();
-    for (const m of motes) {
-      const q = clamp((ta - m.t0) / m.dur);
-      const d = m.path.total * smooth(q);
-      if (q < 1) {
-        stroke(m.path, Math.max(0, d - 70 * k), d, 0.9 * LW, NODE, 0.35);
-        const p = at(m.path, d);
-        halo(p.x, p.y, 10 * k, 0.7);
-        dot(p.x, p.y, 1.8 * Math.max(0.8, k), CORE, 1);
+    for (const m of gifts) {
+      const t = ta - m.t0, land = LIFT + m.D;
+      // The mote brightens where it sits on the orbit.
+      const b = clamp(t / LIFT);
+      if (t < land) { halo(m.o.x, m.o.y, (6 + 8 * b) * k, 0.75 * b * (t < LIFT ? 1 : 1 - clamp((t - LIFT) / 0.4))); }
+      // Its thread draws ahead of it, holds while it travels, and fades once it has landed.
+      const qt = ease(clamp((t - 0.2) / (m.D * 0.55)));
+      const fade = t < land ? 1 : 1 - clamp((t - land - 0.2) / 0.8);
+      if (qt > 0) {
+        stroke(m.h, 0, m.h.total * qt, 0.8 * LW, THREAD, 0.5 * fade);
+        if (qt < 1) { const p = at(m.h, m.h.total * qt); halo(p.x, p.y, 6 * k, 0.45); }
+      }
+      // The mote itself, with a short bright tail.
+      if (t >= LIFT * 0.5 && t < land) {
+        const d = m.h.total * easeIO(clamp((t - LIFT) / m.D));
+        stroke(m.h, Math.max(0, d - 34 * k), d, 1.1 * LW, NODE, 0.6);
+        const p = at(m.h, d);
+        halo(p.x, p.y, 11 * k, 0.8);
+        dot(p.x, p.y, 2 * Math.max(0.8, k), CORE, 1);
       }
     }
     for (const pl of pulses) {
@@ -777,7 +771,7 @@
     timers = [];
     if (!slide.classList.contains('on')) html.classList.remove('ac-quiet');
     dropSeed();
-    motes = []; pulses = []; flare = 0;
+    gifts = []; pend = []; plan = 0; pulses = []; flare = 0;
     labelled = 0;
     root.classList.remove('is-labelled', 'is-community');
     hot = pinned = null;
@@ -793,7 +787,7 @@
       if (states) sd.slots.forEach((x, j) => { x.state = states[i][j]; });
       sd.slots.forEach((x) => { if (x.state !== 'none') x.shown = -50; if (x.filledAt > 0 || x.state === 'full') x.filledAt = -50; });
     });
-    motes = []; pulses = [];
+    gifts = []; pend = []; plan = PLAN.length; pulses = [];
     labelled = 2;
     root.classList.add('is-labelled', 'is-community');
   };
@@ -818,7 +812,7 @@
     if (!armed || !slide.classList.contains('on')) return;
     armed = false;
     ta = seedEl ? -Math.max(0.15, FLIGHT - (performance.now() - launchAt) / 1000) : -0.3; // the seed lands on the eye at 0
-    nextMote = AMBIENT + 0.4; nextUse = AMBIENT + 3.2;
+    nextGift = AMBIENT + 0.2; nextUse = AMBIENT + PLAN.length * GAP + 4; plan = 0;
     // The network that brought us here steps back so the picture reads.
     timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, 150));
     start();
