@@ -110,7 +110,7 @@
   const X = (rx) => ox + (rx - 836) * k, Y = (ry) => oy + (ry - 290) * k;
   const P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
 
-  const RR = 188, DX = 110, LH = Math.sqrt(RR * RR - DX * DX); // ring radius, half the gap between centres, lens half-height
+  const RR = 188, DX = 100, LH = Math.sqrt(RR * RR - DX * DX); // ring radius, half the gap between centres, lens half-height
   const TM = Math.atan2(LH, DX); // where the rings meet, as an angle on the left ring
   // Each ring is a few slightly irregular strands, like hand-drawn thread.
   const STRANDS = [
@@ -180,14 +180,13 @@
     small = W <= 760;
     const num = slide.querySelector('.num');
     const nb = num.getBoundingClientRect();
-    const fs = parseFloat(getComputedStyle(slide.querySelector('h1')).fontSize) || 40;
-    const top = nb.top - b.top; // the label's top: the picture sits above it
+        const top = nb.top - b.top; // the label's top: the picture sits above it
     if (small) {
       k = Math.min((W / 2 - 4) / 520, (top - 70) / 560);
       const ph = (590 - 30) * k;
       oy = Math.max(40, (top - 10 - ph) / 2 + 10) + (290 - 30) * k;
     } else {
-      k = Math.min(fs / 46, (W / 2 - 14) / 560, (top - 26) / (612 - 34));
+      k = Math.min(1.25, (W / 2 - 14) / 560, (top - 26) / (612 - 34));
       oy = top + (290 - 612) * k;
     }
     ox = W / 2;
@@ -206,8 +205,8 @@
 
     // The lens is the core: in it, the Astrid mink drawn in one thread, its neck rising from the bottom left.
     const top0 = P(836, 290 - LH), bot0 = P(836, 290 + LH);
-    const M = window.AstridMink, MS = 8.7; // reference units per pixel of the icon
-    const mp = ([px, py]) => P(836 + (px - M.BOX.cx) * MS - 2, 290 + (py - M.BOX.cy) * MS + 4);
+    const M = window.AstridMink, MS = 9.0; // reference units per pixel of the icon
+    const mp = ([px, py]) => P(836 + (px - M.BOX.cx) * MS - 5, 290 + (py - M.BOX.cy) * MS + 6);
     const onOutline = (px, py) => mp([px, py]);
     lens = {
       top: top0, bot: bot0,
@@ -219,12 +218,11 @@
     let hi = 0;
     lens.outline.pts.forEach((q, i) => { if (q[1] < lens.outline.pts[hi][1]) hi = i; });
     lens.crown = lens.outline.len[hi];
-    lens.tipL = onOutline(3.9, 9.0); lens.tipR = onOutline(12.4, 8.1);
-    // The agent: a constellation on curved threads, flowing right into the core.
+        // The agent: a constellation on curved threads, flowing right into the core.
     const N = {
       ul: rings[0].rim.ul, n1: P(629, 207), n2: P(702, 247), n3: P(622, 276), n4: P(579, 298), n5: P(686, 296),
       n6: P(632, 353), n7: P(719, 353), n8: P(673, 373), n9: P(681, 411), bot: rings[0].rim.bot,
-      ear: lens.ear, back: onOutline(3.95, 9.0), low: onOutline(2.95, 12.2),
+      ear: lens.ear, back: onOutline(3.45, 8.4), low: onOutline(2.4, 11.6),
     };
     const E = [['ear', 'n2', 0.12], ['back', 'n5', -0.06], ['low', 'n7', -0.1], ['n2', 'n1', 0.12], ['n5', 'n3', 0.16], ['n2', 'n5', -0.12],
       ['n1', 'ul', -0.16], ['n3', 'n1', -0.1], ['n3', 'n4', 0.12], ['n4', 'n6', 0.16], ['n7', 'n8', -0.1], ['n6', 'n8', -0.1],
@@ -250,12 +248,12 @@
     // The interface: three panels drawn in thread, each tied to the core.
     const pan = (l, t, r, bm, extra) => ({ l: X(l), t: Y(t), r: X(r), b: Y(bm), mid: P(l, (t + bm) / 2), extra });
     panels = [
-      pan(969, 188, 1050, 238, 'split'),
-      pan(1026, 267, 1105, 321, 'list'),
-      pan(970, 354, 1050, 402, 'media'),
+      pan(962, 188, 1043, 238, 'split'),
+      pan(1016, 267, 1095, 321, 'list'),
+      pan(963, 354, 1043, 402, 'media'),
     ];
     panels.forEach((p, i) => {
-      const from = [lens.nose, onOutline(12.4, 8.1), onOutline(9.95, 12.2)][i];
+      const from = [lens.nose, onOutline(12.6, 8.3), onOutline(10.45, 12.2)][i];
       p.links = [bow(from, p.mid, [-0.1, 0.06, 0.12][i], 20), bow(from, p.mid, [-0.04, 0.12, 0.06][i], 20)];
       p.t0 = 0.08 * i;
       // The frame, drawn from its left middle node both ways round.
@@ -263,7 +261,7 @@
       p.down = line([[p.l, p.mid.y], [p.l, p.b], [p.r, p.b], [p.r, p.mid.y]]);
       p.corners = [[p.l, p.t], [p.r, p.t], [p.l, p.b], [p.r, p.b], [p.l, p.mid.y]];
     });
-    panels[0].out = bow(P(1050, 213), rings[1].rim.ul, 0.22, 20);
+    panels[0].out = bow(P(1043, 213), rings[1].rim.ul, 0.22, 20);
 
     // Extensions on threads below each ring.
     sides = [0, 1].map((side) => {
@@ -294,7 +292,7 @@
       const nearGap = smooth(clamp((Math.abs(rx - 836) - gapX) / 60));
       const bright = rnd() < 0.05 + 0.12 * low;
       orbit.push({ ...p, phi, a: (bright ? 0.85 : 0.3 + 0.2 * low) * endFade * (0.5 + 0.5 * nearGap), r: bright ? 1.35 : 0.75, bright,
-        t0: 2.5 + 0.9 * (Math.abs(phi - 270 * DEG) / (122 * DEG)) });
+        t0: T.orbit + 0.8 * (Math.abs(phi - 270 * DEG) / (122 * DEG)) });
     }
     // Two or three fine streams down each lower arc, beaded with motes.
     streams = [];
@@ -304,7 +302,7 @@
         const pts = Array.from({ length: 25 }, (_, i) => { const p = orbAt(s0 + ((s1 - s0) * i) / 24, da, db); return [p.x, p.y]; });
         const h = rev(line(pts)); // from up the arc down to its end
         const beads = Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => ({ d: (0.1 + 0.85 * rnd()) * h.total, r: 0.9 + rnd() * 0.7, a: 0.5 + rnd() * 0.45 }));
-        streams.push({ h, a: al, beads, t0: 3.0 + rnd() * 0.3 });
+        streams.push({ h, a: al, beads, t0: T.orbit + 0.5 + rnd() * 0.3 });
       }
     }
 
@@ -321,10 +319,10 @@
     feed = line(bez({ x: nx, y: ny - 3 }, { x: nx + 9 * k, y: ny + up * 0.35 }, { x: bot0.x - 8 * k, y: bot0.y - up * 0.6 }, { x: bot0.x, y: bot0.y }, 32));
 
     // Labels.
-    const ls = Math.max(small ? 11 : 13, 21 * k);
-    put(labels.agent, X(684), Y(143), ls);
-    put(labels.face, X(990), Y(143), ls);
-    put(labels.com, X(836), orbAt(270 * DEG).y, Math.max(small ? 10.5 : 12, 20 * k));
+    const ls = small ? Math.max(11, 21 * k) : clamp(W * 0.0132, 13, 26);
+    put(labels.agent, X(692), Y(143), ls);
+    put(labels.face, X(980), Y(143), ls);
+    put(labels.com, X(836), orbAt(270 * DEG).y, ls * 0.95);
     root.style.setProperty('--ac-lw', lw);
     LW = lw;
     return true;
@@ -333,8 +331,8 @@
 
   // ---- Time -------------------------------------------------------------------
   // One clock, ta, in seconds from the moment the network reaches the slide's node.
-  const T = { rings: 0.05, ringDur: 1.3, core: 0.75, feed: 1.15, cons: 1.25, panels: 1.3, drop: 2.15, orbit: 2.5, end: 3.9 };
-  const AMBIENT = 4.6;
+  const T = { rings: 0.05, ringDur: 1.1, core: 0.6, feed: 1.1, cons: 1.0, panels: 1.05, drop: 1.8, orbit: 2.2, end: 3.4 };
+  const AMBIENT = 4.0;
   let ta = 0, pace = 1, visits = 0, running = false, loop = 0, last = 0, timers = [];
   let motes = [], pulses = [], flare = 0, nextMote = 0, nextUse = 0, turn = 0;
   let hot = null, pinned = null, touched = false, seedEl = null, labelled = 0;
@@ -397,8 +395,8 @@
   const advance = (dt) => {
     ta += ta < T.end ? dt / pace : dt;
     flare *= Math.exp(-dt / 0.9);
-    if (labelled < 1 && ta >= 1.0) { labelled = 1; root.classList.add('is-labelled'); }
-    if (labelled < 2 && ta >= 2.9) { labelled = 2; root.classList.add('is-community'); }
+    if (labelled < 1 && ta >= 0.8) { labelled = 1; root.classList.add('is-labelled'); }
+    if (labelled < 2 && ta >= T.orbit + 0.3) { labelled = 2; root.classList.add('is-community'); }
     if (seedEl && ta >= 0) { seedEl.remove(); seedEl = null; if (ring) ring.style.visibility = ''; }
     sides.forEach((sd) => sd.slots.forEach((x) => { if (x.flash) x.flash = Math.max(0, x.flash - dt / 1.2); }));
     if (ta < AMBIENT) return;
@@ -428,6 +426,17 @@
     g.lineWidth = width;
     g.strokeStyle = `rgba(${color},${Math.min(1, a).toFixed(3)})`;
     g.beginPath(); trace(h, d0, d1); g.stroke();
+  };
+  // A stroke between d0 and d1 whose alpha ramps up over the line's first f0 and down over its last f1.
+  const fadeStroke = (h, d0, d1, width, color, a, f0, f1) => {
+    const body0 = Math.max(d0, f0), body1 = Math.min(d1, h.total - f1);
+    stroke(h, body0, body1, width, color, a);
+    const n = 7;
+    for (let j = 0; j < n; j++) {
+      const f = (j + 0.5) / n;
+      if (f0 > 0) { const s0 = (f0 * j) / n, s1 = (f0 * (j + 1)) / n; stroke(h, Math.max(d0, s0), Math.min(d1, s1), width, color, a * f); }
+      if (f1 > 0) { const s1 = h.total - (f1 * j) / n, s0 = h.total - (f1 * (j + 1)) / n; stroke(h, Math.max(d0, s0), Math.min(d1, s1), width, color, a * f); }
+    }
   };
   const poly = (pts, width, color, a) => {
     if (a <= 0.003 || pts.length < 2) return;
@@ -500,21 +509,15 @@
     // The outline: up both sides from the neck, meeting on the head.
     const o = lens.outline, up = lens.crown * q, down = (o.total - lens.crown) * q;
     const lit = 1 + 0.5 * flare;
-    const fadeLen = 26 * k; // the neck's two ends fade out where it rises from below
-    for (const [w, a] of [[5 * LW, 0.06], [1.15 * LW, 0.85]]) {
-      const col = a > 0.5 ? NODE : THREAD;
-      stroke(o, fadeLen, Math.max(fadeLen, up), w, col, a * lit);
-      stroke(o, Math.min(o.total - down, o.total - fadeLen), o.total - fadeLen, w, col, a * lit);
-      for (let j = 0; j < 6; j++) { // segment j runs from the faded tip (j = 0) towards the body
-        const f = (j + 0.5) / 6, d0 = (fadeLen * j) / 6, d1 = (fadeLen * (j + 1)) / 6;
-        stroke(o, d0, Math.min(d1, up), w, col, a * lit * f);
-        stroke(o, Math.max(o.total - d1, o.total - down), o.total - d0, w, col, a * lit * f);
-      }
+    const fadeLen = 34 * k; // the neck's two ends fade out where it rises from below
+    for (const [w, a, col] of [[5 * LW, 0.06, THREAD], [1.15 * LW, 0.85, NODE]]) {
+      fadeStroke(o, 0, up, w, col, a * lit, fadeLen, fadeLen);
+      fadeStroke(o, o.total - down, o.total, w, col, a * lit, fadeLen, fadeLen);
     }
     if (q < 1) { for (const d of [up, o.total - down]) { const p = at(o, d); halo(p.x, p.y, 8 * k, 0.6); } }
     // Its ends fade where the neck leaves the lens.
     const qt = ease(k01(T.core + 0.6 / pace, 0.9 / pace));
-    if (qt > 0) stroke(lens.throat, 0, lens.throat.total * qt, 0.8 * LW, THREAD, 0.42 * lit);
+    if (qt > 0) fadeStroke(lens.throat, 0, lens.throat.total * qt, 0.8 * LW, THREAD, 0.45 * lit, 0, 40 * k);
     node(lens.nose.x, lens.nose.y, 0.85, 1, popIn(T.core + 0.75 / pace));
     node(lens.ear.x, lens.ear.y, 0.85, 1, popIn(T.core + 0.55 / pace));
     dot(lens.mark.x, lens.mark.y, 1.3 * Math.max(0.7, k), NODE, 0.5 * smooth(k01(T.core + 0.9 / pace, 0.4)));
@@ -738,6 +741,7 @@
   };
   // From slide 3: the empty ring lifts off the chart and flies up to become the core's bright node.
   const FLIGHT = 1.1;
+  let launchAt = 0;
   const launch = () => {
     if (!ring) return false;
     const r = ring.getBoundingClientRect(), b = root.getBoundingClientRect();
@@ -750,6 +754,7 @@
     seedEl.setAttribute('aria-hidden', 'true');
     seedEl.innerHTML = '<i></i><b></b>';
     document.body.appendChild(seedEl);
+    launchAt = performance.now();
     ring.style.visibility = 'hidden';
     const steps = 24;
     seedEl.animate(Array.from({ length: steps + 1 }, (_, i) => {
@@ -812,7 +817,7 @@
   const arrive = () => {
     if (!armed || !slide.classList.contains('on')) return;
     armed = false;
-    ta = seedEl ? -0.15 : -0.3;
+    ta = seedEl ? -Math.max(0.15, FLIGHT - (performance.now() - launchAt) / 1000) : -0.3; // the seed lands on the eye at 0
     nextMote = AMBIENT + 0.4; nextUse = AMBIENT + 3.2;
     // The network that brought us here steps back so the picture reads.
     timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, 150));

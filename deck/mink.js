@@ -26,21 +26,23 @@ window.AstridMink = (() => {
   ];
   const COLORS = { o: '#FF7A2E', c: '#F7E6CF', k: '#151311' };
 
-  // The silhouette (body and throat), open at the bottom where the neck leaves the frame:
-  // up the back from the bottom left, over the ear and the head, round the snout, down the throat.
+  // The silhouette, traced along the middle of the icon's dark outline and open at the bottom where the
+  // neck leaves the frame: up the back from the bottom left, over the ear and the flat top of the head,
+  // along the squared snout (pointing right and a little up), down the throat.
   const OUTLINE = [
-    [0.1, 16], [0.35, 14.5], [1.25, 13.85], [2.3, 13.3], [2.95, 12.4], [3.0, 10.7], [3.55, 9.95], [3.95, 9.0],
-    [3.5, 8.05], [2.95, 7.1], [2.85, 5.65], [3.35, 4.95], [4.55, 4.75], [5.05, 4.3], [5.65, 3.45],
-    [6.9, 2.55], [8.3, 2.0], [10.0, 1.95], [11.8, 2.1], [12.8, 2.9], [13.8, 3.8], [14.7, 4.7], [15.05, 5.5],
-    [14.5, 6.3], [13.5, 7.1], [12.4, 8.1], [11.1, 8.9], [10.2, 9.45], [9.95, 10.6], [9.95, 13.2], [9.45, 14.4], [9.05, 16],
+    [-0.2, 15.3], [-0.05, 14.5], [0.55, 13.6], [1.5, 12.6], [2.4, 11.6], [2.55, 10.4], [3.3, 9.5], [3.45, 8.4],
+    [2.6, 7.4], [2.5, 5.6], [2.75, 4.85], [3.3, 4.5], [4.3, 4.4], [5.25, 3.7], [6.3, 2.75], [7.6, 1.8], [8.6, 1.55],
+    [10.5, 1.5], [11.6, 1.6], [12.4, 2.35], [13.2, 3.2], [14.3, 3.2], [15.25, 3.08], [15.6, 3.35], [15.65, 4.4],
+    [15.6, 5.3], [15.3, 5.75], [14.5, 6.4], [13.6, 7.3], [12.6, 8.3], [11.4, 9.2], [10.6, 9.8], [10.45, 11],
+    [10.45, 13.2], [9.8, 14.2], [9.55, 16],
   ];
-  // Where the cream throat and belly meet the body: from the mouth down to the bottom.
+  // Where the cream throat and belly meet the body: from the mouth, back under the jaw, down to the bottom.
   const THROAT = [
-    [14.25, 5.75], [12.3, 6.25], [10.5, 6.9], [9.05, 7.65], [7.95, 8.6], [7.15, 9.8], [6.85, 11.0], [6.3, 12.3],
-    [6.0, 13.6], [5.45, 14.6], [5.1, 16],
+    [14.35, 5.0], [14.1, 5.7], [13.2, 6.05], [11.6, 6.15], [10.6, 6.6], [9.4, 7.3], [8.4, 8.1], [7.5, 9.1],
+    [7.05, 10.2], [6.8, 11.2], [6.3, 12.3], [6.0, 13.6], [5.4, 14.7], [5.1, 16],
   ];
-  const EYE = [10, 5], NOSE = [15.05, 5.5], EAR = [2.95, 5.4], EARMARK = [4.5, 6.5];
-  const BOX = { x0: 0, y0: 2, x1: 15.05, y1: 16, cx: 7.5, cy: 9 }; // the silhouette's bounds
+  const EYE = [10, 5], NOSE = [15.6, 3.4], EAR = [2.75, 4.85], EARMARK = [4.5, 6.5];
+  const BOX = { x0: -0.2, y0: 1.5, x1: 15.65, y1: 16, cx: 7.55, cy: 8.75 }; // the silhouette's bounds
 
   // Centripetal Catmull–Rom through the key points: `per` samples per span.
   const smooth = (pts, per = 8) => {
