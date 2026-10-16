@@ -187,6 +187,7 @@
   .slide.dt-rewind:not(.on) { opacity: 1; transition: none; }
   .slide.dt-rewind > :not(.num):not(.split), .slide.dt-rewind > .split > :not(:first-child) { opacity: 1; transition: none; }
   .slide.dt-rewind:not(.dt-leaving) > .split > :first-child, .slide.dt-rewound:not(.on) > .split > :first-child { opacity: 0; }
+  .slide.dt-return { z-index: 1; } /* its text over the picture coming back into it */
   .slide.dt-return > :not(.num):not(.split), .slide.dt-return > .split > :not(:first-child) { transition: opacity .6s ease; }
   .slide.dt-await > :not(.num):not(.split), .slide.dt-await > .split > :not(:first-child) { opacity: 0; transition: none; }
   /* In F the label moves into the text column, directly above the headline. */
