@@ -119,7 +119,7 @@
   .slide:not(.on) .vc { transform: scale(.32); opacity: 0; }
   .vc-tile { all: unset; position: absolute; overflow: visible; border-radius: 4px; cursor: zoom-in; background: #15110d;
     box-shadow: 0 10px 30px #0008; transition: transform .4s ease, box-shadow .4s ease; }
-  .vc-tile::before { content: ""; position: absolute; inset: -1px 0; }
+  .vc-tile::before { content: ""; position: absolute; inset: -3px 0; }
   .vc-tile video { border-radius: 4px; }
   .vc-tile video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .88; transition: opacity .4s ease; }
   .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
@@ -307,6 +307,7 @@
      small-label voice (clear of the deck's chrome bar at the bottom). Opens in a new tab. */
   .as-try { position: absolute; right: 4px; top: calc(var(--as-cell, 4px) * 21 + 6px - 1.6em); z-index: 1; font: italic 400 1.05rem/1.2 "Cormorant Garamond", serif;
     color: #ecc57e; text-decoration: none; letter-spacing: .02em; pointer-events: auto; transition: opacity .5s ease .3s, color .2s ease; }
+  .as-try::before { content: ""; position: absolute; inset: -12px; }
   .as-try span { display: inline-block; transition: transform .2s ease; }
   .as-try:hover, .as-try:focus-visible { color: #ffd991; }
   .as-try:hover span, .as-try:focus-visible span { transform: translateX(3px); }
@@ -678,6 +679,10 @@
   .fw-cbody b { font: 400 1.12em/1.1 "EB Garamond", serif; color: var(--ink); }
   .fw-cbody span { font: italic 400 .9em/1.28 "Cormorant Garamond", serif; color: #cbbfa9; }
   .fw-cbody a, .fw-cbody em { margin-top: .2em; font: italic 500 .88em/1.2 "Cormorant Garamond", serif; color: #f0c67e; text-decoration: none; letter-spacing: .02em; }
+  .fw-cbody a { position: relative; }
+  .fw-cbody a::before { content: ""; position: absolute; inset: -13px; }
+  .fw-stat a { position: relative; }
+  .fw-stat a::before { content: ""; position: absolute; inset: -13px; }
   .fw-cbody em { color: #a39684; }
   .fw-cards.is-live .fw-card { pointer-events: auto; }
   .fw-card.is-compact .fw-cbody span { display: none; }
@@ -772,7 +777,8 @@
   .sf-whisper.is-on { opacity: 1; }
   .sf-legend { position: absolute; right: max(16px, 9vw); bottom: 76px; width: min(40vw, 640px); z-index: 2; pointer-events: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem 1rem;
     font: 400 0.82rem "EB Garamond", serif; color: #b8a98f88; }
-  .sf-key { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45em; transition: color .4s; }
+  .sf-key { all: unset; position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45em; transition: color .4s; }
+  .sf-key::after { content: ""; position: absolute; inset: -14px 0; }
   .sf-key::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--c); opacity: .7; }
   .sf-key:hover, .sf-key.is-lit { color: var(--ink); }
   .sf-key.is-on { text-decoration: underline; text-decoration-color: var(--c); text-underline-offset: 3px; }
@@ -889,6 +895,8 @@
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); transition: width 0.5s ease; }
   .chrome button { background: none; border: 1px solid #ffffff22; color: var(--soft); font: inherit; padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; }
   .chrome button:hover { color: var(--ink); border-color: var(--gold); }
+  .chrome #ovBtn { position: relative; }
+  .chrome #ovBtn::before { content: ""; position: absolute; inset: -7px 0; }
   /* Previous / next: quiet gold rings either side of the counter. Outside the deck, so the click-thirds never see them. */
   .chrome .navb { position: relative; display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
   .chrome .navb::before { content: ""; position: absolute; inset: -7px; }
