@@ -54,43 +54,101 @@
   document.body.appendChild(cardsRoot);
   const AV = (n) => `<img src="../assets/cards/artcompute/${n}.jpg" alt="">`;
   const STRIP = (n) => `<i style="background-image:url(../assets/astrid/${n}-strip.jpg)"></i>`;
+  const SEAT = (cls = '') => `<span class="fw-astrid${cls}"><img src="../assets/astrid/first-light-anchor.jpg" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span><canvas class="fw-seat"></canvas></span>`;
+  // Astrid's logo, the app's 16 × 16 pixel mink (mink.js GRID, astrid-favicon.svg), as crisp SVG at any scale.
+  const LOGO = (() => {
+    let d = '';
+    M.GRID.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') d += `<rect x="${x}" y="${y}" width="1" height="1" fill="${M.COLORS[ch]}"/>`; }));
+    return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${d}</svg>`;
+  })();
   // The order is fixed by the code that reads it (the Astrid card is [1]); `crop` is its icon in its picture:
   // the centre (as fractions of the picture's width and height) and the size (a fraction of its height).
+  // `face` is what the icon shows instead of that crop, where a logo or an image reads better in a circle;
+  // `full` is the fuller card it grows into on slide 10, the homepage's own (journey/cards/, content/content.js).
   const CARDS = [
     { name: 'Arca Gidan', line: 'The Arca Gidan Prize is an open source AI art competition.', href: 'https://arcagidan.com/', crop: [0.5, 0.5, 1],
-      media: '<img src="../assets/cards/arca/poster-2.jpg" alt="">' },
+      media: '<img src="../assets/cards/arca/poster-2.jpg" alt="">',
+      full: { name: 'Arca Gidan Prize', line: 'The Arca Gidan Prize is an open source AI art competition. We wish to provide a reason for people to push themselves and open models to their limits.',
+        door: 'See the winners →', href: 'https://arcagidan.com/winners/edition-2',
+        stage: `<span class="fw-ag">${[1, 2, 3, 4].map((n) => `<i><img src="../assets/cards/arca/poster-${n}.jpg" alt=""></i>`).join('')}<b>ARCA GIDAN</b></span><span class="fw-ag-band"><span><b>198</b>entries</span><span><b>7,287</b>votes</span><span><b>$56.8K</b>prizes</span></span>` } },
     // Astrid: a still of slide 5's editor (its preview over its timeline), and the seat the mink flies into from slide 9.
     { name: 'Astrid', line: 'A new kind of video editor: describe what you want, and the agent reaches for everything the community has built.', href: 'https://astrid.haus/', label: 'Try Astrid →', crop: [0.17, 0.74, 0.86],
-      media: `<span class="fw-astrid"><img src="../assets/astrid/first-light-anchor.jpg" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span><canvas class="fw-seat"></canvas></span>` },
-    // Banodoco: the homepage's card, its live Discord digest (the captured snapshot, assets/cards/discord/fallback.json).
+      media: SEAT(), face: `<span class="fw-face fw-face-mink">${LOGO}</span>`,
+      full: { name: 'Astrid', line: 'A new kind of video editor: describe what you want, and the agent reaches for everything the community has built.',
+        door: 'Try Astrid →', href: 'https://astrid.haus/', stage: SEAT(' fw-astrid-full') } },
+    // Banodoco: the homepage's card, its live Discord digest (the captured snapshot, assets/cards/discord/fallback.json);
+    // its icon is the Banodoco logo, the site's own B (assets/brand/mark-b-mask-96.png, as in the header's .logo .mark).
     { name: 'Banodoco', line: 'Banodoco is where the community actually lives, day to day.', href: 'https://discord.gg/NnFxGvx94b', label: 'Join →', crop: [0.17, 0.83, 0.42], focus: '.fw-dc-p .fw-avs',
-      media: `<span class="fw-dc"><span class="fw-dc-ch"># daily_summaries</span><span class="fw-dc-t">H3 Tooling Week: Timeline Director, Studio Node Pack, and a Training Adapter Land</span><span class="fw-dc-p"><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span><b>20,000+</b> people</span></span>` },
+      media: `<span class="fw-dc"><span class="fw-dc-ch"># daily_summaries</span><span class="fw-dc-t">H3 Tooling Week: Timeline Director, Studio Node Pack, and a Training Adapter Land</span><span class="fw-dc-p"><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span><b>20,000+</b> people</span></span>`,
+      face: '<span class="fw-face fw-face-b"><i></i></span>',
+      full: { name: 'Banodoco', line: 'Banodoco is where the community actually lives, day to day. Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.',
+        door: 'Join the Discord →', href: 'https://discord.gg/NnFxGvx94b',
+        stage: `<span class="fw-dc fw-dc-full"><span class="fw-dc-ch"># daily_summaries · 2026-08-17</span><span class="fw-dc-t">H3 Tooling Week: Timeline Director, Studio Node Pack, and a Training Adapter Land</span><span class="fw-dc-x">seesee75-commits dropped ComfyUI-MiniMaxH3-Director, a proper timeline editor for MiniMax H3 inside ComfyUI — storyboard prompts, first/last keyframes, image/video/audio references, joint audio, live sampling preview, retakes, and shot chaining.</span><span class="fw-dc-p"><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span><b>20,000+</b> people</span></span>` } },
+    // ADOS: its icon keeps its poster, with the events' own wordmark (Pilowlava, ados.events) over it.
     { name: 'ADOS', line: 'ADOS events bring the community together in the real world.', href: 'https://ados.events/', crop: [0.6, 0.5, 1],
-      media: '<img src="../assets/cards/ados/la-2025-thumb.jpg" alt="">' },
-    // ArtCompute: its own terminal stat band (artcompute.org's figures, verified 2026-08-17) and three grantees.
+      media: '<img src="../assets/cards/ados/la-2025-thumb.jpg" alt="">', face: '<span class="fw-face fw-face-ados"><b>ADOS</b></span>',
+      full: { name: 'ADOS', line: 'ADOS events bring the community together in the real world. We gather our community with people from the extended creative world to look at art, eat nice food, and create things.',
+        door: 'See events →', href: 'https://ados.events/',
+        stage: '<span class="fw-ad"><img src="../assets/cards/ados/la-2025-thumb.jpg" alt=""><span><small>Los Angeles — 7 November 2025</small><b>ADOS</b></span></span>' } },
+    // ArtCompute: its own terminal stat band (artcompute.org's figures, verified 2026-08-17) and three grantees; its
+    // icon is the picture artcompute.org shows for itself (its share image, a frame of its background reel).
     { name: 'ArtCompute', line: 'ArtCompute gives micro-grants to those pushing open AI models, approved by AI.', href: 'https://artcompute.org/', crop: [0.5, 0.3, 0.6],
-      media: `<span class="fw-ac"><span class="fw-ac-stats"><span><b>11</b>grants</span><span><b class="g">473</b>GPU hours</span><span><b class="v">AUTO</b>approval</span></span><span class="fw-ac-l">latest grants</span><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span></span>` },
+      media: `<span class="fw-ac"><span class="fw-ac-stats"><span><b>11</b>grants</span><span><b class="g">473</b>GPU hours</span><span><b class="v">AUTO</b>approval</span></span><span class="fw-ac-l">latest grants</span><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span></span>`,
+      face: '<span class="fw-face fw-face-ac"></span>',
+      full: { name: 'ArtCompute', line: 'ArtCompute gives micro-grants to those pushing open AI models, approved by AI. It is practical compute for people whose ambition has outrun their hardware.',
+        door: 'Request compute →', href: 'https://artcompute.org/',
+        stage: `<span class="fw-ac fw-ac-full"><span class="fw-ac-stats"><span><b>11</b>grants</span><span><b class="g">473</b>GPU hours</span><span><b class="v">AUTO</b>approval</span></span><span class="fw-ac-l">latest grants</span>${[['loreweavr', 'Loreweavr — Dual-LoRA Composition · 50h'], ['ashmotv', 'AshmoTV — Multi-angle IC-LoRA, LTX 2.3 · 50h'], ['persoon', 'Persoon — Obscura Remova IC-LoRA · 40h']].map(([a, t]) => `<span class="fw-ac-row">${AV(a)}<span>${t}</span><i>PAID</i></span>`).join('')}</span>` } },
     // 2RP: no link, as on the homepage (content.js): the publication is coming soon.
     { name: '2RP', line: '2RP is an art and tech publication that aims to highlight the best of the ecosystem.', soon: 'Coming soon', crop: [0.5, 0.45, 1],
-      media: '<img src="../assets/cards/tworp/cover.jpg" alt="">' },
+      media: '<img src="../assets/cards/tworp/cover.jpg" alt="">',
+      full: { name: '2RP', line: '2RP is an art and tech publication that aims to highlight the best of the ecosystem. Open work, open models, and the people making both.',
+        soon: 'Coming soon', stage: '<span class="fw-rp"><img src="../assets/cards/tworp/cover.jpg" alt=""><b>2RP</b></span>' } },
   ];
   const chips = CARDS.map((c) => {
     const el = document.createElement('div');
     el.className = 'fw-card';
     const tail = c.href ? `<a href="${c.href}" target="_blank" rel="noopener">${c.label || 'Learn more →'}</a>` : `<em>${c.soon}</em>`;
-    el.innerHTML = `<div class="fw-media">${c.media}</div><div class="fw-cbody"><b>${c.name}</b><span>${c.line}</span>${tail}</div>`;
+    el.innerHTML = `<div class="fw-media">${c.media}${c.face || ''}</div><div class="fw-cbody"><b>${c.name}</b><span>${c.line}</span>${tail}</div>`;
     cardsRoot.appendChild(el);
     return el;
   });
   const vids = chips.map((el) => el.querySelector('video'));
-  // The mink's seat in the Astrid card, and a small canvas above the cards she flies on from slide 9.
+  const faces = chips.map((el) => el.querySelector('.fw-face'));
+  // The fuller cards slide 10's grow into: built once the wheel first shows, from slide 9 on (so their pictures are
+  // fetched and decoded by the time anyone hovers), on top of everything else on the layer. They copy the small cards' links, so they stay out of
+  // the tab order and the accessibility tree; the small card is the one a keyboard or a reader reaches.
+  const fulls = [];
+  const buildFulls = () => {
+    if (fulls.length) return;
+    CARDS.forEach((c, i) => {
+      const f = c.full, el = document.createElement('div');
+      el.className = 'fw-full';
+      el.setAttribute('aria-hidden', 'true');
+      const door = f.href ? `<a class="fw-door" href="${f.href}" target="_blank" rel="noopener" tabindex="-1">${f.door}</a>` : `<em class="fw-door">${f.soon}</em>`;
+      el.innerHTML = `<div class="fw-fstage">${f.stage}</div><div class="fw-cbody"><b>${f.name}</b><span>${f.line}</span></div>${door}`;
+      el.style.visibility = 'hidden';
+      cardsRoot.appendChild(el);
+      el.querySelectorAll('img').forEach((im) => { im.decoding = 'async'; im.decode?.().catch(() => {}); }); // ready before anyone hovers
+      fulls.push(el);
+      wire(el, i, true);
+    });
+    fullSeat = fulls[1].querySelector('.fw-seat');
+    fullW = 0;
+    paintSeat();
+  };
+  // The mink's seat in the Astrid card (she sits there once she's landed, part of her card), and a small canvas
+  // above the cards she flies on from slide 9.
   const seat = chips[1].querySelector('.fw-seat');
+  let fullSeat = null;
   const fly = document.createElement('canvas');
   fly.className = 'fw-fly';
   cardsRoot.appendChild(fly);
   const cardH = chips.map(() => 0), media = chips.map((el) => el.querySelector('.fw-media'));
   // Each card's visible box last frame (its icon or its whole card), and how open it is: 1 a card, 0 an icon.
   const vis = chips.map(() => null), hov = chips.map(() => 0), hoT = chips.map(() => 0);
+  // How far each has grown into its fuller card (slide 10), and the size that card stands at, whole.
+  const gro = chips.map(() => 0), grT = chips.map(() => 0), fullH = chips.map(() => 0), fullSH = chips.map(() => 0);
+  let fullW = 0, fullS = 1;
   new MutationObserver(() => cardsRoot.classList.toggle('is-on', root.classList.contains('is-on'))).observe(root, { attributes: true, attributeFilter: ['class'] });
 
   // A soft light, stamped wherever something glows.
@@ -290,10 +348,14 @@
     // Type first (it sets the labels' widths), from the room there is; then the picture round it.
     const kBase = tall ? Math.min((W - 24) / 400, (H * 0.6) / 640) : Math.min((W / 2 - 64) / 795, (H * 0.64) / 600);
     root.style.fontSize = `${clamp(22 * (tall ? kBase * 0.55 : kBase), tall ? 10.5 : 12.5, 22).toFixed(1)}px`;
+    for (const key of ['g0', 'g1', 'g2']) labels[key].classList.toggle('fw-c', tall);
+    for (const key in labels) lsz.set(labels[key], [labels[key].offsetWidth, labels[key].offsetHeight]);
+    dirty.fill(true); fullW = 0; // the cards are measured again, at the new size
+    wordsBottom = colOf(hosts[1]).getBoundingClientRect().bottom;
     // Each slide fits its own picture: 10's is the bigger one, the wheel grown with the initiatives round it.
     stages = [build(0, fit(0)), build(1, fit(1)), build(2, fit(2))];
-    // On 11 the deck's Mycelial mark forms above the label (dot-transitions.js: 68 px, its middle 36 px over the node,
-    // the node 13 px over the label): open the halo tall enough that its ring passes above the mark, never over it.
+    // On 11 the halo opens tall enough to pass well above the label's node (the room the deck's small Mycelial mark
+    // once took there; the mark now forms large and faint behind the words, inside the halo).
     const lab = hosts[2].querySelector('.num');
     if (lab) { const r = stages[2].ring, need = r[1] - (lab.getBoundingClientRect().top - 13 - 36 - 34 - (short ? 0 : iconR()) - (tall ? 8 : 10)); if (r[3] < need) r[3] = need; }
     // Cards that sit on the ring (the icons) take their places on it now its size is known.
@@ -624,10 +686,28 @@
   };
 
   // DOM: the labels and the chips follow the picture.
-  const put = (el, x, y, alignX, alignY) => { el.style.transform = `translate(${(x - el.offsetWidth * alignX).toFixed(1)}px, ${(y - el.offsetHeight * alignY).toFixed(1)}px)`; };
+  // DOM: the labels and the chips follow the picture. Each frame writes every card's sizing first, then reads what it
+  // needs back (only for a card whose width, type or layout changed), then sets every transform, clip and opacity:
+  // at most one layout a frame, and none while the picture holds still. The labels' sizes are measured in layout().
+  const lsz = new Map();
+  const put = (el, x, y, alignX, alignY) => { const [w, h] = lsz.get(el) || [0, 0]; el.style.transform = `translate(${(x - w * alignX).toFixed(1)}px, ${(y - h * alignY).toFixed(1)}px)`; };
   const setOp = (el, v) => { const s = v.toFixed(2); if (el.style.opacity !== s) el.style.opacity = s; };
+  const mediaH = chips.map(() => 0), dirty = chips.map(() => true);
+  let layW = 0; // the width the cards are laid out at
+  let seatIn = null, seatAt = null; // the mink's seat: its middle in her card (unscaled), and on screen this frame
+  // A face that arrives late changes the type's size: measure again then.
+  document.fonts?.addEventListener?.('loadingdone', () => {
+    for (const key in labels) lsz.set(labels[key], [labels[key].offsetWidth, labels[key].offsetHeight]);
+    dirty.fill(true); fullW = 0; lastPlaceKey = null;
+    if (!running && begun && cur) frame();
+  });
+  const inCard = (el, card) => { // an element's middle in its card's own coordinates (borders included, transforms not)
+    let x = el.offsetWidth / 2, y = el.offsetHeight / 2;
+    for (let n = el; n && n !== card; n = n.offsetParent) { x += n.offsetLeft + (n.offsetParent ? n.offsetParent.clientLeft : 0); y += n.offsetTop + (n.offsetParent ? n.offsetParent.clientTop : 0); }
+    return [x, y];
+  };
   const place = () => {
-    const key = [W, H, m, k01(T.labels, 0.6), cardOut(), openBase(), ...chips.map((_, i) => chipQ(i)), ...hov, root.classList.contains('is-on')].join('|');
+    const key = [W, H, m, k01(T.labels, 0.6), cardOut(), openBase(), ...chips.map((_, i) => chipQ(i)), ...hov, ...gro, root.classList.contains('is-on')].join('|');
     if (key === lastPlaceKey) return;
     const mChanged = m !== lastPlacedM;
     lastPlaceKey = key;
@@ -645,26 +725,34 @@
     put(labels.equip, cur.equip[0], cur.equip[1], 0.5, 0.5);
     const pa = nine();
     for (const key in labels) setOp(labels[key], key === 'astrid' ? smooth(k01(T.lens + 0.6, 0.5)) * lensA() : ql * pa);
-    for (const key of ['g0', 'g1', 'g2']) labels[key].classList.toggle('fw-c', tall);
     // The cards: sized from the picture's scale, coming out of the ring on the way from 9; on 11 (and on a
     // phone) each is clipped down to an icon of its picture, opening back into the whole card when asked.
     const out = m < 1 ? cardOut() : 1, ob = openBase(), S = iconR() * 2;
+    // While the picture morphs, the cards are laid out at a width that moves in steps (6%), and scaled the rest of
+    // the way; once it rests they are laid out at the true width. Their type is sized with their width, so a step
+    // wraps much as the true width would, and a morph costs a handful of layouts rather than one every frame.
+    const cw = cur.cw;
+    if (!morph || Math.abs(cw - layW) > cw * 0.06) layW = cw;
+    const w = layW, ls = cw / w, ws = `${w.toFixed(1)}px`, fs = `${Math.max(tall ? 10.5 : 11.5, (w / 250) * 15.5).toFixed(2)}px`, compact = !tall && w < 176;
+    chips.forEach((el, i) => { // 1. sizing
+      if (el.style.width !== ws) { el.style.width = ws; el.style.fontSize = fs; dirty[i] = true; }
+      if (el.classList.contains('is-compact') !== compact) { el.classList.toggle('is-compact', compact); dirty[i] = true; }
+    });
+    chips.forEach((el, i) => { // 2. measuring, where the sizing changed
+      if (!dirty[i]) return;
+      dirty[i] = false;
+      cardH[i] = el.offsetHeight; mediaH[i] = media[i].offsetHeight || w * 0.54;
+      const f = CARDS[i].focus && el.querySelector(CARDS[i].focus); // an icon centred on a part of its picture
+      if (f) { const mr = media[i].getBoundingClientRect(), fr = f.getBoundingClientRect(); if (mr.width && fr.width) CARDS[i].crop = [(fr.left + fr.width / 2 - mr.left) / mr.width, (fr.top + fr.height / 2 - mr.top) / mr.height, Math.min(1, (fr.width * 1.15) / mr.height)]; }
+      if (i === 1) seatIn = inCard(seat, el);
+    });
     let live = root.classList.contains('is-on');
-    cur.cards.forEach(([x, y], i) => {
-      const el = chips[i], q = chipQ(i), w = cur.cw;
-      const fs = Math.max(tall ? 10.5 : 11.5, (w / 250) * 15.5);
-      if (el.style.width !== `${w.toFixed(1)}px`) {
-        el.style.width = `${w.toFixed(1)}px`; el.style.fontSize = `${fs.toFixed(2)}px`;
-        const f = CARDS[i].focus && el.querySelector(CARDS[i].focus); // an icon centred on a part of its picture
-        if (f) { const mr = media[i].getBoundingClientRect(), fr = f.getBoundingClientRect(); if (mr.width && fr.width) CARDS[i].crop = [(fr.left + fr.width / 2 - mr.left) / mr.width, (fr.top + fr.height / 2 - mr.top) / mr.height, Math.min(1, (fr.width * 1.15) / mr.height)]; }
-      }
-      el.classList.toggle('is-compact', !tall && w < 176);
-      const h = el.offsetHeight, mh = media[i].offsetHeight || w * 0.54;
-      cardH[i] = h;
+    cur.cards.forEach(([x, y], i) => { // 3. placing
+      const el = chips[i], q = chipQ(i), h = cardH[i], mh = mediaH[i];
       const [fx, fy, fz] = CARDS[i].crop, o = Math.max(ob, hov[i]), c = Math.min(mh, w) * fz;
       const cx0 = clamp(fx * w - c / 2, 0, w - c), cy0 = clamp(fy * mh - c / 2, 0, mh - c);
       const ins = [cy0, w - cx0 - c, h - cy0 - c, cx0].map((v) => v * (1 - o));
-      const sc = lerp(S / c, 1, o) * lerp(0.55, 1, out);
+      const sc = lerp(S / c, ls, o) * lerp(0.55, 1, out);
       const ax = lerp(cx0 + c / 2, w / 2, o), ay = lerp(cy0 + c / 2, h / 2, o);
       const [px, py] = ell(cur.cards[i][2] * RAD); // each comes out of the point where it plugs into the ring
       let sx = m < 1 ? lerp(px, x, out) : x, sy = m < 1 ? lerp(py, y, out) : y;
@@ -678,25 +766,77 @@
       el.style.clipPath = o >= 0.999 ? '' : `inset(${ins.map((v) => `${v.toFixed(1)}px`).join(' ')} round ${lerp(c / 2, 7, o).toFixed(1)}px)`;
       el.classList.toggle('is-icon', o < 0.5);
       setOp(el.lastChild, smooth(clamp((o - 0.5) / 0.4))); // the words go first as a card closes, and come last as it opens
-      el.style.zIndex = hov[i] > 0.02 ? '3' : '';
-      setOp(el, q);
+      const fc = faces[i];
+      if (fc) { // the icon's own face over its crop: it goes first as the icon opens, and comes back last as it closes
+        const fk = `${cx0.toFixed(1)},${cy0.toFixed(1)},${c.toFixed(1)}`;
+        if (fc.dataset.k !== fk) { fc.dataset.k = fk; Object.assign(fc.style, { left: `${(cx0 - 1).toFixed(1)}px`, top: `${(cy0 - 1).toFixed(1)}px`, width: `${(c + 2).toFixed(1)}px`, height: `${(c + 2).toFixed(1)}px`, fontSize: `${(c / 10).toFixed(2)}px` }); } // a pixel over the crop's edge, so none of the picture shows round it
+        setOp(fc, 1 - smooth(clamp((o - 0.04) / 0.36)));
+      }
+      el.style.zIndex = hov[i] > 0.02 || gro[i] > 0.02 ? '3' : '';
+      setOp(el, q * (1 - smooth(clamp((gro[i] - 0.25) / 0.2)))); // under its fuller card, once that has come in, it steps out
       if (q < 0.9) live = false;
       const iw = w - ins[1] - ins[3], ih = h - ins[0] - ins[2];
       vis[i] = { x: sx + (ins[3] + iw / 2 - ax) * sc, y: sy + (ins[0] + ih / 2 - ay) * sc, w: iw * sc, h: ih * sc, o };
+      if (i === 1 && seatIn) seatAt = [sx + (seatIn[0] - ax) * sc, sy + (seatIn[1] - ay) * sc];
     });
     if (cardsRoot.inert === live) cardsRoot.inert = !live;
     cardsRoot.classList.toggle('is-live', live);
-    // The mink: from the lens on 9 she flies up and out into her card, crisp all the way; there she stays on top,
-    // in her seat while the card is whole and in the middle of its icon when it's small.
-    const fq = flightQ();
-    if (fq > 0.001 && begun && vis[1]) {
-      const L0 = stages[0].lens, sb = seat.getBoundingClientRect(), v = vis[1];
-      const tx = lerp(v.x, sb.left + sb.width / 2, v.o), ty = lerp(v.y, sb.top + sb.height / 2, v.o);
+    placeFulls();
+    // The mink: from the lens on 9 she flies up and out into her card, crisp all the way. Once she has landed she
+    // is part of her card, in its seat: she opens, closes and stacks with it, so a neighbour opened over her covers
+    // her like the rest of her card (she used to ride a layer above every card, and had to hide whenever any other
+    // card opened, which left her icon an empty corner of the editor). On 11, and on a phone, her icon is her logo.
+    const fq = flightQ(), landed = fq >= 0.999;
+    setOp(seat, landed ? 1 : 0);
+    if (fq > 0.001 && !landed && begun && vis[1] && seatAt) {
+      const L0 = stages[0].lens, v = vis[1];
+      const tx = lerp(v.x, seatAt[0], v.o), ty = lerp(v.y, seatAt[1], v.o);
       const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
       const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
-      const other = Math.max(0, ...hov.filter((_, j) => j !== 1)); // never over a neighbour opened above her
-      paintFly(lerp(sx, tx, fq), lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, u, (fq < 0.999 ? 1 : chipQ(1)) * (1 - other));
+      const other = Math.max(0, ...hov.filter((_, j) => j !== 1), ...gro.filter((_, j) => j !== 1)); // never over a neighbour opened above her
+      const into = (1 - v.o) * smooth(clamp((fq - 0.8) / 0.2)); // flying into her icon, she becomes its logo
+      paintFly(lerp(sx, tx, fq), lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, u, (1 - into) * (1 - other));
     } else if (fly.style.opacity !== '0') fly.style.opacity = '0';
+  };
+  // Slide 10's cards grow into their fuller cards, from the small card's box (or its icon's, on a phone) to the
+  // whole card, kept on screen; the small card steps out beneath. Each fuller card is sized (from slide 10's own card
+  // width) and measured once a layout.
+  let wordsBottom = 0;
+  const placeFulls = () => {
+    if (!fulls.length) return;
+    const wide = short; // a phone on its side: the fuller card lies on its side too
+    const fw = tall ? Math.min(W - 24, 340) : wide ? Math.min(W - 48, 540) : clamp(stages[1].cw * 1.6, 290, 360);
+    if (Math.abs(fw - fullW) > 0.5) {
+      fullW = fw;
+      fulls.forEach((el) => {
+        el.style.width = `${fw.toFixed(1)}px`;
+        el.style.fontSize = `${((wide ? fw / 1.7 : fw) / 320 * 15).toFixed(2)}px`;
+        el.classList.toggle('is-wide', wide);
+      });
+      fulls.forEach((el, i) => { fullH[i] = el.offsetHeight; fullSH[i] = el.firstChild.offsetHeight; });
+    }
+    // Whole, it fits the screen above the deck's chrome, and below slide 10's words where there's room for it there.
+    const bottom = H - 72, m_ = 10, words = wordsBottom + 14;
+    fulls.forEach((el, i) => {
+      const g = gro[i], v = vis[i];
+      if (g <= 0.002 || !v) {
+        if (el.style.visibility !== 'hidden') { el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
+        return;
+      }
+      const FH = fullH[i], fits = Math.min(1, (W - 2 * m_) / fullW), roomy = (bottom - words) / FH >= fits * 0.9;
+      const top_ = roomy ? words : m_, s1 = Math.min(fits, (bottom - top_) / FH);
+      const s0 = Math.min(v.w / fullW, s1), icon = v.o < 0.5;
+      // It starts at the small card's width, its picture over the small card's (an icon's middle over its picture's),
+      // and grows to the whole card where it fits. Transform and opacity only, so a grow repaints nothing.
+      const a0 = icon ? fullSH[i] / 2 : (v.h / s0) / 2, s = lerp(s0, s1, g);
+      const hw = (fullW * s1) / 2, hh = (FH * s1) / 2;
+      const tx = clamp(v.x, m_ + hw, W - m_ - hw), ty = clamp(v.y, top_ + hh, bottom - hh);
+      const cx = lerp(v.x, tx, g), cy = lerp(v.y, ty, g), ax = fullW / 2, ay = lerp(a0, FH / 2, g);
+      if (el.style.visibility) el.style.visibility = '';
+      el.style.pointerEvents = grT[i] ? 'auto' : 'none';
+      el.style.transform = `translate(${(cx - ax * s).toFixed(1)}px, ${(cy - ay * s).toFixed(1)}px) scale(${s.toFixed(4)})`;
+      setOp(el, smooth(clamp(g / 0.35)) * chipQ(i));
+    });
   };
   const drawPose = (cx2, u, d) => { // the profile pose at u CSS px per art pixel, d device px per CSS px
     const P2 = M.POSES.profile;
@@ -709,10 +849,13 @@
     }
   };
   const paintSeat = () => {
-    const u = seatCell(), w = 23 * u, h = 20 * u;
-    seat.width = Math.round(w * dpr); seat.height = Math.round(h * dpr);
-    seat.style.width = `${w}px`; seat.style.height = `${h}px`;
-    drawPose(seat.getContext('2d'), u, dpr);
+    [[seat, seatCell()], [fullSeat, tall || short ? 2 : 3]].forEach(([cv, u]) => {
+      if (!cv) return;
+      const w = 23 * u, h = 20 * u;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+      drawPose(cv.getContext('2d'), u, dpr);
+    });
   };
   let flyCell = 0;
   const paintFly = (x, y, u, a) => {
@@ -763,6 +906,7 @@
     chips.forEach((_, i) => { if (!pulsed[i] && m >= 0.9 && chipQ(i) >= 1) { pulsed[i] = true; const mo = { kind: 'plug', c: i, span: 0.8 * Math.PI, t0: ta }; mo.dur = clamp(routeFor(mo).total / (220 * Math.max(0.5, k)), 1.2, 4); motes.push(mo); } });
     if (m < 0.5) pulsed = chips.map(() => false);
     hoT.forEach((t, i) => { hov[i] += (t - hov[i]) * (1 - Math.exp(-dt / 0.11)); if (Math.abs(t - hov[i]) < 0.002) hov[i] = t; });
+    grT.forEach((t, i) => { gro[i] += (t - gro[i]) * (1 - Math.exp(-dt / 0.13)); if (Math.abs(t - gro[i]) < 0.002) gro[i] = t; });
     // Motes: a calm, continuous circulation once the wheel is drawn.
     if (ta >= T.motes) {
       if (ta >= nextMote) { spawn(); nextMote = ta + (0.75 + Math.random() * 0.6) / (1 + 0.8 * boost); }
@@ -802,7 +946,8 @@
     if (waiting) { waiting.disconnect(); waiting = null; }
     stop();
     begun = false; armed = false; morph = null; motes = []; ta = 0; boost = 0; attach = { dir: 0, t0: 0 }; lastM = -1; pulsed = chips.map(() => false);
-    hov.fill(0); hoT.fill(0); vis.fill(null);
+    hov.fill(0); hoT.fill(0); gro.fill(0); grT.fill(0); vis.fill(null);
+    fulls.forEach((el) => { el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; });
     vids.forEach((v) => v && !v.paused && v.pause()); cardsRoot.inert = true; cardsRoot.classList.remove('is-live'); fly.style.opacity = '0';
     T = T_FRESH; hand = null; minkAt = null;
     flashes = { art: [0, 0, 0, 0, 0, 0, 0], grp: [0, 0, 0], ring: 0 };
@@ -922,6 +1067,8 @@
       return;
     }
     html.classList.toggle('fw-quiet', now < 2); // not on 11, where the deck's Mycelial mark forms
+    buildFulls();
+    if (now !== 1) { grT.fill(0); if (still) gro.fill(0); } // only slide 10's cards grow; leaving it, they go back
     if (was < 0 || !begun) { // arriving from elsewhere: draw in once the network reaches the node (from slide 8, carry its picture on)
       reset();
       layout(); m = now; settleCur();
@@ -965,28 +1112,36 @@
     frame(); start();
   });
 
-  // An icon opens into its card while it's hovered or focused; a tap opens it (and closes the others).
+  // An icon opens into its card while it's hovered or focused; a tap opens it (and closes the others). On slide 10
+  // a card grows into its fuller card the same way (straight from its icon, on a phone), and the fuller card keeps
+  // itself open while the pointer is on it. With reduced motion they open and close at once.
   // The browser hit-tests each card's rounded clip path, including the icon's
   // radius. Only those interactive pixels retain clicks; the decorative canvas
   // and the space around it pass through to the deck's normal click-thirds.
-  chips.forEach((el, i) => {
-    const open = (on) => { hoT[i] = on ? 1 : 0; if (!running && begun) frame(); };
+  const grows = () => stageOf() === 1;
+  const wire = (el, i, full) => {
+    const mate = () => (full ? chips[i] : fulls[i]);
+    const set = (on) => {
+      (full || grows() ? grT : hoT)[i] = on ? 1 : 0;
+      if (still) { hoT.forEach((t, j) => { hov[j] = t; }); grT.forEach((t, j) => { gro[j] = t; }); }
+      if (!running && begun) frame();
+    };
     let pointerType = '';
     el.addEventListener('pointerdown', (e) => { pointerType = e.pointerType; });
-    el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') open(true); });
-    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') open(false); });
-    el.addEventListener('focusin', () => open(true));
-    el.addEventListener('focusout', () => open(false));
+    el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') set(true); });
+    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !mate()?.contains(e.relatedTarget)) set(false); });
+    if (!full) { el.addEventListener('focusin', () => set(true)); el.addEventListener('focusout', () => set(false)); }
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const source = pointerType || e.pointerType;
       pointerType = '';
       if (e.target.closest('a') || source === 'mouse') return;
-      const on = !hoT[i];
-      chips.forEach((_, j) => { hoT[j] = 0; });
-      open(on);
+      const on = !full && !(grows() ? grT : hoT)[i]; // a tap on an open fuller card closes it
+      hoT.fill(0); grT.fill(0);
+      set(on);
     });
-  });
+  };
+  chips.forEach((el, i) => wire(el, i, false));
   // Links on the slides (the Discord line on 9) open in a new tab and never turn the slide.
   hosts.forEach((s) => s.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation())));
 

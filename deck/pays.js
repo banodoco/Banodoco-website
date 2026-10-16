@@ -88,7 +88,7 @@
   const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  let machines = [], feeds = [], lens = null, arcs = [], rays = [], boundary = null, cell = 3;
+  let machines = [], feeds = [], lens = null, lensLines = [], arcs = [], rays = [], boundary = null, cell = 3;
 
   const put = (el, x, y, alignX, alignY) => {
     const w = el.offsetWidth, h = el.offsetHeight;
@@ -114,7 +114,12 @@
       ky = Math.min((H - (low ? 120 : 230)) / 690, 1.0);
       k = Math.min(ky, kx * 1.35, 1.05);
       ox = left + 52 * k - 63 * kx; // the builders' circles (reference x 213) sit just inside the left edge
-      oy = low ? (H - 64) / 2 : H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
+      // The picture's middle (reference y 415, the lens) on the headline's horizon, so the two read as one line;
+      // measured by layout (offsets), not by boxes, which the slide's entry and the text's drift move.
+      const h1 = slide.querySelector('h1');
+      let mid = h1.offsetHeight / 2;
+      for (let n = h1; n && n !== slide; n = n.offsetParent) mid += n.offsetTop;
+      oy = low ? (H - 64) / 2 : clamp(mid, 40 + 330 * ky, H - 100 - 330 * ky);
     }
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
@@ -125,6 +130,8 @@
     const lw0 = small ? CORE_REF.w * k : Math.max(CORE_REF.w * k, 23 * cell + 40);
     lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: lw0, h: Math.max(CORE_REF.h * k, lw0 * 1.66) };
     const lensL = { x: lens.c.x - lens.w / 2, y: lens.c.y }, lensR = { x: lens.c.x + lens.w / 2, y: lens.c.y };
+    // Its three strands, each side traced from the middle out (built once here, not every frame).
+    lensLines = [[0, 1.2, 0.95], [6 * k, 0.9, 0.55], [-4 * k, 0.8, 0.35]].flatMap(([inset, w, a]) => [-1, 1].map((side) => ({ h: line(lensPts(side, 40, inset)), w, a })));
     machines = [[213, 277, 'term'], [213, 424, 'gpu'], [213, 570, 'graph']].map(([x, y, kind], i) => ({ ...P(x, y), r: 52 * k, kind, i }));
     feeds = machines.map((m, i) => {
       const end = { x: lensL.x + 2 * k, y: lensL.y + (i - 1) * 12 * k };
@@ -151,6 +158,9 @@
         }
       }
       const thread = rows > 1 ? null : line(Array.from({ length: 41 }, (_, j) => { const a = -span + (2 * span * j) / 40; return [X(u + Math.cos(a) * r), Y(415 + Math.sin(a) * r)]; }));
+      // For the waves: how far each person (and each stretch of thread) is from the core; and a phase to twinkle by.
+      dots.forEach((d, j) => { d.dc = Math.hypot(d.x - lens.c.x, d.y - lens.c.y); d.ph = (j * 2.39996 + ai * 1.7) % TAU; });
+      if (thread) thread.dc = thread.pts.slice(1).map(([x, y], j) => Math.hypot((x + thread.pts[j][0]) / 2 - lens.c.x, (y + thread.pts[j][1]) / 2 - lens.c.y));
       arcs.push({ x: u + r, dots, thread, t0: 1.7 + ai * 0.28 });
     });
     // Rays from the core's right tip out to the far front, a few bright people on them.
@@ -162,7 +172,7 @@
     // Labels.
     labels.local.style.fontSize = labels.hosted.style.fontSize = `${Math.max(small ? 10.5 : 13, 23 * k).toFixed(1)}px`;
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
-    put(labels.local, X(150), Y(168), 0, 0.5);
+    put(labels.local, X(150), Y(118), 0, 0.5); // the two sides' names share a line, either side of the boundary's top
     put(labels.hosted, X(1170), Y(118), 0.5, 0.5);
     put(labels.core, lens.c.x + 4 * k, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5);
     return true;
@@ -170,8 +180,12 @@
 
   // ---- Time ----------------------------------------------------------------------------
   const END = 3.2, AMBIENT = 3.6;
+  // The first builder publishes as their threads finish drawing, so the first wave goes out as the people
+  // appear; after that someone publishes every second or two. A wave is a ripple out of the core
+  // (v: px a second, band: its width, both times k) that brightens whatever it passes.
+  const FIRST = 1.9, EVERY = [1.3, 2.6], WAVE = { v: 520, band: 34, life: 2.4 };
   let ta = 0, running = false, raf = 0, last = 0, armed = false, timers = [];
-  let pulses = [], waves = [], nextPulse = 0, nextWave = 0;
+  let pulses = [], waves = [], nextPulse = 0, lastFrom = -1, glintAt = -9;
   const k01 = (t0, d) => clamp((ta - t0) / d);
 
   // ---- Drawing ---------------------------------------------------------------------------
@@ -193,7 +207,7 @@
       g.roundRect(x - 26 * s, y - 20 * s, 52 * s, 34 * s, 3 * s);
       g.moveTo(x, y + 14 * s); g.lineTo(x, y + 21 * s); g.moveTo(x - 10 * s, y + 21 * s); g.lineTo(x + 10 * s, y + 21 * s);
     }
-    if (m.kind === 'term') { g.moveTo(x - 16 * s, y - 10 * s); g.lineTo(x - 9 * s, y - 4 * s); g.lineTo(x - 16 * s, y + 2 * s); g.moveTo(x - 6 * s, y + 3 * s); g.lineTo(x + 4 * s, y + 3 * s); }
+    if (m.kind === 'term') { g.moveTo(x - 16 * s, y - 10 * s); g.lineTo(x - 9 * s, y - 4 * s); g.lineTo(x - 16 * s, y + 2 * s); }
     if (m.kind === 'graph') { g.moveTo(x - 13 * s, y + 4 * s); g.lineTo(x - 1 * s, y - 9 * s); g.lineTo(x + 12 * s, y + 3 * s); }
     if (m.kind === 'gpu') { // a graphics card: its board, its fan, its bracket
       g.roundRect(x - 26 * s, y - 15 * s, 50 * s, 28 * s, 3 * s);
@@ -203,8 +217,20 @@
       for (let b = 0; b < 5; b++) { const an = (b / 5) * TAU + ta * 0.6; g.moveTo(x + 2 * s, y - 1 * s); g.lineTo(x + 2 * s + Math.cos(an) * 9 * s, y - 1 * s + Math.sin(an) * 9 * s); }
     }
     g.stroke();
+    if (m.kind === 'term') { // its cursor blinks
+      g.strokeStyle = `rgba(${CORE},${(0.82 * a * (ta % 1.1 < 0.62 ? 1 : 0.18)).toFixed(3)})`;
+      g.beginPath(); g.moveTo(x - 6 * s, y + 3 * s); g.lineTo(x + 4 * s, y + 3 * s); g.stroke();
+    }
     if (m.kind === 'graph') [[-13, 4], [-1, -9], [12, 3]].forEach(([dx, dy]) => dot(x + dx * s, y + dy * s, 2.2 * s, CORE, 0.9 * a));
-    node(x + m.r, y, 0.9, a);
+    // Publishing: a ring of light leaves the machine as its work sets off for the core.
+    let pub = 0;
+    for (const p of pulses) if (p.i === m.i) pub = Math.max(pub, 1 - (ta - p.t0) / 0.8);
+    if (pub > 0) {
+      halo(x, y, m.r * 1.7, 0.14 * pub);
+      g.lineWidth = (0.6 + 1.1 * pub) * LW; g.strokeStyle = `rgba(${NODE},${(0.55 * pub).toFixed(3)})`;
+      g.beginPath(); g.arc(x, y, m.r + 14 * k * (1 - pub), 0, TAU); g.stroke();
+    }
+    node(x + m.r, y, 0.9 + 0.5 * pub, a);
   };
   // The mink at any whole-number cell u, her eye lit by `glint` (the profile's glint pose), top-left at (x0, y0).
   const paintMinkAt = (x0, y0, u, glint = 0) => {
@@ -230,9 +256,9 @@
   // From slide 6: where she starts (her canvas there, in this slide's coordinates) and the motes she gathers.
   let fly = null;
   const FLY = { charge: 0.85, travel: 1.25, land: 0.6 }; // seconds: power up, cross, settle
-  const paintMink = (x, y, a) => { // the real pixel mink, crisp, centred on (x, y)
+  const paintMink = (x, y, a, glint = 0) => { // the real pixel mink, crisp, centred on (x, y), her eye lit by glint
     if (a <= 0 || (fly && ta < fly.landed)) return;
-    const P2 = M.POSES.profile, u = cell, w = P2[0].length * u, h = P2.length * u;
+    const P2 = M.POSES.profile, G2 = M.POSES.glint, u = cell, w = P2[0].length * u, h = P2.length * u;
     const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
     g.globalAlpha = a;
     for (let j = 0; j < P2.length; j++) for (let i = 0; i < P2[0].length; i++) {
@@ -240,6 +266,15 @@
       if (ch === '.') continue;
       g.fillStyle = M.COLORS[ch];
       g.fillRect(x0 + i * u, y0 + j * u, u, u);
+    }
+    if (glint > 0.01) {
+      g.globalAlpha = a * glint;
+      for (let j = 0; j < G2.length; j++) for (let i = 0; i < G2[0].length; i++) {
+        const ch = G2[j][i];
+        if (ch === '.' || ch === P2[j][i]) continue;
+        g.fillStyle = M.COLORS[ch];
+        g.fillRect(x0 + i * u, y0 + j * u, u, u);
+      }
     }
     g.globalAlpha = 1;
   };
@@ -253,15 +288,10 @@
     const ql = ease(k01(0.05, 1.0));
     halo(lens.c.x, lens.c.y, lens.h * 0.55, 0.12 * ql);
     if (ql > 0) {
-      [[0, 1.2, 0.95], [6 * k, 0.9, 0.55], [-4 * k, 0.8, 0.35]].forEach(([inset, w, a]) => {
-        for (const side of [-1, 1]) {
-          const h = line(lensPts(side, 40, inset)), mid = h.total / 2, half = mid * ql;
-          stroke(h, mid - half, mid + half, w * LW, THREAD, a);
-        }
-      });
+      for (const { h, w, a } of lensLines) { const mid = h.total / 2, half = mid * ql; stroke(h, mid - half, mid + half, w * LW, THREAD, a); }
       node(lens.c.x, lens.c.y - lens.h / 2, 1, ql); node(lens.c.x, lens.c.y + lens.h / 2, 1, ql);
     }
-    paintMink(lens.c.x + 4 * k, lens.c.y + 8 * k, smooth(k01(0.5, 0.5)));
+    paintMink(lens.c.x + 4 * k, lens.c.y + 8 * k, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
     // The builders: their machines, and their threads into the core.
     machines.forEach((m, i) => {
       const q = ease(k01(0.4 + i * 0.12, 0.6));
@@ -274,10 +304,13 @@
         for (let j = -1; j <= 1; j++) if (qf >= 1) node(f.pts[f.pts.length - 1][0], f.pts[f.pts.length - 1][1], 0.6, 1);
       }
     });
+    // Each wave is a ripple out of the core: lit(d) is how brightly it lights a point d px from the core.
+    const reach = waves.map((w) => (ta - w.t0) * WAVE.v * k);
+    const lit = (d) => { let l = 0; for (const R of reach) { const u = (d - R) / (WAVE.band * k); if (u > -3 && u < 3) l = Math.max(l, Math.exp(-u * u)); } return l; };
     // The boundary between local and hosted.
     const qb = k01(1.4, 0.6);
     if (qb > 0) {
-      for (let y = boundary.y0; y < boundary.y0 + (boundary.y1 - boundary.y0) * ease(qb); y += 7 * k) dot(boundary.x, y, 0.75 * Math.max(0.8, k), NODE, 0.35);
+      for (let y = boundary.y0; y < boundary.y0 + (boundary.y1 - boundary.y0) * ease(qb); y += 7 * k) dot(boundary.x, y, 0.75 * Math.max(0.8, k), NODE, 0.35 + 0.45 * lit(Math.hypot(boundary.x - lens.c.x, y - lens.c.y)));
     }
     // Everyone else: rays out of the core, and arcs of people widening out.
     const qr = ease(k01(1.5, 1.0));
@@ -285,19 +318,38 @@
       if (qr <= 0) return;
       stroke(r, 0, r.total * qr, 0.6 * LW, THREAD, 0.3);
       if (qr >= r.mark) node(at(r, r.total * r.mark).x, at(r, r.total * r.mark).y, 0.95, smooth(clamp((qr - r.mark) * 5)));
+      if (qr < 1) return;
+      for (const R of reach) { // a mote rides each ray out with the wave, fading as it goes
+        const d = R - lens.w / 2;
+        if (d <= 0 || d >= r.total) continue;
+        const p = at(r, d), f = 1 - d / r.total;
+        halo(p.x, p.y, 7 * k, 0.5 * f); dot(p.x, p.y, 1.3 * Math.max(0.8, k), CORE, 0.8 * f);
+      }
     });
     for (const a of arcs) {
       const q = k01(a.t0, 0.7);
       if (q <= 0) continue;
-      if (a.thread) { const mid = a.thread.total / 2, half = mid * ease(q); stroke(a.thread, mid - half, mid + half, 0.6 * LW, THREAD, 0.28); }
+      if (a.thread) {
+        const mid = a.thread.total / 2, half = mid * ease(q);
+        stroke(a.thread, mid - half, mid + half, 0.6 * LW, THREAD, 0.28);
+        if (q >= 1 && reach.length) { // the stretch of thread the wave is crossing
+          const P3 = a.thread.pts;
+          g.lineWidth = 0.9 * LW;
+          for (let j = 0; j < a.thread.dc.length; j++) {
+            const l = lit(a.thread.dc[j]);
+            if (l < 0.03) continue;
+            g.strokeStyle = `rgba(${NODE},${(0.42 * l).toFixed(3)})`;
+            g.beginPath(); g.moveTo(P3[j][0], P3[j][1]); g.lineTo(P3[j + 1][0], P3[j + 1][1]); g.stroke();
+          }
+        }
+      }
       for (const d of a.dots) {
         const local = clamp((q - Math.abs(d.a) * 0.35) * 2.6);
         if (local <= 0) continue;
-        let lit = 0;
-        for (const w of waves) { const dist = Math.abs(X(820) + (ta - w.t0) * 520 * k - d.x); lit = Math.max(lit, clamp(1 - dist / (50 * k))); }
-        const al = (d.bright ? 1 : 0.85) * local * (0.85 + 0.15 * lit) + 0.2 * lit;
-        halo(d.x, d.y, (d.bright ? 9 : 6.5) * k * (1 + 0.5 * lit), (d.bright ? 0.6 : 0.36) * al);
-        dot(d.x, d.y, d.r * Math.max(0.8, k) * (1 + 0.3 * lit), CORE, al);
+        const l = reach.length ? lit(d.dc) : 0, tw = 1 + (d.bright ? 0.22 : 0.1) * Math.sin(ta * (0.8 + d.ph * 0.12) + d.ph);
+        const al = (d.bright ? 1 : 0.85) * local * tw + 0.45 * l;
+        halo(d.x, d.y, (d.bright ? 9 : 6.5) * k * (1 + 0.7 * l), (d.bright ? 0.6 : 0.36) * al);
+        dot(d.x, d.y, d.r * Math.max(0.8, k) * (1 + 0.35 * l), CORE, al);
       }
     }
     // Pulses: from a builder into the core.
@@ -360,11 +412,19 @@
   const advance = (dt) => {
     ta += dt;
     if (ta >= END && !fly) window.deckEntryDone?.(slide);
-    if (ta < AMBIENT) return;
+    if (ta < FIRST) return;
     // A builder publishes something; it reaches the core; a wave goes out to everyone.
-    if (ta >= nextPulse) { pulses.push({ i: Math.floor(Math.random() * 3), t0: ta }); nextPulse = ta + 2.2 + Math.random() * 1.6; }
-    pulses = pulses.filter((p) => { if (ta - p.t0 >= 1.4) { waves.push({ t0: ta }); return false; } return true; });
-    waves = waves.filter((w) => ta - w.t0 < 2.4);
+    if (ta >= nextPulse && !(window.deckPace?.() > 1)) { // (none sets off while the entry is hurried on)
+      lastFrom = (lastFrom + 1 + Math.floor(Math.random() * 2)) % 3;
+      pulses.push({ i: lastFrom, t0: ta }); nextPulse = ta + EVERY[0] + Math.random() * (EVERY[1] - EVERY[0]);
+    }
+    pulses = pulses.filter((p) => {
+      if (ta - p.t0 < 1.4) return true;
+      waves.push({ t0: ta });
+      if (ta - glintAt > 4) glintAt = ta; // now and then, her eye lights as the work comes in
+      return false;
+    });
+    waves = waves.filter((w) => ta - w.t0 < WAVE.life);
   };
 
   // ---- Coming and going -----------------------------------------------------------------
@@ -381,7 +441,7 @@
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(window.deckCancelLater); timers = [];
-    pulses = []; waves = []; ta = 0; fly = null;
+    pulses = []; waves = []; ta = 0; fly = null; glintAt = -9;
     root.classList.remove('is-labelled');
     canvas.style.transition = ''; canvas.style.opacity = ''; Object.values(labels).forEach((el) => { el.style.opacity = ''; });
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
@@ -390,7 +450,7 @@
     reset();
     if (!layout()) return;
     if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); window.deckEntryDone?.(slide); if (!still) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
-    ta = -0.2; nextPulse = AMBIENT + 0.3;
+    ta = -0.2; nextPulse = FIRST;
     timers.push(window.deckLater(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
     timers.push(window.deckLater(() => root.classList.add('is-labelled'), 1400));
     start();
@@ -423,7 +483,7 @@
     timers.push(window.deckLater(showStackMink, (FLY.charge + FLY.travel) * 1000 + 200)); // slide 6 has faded away by then
     timers.push(window.deckLater(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 400));
     timers.push(window.deckLater(() => root.classList.add('is-labelled'), (FLY.charge + FLY.travel + 0.4) * 1000));
-    nextPulse = AMBIENT + 0.3;
+    nextPulse = FIRST;
     start();
     return true;
   };

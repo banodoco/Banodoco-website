@@ -59,3 +59,16 @@ generated or stock imagery. Re-fetch sources are listed per directory.
   card fetches (same Supabase source banodoco.ai's Community section reads),
   captured 2026-08-17; rendered only when the live fetch fails, labeled with
   its capture date.
+
+## Added 2026-10-16 (deck slides 10–11, task F4)
+- artcompute/emmacatnip-poster.jpg — the picture artcompute.org shows for
+  itself: its og:image / twitter:image (https://artcompute.org/emmacatnip_poster.jpg,
+  640×360, the poster frame of Emma Catnip's clip in the site's own background
+  reel, credited there as @emmacatnip, HotshotXL), fetched 2026-10-16 and
+  downscaled with macOS sips to 480×270, JPEG q62 (26 KB). Used as ArtCompute's
+  icon on the deck's slide 11 halo (and slide 10 on a phone).
+- Reused, not copied: assets/brand/mark-b-mask-96.png (the Banodoco B, see
+  tools/build-mark.py) as the Banodoco icon's mask; the arca posters, the ADOS
+  LA poster, the 2RP cover and the fonts above in the deck's fuller cards. The
+  Astrid icon is drawn from deck/mink.js's GRID (the app's 16×16
+  astrid-favicon.svg), not a file.

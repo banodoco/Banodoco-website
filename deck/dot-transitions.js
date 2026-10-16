@@ -317,16 +317,17 @@
     const k = m.t;
     const S = (m.size * (1 - 0.94 * m.shrink)) / 54; // px per unit; the ring spans 54 units
     const at = (x, y) => [cx + (x - 32) * S, cy + (y - 32) * S];
-    const fade = 1 - 0.55 * m.shrink;
+    const fade = (1 - 0.55 * m.shrink) * (m.faint || 1);
+    const fine = m.faint ? 0.55 : 1; // the large faint crown is drawn in a finer hand, so the words over it stay clear
     const halo = g.createRadialGradient(cx, cy, 0, cx, cy, 36 * S);
     halo.addColorStop(0, `rgba(${NODE},${(0.1 * clamp(k / 1) * fade).toFixed(3)})`);
     halo.addColorStop(1, `rgba(${NODE},0)`);
     g.fillStyle = halo;
     g.beginPath(); g.arc(cx, cy, 36 * S, 0, 7); g.fill();
     g.strokeStyle = `rgba(${THREAD},${(0.8 * fade).toFixed(3)})`;
-    g.lineWidth = Math.max(m.crown ? 1.1 : 0.6, S * 0.66);
+    g.lineWidth = Math.max(m.crown ? 1.1 : 0.6, S * 0.66 * fine);
     g.beginPath(); g.arc(cx, cy, 27 * S, -Math.PI / 2, -Math.PI / 2 + clamp(k / 0.8) * Math.PI * 2); g.stroke();
-    g.lineWidth = Math.max(m.crown ? 0.9 : 0.5, S * 0.5);
+    g.lineWidth = Math.max(m.crown ? 0.9 : 0.5, S * 0.5 * fine);
     MARK.curves.forEach(([x0, y0, qx, qy, x1, y1], i) => {
       const p = clamp((k - 0.2 - i * 0.05) / 0.5);
       if (p <= 0) return;
@@ -341,13 +342,13 @@
     MARK.nodes.forEach(([x, y, r], i) => {
       const a = clamp((k - 0.15 - i * 0.08) / 0.25) * fade;
       if (a <= 0) return;
-      const [px, py] = at(x, y), rr = Math.max(1, r * S * 0.8);
+      const [px, py] = at(x, y), rr = Math.max(1, r * S * 0.8 * (m.faint ? 0.55 : 1));
       const glow = g.createRadialGradient(px, py, 0, px, py, rr * 3);
-      glow.addColorStop(0, `rgba(${NODE},${(0.5 * a).toFixed(3)})`);
+      glow.addColorStop(0, `rgba(${NODE},${(0.5 * a * fine).toFixed(3)})`);
       glow.addColorStop(1, `rgba(${NODE},0)`);
       g.fillStyle = glow;
       g.beginPath(); g.arc(px, py, rr * 3, 0, 7); g.fill();
-      g.fillStyle = `rgba(255,236,190,${a.toFixed(3)})`;
+      g.fillStyle = `rgba(255,236,190,${(a * fine * 1.2).toFixed(3)})`;
       g.beginPath(); g.arc(px, py, rr, 0, 7); g.fill();
     });
   };
@@ -469,25 +470,36 @@
     }
   };
 
-  // The mark rides on its own small canvas, moved into place.
-  let markBox = 0;
+  // The mark rides on its own canvas, moved into place. Its art is redrawn only while it changes: the opening mark as
+  // it draws itself in and rides out; the large crown behind the last slide's words is drawn once, at its finished art,
+  // and comes in and folds away by the canvas's opacity and scale (crown(), uncrown()).
+  let markBox = 0, markKey = '';
   const drawMarkLayer = () => {
     if (!mark) {
-      if (markBox) { mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, markCv.width, markCv.height); markBox = 0; }
+      if (markBox) { mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, markCv.width, markCv.height); markBox = 0; markKey = ''; }
       return;
     }
     const B = Math.ceil(mark.size * 1.5 + 16);
-    if (B !== markBox) {
+    const tl = `${(mark.x - B / 2).toFixed(1)}px ${(mark.y - B / 2).toFixed(1)}px`;
+    if (markCv.style.translate !== tl) markCv.style.translate = tl;
+    // Its own resolution, budgeted by pixels rather than capped like the full-screen network: the small marks (the
+    // opening, the thread's tip) are drawn at up to 3x so they stay crisp on a phone; a surface that would pass about
+    // 1.5 megapixels there (the large faint crown) is drawn at the network's 2x.
+    const md = (B * Math.min(3, devicePixelRatio || 1)) ** 2 > 1.5e6 ? Math.min(2, devicePixelRatio || 1) : Math.min(3, devicePixelRatio || 1);
+    const art = mark.crown ? { ...mark, t: 2, shrink: 0 } : mark;
+    const key = `${B}|${md}|${mark.x}|${mark.y}|${art.shrink}|${Math.min(art.t, 1.2)}`;
+    if (key === markKey) return;
+    markKey = key;
+    if (B !== markBox || markCv.width !== Math.round(B * md)) {
       markBox = B;
-      markCv.width = markCv.height = Math.round(B * dpr);
+      markCv.width = markCv.height = Math.round(B * md);
       markCv.style.width = markCv.style.height = `${B}px`;
     }
-    markCv.style.transform = `translate(${(mark.x - B / 2).toFixed(1)}px, ${(mark.y - B / 2).toFixed(1)}px)`;
-    mg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mg.setTransform(md, 0, 0, md, 0, 0);
     mg.clearRect(0, 0, B, B);
     mg.lineCap = 'round';
     mg.lineJoin = 'round';
-    drawMark(mg, mark, B / 2, B / 2);
+    drawMark(mg, art, B / 2, B / 2);
   };
 
   // The settled ground, then what is still growing on it, softened under the text together; then the passing
@@ -794,21 +806,35 @@
     name.classList.toggle('is-on', active());
   };
 
-  // The last slide: the node grows back into the mark, and folds away again on leaving.
+  // The last slide: as its node blooms, the Mycelial mark draws itself in large and faint behind the words, its
+  // middle on theirs, and folds away into them again on leaving.
   const deck = () => slides.filter((sl) => (sl.dataset.v || '').split(' ').includes(VER));
   const lastSlide = () => deck().at(-1);
   const levelOf = (s) => Math.max(0, deck().indexOf(s));
-  // The crown's size (a little smaller on a phone), and how far above the node it sits.
-  const crownSize = () => Math.round(clamp(Math.min(innerWidth, innerHeight) * 0.1, 60, 76));
-  const crownY = () => Math.round(crownSize() * 0.53);
+  const crownAt = () => {
+    const col = columnOf(lastSlide()), r = col && col.getBoundingClientRect();
+    if (!r || !r.width) return null;
+    const y = r.top + r.height / 2, room = 2 * Math.min(y - 12, innerHeight - 80 - y); // clear of the chrome at the foot
+    const across = innerWidth <= 760 && innerHeight > innerWidth ? innerWidth * 0.62 : innerWidth - 24; // inside an upright phone's narrow halo
+    const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(across, innerHeight * 0.8, room));
+    return { x: r.left + r.width / 2, y, size: Math.round(size) };
+  };
   const crown = (at, now) => {
-    const size = crownSize();
-    mark = { x: at.x, y: at.y - crownY(), t: now ? 2 : 0, size, shrink: 0, trail: null, shed: 0, crown: true };
-    zones.push(Object.assign(disc(mark.x, mark.y, size * 0.5), { crown: true, a: now ? 1 : 0 }));
-    dot.classList.add('is-moving');
+    const c = crownAt() || { x: at.x, y: at.y, size: 160 };
+    mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: 0.3 };
+    zones.push(Object.assign(disc(mark.x, mark.y, c.size * 0.42), { crown: true, a: now ? 1 : 0 }));
+    markCv.getAnimations().forEach((a) => a.cancel());
+    if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
     wake();
   };
-  const uncrown = () => { if (mark && mark.crown) { mark.folding = 0; wake(); } };
+  const uncrown = () => {
+    if (!mark || !mark.crown) return;
+    mark.folding = 0; // step() times it; the canvas folds into its middle as it fades
+    const cs = getComputedStyle(markCv), from = { opacity: cs.opacity, scale: cs.scale === 'none' ? '1' : cs.scale };
+    markCv.getAnimations().forEach((a) => a.cancel());
+    markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    wake();
+  };
 
   // First load: the mark draws itself in the middle of the screen over its
   // name, then rides a growing thread out to the slide's node, shrinking and
@@ -834,6 +860,7 @@
     textOf(current).forEach((el) => mask(el, anchor, 0));
     clearNet();
     mark = { x: c.x, y: c.y, t: 0, size, shrink: 0, trail: null, shed: 0 };
+    markCv.getAnimations().forEach((an) => an.cancel());
     wake();
     opening = { timers: [], trail: null };
     name.classList.remove('is-resting');
@@ -847,8 +874,8 @@
       html.classList.remove('dt-intro');
       setTimeout(() => html.classList.remove('dt-unveil'), 1300);
       place(anchor);
+      dot.classList.remove('is-moving'); pulse(1.8); bloom(anchor);
       if (current === lastSlide()) crown(anchor);
-      else { dot.classList.remove('is-moving'); pulse(1.8); bloom(anchor); }
       if (current === slides[0]) window.deckEntryDone?.(current); // slide 1 has no separate picture build
       Promise.all(reveal(current, anchor, 60)).then(() => window.deckTurnDone?.(current));
       sprawl(levelOf(current), anchor, 0.15);
@@ -956,8 +983,8 @@
     const arrive = () => {
       if (done) return;
       place(to);
-      if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - crownY(), age: 0 }); crown(to); }
-      else { dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to); }
+      dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to);
+      if (next === lastSlide()) crown(to);
       const z = zone(lines(next));
       if (z) zones.push(z);
       next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
