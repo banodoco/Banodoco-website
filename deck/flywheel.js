@@ -114,8 +114,8 @@
   });
   const vids = chips.map((el) => el.querySelector('video'));
   const faces = chips.map((el) => el.querySelector('.fw-face'));
-  // The fuller cards slide 10's grow into: built once the wheel first shows (so their pictures are in by the time
-  // anyone hovers), on top of everything else on the layer. They copy the small cards' links, so they stay out of
+  // The fuller cards slide 10's grow into: built once the wheel first shows, from slide 9 on (so their pictures are
+  // fetched and decoded by the time anyone hovers), on top of everything else on the layer. They copy the small cards' links, so they stay out of
   // the tab order and the accessibility tree; the small card is the one a keyboard or a reader reaches.
   const fulls = [];
   const buildFulls = () => {
@@ -128,6 +128,7 @@
       el.innerHTML = `<div class="fw-fstage">${f.stage}</div><div class="fw-cbody"><b>${f.name}</b><span>${f.line}</span></div>${door}`;
       el.style.visibility = 'hidden';
       cardsRoot.appendChild(el);
+      el.querySelectorAll('img').forEach((im) => { im.decoding = 'async'; im.decode?.().catch(() => {}); }); // ready before anyone hovers
       fulls.push(el);
       wire(el, i, true);
     });
@@ -347,6 +348,10 @@
     // Type first (it sets the labels' widths), from the room there is; then the picture round it.
     const kBase = tall ? Math.min((W - 24) / 400, (H * 0.6) / 640) : Math.min((W / 2 - 64) / 795, (H * 0.64) / 600);
     root.style.fontSize = `${clamp(22 * (tall ? kBase * 0.55 : kBase), tall ? 10.5 : 12.5, 22).toFixed(1)}px`;
+    for (const key of ['g0', 'g1', 'g2']) labels[key].classList.toggle('fw-c', tall);
+    for (const key in labels) lsz.set(labels[key], [labels[key].offsetWidth, labels[key].offsetHeight]);
+    dirty.fill(true); fullW = 0; // the cards are measured again, at the new size
+    wordsBottom = colOf(hosts[1]).getBoundingClientRect().bottom;
     // Each slide fits its own picture: 10's is the bigger one, the wheel grown with the initiatives round it.
     stages = [build(0, fit(0)), build(1, fit(1)), build(2, fit(2))];
     // On 11 the halo opens tall enough to pass well above the label's node (the room the deck's small Mycelial mark
@@ -681,8 +686,26 @@
   };
 
   // DOM: the labels and the chips follow the picture.
-  const put = (el, x, y, alignX, alignY) => { el.style.transform = `translate(${(x - el.offsetWidth * alignX).toFixed(1)}px, ${(y - el.offsetHeight * alignY).toFixed(1)}px)`; };
+  // DOM: the labels and the chips follow the picture. Each frame writes every card's sizing first, then reads what it
+  // needs back (only for a card whose width, type or layout changed), then sets every transform, clip and opacity:
+  // at most one layout a frame, and none while the picture holds still. The labels' sizes are measured in layout().
+  const lsz = new Map();
+  const put = (el, x, y, alignX, alignY) => { const [w, h] = lsz.get(el) || [0, 0]; el.style.transform = `translate(${(x - w * alignX).toFixed(1)}px, ${(y - h * alignY).toFixed(1)}px)`; };
   const setOp = (el, v) => { const s = v.toFixed(2); if (el.style.opacity !== s) el.style.opacity = s; };
+  const mediaH = chips.map(() => 0), dirty = chips.map(() => true);
+  let layW = 0; // the width the cards are laid out at
+  let seatIn = null, seatAt = null; // the mink's seat: its middle in her card (unscaled), and on screen this frame
+  // A face that arrives late changes the type's size: measure again then.
+  document.fonts?.addEventListener?.('loadingdone', () => {
+    for (const key in labels) lsz.set(labels[key], [labels[key].offsetWidth, labels[key].offsetHeight]);
+    dirty.fill(true); fullW = 0; lastPlaceKey = null;
+    if (!running && begun && cur) frame();
+  });
+  const inCard = (el, card) => { // an element's middle in its card's own coordinates (borders included, transforms not)
+    let x = el.offsetWidth / 2, y = el.offsetHeight / 2;
+    for (let n = el; n && n !== card; n = n.offsetParent) { x += n.offsetLeft + (n.offsetParent ? n.offsetParent.clientLeft : 0); y += n.offsetTop + (n.offsetParent ? n.offsetParent.clientTop : 0); }
+    return [x, y];
+  };
   const place = () => {
     const key = [W, H, m, k01(T.labels, 0.6), cardOut(), openBase(), ...chips.map((_, i) => chipQ(i)), ...hov, ...gro, root.classList.contains('is-on')].join('|');
     if (key === lastPlaceKey) return;
@@ -702,26 +725,34 @@
     put(labels.equip, cur.equip[0], cur.equip[1], 0.5, 0.5);
     const pa = nine();
     for (const key in labels) setOp(labels[key], key === 'astrid' ? smooth(k01(T.lens + 0.6, 0.5)) * lensA() : ql * pa);
-    for (const key of ['g0', 'g1', 'g2']) labels[key].classList.toggle('fw-c', tall);
     // The cards: sized from the picture's scale, coming out of the ring on the way from 9; on 11 (and on a
     // phone) each is clipped down to an icon of its picture, opening back into the whole card when asked.
     const out = m < 1 ? cardOut() : 1, ob = openBase(), S = iconR() * 2;
+    // While the picture morphs, the cards are laid out at a width that moves in steps (6%), and scaled the rest of
+    // the way; once it rests they are laid out at the true width. Their type is sized with their width, so a step
+    // wraps much as the true width would, and a morph costs a handful of layouts rather than one every frame.
+    const cw = cur.cw;
+    if (!morph || Math.abs(cw - layW) > cw * 0.06) layW = cw;
+    const w = layW, ls = cw / w, ws = `${w.toFixed(1)}px`, fs = `${Math.max(tall ? 10.5 : 11.5, (w / 250) * 15.5).toFixed(2)}px`, compact = !tall && w < 176;
+    chips.forEach((el, i) => { // 1. sizing
+      if (el.style.width !== ws) { el.style.width = ws; el.style.fontSize = fs; dirty[i] = true; }
+      if (el.classList.contains('is-compact') !== compact) { el.classList.toggle('is-compact', compact); dirty[i] = true; }
+    });
+    chips.forEach((el, i) => { // 2. measuring, where the sizing changed
+      if (!dirty[i]) return;
+      dirty[i] = false;
+      cardH[i] = el.offsetHeight; mediaH[i] = media[i].offsetHeight || w * 0.54;
+      const f = CARDS[i].focus && el.querySelector(CARDS[i].focus); // an icon centred on a part of its picture
+      if (f) { const mr = media[i].getBoundingClientRect(), fr = f.getBoundingClientRect(); if (mr.width && fr.width) CARDS[i].crop = [(fr.left + fr.width / 2 - mr.left) / mr.width, (fr.top + fr.height / 2 - mr.top) / mr.height, Math.min(1, (fr.width * 1.15) / mr.height)]; }
+      if (i === 1) seatIn = inCard(seat, el);
+    });
     let live = root.classList.contains('is-on');
-    cur.cards.forEach(([x, y], i) => {
-      const el = chips[i], q = chipQ(i), w = cur.cw;
-      const fs = Math.max(tall ? 10.5 : 11.5, (w / 250) * 15.5);
-      if (el.style.width !== `${w.toFixed(1)}px`) {
-        el.style.width = `${w.toFixed(1)}px`; el.style.fontSize = `${fs.toFixed(2)}px`;
-        const f = CARDS[i].focus && el.querySelector(CARDS[i].focus); // an icon centred on a part of its picture
-        if (f) { const mr = media[i].getBoundingClientRect(), fr = f.getBoundingClientRect(); if (mr.width && fr.width) CARDS[i].crop = [(fr.left + fr.width / 2 - mr.left) / mr.width, (fr.top + fr.height / 2 - mr.top) / mr.height, Math.min(1, (fr.width * 1.15) / mr.height)]; }
-      }
-      el.classList.toggle('is-compact', !tall && w < 176);
-      const h = el.offsetHeight, mh = media[i].offsetHeight || w * 0.54;
-      cardH[i] = h;
+    cur.cards.forEach(([x, y], i) => { // 3. placing
+      const el = chips[i], q = chipQ(i), h = cardH[i], mh = mediaH[i];
       const [fx, fy, fz] = CARDS[i].crop, o = Math.max(ob, hov[i]), c = Math.min(mh, w) * fz;
       const cx0 = clamp(fx * w - c / 2, 0, w - c), cy0 = clamp(fy * mh - c / 2, 0, mh - c);
       const ins = [cy0, w - cx0 - c, h - cy0 - c, cx0].map((v) => v * (1 - o));
-      const sc = lerp(S / c, 1, o) * lerp(0.55, 1, out);
+      const sc = lerp(S / c, ls, o) * lerp(0.55, 1, out);
       const ax = lerp(cx0 + c / 2, w / 2, o), ay = lerp(cy0 + c / 2, h / 2, o);
       const [px, py] = ell(cur.cards[i][2] * RAD); // each comes out of the point where it plugs into the ring
       let sx = m < 1 ? lerp(px, x, out) : x, sy = m < 1 ? lerp(py, y, out) : y;
@@ -746,6 +777,7 @@
       if (q < 0.9) live = false;
       const iw = w - ins[1] - ins[3], ih = h - ins[0] - ins[2];
       vis[i] = { x: sx + (ins[3] + iw / 2 - ax) * sc, y: sy + (ins[0] + ih / 2 - ay) * sc, w: iw * sc, h: ih * sc, o };
+      if (i === 1 && seatIn) seatAt = [sx + (seatIn[0] - ax) * sc, sy + (seatIn[1] - ay) * sc];
     });
     if (cardsRoot.inert === live) cardsRoot.inert = !live;
     cardsRoot.classList.toggle('is-live', live);
@@ -756,9 +788,9 @@
     // card opened, which left her icon an empty corner of the editor). On 11, and on a phone, her icon is her logo.
     const fq = flightQ(), landed = fq >= 0.999;
     setOp(seat, landed ? 1 : 0);
-    if (fq > 0.001 && !landed && begun && vis[1]) {
-      const L0 = stages[0].lens, sb = seat.getBoundingClientRect(), v = vis[1];
-      const tx = lerp(v.x, sb.left + sb.width / 2, v.o), ty = lerp(v.y, sb.top + sb.height / 2, v.o);
+    if (fq > 0.001 && !landed && begun && vis[1] && seatAt) {
+      const L0 = stages[0].lens, v = vis[1];
+      const tx = lerp(v.x, seatAt[0], v.o), ty = lerp(v.y, seatAt[1], v.o);
       const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
       const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1), ...gro.filter((_, j) => j !== 1)); // never over a neighbour opened above her
@@ -767,22 +799,24 @@
     } else if (fly.style.opacity !== '0') fly.style.opacity = '0';
   };
   // Slide 10's cards grow into their fuller cards, from the small card's box (or its icon's, on a phone) to the
-  // whole card, kept on screen; the small card stays beneath. Transform, clip and opacity only.
+  // whole card, kept on screen; the small card stays beneath. Transform, clip and opacity only: each fuller card is
+  // sized (from slide 10's own card width) and measured once a layout.
+  let wordsBottom = 0;
   const placeFulls = () => {
     if (!fulls.length) return;
     const wide = short; // a phone on its side: the fuller card lies on its side too
-    const fw = tall ? Math.min(W - 24, 340) : wide ? Math.min(W - 48, 540) : clamp(cur.cw * 1.6, 290, 360);
+    const fw = tall ? Math.min(W - 24, 340) : wide ? Math.min(W - 48, 540) : clamp(stages[1].cw * 1.6, 290, 360);
     if (Math.abs(fw - fullW) > 0.5) {
       fullW = fw;
-      fulls.forEach((el, i) => {
+      fulls.forEach((el) => {
         el.style.width = `${fw.toFixed(1)}px`;
         el.style.fontSize = `${((wide ? fw / 1.7 : fw) / 320 * 15).toFixed(2)}px`;
         el.classList.toggle('is-wide', wide);
-        fullH[i] = el.offsetHeight; fullSH[i] = el.firstChild.offsetHeight;
       });
+      fulls.forEach((el, i) => { fullH[i] = el.offsetHeight; fullSH[i] = el.firstChild.offsetHeight; });
     }
     // Whole, it fits the screen above the deck's chrome, and below slide 10's words where there's room for it there.
-    const bottom = H - 72, m_ = 10, words = colOf(hosts[1]).getBoundingClientRect().bottom + 14;
+    const bottom = H - 72, m_ = 10, words = wordsBottom + 14;
     fulls.forEach((el, i) => {
       const g = gro[i], v = vis[i];
       if (g <= 0.002 || !v) {
@@ -797,7 +831,7 @@
       const hw = (fullW * s1) / 2, hh = (FH * s1) / 2;
       const tx = clamp(v.x, m_ + hw, W - m_ - hw), ty = clamp(v.y, top_ + hh, bottom - hh);
       const cx = lerp(v.x, tx, g), cy = lerp(v.y, ty, g), ax = fullW / 2, ay = (top + bot) / 2;
-      el.style.visibility = '';
+      if (el.style.visibility) el.style.visibility = '';
       el.style.pointerEvents = grT[i] ? 'auto' : 'none';
       el.style.transform = `translate(${(cx - ax * s).toFixed(1)}px, ${(cy - ay * s).toFixed(1)}px) scale(${s.toFixed(4)})`;
       el.style.clipPath = g >= 0.999 ? '' : `inset(${top.toFixed(1)}px 0 ${(FH - bot).toFixed(1)}px 0 round ${lerp(icon ? h0 / 2 : 7 / s0, 7, g).toFixed(1)}px)`;
