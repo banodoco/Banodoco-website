@@ -412,9 +412,14 @@
     }
     return out;
   };
+  // The sky is allocated ahead, while slide 4 rests (allocating it in the press frame added to a full garbage
+  // collection there), cleared back to its first state at the press, and let go when the morph ends or slide 4 is left.
+  const skySize = () => [Math.round(innerWidth * Math.min(2, devicePixelRatio || 1)), Math.round(innerHeight * Math.min(2, devicePixelRatio || 1))];
+  const freeSky = () => { sky.width = 0; sky.height = 0; };
   const startMorph = (snap) => {
     const W = innerWidth, H = innerHeight, d = Math.min(2, devicePixelRatio || 1);
-    sky.width = Math.round(W * d); sky.height = Math.round(H * d);
+    const [sw, sh] = skySize();
+    if (sky.width === sw && sky.height === sh && sg.reset) sg.reset(); else { sky.width = sw; sky.height = sh; }
     sky.style.display = 'block';
     root.classList.add('is-morphing', 'is-minkless');
     sizeMink();
@@ -542,6 +547,8 @@
     sg.setTransform(1, 0, 0, 1, 0, 0);
     sg.clearRect(0, 0, sky.width, sky.height);
     sky.style.display = 'none';
+    freeSky();
+    window.AstridCore?.release?.();
     root.classList.remove('is-morphing', 'is-minkless');
   };
 
@@ -620,6 +627,19 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
+  if (coreSlide && !still) { // the sky, ready while slide 4 is up; let go once it is left (unless a morph flies on it)
+    const idleSoon = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 100));
+    const keepSky = () => {
+      if (coreSlide.classList.contains('on')) setTimeout(() => idleSoon(() => {
+        if (!coreSlide.classList.contains('on') || morph) return;
+        const [sw, sh] = skySize();
+        if (sky.width !== sw || sky.height !== sh) { sky.width = sw; sky.height = sh; }
+      }), 1500);
+      else setTimeout(() => { if (!coreSlide.classList.contains('on') && !morph) freeSky(); }, 700);
+    };
+    new MutationObserver(keepSky).observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
+    keepSky();
+  }
   const syncMotion = () => {
     if (motionBlocked()) {
       if (!running || paused) return;

@@ -919,6 +919,7 @@
     window.deckRewound?.(gapSlide);
   };
 
+  const idleSoon = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 100));
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
@@ -926,11 +927,14 @@
     wasOn = on;
     if (unbuilding) endUnbuild();
     if (!on) {
+      setTimeout(() => { if (!slide.classList.contains('on') && !lent) freeLayers(); }, 700);
       const toGap = gapSlide && gapSlide.classList.contains('on') && ring && window.deckNav?.back && !still && running && rings.length && ta >= T.end;
       if (toGap) { unbuild(); return; }
       leave();
       return;
     }
+    // Slide 5's layers, allocated once this slide is up and the page is idle.
+    if (!still) setTimeout(() => idleSoon(() => { if (slide.classList.contains('on') && !lent) sizeLayers(); }), 1500);
     const fromGap = !still && gapSlide && !gapSlide.classList.contains('on') && records.some((r) => r.target === gapSlide);
     enter(!!fromGap);
   });
@@ -1018,9 +1022,25 @@
   // ---- For slide 5 ---------------------------------------------------------------------
   // Going on to slide 5, this picture turns into the real product: slide 5 takes its geometry
   // and its layers (painted on their own canvases) and carries them into its panels.
+  // They are painted at the press (slide 4 breathes, so they are painted as it stands), on three canvases allocated
+  // ahead, while slide 4 rests, and reused, so the press allocates nothing (three full-screen canvases there set off a
+  // full garbage collection in the press frame). They are let go once the deck has left slides 4 and 5.
+  const layerCv = { agent: null, face: null, outer: null };
+  let lent = false; // slide 5's morph is drawing them
+  const sizeLayers = () => {
+    for (const w in layerCv) {
+      const c = layerCv[w] || (layerCv[w] = document.createElement('canvas'));
+      if (c.width !== canvas.width || c.height !== canvas.height) { c.width = canvas.width; c.height = canvas.height; }
+    }
+  };
+  const freeLayers = () => { for (const w in layerCv) if (layerCv[w]) { layerCv[w].width = 0; layerCv[w].height = 0; } };
   const paintLayer = (which) => {
-    const off = document.createElement('canvas');
-    off.width = canvas.width; off.height = canvas.height;
+    // One of the right size is cleared back to its first state, as a new canvas starts; otherwise it is sized now.
+    let off = layerCv[which];
+    if (!off) off = layerCv[which] = document.createElement('canvas');
+    const x = off.width === canvas.width && off.height === canvas.height && off.getContext('2d');
+    if (x && x.reset) x.reset();
+    else { off.width = canvas.width; off.height = canvas.height; }
     const keep = g;
     g = off.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1039,6 +1059,7 @@
   window.AstridCore = {
     snapshot() {
       if (!rings.length || ta < T.end) return null; // only a picture that has finished growing is carried on
+      lent = true;
       const b = root.getBoundingClientRect();
       return {
         left: b.left, top: b.top, W, H, dpr, k, lw: LW,
@@ -1050,7 +1071,8 @@
       };
     },
     hide() { canvas.style.opacity = '0'; },
+    release() { lent = false; if (!slide.classList.contains('on')) freeLayers(); }, // slide 5's morph is done with them
   };
 
-  if (slide.classList.contains('on')) { wasOn = true; enter(false); }
+  if (slide.classList.contains('on')) { wasOn = true; enter(false); if (!still) setTimeout(() => idleSoon(() => { if (slide.classList.contains('on') && !lent) sizeLayers(); }), 1500); }
 })();
