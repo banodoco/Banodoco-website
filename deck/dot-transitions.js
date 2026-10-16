@@ -972,6 +972,12 @@
     size();
     anchor = current ? anchorOf(current) : null;
     if (anchor) place(anchor);
+    nameRest();
+    const ch = zone(chromeEls());
+    chrome = ch && Object.assign(ch, { a: 1 });
+    const z = active() && current && zone(lines(current));
+    zones = z ? [Object.assign(z, { a: 1 })] : [];
+    if (anchor && current === lastSlide()) crown(anchor, true);
     draw();
   });
   // Keep the initial settle (and its dt-arrive event) in its original place.
