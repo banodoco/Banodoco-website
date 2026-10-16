@@ -387,7 +387,7 @@
   const begin = () => {
     reset();
     if (!layout()) return;
-    if (still) { ta = 9; root.classList.add('is-labelled'); draw(); return; }
+    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); if (!still) start(); return; }
     ta = -0.2; nextPulse = AMBIENT + 0.3;
     timers.push(setTimeout(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
     timers.push(setTimeout(() => root.classList.add('is-labelled'), 1400));
@@ -431,6 +431,7 @@
     if (on === wasOn) return;
     wasOn = on;
     if (on) {
+      if (window.deckNav?.rest) { begin(); return; }
       const fromStack = stackSlide && !stackSlide.classList.contains('on') && records.some((r) => r.target === stackSlide);
       if (fromStack && flyIn()) return;
       reset(); layout(); draw(); enter();

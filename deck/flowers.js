@@ -620,7 +620,7 @@
   const quiet = () => timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
   const begin = () => {
     if (!layout()) return;
-    if (still) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); return; }
+    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); if (!still) start(); return; }
     ta = -0.15;
     timers.push(setTimeout(() => root.classList.add('is-labelled'), 900));
     quiet();
@@ -657,6 +657,7 @@
     wasOn = on;
     if (on) {
       reset();
+      if (window.deckNav?.rest) { whenOpen(begin); return; }
       const fromPays = !still && paysSlide && !paysSlide.classList.contains('on') && records.some((r) => r.target === paysSlide);
       const snap = fromPays && window.AstridPays && window.AstridPays.snapshot();
       if (snap) { handoff(snap); return; }

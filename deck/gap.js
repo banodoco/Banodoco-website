@@ -179,7 +179,7 @@
   // Without the field to fly from: the axes draw, then the tools bloom one by one.
   const enter = (lead = 0) => {
     reset();
-    if (still) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); return; }
+    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); return; }
     size();
     const dy = lift();
     tools.forEach((el, i) => {
@@ -291,7 +291,8 @@
       return;
     }
     const fromField = fieldSlide && !fieldSlide.classList.contains('on') && records.some((r) => r.target === fieldSlide);
-    fromField ? arrive() : begin();
+    if (window.deckNav?.rest) enter();
+    else fromField ? arrive() : begin();
   });
   // On a first load the Mycelial mark plays first (dot-transitions.js): the tools bloom once it has landed.
   const html = document.documentElement;

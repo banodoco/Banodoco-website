@@ -662,7 +662,11 @@
     slide.classList.remove('st-arrive');
     softenNet(true);
     flags.forEach((f) => { f.tabIndex = 0; });
-    if (still) { layout(); settleAll(); stepHead(); return; }
+    if (still || window.deckNav?.rest) {
+      layout(); settleAll(); stepHead();
+      if (!still) { amb = { t: now() }; tourFrom(0, now() + 1100); play(); wake(); }
+      return;
+    }
     if (from5) { // the product moves at once; the slide must not fade in under it
       slide.classList.add('st-arrive');
       timers.push(setTimeout(() => slide.classList.remove('st-arrive'), 900));
@@ -679,7 +683,7 @@
     }
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(setTimeout(go, 1300))); // if the network never says it has arrived
   };
-  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !html.classList.contains('dt-intro')) { clearTimers(); begin(false); play(); wake(); } });
+  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); begin(false); play(); wake(); } });
   const stop = () => {
     running = false;
     if (raf) cancelAnimationFrame(raf);
