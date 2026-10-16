@@ -8,7 +8,9 @@
   if (!root) return;
   const slide = root.closest('.slide');
   const tiles = [...root.querySelectorAll('.vc-tile')];
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Reduced motion, or the viewer's own "animations off" switch (window.deckStill): no previews, no autoplay.
+  let still = window.deckStill ? window.deckStill() : matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('deck-motion', () => { still = window.deckStill(); if (still) tiles.forEach((tile) => preview(tile, false)); });
   const STREAM = 'https://customer-xt84pg68d7eakb9h.cloudflarestream.com'; // where arcagidan.com hosts its films
   const FILM = 16 / 9; // every film here is 16:9
   let open = null;
