@@ -174,9 +174,21 @@
   // Names and cards live in the lower screen: below the headline (floor) and
   // above the legend (ceil), never behind either.
   const text = slide.querySelector('.split > :first-child');
-  let floor = 0, ceil = 0;
+  let floor = 0, ceil = 0, raised = false;
   const measure = () => {
+    // On a phone held upright the field rises above the words (the phone CSS sets them at the foot, on the legend):
+    // names and cards live between the top of the screen (floor) and the label (ceil).
+    raised = w <= 760 && (h >= w || h > 500);
+    if (raised) slide.style.setProperty('--sf-key', `${legend.offsetHeight}px`); // the legend's height, under the words
+    else slide.style.removeProperty('--sf-key');
     const s = stage.getBoundingClientRect(), t = text && text.getBoundingClientRect(), l = legend.getBoundingClientRect();
+    if (raised) {
+      floor = 44;
+      ceil = t && t.height ? t.top - s.top - 22 : h * 0.55;
+      slide.style.setProperty('--sf-top', `${Math.round(ceil + 22)}px`); // where the stage's mask quietens behind the words
+      return;
+    }
+    slide.style.removeProperty('--sf-top');
     floor = Math.max(h * 0.48, t && t.height ? t.bottom - s.top + h * 0.06 : h * 0.5);
     ceil = l.height ? l.top - s.top - 10 : h - 40;
   };
@@ -216,7 +228,8 @@
   // E: the field opens in the right half beside the text. F: below the text, full width.
   const below = () => document.documentElement.dataset.ver === 'f' || w <= 760;
   const aim = () => {
-    if (below()) { cx = w / 2; cy = h * 0.68; F = Math.min(w * 0.42, h * 0.62) * 0.75; }
+    if (raised) { cx = w / 2; cy = floor + (ceil - floor) * 0.56; F = Math.min(w * 0.42, h * 0.62) * 0.75; }
+    else if (below()) { cx = w / 2; cy = h * 0.68; F = Math.min(w * 0.42, h * 0.62) * 0.75; }
     else { cx = w * 0.7; cy = h * 0.48; F = Math.min(w * 0.5, h) * 0.38; }
     // The glide home is one unhurried curve: it sets off with no jolt (zero
     // speed and acceleration), peaks gently about a second in, and fades out
@@ -285,7 +298,7 @@
     leadY += (steerY - leadY) * ease(sr); camY += (leadY - camY) * ease(sr);
     // Labels and hovering stay in the lower screen, clear of the headline.
     const low = below();
-    const clear = (n) => (low ? n.sy > floor + 6 : n.sx > w * 0.5);
+    const clear = (n) => (low ? n.sy > floor + 6 && (!raised || n.sy < ceil) : n.sx > w * 0.5);
     aim();
     const grain = Math.sqrt(F / 240);
 
@@ -439,7 +452,7 @@
       const bx = target.sx + (flip ? -gap : gap), by = target.sy;
       const x = bx + (cx - bx) * e, scale = 0.92 + 0.2 * e, half = (card.offsetHeight * scale) / 2;
       let y = by + (cy - by) * e;
-      if (low) y = Math.max(floor + half, Math.min(y, h - half - 8)); // the card's top never rises behind the text
+      if (low) y = Math.max(floor + half, Math.min(y, (raised ? ceil : h - 8) - half)); // the card never goes behind the text
       const px = (flip ? -100 : 0) + (flip ? 50 : -50) * e;
       card.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${px.toFixed(1)}%, -50%) scale(${scale.toFixed(3)})`;
     }
@@ -678,7 +691,7 @@
     if (!pick && touched && pointer) { // a tap lands before the next frame has looked
       let best = 28 * 28;
       for (const n of named) {
-        if (!n.vis || (below() ? n.sy < floor + 6 : n.sx < w * 0.5)) continue;
+        if (!n.vis || (below() ? n.sy < floor + 6 || (raised && n.sy > ceil) : n.sx < w * 0.5)) continue;
         const dd = (n.sx - pointer.x) ** 2 + (n.sy - pointer.y) ** 2;
         if (dd < best) { best = dd; pick = n; }
       }

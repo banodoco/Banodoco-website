@@ -965,16 +965,10 @@
     frame(); start();
   });
 
-  // Clicks on the picture never turn the slide; clicks on the words still do.
-  const inPicture = (x, y) => {
-    if (!cur) return false;
-    const pts = [...cur.artists, ...cur.groups, cur.artistsLabel, cur.inspire, cur.equip];
-    const [cx, cy, rx, ry] = cur.ring;
-    let x0 = cx - rx, x1 = cx + rx, y0 = cy - ry, y1 = cy + ry;
-    for (const [px, py] of pts) { x0 = Math.min(x0, px - 40); x1 = Math.max(x1, px + 40); y0 = Math.min(y0, py - 40); y1 = Math.max(y1, py + 40); }
-    return x >= x0 && x <= x1 + 160 * k && y >= y0 && y <= y1;
-  };
   // An icon opens into its card while it's hovered or focused; a tap opens it (and closes the others).
+  // The browser hit-tests each card's rounded clip path, including the icon's
+  // radius. Only those interactive pixels retain clicks; the decorative canvas
+  // and the space around it pass through to the deck's normal click-thirds.
   chips.forEach((el, i) => {
     const open = (on) => { hoT[i] = on ? 1 : 0; if (!running && begun) frame(); };
     let pointerType = '';
@@ -984,6 +978,7 @@
     el.addEventListener('focusin', () => open(true));
     el.addEventListener('focusout', () => open(false));
     el.addEventListener('click', (e) => {
+      e.stopPropagation();
       const source = pointerType || e.pointerType;
       pointerType = '';
       if (e.target.closest('a') || source === 'mouse') return;
@@ -994,11 +989,6 @@
   });
   // Links on the slides (the Discord line on 9) open in a new tab and never turn the slide.
   hosts.forEach((s) => s.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation())));
-  hosts.forEach((s) => s.addEventListener('click', (e) => {
-    const col = colOf(s), b = col && col.getBoundingClientRect();
-    if (b && e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) return;
-    if (inPicture(e.clientX, e.clientY)) e.stopPropagation();
-  }));
 
   // Loaded straight onto one of these slides: the network is already at the node (or the mark is about to land there).
   if (stageOf() >= 0) { follow(); if (armed) { armed = false; whenOpen(begin); } }

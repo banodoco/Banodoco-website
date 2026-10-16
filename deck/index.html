@@ -449,6 +449,8 @@
     .slide.vc-host, .slide.gap-host { padding-top: 56px; }
     .vc-host .split h1, .gap-host .split h1 { font-size: 1.6rem; }
     .vc-host .body, .gap-host .body { font-size: .98rem; line-height: 1.45; }
+    /* 2: a little smaller, so the field above the words keeps its room. */
+    html[data-ver="f"] .sf-host h1 { font-size: 1.75rem; }
     /* 6: smaller words and a shorter card slot, so the stack under them keeps some size. */
     html[data-ver="f"] .slide.st-host h1 { font-size: 1.3rem; }
     .st .st-ch { font-size: 17px; } .st .st-card p { font-size: 12.5px; margin-bottom: 5px; } .st .st-card ul { gap: 3px; }
@@ -757,8 +759,15 @@
   }
 
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
-    html[data-ver="f"] .ac-host { padding-bottom: 92px; }
+    /* Upright, the rings and the words are one group in the middle of the screen: the words are centred in what is
+       left under the picture's room (40 px + the picture, 53.85vw - 4.3 px tall at the phone's scale, + a 34 px gap),
+       and core.js hangs the picture just above the label. */
+    html[data-ver="f"] .ac-host { justify-content: center; padding-top: calc(53.85vw + 69.7px); padding-bottom: 90px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); max-width: 22ch; text-wrap: balance; }
+  }
+  /* A very short upright screen has no room to centre the group: the words go to the foot, the picture above them. */
+  @media (max-width: 760px) and (orientation: portrait) and (max-height: 599px) {
+    html[data-ver="f"] .ac-host { justify-content: flex-end; padding-top: 40px; }
   }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     .gap-host .split { grid-template-columns: minmax(0, 1fr); }
@@ -808,6 +817,13 @@
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     .sf-stage { -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); }
     .sf-legend { left: 16px; right: 16px; width: auto; bottom: 86px; } /* clear of the wordmark */
+    /* Upright, the field fills the top of the screen and the words sit at the foot, on the legend (scatter-field.js
+       sets --sf-key to the legend's height and --sf-top to the label's top, and keeps names and cards above it).
+       The field quietens just above the words, as it does behind them on the wide slide. */
+    html[data-ver="f"] .sf-host { justify-content: flex-end; padding-bottom: calc(110px + var(--sf-key, 2.8rem)); }
+    html[data-ver="f"] .sf-stage {
+      -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .7), #000 12%, #000 calc(var(--sf-top, 55%) - 70px), rgb(0 0 0 / .26) calc(var(--sf-top, 55%) + 10px), rgb(0 0 0 / .2)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45));
+      mask-image: linear-gradient(to bottom, rgb(0 0 0 / .7), #000 12%, #000 calc(var(--sf-top, 55%) - 70px), rgb(0 0 0 / .26) calc(var(--sf-top, 55%) + 10px), rgb(0 0 0 / .2)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45)); }
   }
   .body b { color: var(--ink); font-weight: 400; font-style: italic; }
   .split { display: grid; grid-template-columns: 1fr minmax(260px, 40vw); gap: 4vw; align-items: center; }
@@ -1325,6 +1341,24 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pendingTurns = [];
   let turn = null, pace = 1;
+  let backlogDeadline = 0;
+  // Virtual milliseconds through the network arrival and the picture's entry,
+  // with room for the longest node path. The final queued turn is not in this
+  // budget: it STARTS by the deadline, then plays at normal speed.
+  const turnBudgets = [3200, 4300, 4000, 5600, 3400, 5000, 5600, 4000, 4000, 3200, 3200];
+  const hurry = () => {
+    if (!turn || !pendingTurns.length) { setPace(1); return; }
+    const elapsed = turn.ceiling ? turn.ceilingMs - turn.ceiling.left : 0;
+    let remaining = Math.max(250, turn.budget - elapsed), target = i;
+    for (const queued of pendingTurns.slice(0, -1)) {
+      target += queued.dir;
+      remaining += turnBudgets[target];
+    }
+    // Leave a few frames per hand-off for timers, arrival and layout. At 16×
+    // even the short stage morphs still have several painted frames.
+    const available = Math.max(100, backlogDeadline - performance.now() - pendingTurns.length * 48);
+    setPace(Math.min(16, Math.max(4, remaining / available)));
+  };
   // A timer's remaining time is measured on the same clock as the slide builds.
   // Its handle can be cancelled even after the underlying timeout is rescheduled.
   window.deckPace = () => pace;
@@ -1381,14 +1415,14 @@
       if (turn || !pendingTurns.length) return;
       const next = pendingTurns.shift();
       startTurn(i + next.dir, next.mode, true);
-      if (pendingTurns.length) setPace(4);
+      hurry();
     });
   };
   window.deckTurnDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl) { turn.network = true; finishTurn(); }
+    if (turn && slides[turn.to] === slideEl && !turn.network) { turn.network = true; finishTurn(); hurry(); }
   };
   window.deckEntryDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl && !turn.rewinding) { turn.entry = true; finishTurn(); }
+    if (turn && slides[turn.to] === slideEl && !turn.entry && !turn.rewinding) { turn.entry = true; finishTurn(); hurry(); }
   };
   // A step back whose picture plays its hand-off in reverse: the slide being left claims the earlier slide's entry
   // (deckRewinding) and reports it when the reverse has landed (deckRewound), so a queued turn waits for it.
@@ -1396,7 +1430,7 @@
     if (turn && slides[turn.to] === slideEl) { turn.rewinding = true; turn.entry = false; }
   };
   window.deckRewound = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl && turn.rewinding) { turn.rewinding = false; turn.entry = true; finishTurn(); }
+    if (turn && slides[turn.to] === slideEl && turn.rewinding) { turn.rewinding = false; turn.entry = true; finishTurn(); hurry(); }
   };
   // One viewport notification for the slide pictures. A phone's browser chrome can
   // report several sizes in one gesture; only lay out after the last one.
@@ -1435,7 +1469,9 @@
     // a jump back (hash, overview, history, Home) just lands at rest.
     const back = stepped && dir < 0 && to === from - 1 && !reversePair;
     window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, back, signal: turnController.signal };
-    turn = { to, network: reduced, entry: reduced, ceiling: null, rewinding: false };
+    const ceilingMs = from === null ? 18000 : 12000;
+    turn = { to, network: reduced, entry: reduced, ceiling: null, ceilingMs, rewinding: false,
+      budget: from === null ? 6500 : turnBudgets[to] };
     document.documentElement.dataset.dir = String(dir);
     i = to;
     initialized = true;
@@ -1452,12 +1488,12 @@
     else if (historyMode === 'push') history.pushState({ deckSlide: i + 1 }, '', url);
     if (!reduced) turn.ceiling = window.deckLater(() => {
       if (turn?.to === to) { turn.network = true; turn.entry = true; finishTurn(); }
-    }, from === null ? 18000 : 12000);
+    }, ceilingMs);
     else finishTurn();
   };
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
-    if (initialized && to === i) { pendingTurns.length = 0; return; }
+    if (initialized && to === i) { pendingTurns.length = 0; setPace(1); return; }
     pendingTurns.length = 0;
     turn = null;
     setPace(1);
@@ -1469,7 +1505,8 @@
     if (target < 0 || target >= slides.length) return;
     if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, true); return; }
     pendingTurns.push({ dir, mode });
-    setPace(4);
+    backlogDeadline = performance.now() + 1500;
+    hurry();
   };
   const toggleOv = (on = !ov.classList.contains('on')) => {
     if (on) { pendingTurns.length = 0; setPace(1); }
