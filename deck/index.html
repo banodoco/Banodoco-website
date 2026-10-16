@@ -1231,9 +1231,18 @@
   const resizeSubscribers = new Set();
   let resizeTimer = 0;
   window.deckOnResize = (fn) => { resizeSubscribers.add(fn); return () => resizeSubscribers.delete(fn); };
+  // Safari, and Chrome on a phone, report a resize while the page loads with nothing changed; only a real
+  // change lays out again (one that lands during the opening would cut it short).
+  const viewSize = () => `${innerWidth}x${innerHeight} ${Math.round(window.visualViewport?.width || 0)}x${Math.round(window.visualViewport?.height || 0)}`;
+  let laidOut = viewSize();
   const scheduleResize = () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => resizeSubscribers.forEach((fn) => fn()), 120);
+    resizeTimer = setTimeout(() => {
+      const size = viewSize();
+      if (size === laidOut) return;
+      laidOut = size;
+      resizeSubscribers.forEach((fn) => fn());
+    }, 120);
   };
   addEventListener('resize', scheduleResize);
   window.visualViewport?.addEventListener('resize', scheduleResize);
