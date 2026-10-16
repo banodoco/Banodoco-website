@@ -754,6 +754,8 @@
       b.src = snapFrom5();
       if (!b.src) { endFold(); return false; }
     }
+    // Just before the copies show, their pictures are taken again: slide 5's preview may only now have caught up.
+    if (!b.fresh && b.e <= 1.1) { b.fresh = true; repaintGhosts(); }
     const d = Math.min(0.05 * pace(), (t - (b.last || t)) / 1000); // now() runs at the turn's pace
     b.last = t;
     b.e = Math.max(0, b.e - d);
@@ -766,6 +768,10 @@
     stepHead();
     return true;
   };
+  const repaintGhosts = () => Object.keys(SRC).forEach((i) => {
+    const from = demo.querySelector(SRC[i])?.querySelectorAll('canvas') || [], to = ghosts[i].querySelectorAll('canvas');
+    from.forEach((cs, j) => { const c = to[j]; if (!c || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
+  });
   const endFold = () => {
     if (!build || !build.back) return;
     build = null;
