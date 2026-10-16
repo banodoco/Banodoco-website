@@ -396,6 +396,7 @@
   const unease = (v) => (v < 0.5 ? Math.cbrt(v / 4) : 1 - Math.cbrt(2 * (1 - v)) / 2); // easeIO's inverse
   const flightQ = () => (m >= 1 ? 1 : m <= 0 ? 0 : smooth(clamp(unease(m) / 0.7)));
   const seatCell = () => (tall || short ? 1 : 2);
+  const lensCell = () => (tall ? 1 : Math.max(short ? 1 : 2, Math.round(2.45 * stages[0].k))); // her cell in the lens on 9 (as settleCur's)
   // A card's own openness: whole on 10, an icon on 11 (and on a phone); hovered, focused or tapped, it opens again.
   const iconR = () => (tall ? 23 : short ? 22 : 32);
   const openBase = () => (tall || short ? 0 : m <= 1 ? 1 : 1 - smooth(clamp((m - 1) / 0.8)));
@@ -799,9 +800,9 @@
     if (fq > 0.001 && !landed && begun && vis[1] && seatAt) {
       const L0 = stages[0].lens, v = vis[1];
       const tx = lerp(v.x, seatAt[0], v.o), ty = lerp(v.y, seatAt[1], v.o);
-      const c0 = Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)); // her cell in the lens on 9
+      const c0 = lensCell();
       const sx = minkAt ? minkAt[0] : L0[0] + M.LENS.x * c0, sy = minkAt ? minkAt[1] : L0[1] + M.LENS.y * c0;
-      const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
+      const u = fq < 0.55 ? c0 : seatCell(); // she leaves the lens at the size she had in it
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1), ...gro.filter((_, j) => j !== 1)); // never over a neighbour opened above her
       const into = (1 - v.o) * arrive; // flying into her icon, she becomes its logo
       // As she becomes the logo she is drawn onto its middle, so the two never stand apart.
