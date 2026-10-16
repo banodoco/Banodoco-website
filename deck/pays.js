@@ -414,7 +414,7 @@
     if (ta >= END && !fly) window.deckEntryDone?.(slide);
     if (ta < FIRST) return;
     // A builder publishes something; it reaches the core; a wave goes out to everyone.
-    if (ta >= nextPulse) {
+    if (ta >= nextPulse && !(window.deckPace?.() > 1)) { // (none sets off while the entry is hurried on)
       lastFrom = (lastFrom + 1 + Math.floor(Math.random() * 2)) % 3;
       pulses.push({ i: lastFrom, t0: ta }); nextPulse = ta + EVERY[0] + Math.random() * (EVERY[1] - EVERY[0]);
     }

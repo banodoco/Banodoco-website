@@ -520,7 +520,8 @@
   const k01 = (e, [a, b]) => clamp((e - a) / (b - a));
   const stepBuild = (t) => {
     const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
-    if (!amb && e >= T0.open) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
+    // (Not while the entry is being hurried on to the next slide: no card opens just as the slide leaves.)
+    if (!amb && e >= T0.open && !(window.deckPace?.() > 1)) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
       st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
       clearGhosts();
       amb = { t }; tourFrom(0, t);
@@ -566,7 +567,11 @@
       vis.lb = PL.map((_, i) => clamp((e - T.lb - i * T.lbGap) / T.lbDur));
     }
     if (!amb) { apply(); draw(); }
-    if (e >= T0.end) { build = null; vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; window.deckEntryDone?.(slide); }
+    if (e >= T0.end) {
+      build = null;
+      if (amb) { vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; } else { settleAll(); amb = { t }; tourFrom(0, t + SOON); }
+      window.deckEntryDone?.(slide);
+    }
   };
 
   // ---- The tour, and hover ------------------------------------------------------------------------
