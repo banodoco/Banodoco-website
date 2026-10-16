@@ -444,7 +444,20 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (stackSlide) watch.observe(stackSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
-  addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) draw(); });
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    const interrupted = armed || !!fly || ta < END;
+    if (interrupted) {
+      timers.forEach(clearTimeout); timers = [];
+      armed = false; fly = null; showStackMink();
+      slide.classList.remove('pa-arrive');
+      ta = Math.max(ta, AMBIENT);
+      root.classList.add('is-labelled');
+      document.documentElement.classList.add('pa-quiet');
+    }
+    pulses = []; waves = [];
+    if (layout()) { draw(); start(); }
+  });
   root.addEventListener('click', (e) => e.stopPropagation());
 
   // For the next slide: where this slide's core sits, in viewport pixels.

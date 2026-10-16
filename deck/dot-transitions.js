@@ -961,13 +961,24 @@
   }).observe(html, { attributes: true, attributeFilter: ['data-ver'] });
 
   // A resize keeps the network, stretched to the new screen; the node and the text's softening find their places.
-  let resized = 0;
-  addEventListener('resize', () => {
-    if (!turning && !opening) keepGround();
+  window.deckOnResize(() => {
+    if (turning || opening) {
+      endOpening();
+      size();
+      settle(false);
+      return;
+    }
+    keepGround();
     size();
+    anchor = current ? anchorOf(current) : null;
+    if (anchor) place(anchor);
+    nameRest();
+    const ch = zone(chromeEls());
+    chrome = ch && Object.assign(ch, { a: 1 });
+    const z = active() && current && zone(lines(current));
+    zones = z ? [Object.assign(z, { a: 1 })] : [];
+    if (anchor && current === lastSlide()) crown(anchor, true);
     draw();
-    clearTimeout(resized);
-    resized = setTimeout(() => { if (!turning && !opening) settle(false); }, 150);
   });
   // Keep the initial settle (and its dt-arrive event) in its original place.
   // Only the opening waits for the fonts; slide scripts below still initialize

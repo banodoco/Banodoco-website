@@ -415,6 +415,18 @@
     .as-tl { --as-hcol: 52px; } .as-th em { display: none; }
     .as-msg, .as-step { font-size: 10px; } .as-composer { display: none; }
   }
+  /* A rotated phone uses the two-column editor, but has too little height for
+     its full timeline. Keep the player open and the same two panels readable. */
+  @media (min-width: 761px) and (max-height: 500px) {
+    html[data-ver="f"] .as-host { padding-top: 14px; }
+    html[data-ver="f"] .as-host .num { margin-bottom: 6px; }
+    html[data-ver="f"] .as-host h1 { max-width: 38em; font-size: clamp(1.15rem, 2vw, 1.45rem); line-height: 1.04; }
+    .as { margin: 2px 0 48px; }
+    .as-stage { row-gap: 4px; }
+    .as-edit { padding: 5px; gap: 4px; }
+    .as-player { padding: 4px; }
+    .as-tl > .as-th, .as-tl > .as-lane { height: 26px !important; }
+  }
 
   /* Version F, slide 7: how it pays (pays.js). Text centred at the bottom as on slide 4; above it, in the same
      gold-thread language, the few builders running Astrid locally, the core, and everyone else on the hosted version. */
@@ -1211,6 +1223,17 @@
   let i = 0;
   let initialized = false, turnController = null;
   window.deckNav = { from: null, to: 0, dir: 0, rest: false, signal: null };
+  // One viewport notification for the slide pictures. A phone's browser chrome can
+  // report several sizes in one gesture; only lay out after the last one.
+  const resizeSubscribers = new Set();
+  let resizeTimer = 0;
+  window.deckOnResize = (fn) => { resizeSubscribers.add(fn); return () => resizeSubscribers.delete(fn); };
+  const scheduleResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => resizeSubscribers.forEach((fn) => fn()), 120);
+  };
+  addEventListener('resize', scheduleResize);
+  window.visualViewport?.addEventListener('resize', scheduleResize);
 
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));

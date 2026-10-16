@@ -311,4 +311,16 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (fieldSlide) watch.observe(fieldSlide, { attributes: true, attributeFilter: ['class'] });
   if (slide.classList.contains('on')) begin();
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    size();
+    if (!flying) return;
+    // Flight endpoints were measured in the old viewport. Finish at the new
+    // chart instead of leaving old pixel coordinates suspended over it.
+    timers.forEach(clearTimeout); timers = [];
+    flights = []; flying = false;
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    root.classList.add('is-drawn', 'is-labelled');
+    tools.forEach((el) => { el.classList.add('is-in'); el.style.removeProperty('--m'); });
+  });
 })();
