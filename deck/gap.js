@@ -51,12 +51,12 @@
     }
     const d = el.querySelector('i').offsetWidth;
     const x0 = pct(el, 'left') * w, y0 = pct(el, 'top') * h;
-    // Neighbours within a fifth of the chart drift away from it, the nearest most.
-    const reach = w * 0.2, push = d * 0.3;
+    // Neighbours within a third of the chart drift away from it, the nearest most (a few px).
+    const reach = w * 0.3, push = d * 0.35;
     tools.forEach((t) => {
       if (t === el || still) { t.style.removeProperty('--nx'); t.style.removeProperty('--ny'); return; }
       const dx = pct(t, 'left') * w - x0, dy = pct(t, 'top') * h - y0, dist = Math.hypot(dx, dy) || 1;
-      const k = Math.pow(clamp(1 - dist / reach), 1.5) * push;
+      const k = Math.pow(clamp(1 - dist / reach), 1.2) * push;
       t.style.setProperty('--nx', `${((dx / dist) * k).toFixed(2)}px`);
       t.style.setProperty('--ny', `${((dy / dist) * k).toFixed(2)}px`);
     });
