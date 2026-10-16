@@ -447,6 +447,14 @@
   const sampler = document.createElement('canvas');
   const sctx = sampler.getContext('2d', { willReadFrequently: true });
   let motes = [];
+  // The collage's centre, in the stage's px.
+  const middle = (base) => {
+    const boxes = [...collage.querySelectorAll('.vc-tile')].map((t) => t.getBoundingClientRect()).filter((r) => r.width);
+    return boxes.length ? {
+      x: (Math.min(...boxes.map((r) => r.left)) + Math.max(...boxes.map((r) => r.right))) / 2 - base.left,
+      y: (Math.min(...boxes.map((r) => r.top)) + Math.max(...boxes.map((r) => r.bottom))) / 2 - base.top,
+    } : { x: cx, y: cy };
+  };
   const dissolve = () => {
     collageSlide.classList.add('vc-dissolve'); // both slides hold still while they cross
     slide.classList.add('sf-arrive');
@@ -456,17 +464,17 @@
     resize(); aim();
     const base = stage.getBoundingClientRect();
     // The collage's centre, which the picture bursts outward from.
-    const boxes = [...collage.querySelectorAll('.vc-tile')].map((t) => t.getBoundingClientRect()).filter((r) => r.width);
-    const mid = boxes.length ? {
-      x: (Math.min(...boxes.map((r) => r.left)) + Math.max(...boxes.map((r) => r.right))) / 2 - base.left,
-      y: (Math.min(...boxes.map((r) => r.top)) + Math.max(...boxes.map((r) => r.bottom))) / 2 - base.top,
-    } : { x: cx, y: cy };
+    const mid = middle(base);
     // We fly into the collage: for a moment the field opens from its centre.
     shift = { x: 0, y: 0, age: 9 };
     aim();
     shift = { x: mid.x - cx, y: mid.y - cy, age: -0.6 };
     aim();
-    motes = [];
+    motes = tileMotes(base);
+  };
+  // Each tile, sampled into a grid of motes in its own colours, placed in the world where the camera sees it now.
+  const tileMotes = (base) => {
+    const motes = [];
     for (const tile of collage.querySelectorAll('.vc-tile')) {
       const r = tile.getBoundingClientRect(), v = tile.querySelector('video');
       if (!r.width || !r.height) continue;
@@ -507,6 +515,7 @@
       }
     }
     motes.sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : 0)); // draw colour by colour
+    return motes;
   };
 
   // Where the field's dots and some of its dust are on screen right now, for
