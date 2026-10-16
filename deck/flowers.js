@@ -637,7 +637,7 @@
   const quiet = () => timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
   const begin = () => {
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); if (!still) start(); return; }
+    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); if (!still) { html.classList.add('fl-quiet'); start(); } return; }
     ta = -0.15;
     timers.push(setTimeout(() => root.classList.add('is-labelled'), 900));
     quiet();
