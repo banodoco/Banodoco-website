@@ -468,6 +468,8 @@
   html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr) minmax(0, 30vw); }
   html[data-ver="f"] .st-host > .split > :first-child { grid-column: 2; text-align: right; }
   html[data-ver="f"] .st-host h1 { font-size: clamp(1.9rem, 3.1vw, 3.3rem); max-width: 8.25em; margin-left: auto; }
+  /* Safari balances this heading differently unless "community-built" stays whole (on a phone both break it the same). */
+  html[data-ver="f"] .st-host h1 .st-nb { white-space: nowrap; }
   .st-host .body, .st-host .vis { display: none; }
   .st-host > .num, .st-host > .split { position: relative; z-index: 1; }
   /* The text's row runs across the stack, so it takes no clicks (the slide behind it still turns the deck); and while
@@ -595,6 +597,7 @@
     html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr); }
     html[data-ver="f"] .st-host > .split > :first-child { grid-column: 1; text-align: left; }
     html[data-ver="f"] .st-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 16em; margin-left: 0; }
+    html[data-ver="f"] .st-host h1 .st-nb { white-space: normal; }
     /* On a phone: short names on the flags, and every card opens in one slot between the text and the stack. */
     .st-flag { gap: 6px; padding: 4px 9px 5px 7px; font-size: 13.5px; }
     .st-flag::after { display: none; }
@@ -1137,7 +1140,7 @@
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
-        <h1>As you create, you and your agent build on top of a shared foundation — so the editor grows into <em>a community-built creative platform.</em></h1>
+        <h1>As you create, you and your agent build on top of a shared foundation — so the editor grows into&nbsp;<em>a <span class="st-nb">community-built</span> creative platform.</em></h1>
     <div class="body">
       <p>One person's solution becomes someone else's starting point: work out a film-grain look, publish it, and the next artist's agent can reach for it, credited to you. Private projects stay private.</p>
       <ul>
@@ -1295,9 +1298,18 @@
   const resizeSubscribers = new Set();
   let resizeTimer = 0;
   window.deckOnResize = (fn) => { resizeSubscribers.add(fn); return () => resizeSubscribers.delete(fn); };
+  // Safari, and Chrome on a phone, report a resize while the page loads with nothing changed; only a real
+  // change lays out again (one that lands during the opening would cut it short).
+  const viewSize = () => `${innerWidth}x${innerHeight} ${Math.round(window.visualViewport?.width || 0)}x${Math.round(window.visualViewport?.height || 0)}`;
+  let laidOut = viewSize();
   const scheduleResize = () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => resizeSubscribers.forEach((fn) => fn()), 120);
+    resizeTimer = setTimeout(() => {
+      const size = viewSize();
+      if (size === laidOut) return;
+      laidOut = size;
+      resizeSubscribers.forEach((fn) => fn());
+    }, 120);
   };
   addEventListener('resize', scheduleResize);
   window.visualViewport?.addEventListener('resize', scheduleResize);
