@@ -278,7 +278,7 @@
     if (mark) {
       mark.t += dt;
       if (mark.folding !== undefined) {
-        mark.folding += dt / 0.5;
+        mark.folding += dt / (mark.foldFor || 0.5);
         mark.shrink = clamp(mark.folding);
         if (mark.folding >= 1) mark = null;
       }
@@ -819,20 +819,36 @@
     const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(across, innerHeight * 0.8, room));
     return { x: r.left + r.width / 2, y, size: Math.round(size) };
   };
-  const crown = (at, now) => {
+  // From slide 10 (glow given) the mark starts as the glow at the wheel's middle, at its place and size there, and
+  // grows and resolves into its own place as the wheel opens into the halo, from the start of the turn; the
+  // network's arrival then finds it already there. Its surface is drawn once; only its transform and opacity move.
+  const crown = (at, now, glow) => {
+    if (!now && !glow && mark && mark.crown && mark.folding === undefined) return; // already growing out of the glow
     const c = crownAt() || { x: at.x, y: at.y, size: 160 };
     mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: 0.3 };
     zones.push(Object.assign(disc(mark.x, mark.y, c.size * 0.42), { crown: true, a: now ? 1 : 0 }));
     markCv.getAnimations().forEach((a) => a.cancel());
-    if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
+    if (glow) markCv.animate(glowFrames(glow, c), { duration: GLOW_MS, easing: 'cubic-bezier(.3,.1,.25,1)', fill: 'backwards' });
+    else if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
     wake();
   };
-  const uncrown = () => {
+  const GLOW_MS = 1500;
+  const glowFrames = (glow, c) => [
+    { transform: `translate(${(glow.x - c.x).toFixed(1)}px, ${(glow.y - c.y).toFixed(1)}px) scale(${clamp((2 * glow.r) / c.size, 0.04, 0.5).toFixed(3)})`, opacity: 0 },
+    { opacity: 1, offset: 0.35 },
+    { transform: 'none', opacity: 1 },
+  ];
+  // Leaving the last slide the mark folds into its middle; back to slide 10 (glow given) it plays its growth
+  // backwards instead, shrinking back into the glow at the wheel's middle.
+  const uncrown = (glow) => {
     if (!mark || !mark.crown) return;
     mark.folding = 0; // step() times it; the canvas folds into its middle as it fades
     const cs = getComputedStyle(markCv), from = { opacity: cs.opacity, scale: cs.scale === 'none' ? '1' : cs.scale };
     markCv.getAnimations().forEach((a) => a.cancel());
-    markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    if (glow) {
+      mark.foldFor = GLOW_MS / 1000;
+      markCv.animate(glowFrames(glow, mark).reverse().map((f, i) => (i === 1 ? { ...f, offset: 0.65 } : f)), { duration: GLOW_MS, easing: 'cubic-bezier(.75,0,.7,.9)', fill: 'forwards' });
+    } else markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
     wake();
   };
 
@@ -965,7 +981,8 @@
     window.deckNav?.signal?.addEventListener('abort', () => transition.cancel(), { once: true });
     const from = { x: (anchor ? anchor.x : 0) + drift.x, y: (anchor ? anchor.y : 0) + drift.y };
     clearText(prev);
-    uncrown();
+    const glow = (s) => !still && window.AstridFlywheel?.glow(s); // slide 10's glow, between it and the last slide
+    uncrown(prev === lastSlide() && next === deck().at(-2) && glow(1));
     zones.forEach((z) => { z.to = 0; z.wait = z.crown ? 0.2 : 0.45; }); // the old text's softening lifts once it is drawn in
     wake();
 
@@ -978,6 +995,7 @@
     const to = anchorOf(next) || from;
     anchor = to;
     drift = { x: 0, y: 0 }; trail = { x: 0, y: 0 };
+    if (next === lastSlide() && prev === deck().at(-2)) { const g = glow(1); if (g) crown(to, false, g); }
 
     // 3. Arrival: the node blooms (or, on the last slide, becomes the mark) and threads run into the new text.
     const arrive = () => {

@@ -1068,6 +1068,10 @@
     timers.push(setTimeout(() => { if (stageOf() < 0) reset(); }, 700));
   };
 
+  // Slide 10's glow (the quiet core at the middle of the wheel), for the deck's mark to grow out of on the way to 11
+  // and to fold back into on the way back: its middle and reach on a stage (1 = slide 10), in viewport pixels.
+  window.AstridFlywheel = { glow: (s) => { const st = stages[s]; return st && { x: st.ring[0], y: st.ring[1], r: 40 * st.k }; } };
+
   let shown = -1;
   const follow = (records) => {
     const now = stageOf();
