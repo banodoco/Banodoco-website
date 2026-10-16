@@ -512,17 +512,19 @@
   };
 
   // Clock
-  let running = false, raf = 0, last = 0;
+  let running = false, raf = 0, last = 0, ticking = false, requested = false;
   const tick = (t) => {
     raf = 0;
     if (!running) return;
+    ticking = true;
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
     const busy = (morph ? drawMorph(t) : false) | stepBeats(dt) | stepMink(t);
     drawPic(t);
-    if (busy) raf = requestAnimationFrame(tick);
+    ticking = false;
+    if (busy || requested) { requested = false; raf = requestAnimationFrame(tick); }
   };
-  const wake = () => { if (running && !raf) { last = 0; raf = requestAnimationFrame(tick); } };
+  const wake = () => { if (!running) return; if (ticking) { requested = true; return; } if (!raf) { last = 0; raf = requestAnimationFrame(tick); } };
   const net = document.querySelector('.dt-net');
   const softenNet = (on) => {
     if (!net) return;
@@ -539,7 +541,7 @@
     window.warmDeckMedia(slide);
     running = true;
     layout();
-    if (still) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
+    if (still || window.deckNav?.rest) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
     clearAll();
     td = 0; wait = 0;
     const snap = fromCore && window.AstridCore && window.AstridCore.snapshot();
@@ -549,7 +551,7 @@
   const stop = () => {
     running = false;
     if (raf) cancelAnimationFrame(raf);
-    raf = 0;
+    raf = 0; requested = false;
     if (morph) endMorph();
     softenNet(false);
     mink.seq = null; mink.hover = null;
@@ -567,7 +569,7 @@
     if (on === wasOn) return;
     wasOn = on;
     if (on) start(!!coreSlide && !coreSlide.classList.contains('on') && records.some((r) => r.target === coreSlide));
-    else { stop(); setTimeout(() => { if (!slide.classList.contains('on')) clearAll(); }, 700); }
+    else { stop(); const signal = window.deckNav?.signal; const timer = setTimeout(() => { if (!slide.classList.contains('on')) clearAll(); }, 700); signal?.addEventListener('abort', () => clearTimeout(timer), { once: true }); }
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
