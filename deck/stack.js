@@ -519,10 +519,11 @@
   const k01 = (e, [a, b]) => clamp((e - a) / (b - a));
   const stepBuild = (t) => {
     const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
-    // (Not while the entry is being hurried on to the next slide: no card opens just as the slide leaves.)
-    const hurried = window.deckPace?.() > 1;
-    if (!amb && openI < 0 && e >= T0.card && !hurried) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
-    if (!amb && e >= T0.open && !hurried) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
+    // The card and the tour come only on the way in, and not while the entry is hurried on to the next slide
+    // (no card opens just as the slide leaves); folding back to slide 5 runs this clock backwards without them.
+    const fwd = !build.back && !(window.deckPace?.() > 1);
+    if (fwd && !amb && openI < 0 && e >= T0.card) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
+    if (fwd && !amb && e >= T0.open) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
       st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
       clearGhosts();
       amb = { t }; tourFrom(0, t);
@@ -568,7 +569,7 @@
       vis.lb = PL.map((_, i) => clamp((e - T.lb - i * T.lbGap) / T.lbDur));
     }
     if (!amb) { apply(); draw(); }
-    if (e >= T0.end) {
+    if (!build.back && e >= T0.end) {
       build = null;
       if (amb) { vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; } else { settleAll(); amb = { t }; tourFrom(0, t + 1100); }
       window.deckEntryDone?.(slide);
@@ -761,6 +762,7 @@
     slide5.classList.add('dt-return', 'dt-await');
     window.deckRewinding?.(slide5);
     // From the settled stack, the arrival's clock runs back from its end.
+    amb = null; // the tour is over: the planes are the build's again
     build = { back: true, from5: true, src: null, t0: 0, e: FROM5.end - 1e-3, last: 0, shown: false };
     signal?.addEventListener('abort', endFold, { once: true });
     wake();
