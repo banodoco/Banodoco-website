@@ -199,6 +199,7 @@
   // ---- Layout ---------------------------------------------------------------------------------
   let W = 0, H = 0, dpr = 1, tall = false, R = WIDE, cell = 3;
   let stages = [null, null, null]; // per slide: the picture in viewport pixels
+  let lastPlaceKey = null, layoutVersion = 0, lastPlacedM = null;
   const colOf = (s) => s.querySelector(':scope > .split > :first-child');
   const fit = (s) => {
     const c = colOf(hosts[s]).getBoundingClientRect();
@@ -271,6 +272,9 @@
   const layout = () => {
     W = innerWidth; H = innerHeight;
     if (!W || !H) return false;
+    lastPlaceKey = null;
+    lastPlacedM = null;
+    layoutVersion++;
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     tall = W <= 760 && H > W;
@@ -362,7 +366,7 @@
   };
   const join = (...hs) => line(hs.flatMap((h, i) => (i ? h.pts.slice(1) : h.pts)));
   const rev = (h) => line([...h.pts].reverse());
-  // A mote's whole route, rebuilt every frame from the picture as it now stands.
+  // A mote's whole route, reused while the picture geometry holds.
   const route = (mo) => {
     if (mo.kind === 'in') { // an artist, round the top, out to a group
       const a = entryTh(mo.a), b = exitTh(mo.b) + TAU;
@@ -376,6 +380,14 @@
     // An initiative plugging energy in: from its card down its thread, into the ring and on round it.
     const at_ = cur.cards[mo.c][2] * RAD;
     return join(rev(cardThread(mo.c)), line(arc(at_, at_ + mo.span, 0)));
+  };
+  const routeFor = (mo) => {
+    if (mo.pathM !== m || mo.pathVersion !== layoutVersion) {
+      mo.path = route(mo);
+      mo.pathM = m;
+      mo.pathVersion = layoutVersion;
+    }
+    return mo.path;
   };
 
   // Where a drifting dot from slide 8 is headed: a point on an artist's circle, or one of a group's dots.
@@ -591,7 +603,7 @@
 
     // Motes in flight, each with a short tail; where one lands, its node lights.
     for (const mo of motes) {
-      const h = route(mo), u = clamp((ta - mo.t0) / mo.dur), d = (0.8 * u + 0.2 * smooth(u)) * h.total;
+      const h = routeFor(mo), u = clamp((ta - mo.t0) / mo.dur), d = (0.8 * u + 0.2 * smooth(u)) * h.total;
       const tail = 64 * Math.max(0.6, k) * (1 + 0.3 * boost);
       const plug = mo.kind === 'plug', fade = smooth(clamp(u / 0.06)) * smooth(clamp((1 - u) / (plug ? 0.25 : 0.04)));
       const a = (mo.kind === 'eq' || mo.kind === 'hop' ? 0.8 : 1) * fade * (0.85 + 0.25 * boost) * (plug ? chipQ(mo.c) : pa);
@@ -607,6 +619,12 @@
   const put = (el, x, y, alignX, alignY) => { el.style.transform = `translate(${(x - el.offsetWidth * alignX).toFixed(1)}px, ${(y - el.offsetHeight * alignY).toFixed(1)}px)`; };
   const setOp = (el, v) => { const s = v.toFixed(2); if (el.style.opacity !== s) el.style.opacity = s; };
   const place = () => {
+    const key = [W, H, m, k01(T.labels, 0.6), cardOut(), openBase(), ...chips.map((_, i) => chipQ(i)), ...hov, root.classList.contains('is-on')].join('|');
+    if (key === lastPlaceKey) return;
+    const mChanged = m !== lastPlacedM;
+    lastPlaceKey = key;
+    lastPlacedM = m;
+    if (!mChanged || !morph) layoutVersion++;
     const ql = k01(T.labels, 0.6);
     const lens = cur.lens;
     put(labels.astrid, lens[0] + 3 * k * (1 - clamp(m)), lens[1] - lens[3] / 2 - lerp(22 * k, 13, clamp(m)), 0.5, 0.5); // over the lens, wherever she sits
@@ -708,7 +726,7 @@
     const mo = m >= 0.5 ? { kind: 'plug', c: Math.floor(Math.random() * chips.length), span: (0.55 + Math.random() * 0.9) * Math.PI }
       : r < 0.5 ? { kind: 'in', a, b } : r < 0.84 ? { kind: 'eq', a, b } : { kind: 'hop', b: Math.floor(Math.random() * 2) };
     mo.t0 = ta;
-    const len = route(mo).total;
+    const len = routeFor(mo).total;
     mo.dur = clamp(len / ((150 + 70 * boost) * Math.max(0.5, k)), 1.4, 7);
     motes.push(mo);
   };
@@ -733,7 +751,7 @@
     for (const key of ['art', 'grp']) flashes[key] = flashes[key].map((f) => f * Math.exp(-dt / 0.5));
     flashes.ring *= Math.exp(-dt / 0.6);
     // Each initiative, once out, sends its first pulse of energy down its thread into the ring.
-    chips.forEach((_, i) => { if (!pulsed[i] && m >= 0.9 && chipQ(i) >= 1) { pulsed[i] = true; const mo = { kind: 'plug', c: i, span: 0.8 * Math.PI, t0: ta }; mo.dur = clamp(route(mo).total / (220 * Math.max(0.5, k)), 1.2, 4); motes.push(mo); } });
+    chips.forEach((_, i) => { if (!pulsed[i] && m >= 0.9 && chipQ(i) >= 1) { pulsed[i] = true; const mo = { kind: 'plug', c: i, span: 0.8 * Math.PI, t0: ta }; mo.dur = clamp(routeFor(mo).total / (220 * Math.max(0.5, k)), 1.2, 4); motes.push(mo); } });
     if (m < 0.5) pulsed = chips.map(() => false);
     hoT.forEach((t, i) => { hov[i] += (t - hov[i]) * (1 - Math.exp(-dt / 0.11)); if (Math.abs(t - hov[i]) < 0.002) hov[i] = t; });
     // Motes: a calm, continuous circulation once the wheel is drawn.
