@@ -188,6 +188,7 @@
   // (v: px a second, band: its width, both times k) that brightens whatever it passes.
   const FIRST = 1.9, EVERY = [1.3, 2.6], WAVE = { v: 520, band: 34, life: 2.4 };
   let ta = 0, running = false, raf = 0, last = 0, armed = false, timers = [];
+  let coreHeld = false; // slide 8 is drawing the core (on its way out, or on its way back here): this picture leaves it out
   let pulses = [], waves = [], nextPulse = 0, lastFrom = -1, glintAt = -9;
   const k01 = (t0, d) => clamp((ta - t0) / d);
 
@@ -289,14 +290,14 @@
     if (!lens) return;
     g.lineCap = 'round'; g.lineJoin = 'round';
     // The core: the lens traces from its tips, the mink inside it.
-    const ql = ease(k01(0.05, 1.0));
+    const ql = coreHeld ? 0 : ease(k01(0.05, 1.0));
     halo(lens.c.x, lens.c.y, lens.h * 0.55, 0.12 * ql);
     if (ql > 0) {
       for (const { h, w, a } of lensLines) { const mid = h.total / 2, half = mid * ql; stroke(h, mid - half, mid + half, w * LW, THREAD, a); }
       node(lens.c.x, lens.c.y - lens.h / 2, 1, ql); node(lens.c.x, lens.c.y + lens.h / 2, 1, ql);
     }
     const her = inLens();
-    paintMink(her.x, her.y, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
+    if (!coreHeld) paintMink(her.x, her.y, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
     // The builders: their machines, and their threads into the core.
     machines.forEach((m, i) => {
       const q = ease(k01(0.4 + i * 0.12, 0.6));
@@ -447,7 +448,7 @@
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(window.deckCancelLater); timers = [];
-    pulses = []; waves = []; ta = 0; fly = null; glintAt = -9;
+    pulses = []; waves = []; ta = 0; fly = null; glintAt = -9; coreHeld = false;
     root.classList.remove('is-labelled');
     canvas.style.transition = ''; canvas.style.opacity = ''; Object.values(labels).forEach((el) => { el.style.opacity = ''; });
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
@@ -621,7 +622,11 @@
         k, lw: LW,
       };
     },
+    // Slide 8 carries the core on, and brings it back on a step back: this picture leaves it out meanwhile, and
+    // takes it back in the frame slide 8 lets go of its own, so only one mink is ever on screen.
+    holdCore(on) { coreHeld = on; if (!on && lens && slide.classList.contains('on')) draw(); },
     hide() { // fade out as the next slide's picture takes over
+      coreHeld = true; draw(); // the core goes at once: slide 8 draws it from this frame, in the same place
       canvas.style.transition = 'opacity .35s ease'; canvas.style.opacity = '0';
       labels.local.style.opacity = labels.hosted.style.opacity = labels.core.style.opacity = '0';
     },

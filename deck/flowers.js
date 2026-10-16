@@ -555,7 +555,7 @@
       const q = easeIO(k01(0, 1.1));
       const c = { x: lerp(from.core.x, core.x, q), y: lerp(from.core.y, core.y, q) };
       const mo = { x: lerp(from.mink.x, inLens(cell).x, q), y: lerp(from.mink.y, inLens(cell).y, q) };
-      drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose, mo);
+      if (!coreHeld) drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose, mo);
       from.machines.forEach((m, i) => {
         const qm = easeIO(k01(0.1 + i * 0.08, 0.9)), a = 1 - qm;
         if (a <= 0) return;
@@ -622,6 +622,7 @@
     timers.forEach(window.deckCancelLater); timers = [];
     ta = 0; off = 0; from = null; handed = false; counted = ''; coreHeld = false;
     root.classList.remove('is-labelled', 'is-counting');
+    slide.classList.remove('fl-arrive');
     dots.forEach((d) => { delete d.src; delete d.handed; });
     canvas.style.transition = ''; canvas.style.opacity = '';
     pool.forEach((p) => { p.el.style.transition = ''; p.el.style.opacity = '0'; p.o = 0; });
@@ -667,6 +668,9 @@
     ta = 0;
     html.classList.add('fl-quiet');
     timers.push(window.deckLater(() => root.classList.add('is-labelled'), 1400));
+    draw(); // the core, in this frame, where slide 7 has just let go of it
+    slide.classList.add('fl-arrive'); // at full strength at once, as slide 7 is
+    timers.push(window.deckLater(() => slide.classList.remove('fl-arrive'), 900));
     start();
   };
   const paysHost = document.querySelector('[data-astrid-pays]');
@@ -698,6 +702,7 @@
       if (best) { free.delete(best); best.src = { x: p.x, y: p.y, d: 0.2 + (i % 17) * 0.035 }; } else from.rest.push(p);
     });
     ta = BACK7; off = ta - tc0;
+    window.AstridPays.holdCore?.(true); // the core is drawn here until it has landed in slide 7's lens
     slide.classList.add('dt-rewind');
     paysSlide.classList.add('dt-return', 'dt-await');
     window.deckRewinding?.(paysSlide);
@@ -717,6 +722,10 @@
   };
   const end7 = () => {
     if (!back7) return;
+    // Slide 7 takes its core back in this frame, and this picture lets go of its own (drawn as it stands, its crowd
+    // still drawn back), so there is never a second mink.
+    window.AstridPays?.holdCore?.(false);
+    if (!slide.classList.contains('on')) { coreHeld = true; draw(); }
     back7 = null;
     slide.classList.replace('dt-rewind', 'dt-rewound');
     paysSlide.classList.remove('dt-return', 'dt-await');
@@ -742,6 +751,7 @@
       layout(); draw(); armed = true;
       timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
+      slide.classList.remove('fl-arrive'); // it fades as it leaves, however soon
       const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !still && running && !handed && ta - off >= END && ta >= BACK7 && !!window.AstridPays; // any hand-off in is long done
       if (to7) { armed = false; gen++; if (waiting) { waiting.disconnect(); waiting = null; } if (unhand7()) return; }
       armed = false; gen++; stop(); html.classList.remove('fl-quiet');
