@@ -773,7 +773,7 @@
         setOp(fc, 1 - smooth(clamp((o - 0.04) / 0.36)));
       }
       el.style.zIndex = hov[i] > 0.02 || gro[i] > 0.02 ? '3' : '';
-      setOp(el, q);
+      setOp(el, q * (1 - smooth(clamp((gro[i] - 0.25) / 0.2)))); // under its fuller card, once that has come in, it steps out
       if (q < 0.9) live = false;
       const iw = w - ins[1] - ins[3], ih = h - ins[0] - ins[2];
       vis[i] = { x: sx + (ins[3] + iw / 2 - ax) * sc, y: sy + (ins[0] + ih / 2 - ay) * sc, w: iw * sc, h: ih * sc, o };
