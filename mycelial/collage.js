@@ -68,14 +68,18 @@
   const poster = frame.querySelector('img');
   const title = box.querySelector('.vc-title');
   const page = box.querySelector('.vc-page');
+  const meta = box.querySelector('.vc-meta');
   let player = null;
   poster.addEventListener('load', () => poster.classList.add('is-ready'));
 
   // Largest 16:9 rect that fits the screen, a little above centre.
+  // On a short screen it also stays clear of the title under it (and so the player's controls stay clickable).
   const fit = () => {
+    const below = meta.getBoundingClientRect().top - 12;
     let w = innerWidth * 0.86, h = w / FILM;
-    if (h > innerHeight * 0.74) { h = innerHeight * 0.74; w = h * FILM; }
-    return { x: (innerWidth - w) / 2, y: (innerHeight - h) / 2 - innerHeight * 0.04, w, h };
+    const tall = Math.min(innerHeight * 0.74, below - 12);
+    if (h > tall) { h = tall; w = h * FILM; }
+    return { x: (innerWidth - w) / 2, y: Math.min((innerHeight - h) / 2 - innerHeight * 0.04, below - h), w, h };
   };
   // The tile is a crop of its film's frame. Laid over the tile, the player is that frame scaled to the tile's size and
   // clipped to the crop, so the full frame opens out of it.
@@ -98,6 +102,8 @@
   const show = (tile) => {
     open = tile;
     tiles.forEach((t) => preview(t, false));
+    title.textContent = `${tile.dataset.title} — ${tile.dataset.artist}`;
+    page.href = tile.dataset.page;
     at = fit();
     const c = crop(tile);
     Object.assign(frame.style, {
@@ -116,8 +122,6 @@
     player.addEventListener('load', () => player?.classList.add('is-ready'), { once: true });
     player.src = `${STREAM}/${tile.dataset.film}/iframe?autoplay=${!still}&preload=auto&poster=${encodeURIComponent(posterOf(tile))}`;
     frame.appendChild(player);
-    title.textContent = `${tile.dataset.title} — ${tile.dataset.artist}`;
-    page.href = tile.dataset.page;
     box.classList.add('is-on');
     frame.getBoundingClientRect(); // commit the starting pose before growing
     frame.style.transition = '';
