@@ -67,7 +67,7 @@
   const anchorEls = CLIPS.map((c) => {
     const el = document.createElement('div');
     place(el, c.at, c.len);
-    el.innerHTML = `<img class="as-still" src="../assets/astrid/${c.name}-anchor.jpg" alt=""><span class="as-film" style="background-image:url(../assets/astrid/${c.name}-strip.jpg)"></span><span class="as-name">${c.name}</span><span class="as-kind">image</span>`;
+    el.innerHTML = `<img class="as-still" src="../assets/astrid/${c.name}-anchor.jpg" alt=""><span class="as-film"></span><span class="as-name">${c.name}</span><span class="as-kind">image</span>`;
     lanes.V1.appendChild(el);
     return el;
   });
@@ -539,6 +539,7 @@
   const start = (fromCore) => {
     // Navigation warms these from slide 4; direct #5 entry also needs warming.
     window.warmDeckMedia(slide);
+    CLIPS.forEach((c, i) => { anchorEls[i].querySelector('.as-film').style.backgroundImage = `url(../assets/astrid/${c.name}-strip.jpg)`; });
     running = true;
     layout();
     if (still || window.deckNav?.rest) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
