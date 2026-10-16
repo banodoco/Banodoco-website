@@ -1006,15 +1006,18 @@
   }).observe(html, { attributes: true, attributeFilter: ['data-ver'] });
 
   // A resize keeps the network (see size), growing it at once over ground a new shape of screen leaves bare;
-  // the node and the text's softening find their places.
+  // the node, its tuft and the text's softening find their places.
   window.deckOnResize(() => {
-    const busy = turning || opening;
+    const busy = turning || opening, tuft = busy ? [] : hyphae.filter((h) => h.keep);
     endOpening();
     keepGround();
     const was = anchor;
     anchor = current ? anchorOf(current) : null;
     if (size(was, anchor) && anchor && active()) { sprawl(levelOf(current), anchor); ripen(); }
     if (busy) { settle(false); return; }
+    if (was && anchor) for (const h of tuft) for (const p of h.pts) { p[0] += anchor.x - was.x; p[1] += anchor.y - was.y; }
+    hyphae.push(...tuft);
+    if (tuft.length) wake();
     if (anchor) place(anchor);
     nameRest();
     const ch = zone(chromeEls());
