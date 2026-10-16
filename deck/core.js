@@ -766,7 +766,6 @@
     ], { duration: FLIGHT * 1000, easing: 'ease-in', fill: 'forwards' });
     seedEl.querySelector('b').animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.45 }, { opacity: 1, transform: 'scale(1.3)' }],
       { duration: FLIGHT * 1000, fill: 'forwards' });
-    window.deckSyncAnimations?.();
     return true;
   };
 

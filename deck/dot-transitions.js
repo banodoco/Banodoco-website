@@ -766,11 +766,7 @@
   window.addEventListener('deck-overview', syncIdle);
   syncIdle();
 
-  const pulse = (k) => {
-    const animation = core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
-    window.deckSyncAnimations?.();
-    return animation;
-  };
+  const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
 
   // ---- The name, the opening and the ending ----------------------------------
   // The site's wordmark. On first load it sits beneath the mark, then settles
@@ -854,7 +850,6 @@
       name.classList.add('is-resting');
       const glide = name.animate([{ transform: name.style.transform }, { transform: nameCorner() }],
         { duration: 1400, easing: 'cubic-bezier(.6,0,.25,1)', fill: 'forwards' });
-      window.deckSyncAnimations?.();
       glide.finished.then(() => { if (!opening || opening.trail?.done) nameRest(); }).catch(() => {});
       const pts = wander(c, anchor);
       const total = lengths(pts).at(-1);
