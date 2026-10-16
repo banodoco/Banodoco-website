@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 const args = process.argv.slice(2);
 const skipWebkit = args.includes('--skip-webkit');
 const positional = args.filter(a => !a.startsWith('--'));
-const [base = 'http://127.0.0.1:8181/deck/index.html', size = '1440x900'] = positional;
+const [base = 'http://127.0.0.1:8181/mycelial/index.html', size = '1440x900'] = positional;
 const [width, height] = size.split('x').map(Number);
 let url;
 try { url = new URL(base); } catch { /* Report usage below. */ }
