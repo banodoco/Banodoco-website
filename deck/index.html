@@ -3,7 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mycelial Deck</title>
+<title>Mycelial</title>
+<meta name="description" content="Open-source AI has unimaginable creative potential waiting to be unlocked. We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI.">
+<meta property="og:title" content="Mycelial">
+<meta property="og:description" content="Open-source AI has unimaginable creative potential waiting to be unlocked. We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="__OG_IMAGE_URL__">
+<meta property="og:image:alt" content="Mycelial’s opening slide: open-source AI has unimaginable creative potential waiting to be unlocked, set over a network with the Mycelial wordmark.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0d0a07">
+<link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/favicon-96.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/brand/apple-touch-icon.png">
 <script>
   // Version F opens with the Mycelial mark: hide the slide before first paint (dot-transitions.js takes over).
   const root = document.documentElement;
@@ -171,11 +181,12 @@
   .slide.dt-leaving > :not(.num):not(.split), .slide.dt-leaving > .split > :not(:first-child) { opacity: 0; transition: opacity .45s ease; }
   .slide.dt-entering > .split > :first-child { opacity: 0; }
   /* A step back: the slide being left holds its picture on screen while it plays its hand-off in reverse (dt-rewind,
-     set and cleared by its own script); its text is drawn in as usual and stays hidden. The earlier slide's picture
-     can wait, hidden, for that motion to come back into it (dt-await), then fade in (dt-return). */
+     set by its own script, which swaps it for dt-rewound to let the slide fade); its text, drawn in as usual, stays
+     out of sight until the slide next comes on. The earlier slide's picture can wait, hidden, for that motion to come
+     back into it (dt-await), then fade in (dt-return). */
   .slide.dt-rewind:not(.on) { opacity: 1; transition: none; }
   .slide.dt-rewind > :not(.num):not(.split), .slide.dt-rewind > .split > :not(:first-child) { opacity: 1; transition: none; }
-  .slide.dt-rewind:not(.dt-leaving) > .split > :first-child { opacity: 0; }
+  .slide.dt-rewind:not(.dt-leaving) > .split > :first-child, .slide.dt-rewound:not(.on) > .split > :first-child { opacity: 0; }
   .slide.dt-return > :not(.num):not(.split), .slide.dt-return > .split > :not(:first-child) { transition: opacity .6s ease; }
   .slide.dt-await > :not(.num):not(.split), .slide.dt-await > .split > :not(:first-child) { opacity: 0; transition: none; }
   /* In F the label moves into the text column, directly above the headline. */
@@ -1310,6 +1321,82 @@
   let i = 0;
   let initialized = false, turnController = null;
   window.deckNav = { from: null, to: 0, dir: 0, rest: false, signal: null };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pendingTurns = [];
+  let turn = null, pace = 1;
+  // A timer's remaining time is measured on the same clock as the slide builds.
+  // Its handle can be cancelled even after the underlying timeout is rescheduled.
+  window.deckPace = () => pace;
+  window.deckCancelLater = (handle) => {
+    if (typeof handle === 'number') { clearTimeout(handle); return; }
+    if (!handle) return;
+    handle.cancelled = true;
+    clearTimeout(handle.id);
+  };
+  window.deckLater = (fn, ms) => {
+    const signal = window.deckNav?.signal;
+    const handle = { left: ms, at: performance.now(), id: 0, cancelled: false };
+    const tick = () => {
+      if (handle.cancelled || signal?.aborted) { window.deckCancelLater(handle); return; }
+      const now = performance.now();
+      handle.left -= Math.min(50, now - handle.at) * pace;
+      handle.at = now;
+      if (handle.left <= 0) { handle.cancelled = true; fn(); }
+      else handle.id = setTimeout(tick, Math.min(32, Math.max(4, handle.left / pace)));
+    };
+    handle.id = setTimeout(tick, Math.min(32, Math.max(4, ms / pace)));
+    signal?.addEventListener('abort', () => window.deckCancelLater(handle), { once: true });
+    return handle;
+  };
+  const pacedAnimations = new Map();
+  let animationRaf = 0;
+  const syncAnimations = () => {
+    animationRaf = 0;
+    if (pace === 1) {
+      pacedAnimations.forEach((rate, animation) => { try { animation.playbackRate = rate; } catch {} });
+      pacedAnimations.clear();
+      return;
+    }
+    for (const animation of document.getAnimations()) {
+      const target = animation.effect?.target;
+      if (!(target instanceof Element) || !target.closest('.slide, .dt-dot, .dt-net, .dt-mark, .dt-name, .ac-seed')) continue;
+      if (!pacedAnimations.has(animation)) pacedAnimations.set(animation, animation.playbackRate);
+      animation.playbackRate = pacedAnimations.get(animation) * pace;
+    }
+    if (!animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
+  };
+  const setPace = (value) => {
+    if (pace === value) return;
+    pace = value;
+    if (value === 1) { if (animationRaf) cancelAnimationFrame(animationRaf); syncAnimations(); }
+    else if (!animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
+  };
+  const finishTurn = () => {
+    if (!turn || !turn.network || !turn.entry) return;
+    window.deckCancelLater(turn.ceiling);
+    turn = null;
+    setPace(1);
+    if (pendingTurns.length) queueMicrotask(() => {
+      if (turn || !pendingTurns.length) return;
+      const next = pendingTurns.shift();
+      startTurn(i + next.dir, next.mode, true);
+      if (pendingTurns.length) setPace(4);
+    });
+  };
+  window.deckTurnDone = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl) { turn.network = true; finishTurn(); }
+  };
+  window.deckEntryDone = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl && !turn.rewinding) { turn.entry = true; finishTurn(); }
+  };
+  // A step back whose picture plays its hand-off in reverse: the slide being left claims the earlier slide's entry
+  // (deckRewinding) and reports it when the reverse has landed (deckRewound), so a queued turn waits for it.
+  window.deckRewinding = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl) { turn.rewinding = true; turn.entry = false; }
+  };
+  window.deckRewound = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl && turn.rewinding) { turn.rewinding = false; turn.entry = true; finishTurn(); }
+  };
   // One viewport notification for the slide pictures. A phone's browser chrome can
   // report several sizes in one gesture; only lay out after the last one.
   const resizeSubscribers = new Set();
@@ -1332,7 +1419,7 @@
   window.visualViewport?.addEventListener('resize', scheduleResize);
 
   // stepped: an arrow, a click, a swipe or the back button, one slide at a time (never a jump).
-  const go = (n, historyMode = 'push', stepped = false) => {
+  const startTurn = (n, historyMode = 'push', stepped = false) => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
     if (initialized && to === i) return;
     // A slide never comes on behind the overview: its scene would start paused and miss its entry.
@@ -1347,11 +1434,13 @@
     // a jump back (hash, overview, history, Home) just lands at rest.
     const back = stepped && dir < 0 && to === from - 1 && !reversePair;
     window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, back, signal: turnController.signal };
+    turn = { to, network: reduced, entry: reduced, ceiling: null, rewinding: false };
     document.documentElement.dataset.dir = String(dir);
     i = to;
     initialized = true;
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
+    slides[i].classList.remove('dt-rewound');
     if (!(i === 0 && document.documentElement.classList.contains('dt-intro'))) warmMedia(slides[i]);
     warmMedia(slides[i + 1]);
     count.textContent = `${i + 1} / ${slides.length}`;
@@ -1360,8 +1449,29 @@
     const url = `${location.pathname}${location.search}#${i + 1}`;
     if (historyMode === 'replace') history.replaceState({ deckSlide: i + 1 }, '', url);
     else if (historyMode === 'push') history.pushState({ deckSlide: i + 1 }, '', url);
+    if (!reduced) turn.ceiling = window.deckLater(() => {
+      if (turn?.to === to) { turn.network = true; turn.entry = true; finishTurn(); }
+    }, from === null ? 18000 : 12000);
+    else finishTurn();
+  };
+  const go = (n, historyMode = 'push') => {
+    const to = Math.max(0, Math.min(slides.length - 1, n));
+    if (initialized && to === i) { pendingTurns.length = 0; return; }
+    pendingTurns.length = 0;
+    turn = null;
+    setPace(1);
+    startTurn(to, historyMode);
+  };
+  const step = (dir, mode = 'push') => {
+    if (!slides.length || reduced) { go(i + dir, mode); return; }
+    const target = i + pendingTurns.reduce((n, queued) => n + queued.dir, 0) + dir;
+    if (target < 0 || target >= slides.length) return;
+    if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, true); return; }
+    pendingTurns.push({ dir, mode });
+    setPace(4);
   };
   const toggleOv = (on = !ov.classList.contains('on')) => {
+    if (on) { pendingTurns.length = 0; setPace(1); }
     ov.classList.toggle('on', on);
     document.documentElement.classList.toggle('deck-overview-open', on);
     dispatchEvent(new Event('deck-overview'));
@@ -1384,8 +1494,8 @@
 
   addEventListener('keydown', (e) => {
     const mode = e.repeat ? 'replace' : 'push';
-    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1, mode, true); }
-    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1, mode, true); }
+    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); step(1, mode); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); step(-1, mode); }
     else if (e.key === 'Home') go(0, mode);
     else if (e.key === 'End') go(slides.length - 1, mode);
     else if (e.key === 'o' || e.key === 'O') toggleOv();
@@ -1397,11 +1507,11 @@
   deck.addEventListener('click', (e) => {
     const selected = selectedOnMouseup || !!getSelection()?.toString().trim();
     selectedOnMouseup = false;
-    if (!selected) go(i + (e.clientX < innerWidth / 3 ? -1 : 1), 'push', true);
+    if (!selected) step(e.clientX < innerWidth / 3 ? -1 : 1);
   });
   document.getElementById('ovBtn').onclick = () => toggleOv();
-  prevBtn.onclick = () => go(i - 1, 'push', true);
-  nextBtn.onclick = () => go(i + 1, 'push', true);
+  prevBtn.onclick = () => step(-1);
+  nextBtn.onclick = () => step(1);
   let tx = null;
   addEventListener('touchstart', (e) => {
     const t = e.touches[0];
@@ -1410,7 +1520,7 @@
   addEventListener('touchend', (e) => {
     if (tx === null) return;
     const dx = e.changedTouches[0].clientX - tx.x, dy = e.changedTouches[0].clientY - tx.y, interactive = tx.interactive; tx = null;
-    if (!interactive && Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) go(i + (dx < 0 ? 1 : -1), 'push', true);
+    if (!interactive && Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) step(dx < 0 ? 1 : -1);
   });
 
   const fromHash = (mode = 'none') => go((parseInt(location.hash.slice(1), 10) || 1) - 1, mode);

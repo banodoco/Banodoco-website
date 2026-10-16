@@ -4,9 +4,9 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const [outputArg, versionArg] = process.argv.slice(2);
-if (!outputArg || process.argv.length > 4) {
-  console.error('Usage: node tools/deck/stamp-versions.mjs <site-copy> <short-commit-hash>');
+const [outputArg, versionArg, baseArg] = process.argv.slice(2);
+if (!outputArg || process.argv.length !== 5) {
+  console.error('Usage: node tools/deck/stamp-versions.mjs <site-copy> <short-commit-hash> <site-base-url>');
   process.exit(2);
 }
 
@@ -21,6 +21,16 @@ if (!version || !/^[0-9a-f]{4,40}$/i.test(version)) {
   console.error('Provide a short commit hash (4–40 hexadecimal characters).');
   process.exit(2);
 }
+let baseUrl;
+try {
+  baseUrl = new URL(baseArg);
+  if (!['http:', 'https:'].includes(baseUrl.protocol)) throw new Error('Use an HTTP(S) URL.');
+  if (!baseUrl.pathname.endsWith('/')) baseUrl.pathname += '/';
+} catch (error) {
+  console.error(`Provide a valid site base URL, for example https://banodoco.github.io/Banodoco-website/: ${error.message}`);
+  process.exit(2);
+}
+const ogImageUrl = new URL(`deck/mycelial-og.jpg?v=${version}`, baseUrl).href;
 
 const allowed = /\.(?:js|mjs|css|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mov|woff2?|ttf|otf|eot)$/i;
 
@@ -56,6 +66,14 @@ function rewriteSrcset(value, relativeFile) {
 function rewrite(text, relativeFile, extension) {
   let result = text;
   if (/\.html?$/i.test(extension)) {
+    if (relativeFile === 'deck/index.html') {
+      let replaced = false;
+      result = result.replace(/(<meta\s+property=["']og:image["']\s+content=["'])[^"']*(["'])/i, (_all, before, after) => {
+        replaced = true;
+        return `${before}${ogImageUrl}${after}`;
+      });
+      if (!replaced) throw new Error('Failed to set the Open Graph image URL in deck/index.html.');
+    }
     result = result.replace(/(\b(?:src|href|poster|srcset)\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix, quote, value) => {
       const next = /\bsrcset\s*=/i.test(prefix) ? rewriteSrcset(value, relativeFile) : stamp(value, relativeFile);
       return `${prefix}${quote}${next}${quote}`;

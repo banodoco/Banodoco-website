@@ -251,22 +251,24 @@
     frameRaf = 0;
     if (!running) return;
     if (!still) frameRaf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - (last || now)) / 1000);
+    const raw = Math.min(0.05, (now - (last || now)) / 1000), paced = raw * pace();
+    const dt = since < 2.5 || rewind ? paced : raw; // the arrival, or the gathering back, is hurried with the turn
     last = now;
     if (!w || !h) return;
     const ease = (rate) => 1 - Math.exp(-rate * dt);
 
-    holdFor -= dt * pace();
+    holdFor -= paced;
     const wantSpeed = still ? 0 : front ? 0.08 : hot ? 0.04 : holdFor > 0 ? 0 : 1;
     speed += (wantSpeed - speed) * ease(2.5);
     boost *= Math.exp(-2.2 * dt); // scroll momentum settles back to the drift
     // The arrival rush: the burst past slide 1's films is quick, then it eases
     // off more slowly, so slowing down and the heading's glide home settle together.
     since += dt;
+    if (since >= 2.5) window.deckEntryDone?.(slide);
     glide *= Math.exp(-(2.2 - 1.25 * (t => t * t * (3 - 2 * t))(clamp((since - 0.6) / 0.8))) * dt);
     // Gathering back into slide 1 (rewind): the arrival's flight runs backwards, the field rushing away from us.
     if (rewind) { // the vanishing point drifts back to the collage, coming to rest there as the motes land
-      rewind.t += dt * pace();
+      rewind.t += dt;
       const q = clamp(rewind.t / 1.15);
       shift.k = rewind.k0 + (1 - rewind.k0) * q * q * q * (q * (q * 6 - 15) + 10);
     }
@@ -476,8 +478,8 @@
     collageSlide.classList.add('vc-dissolve'); // both slides hold still while they cross
     slide.classList.add('sf-arrive');
     const clear = () => { collageSlide.classList.remove('vc-dissolve'); slide.classList.remove('sf-arrive'); };
-    const timer = setTimeout(clear, 900);
-    window.deckNav?.signal?.addEventListener('abort', () => { clearTimeout(timer); clear(); }, { once: true });
+    const timer = window.deckLater(clear, 900);
+    window.deckNav?.signal?.addEventListener('abort', () => { window.deckCancelLater(timer); clear(); }, { once: true });
     resize(); aim();
     const base = stage.getBoundingClientRect();
     // The collage's centre, which the picture bursts outward from.
@@ -551,6 +553,7 @@
     const signal = window.deckNav?.signal;
     collageSlide.classList.add('vc-dissolve', 'dt-return', 'dt-await'); // the collage holds still, hidden, at full size
     slide.classList.add('dt-rewind');
+    window.deckRewinding?.(collageSlide);
     resize();
     const k0 = shift.k ?? (shift.age < 0 ? 1 : (1 + shift.age * 1.8 + (shift.age * 1.8) ** 2 / 2) * Math.exp(-shift.age * 1.8));
     const base = stage.getBoundingClientRect(), mid = middle(base);
@@ -565,7 +568,7 @@
     shift.k = k0; // where the vanishing point is now (home, unless it is still drifting there)
     aim();
     rewind = { t: 0, k0, A, landed, v0: speed + boost + glide, kept: [...named, ...dust].map((o) => [o, o.x, o.y, o.z]), shown: false };
-    pointer = null; front = null; boost = 0; glide = 0;
+    pointer = null; front = null; boost = 0; glide = 0; since = 9;
     signal?.addEventListener('abort', () => endRewind(), { once: true });
   };
   const stepRewind = () => {
@@ -573,7 +576,7 @@
     if (!r.shown && r.t >= r.landed) { // back in their tiles: the collage fades in over them, and the field goes
       r.shown = true;
       collageSlide.classList.remove('dt-await');
-      slide.classList.remove('dt-rewind');
+      slide.classList.replace('dt-rewind', 'dt-rewound');
     }
     if (r.t >= r.landed + 0.7) endRewind();
   };
@@ -582,11 +585,12 @@
     const r = rewind;
     rewind = null;
     collageSlide.classList.remove('vc-dissolve', 'dt-return', 'dt-await');
-    slide.classList.remove('dt-rewind');
+    slide.classList.replace('dt-rewind', 'dt-rewound');
     for (const [o, x, y, z] of r.kept) { o.x = x; o.y = y; o.z = z; }
     motes = [];
     shift = { x: 0, y: 0, age: 9 };
     stop();
+    window.deckRewound?.(collageSlide);
   };
 
   // Coming back from slide 3, the field holds still while the tools fly back to their dots, then drifts on.

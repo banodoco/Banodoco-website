@@ -159,11 +159,11 @@
   sky.setAttribute('aria-hidden', 'true');
   document.body.appendChild(sky);
   const g = sky.getContext('2d');
-  let flights = [], flying = false, began = 0, timers = [];
+  let flights = [], flying = false, timers = [];
   const MORPH = 0.5; // seconds from landing to the settled logo
 
   const reset = () => {
-    timers.forEach(clearTimeout);
+    timers.forEach(window.deckCancelLater);
     timers = [];
     flights = [];
     root.classList.remove('is-drawn', 'is-labelled');
@@ -171,7 +171,7 @@
     empty.classList.remove('is-open');
     focus(null);
   };
-  const later = (ms, f) => timers.push(setTimeout(f, ms));
+  const later = (ms, f) => timers.push(window.deckLater(f, ms));
   const size = () => {
     const dpr = Math.min(2, devicePixelRatio || 1);
     const width = Math.round(innerWidth * dpr), height = Math.round(innerHeight * dpr);
@@ -188,13 +188,14 @@
     return { x1: r.left + r.width / 2, y1: r.top + r.height / 2 - dy, r1: r.width / 2 + 1.5 }; // the orb covers the ring too
   };
   const tint = (el) => rgb(getComputedStyle(el).getPropertyValue('--c').trim() || '#e0ab5e');
-  const fire = () => { began = performance.now(); if (!flying) { flying = true; requestAnimationFrame(fly); } };
+  let flightTime = 0, flightLast = 0;
+  const fire = () => { flightTime = 0; flightLast = 0; if (!flying) { flying = true; requestAnimationFrame(fly); } };
 
   // Without the field to fly from: the axes draw, then the tools bloom one by one.
   const enter = (lead = 0) => {
     reset();
     size();
-    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); return; }
+    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); window.deckEntryDone?.(slide); return; }
     const dy = lift();
     tools.forEach((el, i) => {
       const p = disc(el, dy);
@@ -269,7 +270,9 @@
     return { x, y, r, c };
   };
   const fly = (now) => {
-    const t = (now - began) / 1000;
+    flightTime += Math.min(0.05, (now - (flightLast || now)) / 1000) * (window.deckPace?.() || 1);
+    flightLast = now;
+    const t = flightTime;
     g.clearRect(0, 0, innerWidth, innerHeight);
     const drawn = t > 0.95; // once the axes start drawing, the settled dust fades into them
     flights = flights.filter((f) => {
@@ -293,7 +296,7 @@
       return true;
     });
     if (flights.length) requestAnimationFrame(fly);
-    else { g.clearRect(0, 0, innerWidth, innerHeight); flying = false; }
+    else { g.clearRect(0, 0, innerWidth, innerHeight); flying = false; window.deckEntryDone?.(slide); }
   };
 
   // ---- Going back ----------------------------------------------------------
@@ -332,10 +335,13 @@
     if (backRaf) cancelAnimationFrame(backRaf);
     backRaf = 0; backs = [];
     g.clearRect(0, 0, innerWidth, innerHeight);
+    if (!flying) { sky.width = 0; sky.height = 0; } // the flight layer is only needed in flight (size() brings it back)
     if (!slide.classList.contains('on')) reset();
+    if (fieldSlide) window.deckRewound?.(fieldSlide);
   };
   const depart = () => {
     const signal = window.deckNav?.signal;
+    window.deckRewinding?.(fieldSlide);
     signal?.addEventListener('abort', endDepart, { once: true });
     field.hold?.(2.2);
     // Once the field has drawn a frame, its dots are where they will be met.
@@ -381,7 +387,7 @@
       clearInterval(asking);
       focus(null);
       const toField = fieldSlide && fieldSlide.classList.contains('on') && field.snapshot && window.deckNav?.back && !still && tools.every((el) => el.classList.contains('is-in'));
-      if (toField) { timers.forEach(clearTimeout); timers = []; flights = []; depart(); return; }
+      if (toField) { timers.forEach(window.deckCancelLater); timers = []; flights = []; depart(); return; }
       flights = flights.filter((f) => !f.dot);
       later(700, () => { if (!slide.classList.contains('on')) reset(); });
       return;
@@ -414,7 +420,7 @@
     if (!flying) return;
     // Flight endpoints were measured in the old viewport. Finish at the new
     // chart instead of leaving old pixel coordinates suspended over it.
-    timers.forEach(clearTimeout); timers = [];
+    timers.forEach(window.deckCancelLater); timers = [];
     flights = []; flying = false;
     g.clearRect(0, 0, innerWidth, innerHeight);
     root.classList.add('is-drawn', 'is-labelled');
