@@ -367,11 +367,18 @@
   // rt: the roots' growth.
   const vis = { sh: 1, lb: PL.map(() => 1), rt: 1 };
   const GOLD = (a) => `rgba(240,200,119,${a.toFixed(3)})`;
+  // Each bead's glow is stamped from one sprite (the same radial light, .55 at its heart to nothing at 4r, faded by its
+  // alpha), not built as a new gradient for every bead in every frame.
+  const glow = document.createElement('canvas');
+  glow.width = glow.height = 128;
+  {
+    const sg = glow.getContext('2d'), rg = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    rg.addColorStop(0, 'rgba(255,226,170,0.55)'); rg.addColorStop(1, 'rgba(255,217,145,0)');
+    sg.fillStyle = rg; sg.fillRect(0, 0, 128, 128);
+  }
   const dot = (x, y, r, a) => {
     if (a <= 0.01) return;
-    const gr = g.createRadialGradient(x, y, 0, x, y, r * 4);
-    gr.addColorStop(0, `rgba(255,226,170,${(0.55 * a).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,217,145,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 4, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = a; g.drawImage(glow, x - r * 4, y - r * 4, r * 8, r * 8); g.globalAlpha = 1;
     g.fillStyle = `rgba(255,236,200,${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
   };
   const partial = (pts, q) => { // a polyline drawn to fraction q of its points
