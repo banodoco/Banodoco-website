@@ -24,7 +24,10 @@
   const preview = (tile, on) => {
     const v = tile.querySelector('video');
     if (on && !still && !open && slide.classList.contains('on') && !document.hidden && !overviewOpen()) {
-      if (!v.firstElementChild) v.append(Object.assign(document.createElement('source'), { src: tile.dataset.preview, type: 'video/mp4' }));
+      if (!v.firstElementChild) { // a <source>, so the deck's own media warmer (video[src]) leaves it alone
+        v.append(Object.assign(document.createElement('source'), { src: tile.dataset.preview, type: 'video/mp4' }));
+        v.load(); // WebKit only starts on a <source> added later when told to
+      }
       v.play().catch(() => {});
       if (tile.dataset.film && !primed.has(tile)) primed.set(tile, Object.assign(new Image(), { src: posterOf(tile) })); // ahead of a click
       return;
