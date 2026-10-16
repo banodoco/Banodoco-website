@@ -245,10 +245,25 @@
   let headT = 0, headGoal = 0, total = 0;
   const headTo = (t, now_) => { headGoal = t; if (now_) headT = t; };
   const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  // The playhead moves by transform on its own layer, so a frame neither lays out nor repaints the editor under it: the
+  // same place as left: calc(var(--as-hcol) + (100% - var(--as-hcol) - 8px) * f), from the timeline's width and header
+  // column as last laid out (kept by a ResizeObserver). The clock's text is only replaced when its reading changes.
+  // Until its first step it stands where the stylesheet puts it, as before.
+  let tlW = 0, tlL = 0, hcol = 0, headF = null, headX = '', clock = '';
+  const measureTl = (w) => { tlW = w ?? parseFloat(getComputedStyle(tl).width); tlL = tl.getBoundingClientRect().left - 1; hcol = parseFloat(getComputedStyle(tl).getPropertyValue('--as-hcol')) || 0; };
+  const placeHead = () => {
+    if (headF === null) return;
+    // Whole device pixels, as the line was snapped when laid out (a layer at a fraction would be resampled, softer).
+    const d = devicePixelRatio || 1, at = hcol + (tlW - hcol - 8) * headF;
+    const x = `translateX(${((Math.round((tlL + at) * d) - Math.round(tlL * d)) / d).toFixed(4)}px)`;
+    if (x !== headX) { headX = x; playhead.style.transform = x; }
+  };
   const stepHead = (dt) => {
     headT += (headGoal - headT) * (1 - Math.exp(-dt / 0.12));
-    playhead.style.left = `calc(var(--as-hcol) + (100% - var(--as-hcol) - 8px) * ${(headT / SPAN).toFixed(4)})`;
-    timeEl.textContent = `${fmt(headT)} / ${fmt(total)}`;
+    headF = +(headT / SPAN).toFixed(4);
+    placeHead();
+    const c = `${fmt(headT)} / ${fmt(total)}`;
+    if (c !== clock) { clock = c; timeEl.textContent = c; }
   };
 
   // The three beats
@@ -545,7 +560,8 @@
     net.style.maskMode = 'luminance';
     net.style.maskSize = '100% 100%';
   };
-  const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
+  const layout = () => { sizeMink(); sizePic(); measureTl(); placeHead(); if (slide.classList.contains('on')) softenNet(true); };
+  new ResizeObserver((es) => { for (const e of es) if (e.target === tl) { measureTl(e.contentRect.width); placeHead(); } }).observe(tl);
   const start = (fromCore) => {
     if (motionBlocked()) { pendingStart = fromCore; return; }
     pendingStart = null;

@@ -649,9 +649,21 @@
   const pinTo = (i) => { hold.pin = hold.pin === i ? -1 : i; hold.hover = -1; react(); };
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   let shownSec = -1;
+  // The playhead moves by transform on its own layer, so a frame neither lays out nor repaints the timeline plane: the
+  // same place as left: f%, from its lane's width as last laid out (kept by a ResizeObserver). Until its first step it
+  // stands where the stylesheet puts it, as before.
+  const lane = head.parentElement;
+  let laneW = parseFloat(getComputedStyle(lane).width) || 0, headF = null, headX = '';
+  const placeHead = () => {
+    if (headF === null) return;
+    const x = `translateX(${(laneW * headF / 100).toFixed(3)}px)`;
+    if (x !== headX) { headX = x; head.style.transform = x; }
+  };
+  new ResizeObserver((es) => { for (const e of es) { laneW = e.contentRect.width; placeHead(); } }).observe(lane);
   const stepHead = () => {
     const tt = video.currentTime || 0;
-    head.style.left = `${((tt / SPAN) * 100).toFixed(3)}%`;
+    headF = +((tt / SPAN) * 100).toFixed(3);
+    placeHead();
     const sec = Math.floor(tt);
     if (sec !== shownSec) { shownSec = sec; timeEl.textContent = `${fmt(sec)} / 0:28`; }
   };

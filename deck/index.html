@@ -420,7 +420,7 @@
   .as-fxclip.on { clip-path: inset(0 0 0 0); transition: clip-path .7s cubic-bezier(.4, 0, .2, 1); }
   .as-clip.is-motion { transform-origin: 50% 100%; transform: scaleY(0); transition: transform .35s cubic-bezier(.2, .7, .2, 1), opacity .35s ease, box-shadow .3s ease, border-color .3s ease; }
   .as-clip.is-motion.is-grown { transform: none; }
-  .as-playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 6px rgb(56 189 248 / .5); pointer-events: none; z-index: 2; }
+  .as-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; will-change: transform; background: var(--as-sky); box-shadow: 0 0 6px rgb(56 189 248 / .5); pointer-events: none; z-index: 2; }
   .as-playhead::before { content: ""; position: absolute; top: 0; left: -4px; width: 10px; height: 8px; border-radius: 2px 2px 5px 5px; background: var(--as-sky); }
   .as.is-resetting .as-clip, .as.is-resetting .as-fxclip { opacity: 0; }
   /* Arriving from slide 4 the panels draw out of the rings (demo.js): hidden while the frames form, then the shells and their contents resolve. */
@@ -587,7 +587,7 @@
   .st-clip i { right: 7px; bottom: 5px; font-size: 12px; color: var(--as-muted); }
   .st-fx { display: flex; align-items: center; gap: 5px; padding: 0 7px; border: 1px solid rgb(167 139 250 / .6); background: rgb(91 70 140 / .6); color: #efe7ff; font-size: 13px; font-weight: 500; }
   .st-fx em { font-style: normal; font-weight: 400; font-size: 11px; color: #c9b8f0; }
-  .st-head { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--as-sky); box-shadow: 0 0 8px rgb(56 189 248 / .5); z-index: 2; }
+  .st-head { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; will-change: transform; background: var(--as-sky); box-shadow: 0 0 8px rgb(56 189 248 / .5); z-index: 2; }
   .st-head::before { content: ""; position: absolute; top: 0; left: -5px; width: 12px; height: 10px; border-radius: 2px 2px 6px 6px; background: var(--as-sky); }
   /* The agent: the chat from slide 5, laid out wide. */
   .st-agent { display: grid; grid-template-rows: 50px minmax(0, 1fr) 64px; }
