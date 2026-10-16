@@ -130,25 +130,32 @@
   .vc-tile { all: unset; position: absolute; overflow: visible; border-radius: 4px; cursor: zoom-in; background: #15110d;
     box-shadow: 0 10px 30px #0008; transition: transform .4s ease, box-shadow .4s ease; }
   .vc-tile::before { content: ""; position: absolute; inset: -3px 0; }
-  .vc-tile video { border-radius: 4px; }
-  .vc-tile video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .88; transition: opacity .4s ease; }
+  /* At rest a still from the film; a mouse resting on it plays a short preview from the same frame over it. */
+  .vc-tile img, .vc-tile video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+  .vc-tile img { opacity: .88; transition: opacity .4s ease; }
+  .vc-tile video { opacity: 0; transition: opacity .3s ease; }
+  .vc-tile.is-live video { opacity: 1; }
   .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
-  .vc-tile:hover video { opacity: 1; }
+  .vc-tile:hover img { opacity: 1; }
   .vc-tile:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
   .vc-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.4rem 0.6rem 0.45rem; border-radius: 0 0 4px 4px; background: linear-gradient(transparent, #0d0a07cc);
     font: italic 400 0.85rem "Cormorant Garamond", serif; color: var(--ink); opacity: 0; transition: opacity .3s ease; }
   .vc-tile:hover .vc-cap, .vc-tile:focus-visible .vc-cap { opacity: 1; }
+  .vc-cap b { font-weight: 400; font-style: normal; }
   .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; }
   .vc-label b { font-weight: 400; color: var(--gold); }
   .vc-box { position: fixed; inset: 0; z-index: 100; background: #0d0a07f2; opacity: 0; pointer-events: none; transition: opacity .45s ease; cursor: zoom-out; }
   .vc-box.is-on { opacity: 1; pointer-events: auto; }
-  .vc-frame { position: absolute; margin: 0; overflow: hidden; border-radius: 6px; background: #000; box-shadow: 0 30px 90px #000;
-    transform-origin: 0 0; transition: transform .55s cubic-bezier(.3, 0, .2, 1); }
-  .vc-frame video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .vc-frame { position: absolute; margin: 0; overflow: hidden; border-radius: 6px; background: #000 no-repeat; box-shadow: 0 30px 90px #000;
+    transform-origin: 0 0; transition: transform .55s cubic-bezier(.3, 0, .2, 1), clip-path .55s cubic-bezier(.3, 0, .2, 1); cursor: auto; }
+  .vc-frame img, .vc-frame iframe { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; object-fit: cover;
+    opacity: 0; transition: opacity .3s ease; }
+  .vc-frame .is-ready { opacity: 1; }
   .vc-meta { position: absolute; left: 0; right: 0; bottom: 4vh; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; }
   .vc-kicker { font: italic 400 0.95rem "Cormorant Garamond", serif; color: var(--gold); letter-spacing: .04em; }
   .vc-title { font: 400 1.35rem "Cormorant Garamond", serif; color: var(--ink); }
-  .vc-note { font: italic 400 0.85rem "EB Garamond", serif; color: #b8a98f99; }
+  .vc-page { font: italic 400 0.85rem "EB Garamond", serif; color: #b8a98f99; text-decoration: none; cursor: pointer; }
+  .vc-page:hover, .vc-page:focus-visible { color: var(--gold); }
   .vc-close { all: unset; position: absolute; top: 18px; right: 22px; font: 300 2rem/1 system-ui, sans-serif; color: var(--soft); cursor: pointer; }
   .vc-close:hover, .vc-close:focus-visible { color: var(--ink); }
   /* Slide 1 → 2: both slides hold still and simply cross while the films come apart into the field. */
@@ -1170,12 +1177,11 @@
       </div>
       <div class="vis">
         <div class="vc" data-collage>
-          <button class="vc-tile" type="button" style="left:0;top:4%;width:31%;height:55.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-1-60.mp4" poster="../assets/cards/arca/poster-1.jpg" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:0;width:66%;height:37.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-2-60.mp4" poster="../assets/cards/arca/poster-2.jpg" style="object-position:50% 38%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:0;top:62.1%;width:31%;height:31%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-2-60.mp4" poster="../assets/cards/arca/poster-2.jpg" style="object-position:50% 78%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:40.1%;width:31.5%;height:39.4%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-3-60.mp4" poster="../assets/cards/arca/poster-3.jpg" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:68.5%;top:40.1%;width:31.5%;height:56%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-4-60.mp4" poster="../assets/cards/arca/poster-4.jpg" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:82.3%;width:31.5%;height:17.7%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-1-60.mp4" poster="../assets/cards/arca/poster-1.jpg" style="object-position:50% 72%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:0;top:0;width:66%;height:37.1%" data-film="731a60e7e584d380918dd3c3503276d5" data-at="6" data-page="https://arcagidan.com/submissions/entry/590bc5e0-62b5-4649-9da0-676e0057df4f" data-preview="../assets/cards/arca/everyone-all-at-once-preview.mp4" data-title="Everyone All at Once" data-artist="VisualFrisson" aria-label="Play Everyone All at Once by VisualFrisson"><picture><source type="image/avif" srcset="../assets/cards/arca/everyone-all-at-once.avif"><img src="../assets/cards/arca/everyone-all-at-once.jpg" width="848" height="476" alt="" decoding="async" fetchpriority="high"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Everyone All at Once</b> · VisualFrisson</span></button>
+          <button class="vc-tile" type="button" style="left:69%;top:4%;width:31%;height:46.5%" data-film="8be9148eb0006c9738c46a6c1c49bfc9" data-at="13" data-focus="64% 50%" data-page="https://arcagidan.com/submissions/entry/3b32b51f-cb9a-4f20-ad87-5993f8e0a511" data-preview="../assets/cards/arca/the-cellist-preview.mp4" data-title="The Cellist" data-artist="Material_Rabbit" aria-label="Play The Cellist by Material_Rabbit"><picture><source type="image/avif" srcset="../assets/cards/arca/the-cellist.avif"><img src="../assets/cards/arca/the-cellist.jpg" width="400" height="600" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>The Cellist</b> · Material_Rabbit</span></button>
+          <button class="vc-tile" type="button" style="left:0;top:40.1%;width:31.5%;height:56%" data-film="062116e31ef01a199790f1fc3c94d96d" data-at="63.25" data-focus="42% 50%" data-page="https://arcagidan.com/submissions/entry/ec26de7e-c088-41b1-b943-826e15db6900" data-preview="../assets/cards/arca/sliver-of-light-preview.mp4" data-title="Sliver of Light" data-artist="Calvin Herbst" aria-label="Play Sliver of Light by Calvin Herbst"><picture><source type="image/avif" srcset="../assets/cards/arca/sliver-of-light.avif"><img src="../assets/cards/arca/sliver-of-light.jpg" width="404" height="718" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Sliver of Light</b> · Calvin Herbst</span></button>
+          <button class="vc-tile" type="button" style="left:34.5%;top:40.1%;width:31.5%;height:52.5%" data-film="2eead7ea1c7f7c5a6e4caeb43ff810dd" data-at="69" data-focus="42% 50%" data-page="https://arcagidan.com/submissions/entry/13c435a1-057a-441b-b729-545d61cb111b" data-preview="../assets/cards/arca/cherrybomb-preview.mp4" data-title="Cherrybomb (Original Music)" data-artist="sagansagansagans" aria-label="Play Cherrybomb (Original Music) by sagansagansagans"><picture><source type="image/avif" srcset="../assets/cards/arca/cherrybomb.avif"><img src="../assets/cards/arca/cherrybomb.jpg" width="404" height="672" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Cherrybomb (Original Music)</b> · sagansagansagans</span></button>
+          <button class="vc-tile" type="button" style="left:69%;top:53.5%;width:31%;height:38.75%" data-film="bc5af2f9fce4801d46e8c0f9a57cc4e0" data-at="9.25" data-page="https://arcagidan.com/submissions/entry/c7041961-a637-489d-91c0-84e10e40cb53" data-preview="../assets/cards/arca/to-be-continued-preview.mp4" data-title="To be continued" data-artist="davidmaruscsak00" aria-label="Play To be continued by davidmaruscsak00"><picture><source type="image/avif" srcset="../assets/cards/arca/to-be-continued.avif"><img src="../assets/cards/arca/to-be-continued.jpg" width="400" height="500" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>To be continued</b> · davidmaruscsak00</span></button>
         </div>
         <p class="vc-label">Recipients of the last <b>Arca Gidan Prize</b></p>
       </div>

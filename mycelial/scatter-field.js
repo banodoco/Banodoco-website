@@ -469,14 +469,6 @@
   // tile now, then released (edges first) to fly at us and thin into stars.
   const collage = document.querySelector('[data-collage]');
   const collageSlide = collage && collage.closest('.slide');
-  // Start decoding the posters now, so an early flight keeps the tile's colours.
-  const posters = new Map();
-  for (const v of collage ? collage.querySelectorAll('video[poster]') : []) {
-    if (!v.poster || posters.has(v.poster)) continue;
-    const poster = new Image();
-    poster.src = v.poster;
-    posters.set(v.poster, poster);
-  }
   const sampler = document.createElement('canvas');
   const sctx = sampler.getContext('2d', { willReadFrequently: true });
   let motes = [];
@@ -509,27 +501,21 @@
   const tileMotes = (base) => {
     const motes = [];
     for (const tile of collage.querySelectorAll('.vc-tile')) {
-      const r = tile.getBoundingClientRect(), v = tile.querySelector('video');
+      const r = tile.getBoundingClientRect(), v = tile.querySelector('video'), img = tile.querySelector('img');
       if (!r.width || !r.height) continue;
       const cols = Math.max(4, Math.round(r.width / 8)), rows = Math.max(4, Math.round(r.height / 8));
       let px = null;
-      if (v.readyState >= 2 && v.videoWidth) {
-        const [ox, oy] = getComputedStyle(v).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
+      // What the tile shows: its preview while one plays over it, otherwise its still (both same-origin).
+      const live = tile.classList.contains('is-live') && v && v.readyState >= 2 && v.videoWidth;
+      const pic = live ? v : img && img.complete && img.naturalWidth ? img : null;
+      if (pic) {
+        const iw = live ? v.videoWidth : img.naturalWidth, ih = live ? v.videoHeight : img.naturalHeight;
+        const [ox, oy] = getComputedStyle(pic).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
         const ta = r.width / r.height;
-        let sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
-        if (sw / sh > ta) { sw = sh * ta; sx = (v.videoWidth - sw) * ox; } else { sh = sw / ta; sy = (v.videoHeight - sh) * oy; }
+        let sw = iw, sh = ih, sx = 0, sy = 0;
+        if (sw / sh > ta) { sw = sh * ta; sx = (iw - sw) * ox; } else { sh = sw / ta; sy = (ih - sh) * oy; }
         sampler.width = cols; sampler.height = rows;
-        try { sctx.drawImage(v, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
-      } else {
-        const poster = posters.get(v.poster);
-        if (poster && poster.complete && poster.naturalWidth) {
-          const [ox, oy] = getComputedStyle(v).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
-          const ta = r.width / r.height;
-          let sw = poster.naturalWidth, sh = poster.naturalHeight, sx = 0, sy = 0;
-          if (sw / sh > ta) { sw = sh * ta; sx = (poster.naturalWidth - sw) * ox; } else { sh = sw / ta; sy = (poster.naturalHeight - sh) * oy; }
-          sampler.width = cols; sampler.height = rows;
-          try { sctx.drawImage(poster, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
-        }
+        try { sctx.drawImage(pic, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
       }
       const cw = r.width / cols, ch = r.height / rows;
       for (let j = 0; j < rows; j++) {
