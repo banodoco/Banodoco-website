@@ -571,8 +571,13 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => { if (document.hidden) videos.forEach((v) => v.pause()); });
-  let resizing = 0;
-  addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (slide.classList.contains('on')) { layout(); if (still) drawPic(now()); } }, 100); });
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    if (morph) { endMorph(); settledState(); td = -1; wait = 0; }
+    layout();
+    drawPic(now());
+    wake();
+  });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays
   videos.forEach((v) => v.addEventListener('loadeddata', () => { if (still && slide.classList.contains('on')) drawPic(now()); }));

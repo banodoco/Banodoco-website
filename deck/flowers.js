@@ -672,7 +672,22 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (paysSlide) watch.observe(paysSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
-  addEventListener('resize', () => { if (slide.classList.contains('on') && layout()) { from = null; draw(); if (ta > 0) labels(); } });
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    // layout rebuilds the crowd in the new geometry. Keep its clock: draw()
+    // deterministically recreates every app already due at that phase.
+    if (armed || from || ta < END) {
+      gen++;
+      if (waiting) { waiting.disconnect(); waiting = null; }
+      armed = false;
+      timers.forEach(clearTimeout); timers = [];
+      from = null; off = 0;
+      ta = Math.max(ta, END + 0.2);
+      root.classList.add('is-labelled');
+      html.classList.add('fl-quiet');
+    }
+    if (layout()) { draw(); labels(); start(); }
+  });
 
   // For slide 9: the core and the visible communities' people, in viewport pixels, so the wheel can grow out of them.
   // The most recent communities go first, then an even sample of the rest, at most HAND people in all.

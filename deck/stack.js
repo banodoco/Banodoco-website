@@ -715,15 +715,25 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); else play(); });
-  let resizing = 0;
-  addEventListener('resize', () => {
-    clearTimeout(resizing);
-    resizing = setTimeout(() => {
-      if (!slide.classList.contains('on')) return;
-      layout();
-      softenNet(true);
-      if (!build) { if (amb || still) settleAll(); }
-    }, 100);
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    const interrupted = !!build || (!amb && !still);
+    layout();
+    softenNet(true);
+    if (interrupted) {
+      clearTimers();
+      build = null;
+      amb = { t: now() };
+      settleAll();
+      tourFrom(guide.i, now() + 1100);
+    } else {
+      st.forEach((s, i) => Object.assign(s, settledOf(PL[i]), { y: PL[i].cy - 6 * lit[i] }));
+      apply();
+      guide.way = guide.mode === 'go' ? geo.ways[guide.i] : null;
+      if (amb) stepTour(now());
+      else { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c); draw(); }
+    }
+    wake();
   });
   // Clicks on the stack stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.st-plane, .st-mink, .st-flag, .st-card, .st-hit')) e.stopPropagation(); });
