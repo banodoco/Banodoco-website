@@ -1058,6 +1058,14 @@
     opacity: 0; transition: opacity .25s ease; }
   .motion:hover span, .motion:focus-visible span, .motion.is-told span { opacity: 1; }
   .motion:focus-visible { outline: none; } .motion:focus-visible i { outline: 1px solid #f0c67e; outline-offset: 2px; }
+  /* A short landscape phone packs the slide's label and links to the top: the same 44 px target, tucked into the very
+     corner, with a smaller ring at its outer edge, clear of slide 3's label and slide 5's "Try Astrid". */
+  @media (orientation: landscape) and (max-height: 420px) {
+    .motion { top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px); place-items: start end; padding: 5px; }
+    .motion i { width: 16px; height: 16px; }
+    .motion b { inset: 2px; }
+    .motion span { right: 27px; top: 13px; font-size: 14px; }
+  }
 
   /* Versions of the story: data-v lists which versions a slide belongs to; JS hides the rest. */
   .slide.out { display: none; }
