@@ -1202,9 +1202,22 @@
   const prevBtn = document.getElementById('prevBtn'), nextBtn = document.getElementById('nextBtn');
   const ov = document.getElementById('overview'), list = document.getElementById('list');
   let i = 0;
+  let initialized = false, turnController = null;
+  window.deckNav = { from: null, to: 0, dir: 0, rest: false, signal: null };
 
-  const go = (n) => {
-    i = Math.max(0, Math.min(slides.length - 1, n));
+  const go = (n, historyMode = 'push') => {
+    const to = Math.max(0, Math.min(slides.length - 1, n));
+    if (initialized && to === i) return;
+    const from = initialized ? i : null;
+    const dir = from === null ? 0 : Math.sign(to - from);
+    if (turnController) turnController.abort();
+    turnController = new AbortController();
+    // These two neighboring groups have their own approved reverse motion.
+    const reversePair = (from === 4 && to === 3) || (from !== null && from >= 8 && to >= 8);
+    window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, signal: turnController.signal };
+    document.documentElement.dataset.dir = String(dir);
+    i = to;
+    initialized = true;
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
     if (!(i === 0 && document.documentElement.classList.contains('dt-intro'))) warmMedia(slides[i]);
@@ -1212,9 +1225,14 @@
     count.textContent = `${i + 1} / ${slides.length}`;
     prevBtn.disabled = i === 0; nextBtn.disabled = i === slides.length - 1;
     fill.style.width = `${((i + 1) / slides.length) * 100}%`;
-    history.replaceState(null, '', `${location.pathname}#${i + 1}`);
+    const url = `${location.pathname}${location.search}#${i + 1}`;
+    if (historyMode === 'replace') history.replaceState({ deckSlide: i + 1 }, '', url);
+    else if (historyMode === 'push') history.pushState({ deckSlide: i + 1 }, '', url);
   };
-  const toggleOv = (on = !ov.classList.contains('on')) => ov.classList.toggle('on', on);
+  const toggleOv = (on = !ov.classList.contains('on')) => {
+    ov.classList.toggle('on', on);
+    dispatchEvent(new Event('deck-overview'));
+  };
 
   const setup = () => {
     document.documentElement.dataset.ver = ver;
@@ -1232,14 +1250,22 @@
   setup();
 
   addEventListener('keydown', (e) => {
-    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
-    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1); }
-    else if (e.key === 'Home') go(0);
-    else if (e.key === 'End') go(slides.length - 1);
+    const mode = e.repeat ? 'replace' : 'push';
+    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(i + 1, mode); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1, mode); }
+    else if (e.key === 'Home') go(0, mode);
+    else if (e.key === 'End') go(slides.length - 1, mode);
     else if (e.key === 'o' || e.key === 'O') toggleOv();
     else if (e.key === 'Escape') toggleOv(false);
   });
-  document.getElementById('deck').addEventListener('click', (e) => go(i + (e.clientX < innerWidth / 3 ? -1 : 1)));
+  const deck = document.getElementById('deck');
+  let selectedOnMouseup = false;
+  deck.addEventListener('mouseup', () => { selectedOnMouseup = !!getSelection()?.toString().trim(); });
+  deck.addEventListener('click', (e) => {
+    const selected = selectedOnMouseup || !!getSelection()?.toString().trim();
+    selectedOnMouseup = false;
+    if (!selected) go(i + (e.clientX < innerWidth / 3 ? -1 : 1));
+  });
   document.getElementById('ovBtn').onclick = () => toggleOv();
   prevBtn.onclick = () => go(i - 1);
   nextBtn.onclick = () => go(i + 1);
@@ -1251,7 +1277,8 @@
     if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1));
   });
 
-  const fromHash = () => go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+  const fromHash = (mode = 'none') => go((parseInt(location.hash.slice(1), 10) || 1) - 1, mode);
+  addEventListener('popstate', () => fromHash());
   addEventListener('hashchange', fromHash);
   // One fetch and one object URL serve every video element that reuses a file.
   const warmedMedia = new Map();
@@ -1295,7 +1322,7 @@
     intro.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     setTimeout(() => { intro.disconnect(); warmOpening(); }, 9000);
   } else warmOpening();
-  fromHash();
+  fromHash('replace');
   if (!document.documentElement.classList.contains('dt-intro')) warmOpening();
 </script>
 <script src="scatter-field.js"></script>
