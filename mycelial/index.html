@@ -1042,11 +1042,12 @@
      hurries to keep up with the viewer, and is full when animations are off, which it also switches. */
   .motion { position: fixed; top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right)); z-index: 2;
     display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
-    --frost: 0; opacity: 0; pointer-events: none; transition: opacity 1s ease 1s; -webkit-tap-highlight-color: transparent; }
-  /* Only a hurry that lasts shows it: a press into the tail of a turn while reading never flashes it. */
-  .motion.is-shown { opacity: 1; pointer-events: auto; transition: opacity .3s ease .5s; }
-  .motion.is-off, .motion:focus-visible { opacity: 1; pointer-events: auto; transition: opacity .3s ease; }
-  @media (hover: hover) { .motion { pointer-events: auto; } .motion:hover { opacity: 1; transition: opacity .3s ease; } }
+    --frost: 0; opacity: 0; visibility: hidden; transition: opacity 1s ease 1s, visibility 0s linear 2s; -webkit-tap-highlight-color: transparent; }
+  /* Only a hurry that lasts shows it: a press into the tail of a turn while reading never flashes it. On a touch
+     screen it takes taps exactly while it can be seen, its linger and fade included; elsewhere taps go to the deck. */
+  .motion.is-shown { opacity: 1; visibility: visible; transition: opacity .3s ease .5s, visibility 0s linear .5s; }
+  .motion.is-off, .motion:focus-visible { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+  @media (hover: hover) { .motion { visibility: visible; } .motion:hover { opacity: 1; transition: opacity .3s ease; } }
   .motion i { position: relative; display: block; width: 22px; height: 22px; border-radius: 50%; background: rgb(13 10 7 / .6);
     border: 1px solid rgb(240 200 119 / calc(.32 + .5 * var(--frost))); transition: border-color .45s ease; }
   .motion b { position: absolute; inset: 3px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #fbe7bd, #f0c67e 52%, #b9772f);
