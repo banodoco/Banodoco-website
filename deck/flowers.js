@@ -688,6 +688,7 @@
     const sk = snap.k || k, mink = snap.mink ? { x: snap.mink.x - snap.core.x, y: snap.mink.y - snap.core.y } : { x: 4 * sk, y: 8 * sk };
     from = { core: v(snap.core), machines: (snap.machines || []).map(v), mink, rest: [] };
     // Each of its people is carried back by the nearest person in the crowd, as the hand-off matched them.
+    dots.forEach((d) => { delete d.src; }); // (any left from the way in)
     const free = new Set(dots.filter((d) => tc0 >= d.t0 + 0.6));
     (snap.people || []).map(v).forEach((p, i) => {
       let best = null, bd = Infinity;
@@ -698,16 +699,18 @@
     slide.classList.add('dt-rewind');
     paysSlide.classList.add('dt-return', 'dt-await');
     window.deckRewinding?.(paysSlide);
-    back7 = { tc0, shown: false };
+    back7 = { tc0, shown: false, since: 0 };
     signal?.addEventListener('abort', end7, { once: true });
     return true;
   };
   const step7 = (dt) => {
-    ta -= dt;
+    ta = Math.max(0, ta - dt);
     off = ta - back7.tc0;
     coreLabel.style.opacity = count.style.opacity = crowdA().toFixed(3);
-    if (!back7.shown && ta <= 0.5) { back7.shown = true; paysSlide.classList.remove('dt-await'); } // slide 7, under its people
-    if (ta <= 0) { end7(); return false; }
+    if (back7.shown) back7.since += dt;
+    // Slide 7 fades in under its people as the core settles into its lens; once it is whole, this picture goes.
+    if (!back7.shown && ta <= 0.2) { back7.shown = true; back7.since = 0; paysSlide.classList.remove('dt-await'); }
+    if (ta <= 0 && back7.since >= 0.65) { end7(); return false; }
     return true;
   };
   const end7 = () => {
@@ -737,7 +740,7 @@
       layout(); draw(); armed = true;
       timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
-      const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !still && running && !from && !handed && ta - off >= END && !!window.AstridPays;
+      const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !still && running && !handed && ta - off >= END && ta >= BACK7 && !!window.AstridPays; // any hand-off in is long done
       if (to7) { armed = false; gen++; if (waiting) { waiting.disconnect(); waiting = null; } if (unhand7()) return; }
       armed = false; gen++; stop(); html.classList.remove('fl-quiet');
       if (waiting) { waiting.disconnect(); waiting = null; }
