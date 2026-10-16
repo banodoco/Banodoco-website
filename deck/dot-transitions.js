@@ -358,12 +358,16 @@
     cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
     const c = cv.getContext('2d');
     c.scale(dpr, dpr);
-    c.filter = `blur(${P * 0.55}px)`;
+    // Safari has no canvas filter: the same blur, as the shadow of the shapes drawn just off the canvas
+    // (shadowBlur is twice the blur's deviation, and like the filter it ignores the scale).
+    const off = 'filter' in c ? 0 : w + 4 * P;
+    if (off) { c.shadowColor = '#000'; c.shadowBlur = 2 * P * 0.55; c.shadowOffsetX = off * dpr; }
+    else c.filter = `blur(${P * 0.55}px)`;
     c.fillStyle = '#000';
     for (const r of rs) {
       const py = r.height * r.trim;
       c.beginPath();
-      c.roundRect(r.left - x0 - P * 0.6, r.top - y0 + py - P * 0.25, r.width + P * 1.2, r.height - 2 * py + P * 0.5, 10);
+      c.roundRect(r.left - x0 - P * 0.6 - off, r.top - y0 + py - P * 0.25, r.width + P * 1.2, r.height - 2 * py + P * 0.5, 10);
       c.fill();
     }
     return { cv, x: x0, y: y0, w, h, a: 0, to: 1 };
