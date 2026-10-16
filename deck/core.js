@@ -798,7 +798,7 @@
     reset();
     if (!layout()) return false;
     visits++;
-    if (still) { ta = 0; settle(); draw(); return false; }
+    if (still || window.deckNav?.rest) { ta = 0; settle(); draw(); if (!still) start(); return false; }
     pace = visits > 1 ? 0.7 : 1;
     ta = -9; // dark until the network arrives
     if (fromGap && launch()) pace = 1;
