@@ -14,6 +14,9 @@
   let open = null;
 
   const playing = (on) => clips.forEach((v) => (on && !still ? v.play().catch(() => {}) : v.pause()));
+  clips.forEach((v) => v.addEventListener('loadeddata', () => {
+    if (slide.classList.contains('on') && !open && !still) v.play().catch(() => {});
+  }));
   new MutationObserver(() => playing(slide.classList.contains('on') && !open))
     .observe(slide, { attributes: true, attributeFilter: ['class'] });
 
@@ -54,12 +57,18 @@
       left: `${at.x}px`, top: `${at.y}px`, width: `${at.w}px`, height: `${at.h}px`,
       transition: 'none', transform: over(tile, at),
     });
-    film.src = clip.currentSrc || clip.src;
+    const source = clip.currentSrc || clip.getAttribute('src');
+    const loadFilm = () => {
+      if (open !== tile) return;
+      film.src = source || clip.currentSrc || clip.getAttribute('src');
+      film.currentTime = clip.currentTime;
+      if (!still) film.play().catch(() => {});
+    };
+    if (source) loadFilm();
+    else if (window.warmDeckMedia) window.warmDeckMedia(slide).then(loadFilm);
     film.style.objectPosition = getComputedStyle(clip).objectPosition;
-    film.currentTime = clip.currentTime;
     title.textContent = tile.dataset.title;
     playing(false);
-    if (!still) film.play().catch(() => {});
     box.classList.add('is-on');
     frame.getBoundingClientRect(); // commit the starting pose before growing
     frame.style.transition = '';
