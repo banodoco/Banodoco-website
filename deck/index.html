@@ -1279,7 +1279,7 @@
   let tx = null;
   addEventListener('touchstart', (e) => {
     const t = e.touches[0];
-    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest('button, a, [role="button"], .fw-card, .vc-box, .st-card, .st-flag') };
+    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .vc-box, .st-card, .st-flag') };
   }, { passive: true });
   addEventListener('touchend', (e) => {
     if (tx === null) return;
