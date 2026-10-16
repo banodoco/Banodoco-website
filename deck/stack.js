@@ -80,7 +80,7 @@
   const span = (at, len) => `left:calc(${(at / SPAN) * 100}% + 1px);width:calc(${(len / SPAN) * 100}% - 2px)`;
   const CLIPS = [['first-light', 0, 8], ['passing-shapes', 8, 12], ['quiet-finish', 20, 8]];
   const CONTENT = {
-    preview: `<div class="st-screen"><div class="st-pic"><video src="../assets/astrid/first-light.mp4" poster="../assets/astrid/first-light-anchor.jpg" muted loop playsinline preload="auto"></video><span>A quiet light study</span></div></div>
+    preview: `<div class="st-screen"><div class="st-pic"><video data-src="../assets/astrid/first-light.mp4" poster="../assets/astrid/first-light-anchor.jpg" muted loop playsinline preload="none"></video><span>A quiet light study</span></div></div>
       <div class="st-transport"><b class="st-btn">${I.back}</b><b class="st-btn is-play">${I.pause}</b><span class="st-time">0:02 / 0:28</span><span class="st-pill">1280×720</span></div>`,
     timeline: `<div class="st-th"></div><div class="st-ruler">${[0, 5, 10, 15, 20, 25].map((t) => `<span style="left:${(t / SPAN) * 100}%">0:${String(t).padStart(2, '0')}</span>`).join('')}${Array.from({ length: 24 }, (_, n) => `<i class="st-beat" style="left:${(((n + 0.5) * 1.2) / SPAN * 100).toFixed(2)}%"></i>`).join('')}</div>
       <div class="st-th">${I.fx}<span>V2</span><em>Effects</em></div><div class="st-lane"><span class="st-fx" style="${span(0, 8)}">✦ type-on <em>community-made</em></span><span class="st-fx" style="${span(8, 20)}">✦ audio-reactive-colour <em>community-made</em></span></div>
