@@ -421,6 +421,7 @@
   // ---- Time ----------------------------------------------------------------------------------------------------
   const END = 2.2;
   let ta = 0, off = 0, running = false, raf = 0, last = 0, armed = false, timers = [], from = null, handed = false, counted = '';
+  let coreHeld = false; // slide 9 is drawing the core (on its way out, or on its way back here): this picture leaves it out
   const k01 = (t0, d) => clamp((ta - t0) / d);
   // The apps and the crowd run on their own clock, which starts a little later when slide 7's picture is carried on.
   let tc = 0;
@@ -561,7 +562,7 @@
         g.lineWidth = 1.4 * LW; g.strokeStyle = `rgba(${THREAD},${(0.9 * a).toFixed(3)})`;
         g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
       });
-    } else drawCore(core, core.w, core.h, ease(k01(0, 0.8)), cell, 1, pose);
+    } else if (!coreHeld) drawCore(core, core.w, core.h, ease(k01(0, 0.8)), cell, 1, pose);
     // The door the apps leave by, on the core's right side; it flares as each one fires.
     const qS = from ? smooth(k01(0.8, 0.4)) : ease(k01(0.3, 0.5));
     let flare = 0;
@@ -618,7 +619,7 @@
   const reset = () => {
     gen++;
     timers.forEach(window.deckCancelLater); timers = [];
-    ta = 0; off = 0; from = null; handed = false; counted = '';
+    ta = 0; off = 0; from = null; handed = false; counted = ''; coreHeld = false;
     root.classList.remove('is-labelled', 'is-counting');
     dots.forEach((d) => { delete d.src; delete d.handed; });
     canvas.style.transition = ''; canvas.style.opacity = '';
@@ -792,8 +793,11 @@
       const people = chosen.map(([d, app]) => { d.handed = true; const [x, y] = pos(d); return { ...v(x, y), r: d.r * 1.45, bright: d.bright, app }; });
       return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, apps: apps.filter((a) => tc >= a.T).slice(-12).map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
     },
+    // Slide 9 brings the core back on a step back: this picture leaves it out until it has landed, then takes it
+    // back in the same frame, so only one mink is ever on screen.
+    holdCore(on) { coreHeld = on; if (!on && core && slide.classList.contains('on')) draw(); },
     hide() { // fade out as the next slide's picture takes over; its people are drawn there from now on
-      handed = true; draw();
+      handed = true; coreHeld = true; draw(); // the core goes at once: slide 9 draws it from this frame, in the same place
       canvas.style.transition = 'opacity .5s ease'; canvas.style.opacity = '0';
       pool.forEach((p) => { p.el.style.transition = 'opacity .4s ease'; p.el.style.opacity = '0'; p.o = 0; });
       coreLabel.style.opacity = '0'; count.style.opacity = '0';
