@@ -145,7 +145,7 @@
     font: italic 400 0.85rem "Cormorant Garamond", serif; color: var(--ink); opacity: 0; transition: opacity .3s ease; }
   .vc-tile:hover .vc-cap, .vc-tile:focus-visible .vc-cap { opacity: 1; }
   .vc-cap b { font-weight: 400; font-style: normal; }
-  .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; }
+  .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; text-wrap: balance; }
   .vc-label a { color: var(--gold); text-decoration: underline 1px transparent; text-underline-offset: .18em; transition: text-decoration-color .25s ease; }
   .vc-label a:hover, .vc-label a:focus-visible { text-decoration-color: currentColor; outline: none; }
   .vc-box { position: fixed; inset: 0; z-index: 100; background: #0d0a07f2; opacity: 0; pointer-events: none; transition: opacity .45s ease; cursor: zoom-out; }
@@ -1117,7 +1117,7 @@
        under the footer. */
     .vc-host > .split, .gap-host > .split { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
     .vc-host .vis, .gap-host .vis { flex: 1 1 0; min-height: 0; container-type: size; justify-content: center; }
-    .vc { width: min(100cqw, 100cqh - 3rem); }
+    .vc { width: min(100cqw, 100cqh - 3.6rem); } /* room for the label's two lines */
     .gp { width: min(100cqw, 100cqh); }
   }
   /* A phone on its side (or any short, wide window) keeps the wide compositions, drawn smaller: everything sits
@@ -1136,6 +1136,7 @@
     .gap-host .body { font-size: .88rem; }
     .gp { width: min(100%, 100svh - 96px); }
     .vc { width: min(100%, 62svh); } /* the height the browser's bars leave */
+    .vc-label { margin-top: .4rem; font-size: .88rem; line-height: 1.12; } /* its two lines, without pushing the collage under the footer */
     html[data-ver="f"] .ac-host { padding-bottom: 80px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.3rem, 6.4svh, 1.8rem); max-width: 26em; }
     /* 5: the text beside the editor, so the player and the timeline keep their height. */
@@ -1216,7 +1217,7 @@
           <button class="vc-tile" type="button" style="left:34.5%;top:40.1%;width:31.5%;height:52.5%" data-film="2eead7ea1c7f7c5a6e4caeb43ff810dd" data-at="69" data-focus="42% 50%" data-page="https://arcagidan.com/submissions/entry/13c435a1-057a-441b-b729-545d61cb111b" data-preview="../assets/cards/arca/cherrybomb-preview.mp4" data-title="Cherrybomb (Original Music)" data-artist="sagansagansagans" aria-label="Play Cherrybomb (Original Music) by sagansagansagans"><picture><source type="image/avif" srcset="../assets/cards/arca/cherrybomb.avif"><img src="../assets/cards/arca/cherrybomb.jpg" width="404" height="672" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Cherrybomb (Original Music)</b> · sagansagansagans</span></button>
           <button class="vc-tile" type="button" style="left:69%;top:53.5%;width:31%;height:38.75%" data-film="bc5af2f9fce4801d46e8c0f9a57cc4e0" data-at="9.25" data-page="https://arcagidan.com/submissions/entry/c7041961-a637-489d-91c0-84e10e40cb53" data-preview="../assets/cards/arca/to-be-continued-preview.mp4" data-title="To be continued" data-artist="davidmaruscsak00" aria-label="Play To be continued by davidmaruscsak00"><picture><source type="image/avif" srcset="../assets/cards/arca/to-be-continued.avif"><img src="../assets/cards/arca/to-be-continued.jpg" width="400" height="500" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>To be continued</b> · davidmaruscsak00</span></button>
         </div>
-        <p class="vc-label">Recipients of the last <a href="https://arcagidan.com/" target="_blank" rel="noopener">Arca Gidan Prize</a></p>
+        <p class="vc-label">Recipients of the last <a href="https://arcagidan.com/" target="_blank" rel="noopener">Arca Gidan Prize</a>, our open-source AI art competition</p>
       </div>
     </div>
   </section>
