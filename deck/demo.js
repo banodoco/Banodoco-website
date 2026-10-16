@@ -155,20 +155,31 @@
     n.putImageData(d, 0, 0);
   }
   let grain = null, grainAt = 0, gx = 0, gy = 0, pdpr = 1;
+  // The preview is redrawn only when what it shows can have changed: a playing film (with its title and colour look)
+  // every frame, as before; an empty screen, a still, or a film not yet ready once. Its size on screen comes from a
+  // ResizeObserver rather than a layout read every frame.
+  let picCW = -1, picCH = -1, picKey = '';
   const sizePic = () => {
     const b = pic.getBoundingClientRect();
     pdpr = Math.min(2, devicePixelRatio || 1);
     pic.width = Math.max(1, Math.round(b.width * pdpr)); pic.height = Math.max(1, Math.round(b.height * pdpr));
     grain = pg.createPattern(noise, 'repeat');
+    picKey = ''; // sizing a canvas clears it
   };
+  new ResizeObserver((es) => { for (const e of es) { picCW = e.contentRect.width; picCH = e.contentRect.height; } }).observe(pic);
   const drawPic = (t) => {
-    if (Math.abs(pic.clientWidth * pdpr - pic.width) > 1 || Math.abs(pic.clientHeight * pdpr - pic.height) > 1) sizePic();
+    const cw = picCW < 0 ? pic.clientWidth : picCW, ch = picCH < 0 ? pic.clientHeight : picCH;
+    if (Math.abs(cw * pdpr - pic.width) > 1 || Math.abs(ch * pdpr - pic.height) > 1) sizePic();
+    const src = view.mode === 'still' ? anchors[view.i] : view.mode === 'play' ? videos[view.i] : null;
+    root.classList.toggle('has-pic', !!src);
+    const ready = !!src && (src.tagName === 'VIDEO' ? src.readyState >= 2 : src.complete);
+    const key = view.mode === 'play' && ready ? '' : `${view.mode}|${view.i}|${ready}`;
+    if (key && key === picKey) return; // the same picture as last frame
+    picKey = key;
     const w = pic.width, h = pic.height;
     pg.setTransform(1, 0, 0, 1, 0, 0);
     pg.clearRect(0, 0, w, h);
-    const src = view.mode === 'still' ? anchors[view.i] : view.mode === 'play' ? videos[view.i] : null;
-    root.classList.toggle('has-pic', !!src);
-    if (!src || (src.tagName === 'VIDEO' ? src.readyState < 2 : !src.complete)) return;
+    if (!ready) return;
     const s = Math.min(w / 16, h / 9) * 0.86, dw = 16 * s, dh = 9 * s, dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2);
     pg.drawImage(src, dx, dy, dw, dh);
     const seqT = view.mode === 'play' ? view.seq : -1;
