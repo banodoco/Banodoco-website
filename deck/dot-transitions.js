@@ -759,7 +759,8 @@
     return [[from.x, from.y], ...t.pts.slice(1, -1).reverse().map(([x, y]) => [x, y]), [to.x, to.y]];
   };
   let drift = { x: 0, y: 0 }, trail = { x: 0, y: 0 }, t = 0, last = 0;
-  const clearText = (s) => s && textOf(s).forEach((el) => { el.style.transform = ''; unmask(el); });
+  const put = { x: NaN, y: NaN }; // where the idle text was last put (none since it was last cleared)
+  const clearText = (s) => { put.x = NaN; return s && textOf(s).forEach((el) => { el.style.transform = ''; unmask(el); }); };
 
   // Idle: the node wanders a pixel or two; the text follows a beat behind.
   let idleRaf = 0;
@@ -781,7 +782,13 @@
     trail.x += (drift.x * 0.7 - trail.x) * k;
     trail.y += (drift.y * 0.7 - trail.y) * k;
     place({ x: anchor.x + drift.x, y: anchor.y + drift.y });
-    textOf(current).forEach((el) => { el.style.transform = `translate(${trail.x.toFixed(2)}px, ${trail.y.toFixed(2)}px)`; });
+    // The text is moved only once it has drifted an eighth of a device pixel from where it was last put (at most
+    // 0.6 px/s, most frames move it by far less), so a frame that would not change what is seen repaints nothing.
+    const e = 1 / (8 * (devicePixelRatio || 1));
+    if (!(Math.abs(trail.x - put.x) < e && Math.abs(trail.y - put.y) < e)) {
+      put.x = trail.x; put.y = trail.y;
+      textOf(current).forEach((el) => { el.style.transform = `translate(${trail.x.toFixed(2)}px, ${trail.y.toFixed(2)}px)`; });
+    }
   };
   document.addEventListener('visibilitychange', syncIdle);
   window.addEventListener('deck-overview', syncIdle);
