@@ -741,6 +741,75 @@
   .fw-avs { display: flex; align-items: center; }
   .fw-avs img { width: 2.6em; height: 2.6em; border-radius: 50%; border: 1px solid #0a0a0a; margin-left: -.5em; object-fit: cover; }
   .fw-avs img:first-child { margin-left: 0; }
+  /* The icons' own faces (slide 11, and 10 on a phone): a logo or a picture over the icon's crop, made for its circle
+     (flywheel.js sizes each to its crop, and sets its font-size to a tenth of it). */
+  .fw-face { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: hidden; }
+  .fw-face-mink { background: radial-gradient(circle at 50% 54%, #3b2d1f, #1b1611 68%); }
+  .fw-face-mink svg { width: 6.6em; height: 6.6em; margin: 0 0 .45em .35em; } /* the mink's own weight sits low and left in her grid */
+  .fw-face-b { background: radial-gradient(circle at 50% 50%, #2b2117, #120e0a 70%); }
+  .fw-face-b i { width: 4.7em; height: 6.4em; background: #f6d391;
+    -webkit-mask: url(../assets/brand/mark-b-mask-96.png) center / contain no-repeat; mask: url(../assets/brand/mark-b-mask-96.png) center / contain no-repeat; }
+  .fw-face-ac { background: #0a0a0a url(../assets/cards/artcompute/emmacatnip-poster.jpg) 47% 38% / auto 128% no-repeat; }
+  .fw-face-ados { background: radial-gradient(circle, #0000 20%, #0000008c 100%), #0000004d; }
+  .fw-face-ados b { font: 400 2.2em/1 "Pilowlava", sans-serif; color: #fff; letter-spacing: .02em; text-shadow: 0 0 .25em #0009; }
+  @font-face { font-family: "Eubergine"; font-display: block; src: url(../assets/cards/arca/eubergine-sub.woff2) format("woff2"); }
+  @font-face { font-family: "Pilowlava"; font-display: block; src: url(../assets/cards/ados/pilowlava-sub.woff2) format("woff2"); }
+  @font-face { font-family: "Sixtyfour"; font-display: block; src: url(../assets/cards/tworp/sixtyfour-sub.woff2) format("woff2"); }
+  /* Slide 10: each card grows into its fuller card, the homepage's own (journey/cards/), in the deck's look:
+     its picture, its name and its words, and the homepage's way in at the foot. flywheel.js grows it out of the
+     small card (or a phone's icon) with transform, clip and opacity; its font-size follows its width. */
+  .fw-full { position: absolute; left: 0; top: 0; z-index: 5; opacity: 0; transform-origin: 0 0; border-radius: 7px; overflow: hidden; will-change: transform, opacity;
+    background: #14100c; border: 1px solid #f0c87738; box-shadow: 0 0 44px #e0ab5e1c, 0 22px 60px #000e; }
+  .fw-fstage { position: relative; display: block; overflow: hidden; background: #0b0907; border-bottom: 1px solid #f0c87722; }
+  .fw-full .fw-cbody { gap: .34em; padding: .8em 1em .85em; }
+  .fw-full .fw-cbody b { font-size: 1.28em; }
+  .fw-full .fw-cbody span { font-size: .96em; line-height: 1.32; }
+  .fw-door { display: block; padding: .78em 1em .85em; border-top: 1px solid #f0c8771f; text-align: center; text-decoration: none;
+    font: 500 .64em/1.2 "DM Sans", "Inter", system-ui, sans-serif; letter-spacing: .26em; text-transform: uppercase; color: #f0c67e; }
+  a.fw-door:hover { color: #ffe3a8; background: #f0c67e0b; }
+  em.fw-door { font-style: normal; color: #a39684; }
+  .fw-full.is-wide { display: grid; grid-template-columns: 1.1fr 1fr; grid-template-rows: 1fr auto; }
+  .fw-full.is-wide .fw-fstage { grid-row: 1 / 3; border-bottom: 0; border-right: 1px solid #f0c87722; }
+  .fw-full.is-wide .fw-cbody { align-self: center; }
+  .fw-full.is-wide .fw-door { grid-column: 2; }
+  /* Arca Gidan: its four figures under its wordmark, and its record (arcagidan.com's own panels, face and figures). */
+  .fw-ag { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); aspect-ratio: 16 / 8.8; background: #1a1a1a; }
+  .fw-ag i { position: relative; overflow: hidden; }
+  .fw-ag img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.78) brightness(.88); }
+  .fw-ag > b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap;
+    font: 400 1.62em/.9 "Eubergine", Georgia, serif; letter-spacing: .12em; color: #f5f0eb; text-shadow: 0 1px 14px #000e, 0 0 6px #000d, 0 0 2px #000; }
+  .fw-ag-band { display: grid; grid-template-columns: repeat(3, 1fr); background: #141414; border-top: 1px solid #f5f0eb1f; }
+  .fw-ag-band > span { display: flex; flex-direction: column; align-items: center; gap: .32em; padding: .5em .2em .5em; font: 400 .5em/1 "DM Sans", "Inter", sans-serif; letter-spacing: .24em; text-transform: uppercase; color: #f5f0eb80; }
+  .fw-ag-band > span + span { border-left: 1px solid #f5f0eb1a; }
+  .fw-ag-band b { font: 400 2.1em/1 "EB Garamond", serif; letter-spacing: 0; color: #f5f0eb; }
+  .fw-full.is-wide .fw-ag { aspect-ratio: auto; height: 100%; min-height: 9em; }
+  .fw-full.is-wide .fw-fstage:has(.fw-ag) { display: flex; flex-direction: column; } .fw-full.is-wide .fw-ag { flex: 1; }
+  /* ArtCompute: its terminal, with its newest grants on the ledger. */
+  .fw-ac-full { height: auto; justify-content: flex-start; gap: .55em; padding: .85em .9em .7em; font-size: .78em; }
+  .fw-ac-full .fw-ac-l { margin: .25em 0 -.15em; }
+  .fw-ac-row { display: flex; align-items: center; gap: .7em; padding: .38em 0 .1em; border-top: 1px solid #ffffff10; color: #c8c8c8; letter-spacing: .02em; }
+  .fw-ac-row img { width: 1.9em; height: 1.9em; border-radius: 50%; object-fit: cover; filter: saturate(.55) sepia(.2) brightness(.92); }
+  .fw-ac-row span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fw-ac-row i { padding: .2em .45em .15em; border: 1px solid #39ff1455; border-radius: 2px; font-style: normal; font-size: .8em; color: #39ff14; }
+  /* Banodoco: the community's own daily digest, a little more of it. */
+  .fw-dc-full { height: auto; gap: .55em; padding: .95em 1em .9em; }
+  .fw-dc-full .fw-dc-t { font-size: .86em; }
+  .fw-dc-x { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin-top: -.25em; padding-left: .65em; border-left: 2px solid #5865f2;
+    font: 400 .68em/1.45 "Inter", system-ui, sans-serif; color: #b5bac1; }
+  .fw-dc-full .fw-dc-p { margin-top: .2em; }
+  /* ADOS: its poster, the event's date and its wordmark; 2RP: its cover under its masthead. */
+  .fw-ad, .fw-rp { position: relative; display: block; aspect-ratio: 16 / 9.2; }
+  .fw-ad img, .fw-rp img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .fw-ad > span { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em;
+    background: linear-gradient(to top, #000000c4, #0006 55%, #00000026); color: #fff; }
+  .fw-ad small { font: 400 .78em/1 "DM Sans", "Inter", sans-serif; color: #ffffffd9; letter-spacing: .02em; }
+  .fw-ad b { font: 400 2.5em/1 "Pilowlava", sans-serif; letter-spacing: .02em; text-shadow: 0 2px 14px #0009; }
+  .fw-rp::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, #1a1008d1, #1a100866 50%, #1a100800); }
+  .fw-rp b { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font: 400 2.5em/1 "Sixtyfour", ui-monospace, monospace; color: #fff; text-shadow: 0 2px 14px #000b; }
+  .fw-full.is-wide .fw-ad, .fw-full.is-wide .fw-rp, .fw-full.is-wide .fw-astrid-full { aspect-ratio: auto; height: 100%; }
+  /* Astrid: the editor still, the mink in her seat. */
+  .fw-astrid-full { height: auto; aspect-ratio: 16 / 9.6; }
+  .fw-astrid-full .fw-seat { opacity: 1; }
   /* Slide 9: the community, in one quiet real line under the headline. */
   .fw-stat { margin: .95rem 0 0; font: italic 400 clamp(1rem, 1.25vw, 1.25rem)/1.3 "Cormorant Garamond", serif; color: #b8a98f; letter-spacing: .02em; }
   .fw-stat b { font-weight: 500; color: #ecc57e; }
@@ -752,9 +821,9 @@
     html[data-ver="f"] .fw-raise { justify-content: center; padding: 60px 24px 80px; }
     html[data-ver="f"] .fw-top { padding: 52px 24px 0; }
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.25rem, 5.6vw, 1.6rem); max-width: 8.6em; }
-    .fw-cbody span { display: none; }
-    .fw-dc { gap: .3em; padding: .35em .5em; } .fw-dc-ch { display: none; } .fw-dc-t { font-size: .62em; }
-    .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-ac-l { display: none; } .fw-ac-stats > span { padding: .35em .4em; }
+    .fw-card .fw-cbody span { display: none; }
+    .fw-card .fw-dc { gap: .3em; padding: .35em .5em; } .fw-card .fw-dc-ch { display: none; } .fw-card .fw-dc-t { font-size: .62em; }
+    .fw-card .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-card .fw-ac-l { display: none; } .fw-card .fw-ac-stats > span { padding: .35em .4em; }
     .fw-stat { margin-top: .6rem; font-size: 1rem; }
     .fw-sub { margin-top: .7rem; font-size: .95rem; line-height: 1.4; max-width: 17em; }
   }
@@ -1554,7 +1623,7 @@
   let tx = null;
   addEventListener('touchstart', (e) => {
     const t = e.touches[0];
-    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .vc-box, .st-card, .st-flag') };
+    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .fw-full, .vc-box, .st-card, .st-flag') };
   }, { passive: true });
   addEventListener('touchend', (e) => {
     if (tx === null) return;
