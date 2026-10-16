@@ -199,6 +199,7 @@
   // ---- Layout ---------------------------------------------------------------------------------
   let W = 0, H = 0, dpr = 1, tall = false, R = WIDE, cell = 3;
   let stages = [null, null, null]; // per slide: the picture in viewport pixels
+  let lastPlaceKey = null;
   const colOf = (s) => s.querySelector(':scope > .split > :first-child');
   const fit = (s) => {
     const c = colOf(hosts[s]).getBoundingClientRect();
@@ -271,6 +272,7 @@
   const layout = () => {
     W = innerWidth; H = innerHeight;
     if (!W || !H) return false;
+    lastPlaceKey = null;
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     tall = W <= 760 && H > W;
@@ -607,6 +609,9 @@
   const put = (el, x, y, alignX, alignY) => { el.style.transform = `translate(${(x - el.offsetWidth * alignX).toFixed(1)}px, ${(y - el.offsetHeight * alignY).toFixed(1)}px)`; };
   const setOp = (el, v) => { const s = v.toFixed(2); if (el.style.opacity !== s) el.style.opacity = s; };
   const place = () => {
+    const key = [W, H, m, k01(T.labels, 0.6), cardOut(), openBase(), ...chips.map((_, i) => chipQ(i)), ...hov, root.classList.contains('is-on')].join('|');
+    if (key === lastPlaceKey) return;
+    lastPlaceKey = key;
     const ql = k01(T.labels, 0.6);
     const lens = cur.lens;
     put(labels.astrid, lens[0] + 3 * k * (1 - clamp(m)), lens[1] - lens[3] / 2 - lerp(22 * k, 13, clamp(m)), 0.5, 0.5); // over the lens, wherever she sits
