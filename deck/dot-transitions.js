@@ -806,7 +806,8 @@
     const col = columnOf(lastSlide()), r = col && col.getBoundingClientRect();
     if (!r || !r.width) return null;
     const y = r.top + r.height / 2, room = 2 * Math.min(y - 12, innerHeight - 80 - y); // clear of the chrome at the foot
-    const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(innerWidth - 24, innerHeight * 0.8, room));
+    const across = innerWidth <= 760 && innerHeight > innerWidth ? innerWidth * 0.62 : innerWidth - 24; // inside an upright phone's narrow halo
+    const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(across, innerHeight * 0.8, room));
     return { x: r.left + r.width / 2, y, size: Math.round(size) };
   };
   const crown = (at, now) => {
