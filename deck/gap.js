@@ -4,9 +4,9 @@
 // Arriving from slide 2, the field's own dots fly into place as the tools
 // (changing colour as they land, then opening into their logos), its dust
 // settles where the axes will run, and then the axes draw through it.
-// Hovering a tool lifts it and extends it into its name and what it is, eases
-// its neighbours aside and draws a thread to the empty corner; hovering the
-// empty corner raises a few question marks.
+// Hovering a tool lifts it and extends it into its name and what it is, and
+// eases its neighbours aside; hovering the empty corner raises a few question
+// marks.
 (() => {
   const root = document.querySelector('[data-gap]');
   if (!root) return;
@@ -29,24 +29,15 @@
 
   // ---- Hovering ---------------------------------------------------------
   // The tool in focus lifts and glows (CSS); its neighbours ease a little out
-  // of its way, and a faint thread draws from it to the empty corner.
-  const thread = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  thread.setAttribute('class', 'gp-thread');
-  thread.setAttribute('aria-hidden', 'true');
-  thread.innerHTML = '<defs><linearGradient id="gp-thread-ink" gradientUnits="userSpaceOnUse"><stop offset="0"/><stop offset="1"/></linearGradient></defs><path pathLength="1"/>';
-  root.insertBefore(thread, root.querySelector('.gp-ax'));
-  const ink = thread.querySelector('linearGradient');
-  const line = thread.querySelector('path');
+  // of its way.
   let focused = null;
   const pct = (el, k) => parseFloat(el.style[k]) / 100;
   const focus = (el) => {
     if (el === focused) return;
     focused = el;
     const w = root.clientWidth, h = root.clientHeight;
-    empty.classList.remove('is-reached');
     if (!el) {
       tools.forEach((t) => { t.style.removeProperty('--nx'); t.style.removeProperty('--ny'); });
-      thread.classList.remove('is-on'); // it fades where it is
       return;
     }
     const d = el.querySelector('i').offsetWidth;
@@ -60,52 +51,7 @@
       t.style.setProperty('--nx', `${((dx / dist) * k).toFixed(2)}px`);
       t.style.setProperty('--ny', `${((dy / dist) * k).toFixed(2)}px`);
     });
-    // The thread: from the disc's rim into the empty ring's, bowing gently, and
-    // coming round the side of the ring's label rather than through it.
-    const box = root.getBoundingClientRect(), rr = empty.querySelector('i').getBoundingClientRect();
-    const tag = empty.querySelector('span').getBoundingClientRect();
-    const lab = { l: tag.left - box.left - 8, r: tag.right - box.left + 8, t: tag.top - box.top - 6, b: tag.bottom - box.top + 6 };
-    const x2 = rr.left + rr.width / 2 - box.left, y2 = rr.top + rr.height / 2 - box.top, ring = rr.width / 2 + 5;
-    const dist = Math.hypot(x0 - x2, y0 - y2) || 1;
-    const ux = (x2 - x0) / dist, uy = (y2 - y0) / dist;
-    const a = [x0 + ux * (d / 2 + 4), y0 + uy * (d / 2 + 4)];
-    const bow = dist * 0.08 * (ux < 0 ? -1 : 1);
-    const th0 = Math.atan2(y0 - y2, x0 - x2); // the side of the ring the tool lies on
-    const at = (p0, p1, p2, p3, t) => { const u = 1 - t; return [0, 1].map((j) => u * u * u * p0[j] + 3 * u * u * t * p1[j] + 3 * u * t * t * p2[j] + t * t * t * p3[j]); };
-    const misses = (c1, c2, b) => {
-      for (let i = 1; i < 24; i++) { const [x, y] = at(a, c1, c2, b, i / 24); if (x > lab.l && x < lab.r && y > lab.t && y < lab.b) return false; }
-      return true;
-    };
-    // From below, try arriving ever more level with the ring until the curve misses the label;
-    // failing that (a tool right under it, on a small chart), swing out wide and come in level.
-    let side = Math.abs(th0) < Math.PI / 2 ? 1 : -1;
-    const wide = Math.max(dist * 0.45, (lab.r - lab.l) / 2 + 16);
-    if (x2 + side * (ring + wide) < 0 || x2 + side * (ring + wide) > w) side = -side;
-    const flat = side > 0 ? 0 : Math.PI;
-    const tries = th0 > 0 ? [0, 0.35, 0.7, 1].map((k) => th0 + (flat - th0) * k) : [th0];
-    let b, c1, c2;
-    for (const th of tries) {
-      const ex = Math.cos(th), ey = Math.sin(th);
-      b = [x2 + ex * ring, y2 + ey * ring];
-      c2 = [b[0] + ex * dist * 0.45, b[1] + ey * dist * 0.45];
-      c1 = [a[0] + (c2[0] - a[0]) * 0.35 + uy * bow, a[1] + (c2[1] - a[1]) * 0.35 - ux * bow];
-      if (misses(c1, c2, b)) break;
-      if (th !== tries[tries.length - 1]) continue;
-      b = [x2 + side * ring, y2];
-      c2 = [b[0] + side * wide, y2];
-      c1 = [c2[0], a[1]];
-    }
-    const f = (p) => p.map((v) => v.toFixed(1)).join(',');
-    thread.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    line.setAttribute('d', `M${f(a)}C${f(c1)} ${f(c2)} ${f(b)}`);
-    ink.setAttribute('x1', a[0]); ink.setAttribute('y1', a[1]); ink.setAttribute('x2', b[0]); ink.setAttribute('y2', b[1]);
-    ink.firstChild.setAttribute('stop-color', getComputedStyle(el).getPropertyValue('--c').trim() || '#e0ab5e');
-    thread.style.setProperty('--draw', `${(0.45 + dist / w * 0.5).toFixed(2)}s`);
-    thread.classList.remove('is-drawn');
-    void thread.getBoundingClientRect(); // restart the draw from this tool
-    thread.classList.add('is-on', 'is-drawn');
   };
-  line.addEventListener('transitionend', () => { if (thread.classList.contains('is-on')) empty.classList.add('is-reached'); });
   // Mouse hover and keyboard focus; touch goes through the tap below instead.
   tools.forEach((el) => {
     el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') focus(el); });
