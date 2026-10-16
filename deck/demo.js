@@ -8,7 +8,11 @@
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
-  const now = () => performance.now();
+  // Keep absolute animation timestamps on the same clock across a pause.
+  let paused = false, pausedAt = 0, pausedTime = 0;
+  let pendingStart = null, pausedVideos = [];
+  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
+  const now = () => (paused ? pausedAt : performance.now()) - pausedTime;
 
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
@@ -510,9 +514,10 @@
 
   // Clock
   let running = false, raf = 0, last = 0, ticking = false, requested = false;
-  const tick = (t) => {
+  const tick = () => {
     raf = 0;
-    if (!running) return;
+    if (!running || paused) return;
+    const t = now();
     ticking = true;
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
@@ -521,7 +526,7 @@
     ticking = false;
     if (busy || requested) { requested = false; raf = requestAnimationFrame(tick); }
   };
-  const wake = () => { if (!running) return; if (ticking) { requested = true; return; } if (!raf) { last = 0; raf = requestAnimationFrame(tick); } };
+  const wake = () => { if (!running || paused) return; if (ticking) { requested = true; return; } if (!raf) { last = 0; raf = requestAnimationFrame(tick); } };
   const net = document.querySelector('.dt-net');
   const softenNet = (on) => {
     if (!net) return;
@@ -534,7 +539,8 @@
   };
   const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
   const start = (fromCore) => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
+    if (motionBlocked()) { pendingStart = fromCore; return; }
+    pendingStart = null;
     // Also warm direct #5 entry.
     window.warmDeckMedia(slide);
     running = true;
@@ -553,6 +559,7 @@
   };
   const stop = () => {
     running = false;
+    paused = false; pausedTime = 0; pendingStart = null; pausedVideos = [];
     if (raf) cancelAnimationFrame(raf);
     raf = 0; requested = false;
     if (morph) endMorph();
@@ -576,15 +583,24 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
-  let pausedForOverview = [];
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) {
-      pausedForOverview = [...videos, ...gradedVideos].filter((v) => v && !v.paused);
-      stop();
+    if (motionBlocked()) {
+      if (!running || paused) return;
+      pausedAt = performance.now(); paused = true;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      pausedVideos = [...videos, ...gradedVideos].filter((v) => v && !v.paused);
+      pausedVideos.forEach((v) => v.pause());
     } else if (slide.classList.contains('on')) {
-      start(false);
-      pausedForOverview.forEach((v) => v.play().catch(() => {}));
-      pausedForOverview = [];
+      // An entry deferred behind the overview has no scene to resume yet.
+      if (pendingStart !== null) { start(pendingStart); return; }
+      if (!paused) return;
+      pausedTime += performance.now() - pausedAt;
+      paused = false;
+      last = 0;
+      pausedVideos.forEach((v) => v.play().catch(() => {}));
+      pausedVideos = [];
+      if (!still) wake();
     }
   };
   document.addEventListener('visibilitychange', syncMotion);

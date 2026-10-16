@@ -24,7 +24,11 @@
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
   const seep = (k) => 0.5 - 0.5 * Math.cos(Math.PI * k);
-  const now = () => performance.now();
+  // Keep absolute animation timestamps on the same clock across a pause.
+  let paused = false, pausedAt = 0, pausedTime = 0;
+  let pendingStart = null, pausedVideos = [];
+  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
+  const now = () => (paused ? pausedAt : performance.now()) - pausedTime;
   const RAD = Math.PI / 180;
 
   // ---- The scene -----------------------------------------------------------------------------
@@ -636,14 +640,15 @@
     else { if (amb) stepTour(t); stepMink(t); }
     stepHead();
   };
-  const tick = (t) => {
+  const tick = () => {
     raf = 0;
-    if (!running) return;
+    if (!running || paused) return;
+    const t = now();
     step(t);
     raf = requestAnimationFrame(tick);
   };
-  const wake = () => { if (running && !raf) raf = requestAnimationFrame(tick); };
-  const play = () => { if (!still && running) video.play().catch(() => {}); };
+  const wake = () => { if (running && !paused && !raf) raf = requestAnimationFrame(tick); };
+  const play = () => { if (!still && running && !paused) video.play().catch(() => {}); };
 
   // As on slide 5, the network stays visible behind; only where its threads pass behind the text are they softened.
   // Only ever clear a mask this slide set, so a neighbour that set its own (slide 5) keeps it.
@@ -660,10 +665,17 @@
     netMask = net.style.maskImage;
   };
 
-  let waitArrive = null, timers = [];
+  let waitArrive = null, timers = [], pendingBuild = false;
+  const beginWhenReady = () => {
+    if (!running || build || amb) return;
+    if (paused) { pendingBuild = true; return; }
+    pendingBuild = false;
+    begin(false); play(); wake();
+  };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
+    if (motionBlocked()) { pendingStart = from5; return; }
+    pendingStart = null;
     running = true;
     layout();
     slide.classList.remove('st-arrive');
@@ -682,7 +694,7 @@
       return;
     }
     hideAll();
-    const go = () => { if (running && !build && !amb) { begin(false); play(); wake(); } };
+    const go = beginWhenReady;
     if (html.classList.contains('dt-intro')) { // a first load: the Mycelial mark plays first
       waitArrive = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waitArrive.disconnect(); waitArrive = null; timers.push(setTimeout(go, 250)); } });
       waitArrive.observe(html, { attributes: true, attributeFilter: ['class'] });
@@ -690,12 +702,14 @@
     }
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(setTimeout(go, 1300))); // if the network never says it has arrived
   };
-  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); begin(false); play(); wake(); } });
+  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
   const stop = () => {
     running = false;
+    paused = false; pausedTime = 0; pendingStart = null; pausedVideos = [];
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     clearTimers();
+    pendingBuild = false;
     build = null; amb = null;
     restMink();
     clearTimeout(leaving); Object.assign(hold, { hover: -1, focus: -1, pin: -1 }); guide.on = false; guide.a = 0; guide.last = 0;
@@ -718,8 +732,25 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
-    else if (slide.classList.contains('on')) start(false);
+    if (motionBlocked()) {
+      if (!running || paused) return;
+      pausedAt = performance.now(); paused = true;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      pausedVideos = [video].filter((v) => v && !v.paused);
+      pausedVideos.forEach((v) => v.pause());
+    } else if (slide.classList.contains('on')) {
+      // An entry deferred behind the overview has no scene to resume yet.
+      if (pendingStart !== null) { start(pendingStart); return; }
+      if (!paused) return;
+      pausedTime += performance.now() - pausedAt;
+      paused = false;
+      guide.last = 0;
+      if (pendingBuild) beginWhenReady();
+      pausedVideos.forEach((v) => v.play().catch(() => {}));
+      pausedVideos = [];
+      if (!still) wake();
+    }
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);

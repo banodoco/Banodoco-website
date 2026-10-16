@@ -654,15 +654,30 @@
     let raf = 0, stopped = false, resolve;
     const signal = window.deckNav?.signal;
     const p = new Promise((r) => { resolve = r; });
-    let t0 = null;
+    let elapsed = -delay, last = 0;
+    const blocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
     const tick = (now) => {
-      if (stopped) return;
-      if (t0 === null) t0 = now + delay;
-      const k = clamp((now - t0) / duration);
-      if (now >= t0) step(ease(k));
+      raf = 0;
+      if (stopped || blocked()) return;
+      elapsed += now - (last || now);
+      last = now;
+      const k = clamp(elapsed / duration);
+      if (elapsed >= 0) step(ease(k));
       if (k < 1) raf = requestAnimationFrame(tick); else { stopped = true; resolve(true); }
     };
-    raf = requestAnimationFrame(tick);
+    // Text can still be revealing when a slide's build is paused.
+    const syncMotion = () => {
+      if (stopped) return;
+      if (blocked()) { cancelAnimationFrame(raf); raf = 0; last = 0; }
+      else if (!raf) raf = requestAnimationFrame(tick);
+    };
+    document.addEventListener('visibilitychange', syncMotion);
+    window.addEventListener('deck-overview', syncMotion);
+    p.then(() => {
+      document.removeEventListener('visibilitychange', syncMotion);
+      window.removeEventListener('deck-overview', syncMotion);
+    });
+    syncMotion();
     p.stop = () => { if (stopped) return; stopped = true; cancelAnimationFrame(raf); resolve(false); };
     if (signal) {
       signal.addEventListener('abort', p.stop, { once: true });
