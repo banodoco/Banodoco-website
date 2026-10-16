@@ -257,6 +257,17 @@
     }
     if (a > 0.004) { g.fillStyle = `rgba(${c},${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
   };
+  // Where a flight is a fraction k of the way: its curve, eased in and out; a tool's orb takes its size and colour as it lands.
+  const along = (f, k) => {
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    const u = 1 - e;
+    const x = u * u * f.x0 + 2 * u * e * f.cx + e * e * f.x1;
+    const y = u * u * f.y0 + 2 * u * e * f.cy + e * e * f.y1;
+    const w = smooth(clamp((k - 0.35) / 0.65)); // size and colour come in as it lands
+    const r = f.r0 + (f.r1 - f.r0) * (f.dot ? w : e);
+    const c = f.c0.map((v, j) => Math.round(v + (f.c1[j] - v) * (f.dot ? w : e)));
+    return { x, y, r, c };
+  };
   const fly = (now) => {
     const t = (now - began) / 1000;
     g.clearRect(0, 0, innerWidth, innerHeight);
@@ -274,13 +285,7 @@
         orb(f.x1, f.y1, f.r1, f.c1, 0.92 * fade, 0.35 * (1 - smooth(m)));
         return true;
       }
-      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      const u = 1 - e;
-      const x = u * u * f.x0 + 2 * u * e * f.cx + e * e * f.x1;
-      const y = u * u * f.y0 + 2 * u * e * f.cy + e * e * f.y1;
-      const w = smooth(clamp((k - 0.35) / 0.65)); // size and colour come in as it lands
-      const r = f.r0 + (f.r1 - f.r0) * (f.dot ? w : e);
-      const c = f.c0.map((v, j) => Math.round(v + (f.c1[j] - v) * (f.dot ? w : e)));
+      const { x, y, r, c } = along(f, k);
       let a = f.dot ? 0.92 * Math.min(1, k * 6) : 0.75;
       if (!f.dot && drawn) a *= clamp(1 - (t - 0.95) / 0.7);
       if (!f.dot && a <= 0.01) return false;
