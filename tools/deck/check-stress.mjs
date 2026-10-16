@@ -259,12 +259,12 @@ async function touch(browser) {
     await swipe(page, [100, 400], [260, 405]); await check('back', 10);
   }, phone);
   await run(browser, 'K', 'iPhone WebKit: vertical gestures with 45 px horizontal drift', async ({ page, check, rec }) => {
-    // Preserve the original scenario and current dx > 40 navigation contract:
-    // these gestures go back one slide (also observed in stress-results.json).
-    rec.behavior = '45 px right drift navigates back, even on a mostly vertical gesture';
+    // Swipes need horizontal intent (E-N4): a mostly vertical gesture with
+    // 45 px of sideways drift is a scroll attempt and stays on its slide.
+    rec.behavior = 'a mostly vertical gesture with 45 px drift stays put';
     for (const n of [2, 9]) {
       await hash(page, n); await check(`start ${n}`, n);
-      await swipe(page, [200, 600], [245, 300]); await check(`vertical drift ${n}`, n - 1);
+      await swipe(page, [200, 600], [245, 300]); await check(`vertical drift ${n}`, n);
     }
   }, phone);
 }
