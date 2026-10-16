@@ -114,7 +114,9 @@
   .dt-net { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
   html[data-ver="f"] body { background: transparent; }
   .dt-dot { position: fixed; left: 0; top: 0; z-index: 2; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
-  html[data-ver="f"] .dt-net.is-on, html[data-ver="f"] .dt-dot.is-on { opacity: 1; }
+  /* The Mycelial mark has its own small canvas over the network, never quieted with it. */
+  .dt-mark { position: fixed; left: 0; top: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  html[data-ver="f"] .dt-net.is-on, html[data-ver="f"] .dt-dot.is-on, html[data-ver="f"] .dt-mark.is-on { opacity: 1; }
   .dt-dot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%;
     background: radial-gradient(circle at 40% 35%, #fff1cf, #f0c877 55%, #c98f3e); box-shadow: 0 0 10px #ffd99177; transition: opacity .25s ease; }
   .dt-dot.is-moving i { opacity: 0; }
@@ -215,8 +217,8 @@
   html[data-ver="f"] .ac-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   html[data-ver="f"] .ac-host h1 { max-width: 18.4em; margin: 0 auto; text-wrap: balance; font-size: clamp(2rem, 3.7vw, 3.7rem); }
   html[data-ver="f"] .ac-host .num { font-size: clamp(1rem, 1.35vw, 1.5rem); }
-  /* While the picture is up, the network the earlier slides left behind steps back; slide 4's own node stays. */
-  html[data-ver="f"].ac-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the picture is up, the network the earlier slides left behind steps back a little; slide 4's own node stays. */
+  html[data-ver="f"].ac-quiet .dt-net.is-on { opacity: .55; transition: opacity .6s ease; }
   .ac-host > .num, .ac-host > .split { position: relative; z-index: 1; }
   .ac-nw { white-space: nowrap; }
   .ac { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
@@ -377,8 +379,8 @@
   /* From slide 6 the slide shows at once, so the mink's power-up can play over the stack as it recedes. */
   .slide.pa-arrive { transition: none; }
   html[data-ver="f"] .pa-host .body, html[data-ver="f"] .pa-host .vis, html[data-ver="f"] .pa-host .e-note { display: none; }
-  /* While the picture is up, the network the earlier slides left behind steps back, as on slide 4. */
-  html[data-ver="f"].pa-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the picture is up, the network the earlier slides left behind steps back a little, as on slide 4. */
+  html[data-ver="f"].pa-quiet .dt-net.is-on { opacity: .6; transition: opacity .6s ease; }
   .pa-host > .num, .pa-host > .split { position: relative; z-index: 1; }
   .pa { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .pa-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -546,13 +548,14 @@
   html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 36vw); }
   html[data-ver="f"] .fl-host h1 { max-width: 13.6em; font-size: clamp(1.7rem, 2.55vw, 2.9rem); text-wrap: balance; }
   html[data-ver="f"] .fl-host .body, html[data-ver="f"] .fl-host .vis { display: none; }
-  html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .5; transition: opacity .6s ease; }
   .fl-host > .num, .fl-host > .split { position: relative; z-index: 1; }
   .fl { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .fl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .fl-ax { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; font: italic 400 1.2rem/1.2 "Cormorant Garamond", serif; color: #ecc57e;
     text-shadow: 0 0 3px #0d0a07, 0 0 7px #0d0a07, 0 0 14px #0d0a07; }
   .fl-core { color: #f0c67e; transition: opacity .6s ease; }
+  .fl-measure { visibility: hidden; }
   .fl.is-labelled .fl-core { opacity: 1; }
   .fl-count { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: .5em; opacity: 0; transition: opacity .8s ease; white-space: nowrap; }
   .fl.is-counting .fl-count { opacity: 1; }
@@ -576,10 +579,11 @@
   html[data-ver="f"] .fw-host .cap, html[data-ver="f"] .fw-host .e-note { display: none; }
   html[data-ver="f"] .fw-raise { justify-content: center; padding-bottom: 4vh; }
   html[data-ver="f"] .fw-raise h1 { max-width: 13em; font-size: clamp(2.1rem, 3.7vw, 3.9rem); }
+  .fw-sub { max-width: 30em; margin: 1.1rem auto 0; font-size: clamp(1.02rem, 1.3vw, 1.25rem); line-height: 1.5; color: var(--soft); text-wrap: balance; }
   /* Slide 10: the text at the very top, the wheel and its initiatives below it (9 bottom, 10 top, 11 middle). */
   html[data-ver="f"] .fw-top { justify-content: flex-start; padding-top: max(40px, 5.6vh); padding-bottom: 0; }
-  /* While the wheel is up, the network the earlier slides left behind steps back, as on slides 4 and 8. */
-  html[data-ver="f"].fw-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the wheel is up, the network the earlier slides left behind steps back a little, as on slides 4 and 8. */
+  html[data-ver="f"].fw-quiet .dt-net.is-on { opacity: .6; transition: opacity .6s ease; }
   .fw-alt { position: absolute; inset: 0; pointer-events: none; }
   .fw { position: fixed; inset: 0; z-index: -1; pointer-events: none; user-select: none; -webkit-user-select: none; opacity: 0; transition: opacity .5s ease; }
   html[data-ver="f"] .fw.is-on { opacity: 1; }
@@ -606,8 +610,18 @@
   .fw-cbody span { font: italic 400 .9em/1.28 "Cormorant Garamond", serif; color: #cbbfa9; }
   .fw-cbody a, .fw-cbody em { margin-top: .2em; font: italic 500 .88em/1.2 "Cormorant Garamond", serif; color: #f0c67e; text-decoration: none; letter-spacing: .02em; }
   .fw-cbody em { color: #a39684; }
-  .fw-cards.is-live .fw-cbody a { pointer-events: auto; }
+  .fw-cards.is-live .fw-card { pointer-events: auto; }
+  .fw-card.is-compact .fw-cbody span { display: none; }
+  .fw-card.is-icon { cursor: pointer; }
   .fw-cbody a:hover, .fw-cbody a:focus-visible { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; outline: none; }
+  /* Astrid's card: a still of slide 5's editor, its preview over its timeline, and the mink's seat. */
+  .fw-astrid { position: relative; display: flex; flex-direction: column; gap: 5%; height: 100%; padding: 5% 5% 4%; background: #24211b; }
+  .fw-astrid > img { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: cover; border-radius: 3px; filter: brightness(.84) saturate(.92); }
+  .fw-tl { position: relative; flex: none; display: flex; gap: 2px; height: 22%; padding: 2px 2px 2px 24%; border-radius: 3px; background: #1b1915; border: 1px solid #4a4337; }
+  .fw-tl i { flex: 1; border-radius: 2px; background-size: cover; background-position: center; border: 1px solid #4a4337; }
+  .fw-tl b { position: absolute; top: 0; bottom: 0; left: 46%; width: 2px; background: #38bdf8; box-shadow: 0 0 5px #38bdf880; }
+  .fw-seat { position: absolute; left: 5.5%; bottom: 4%; image-rendering: pixelated; opacity: 0; }
+  .fw-fly { position: absolute; left: 0; top: 0; z-index: 4; image-rendering: pixelated; opacity: 0; pointer-events: none; }
   /* ArtCompute's stat band in its own terminal palette (artcompute.org: ground #0a0a0a, neon green, violet). */
   .fw-ac { display: flex; flex-direction: column; justify-content: center; gap: .6em; height: 100%; padding: .55em .75em; background: #0a0a0a;
     font: 500 .68em/1.15 ui-monospace, "SF Mono", Menlo, monospace; color: #8a8a8a; letter-spacing: .05em; }
@@ -616,6 +630,16 @@
   .fw-ac-stats b { font-size: 1.6em; font-weight: 600; color: #ededed; }
   .fw-ac-stats b.g { color: #39ff14; } .fw-ac-stats b.v { color: #a78bfa; }
   .fw-ac-l { margin-bottom: -.2em; text-transform: uppercase; font-size: .78em; color: #6e6e6e; }
+  .fw-ac .fw-avs img { width: 2.6em; height: 2.6em; margin-left: -.5em; filter: saturate(.55) sepia(.2) brightness(.92); }
+  .fw-ac .fw-avs img:first-child { margin-left: 0; }
+  /* Banodoco's card: its homepage card, the community's own daily digest from the Discord, with a blurple rule. */
+  .fw-dc { display: flex; flex-direction: column; justify-content: center; gap: .45em; height: 100%; padding: .6em .8em; background: #1e1f22; }
+  .fw-dc-ch { font: 500 .62em/1 ui-monospace, "SF Mono", Menlo, monospace; color: #949ba4; letter-spacing: .04em; }
+  .fw-dc-t { padding-left: .55em; border-left: 2px solid #5865f2; font: 500 .74em/1.3 "Inter", system-ui, sans-serif; color: #f2f3f5; }
+  .fw-dc-p { display: flex; align-items: center; gap: .55em; font: italic 400 .86em/1 "Cormorant Garamond", serif; color: #b8a98f; }
+  .fw-dc-p b { font-style: normal; font-weight: 500; color: #ecc57e; }
+  .fw-dc-p .fw-avs img { width: 1.9em; height: 1.9em; margin-left: -.4em; filter: saturate(.55) sepia(.2) brightness(.92); }
+  .fw-dc-p .fw-avs img:first-child { margin-left: 0; }
   .fw-avs { display: flex; align-items: center; }
   .fw-avs img { width: 2.6em; height: 2.6em; border-radius: 50%; border: 1px solid #0a0a0a; margin-left: -.5em; object-fit: cover; }
   .fw-avs img:first-child { margin-left: 0; }
@@ -631,8 +655,10 @@
     html[data-ver="f"] .fw-top { padding: 52px 24px 0; }
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.25rem, 5.6vw, 1.6rem); max-width: 8.6em; }
     .fw-cbody span { display: none; }
+    .fw-dc { gap: .3em; padding: .35em .5em; } .fw-dc-ch { display: none; } .fw-dc-t { font-size: .62em; }
     .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-ac-l { display: none; } .fw-ac-stats > span { padding: .35em .4em; }
     .fw-stat { margin-top: .6rem; font-size: 1rem; }
+    .fw-sub { margin-top: .7rem; font-size: .95rem; line-height: 1.4; max-width: 17em; }
   }
 
   @media (max-width: 760px) {
@@ -787,6 +813,13 @@
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); transition: width 0.5s ease; }
   .chrome button { background: none; border: 1px solid #ffffff22; color: var(--soft); font: inherit; padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; }
   .chrome button:hover { color: var(--ink); border-color: var(--gold); }
+  /* Previous / next: quiet gold rings either side of the counter. Outside the deck, so the click-thirds never see them. */
+  .chrome .navb { display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
+  .chrome .navb i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgb(240 200 119 / .32); background: rgb(13 10 7 / .6); transition: border-color .25s ease, background-color .25s ease, color .25s ease; }
+  @media (hover: hover) { .chrome .navb:hover:not(:disabled) i { border-color: rgb(255 214 150 / .8); background: rgb(240 200 119 / .1); color: #ffd991; } }
+  .chrome .navb:focus-visible { outline: none; } .chrome .navb:focus-visible i { outline: 1px solid #f0c67e; outline-offset: 2px; }
+  .chrome .navb:disabled { cursor: default; opacity: .22; }
+  .chrome #count { min-width: 3.4em; text-align: center; font-variant-numeric: tabular-nums; }
 
   /* Overview: every title on one screen, to read the story straight through. */
   .overview { position: fixed; inset: 0; background: var(--bg); z-index: 3; overflow-y: auto; display: none;
@@ -829,8 +862,10 @@
     .body { font-size: 1.05rem; }
     .m-collage { aspect-ratio: 4 / 3; }
     .m-grid4 img { max-height: 200px; }
-    .chrome { gap: 0.5rem; padding: 0.8rem 12px; font-size: 0.75rem; }
+    .chrome { gap: 0.5rem; padding: 0.35rem 12px; font-size: 0.75rem; }
     .chrome button { padding: 0.4rem 0.55rem; }
+    .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
+    .chrome .navb i { width: 30px; height: 30px; }
     .chrome .bar { min-width: 8px; }
     .d-cards { gap: 0.5rem; }
     .d-cards > div { padding: 0.65rem 0.85rem; }
@@ -969,7 +1004,7 @@
   </section>
 
   <section class="slide st-host" data-v="f">
-    <div class="st" data-astrid-stack role="group" aria-label="One stack, from the top: rendering, the timeline, effects, the agent's tools, and the models and runtime at the foundation, rooted in the community. Each layer's flag opens examples of what can be customised there."></div>
+    <div class="st" data-astrid-stack role="group" aria-label="One stack, from the top: rendering, editing, effects, the agent's tools, and the models and runtime at the foundation, rooted in the community. Each layer's flag opens examples of what can be customised there."></div>
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
@@ -1059,7 +1094,7 @@
   </section>
 
   <section class="slide fw-host fw-top" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The flywheel grown bigger round a glowing core, with our four initiatives round it, each plugging energy into the ring: Arca Gidan, an open source AI art competition; 2RP, an art and tech publication; ArtCompute, micro-grants for open AI work; ADOS, events that bring the community together; Astrid sits in the corner"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel grown wider round a glowing core, with six cards round it, each plugging energy into the ring: above, Arca Gidan, an open source AI art competition, ArtCompute, micro-grants for open AI work, and Astrid, a new kind of video editor; below, Banodoco, the community’s home with 20,000+ people, 2RP, a publication coming soon, and ADOS, events that bring the community together"></div>
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
       <div>
@@ -1076,11 +1111,12 @@
   </section>
 
   <section class="slide fw-host fw-raise" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a halo round the words, with the four initiatives round it and Astrid in the corner"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a halo round the words, with the six as icons on it: Arca Gidan, ArtCompute and Astrid above, Banodoco, 2RP and ADOS below"></div>
     <div class="num">11<span class="act">The raise</span></div>
     <div class="split">
       <div>
         <h1>Join us: we’re raising $1M from angels and small funds <em>who want the open ecosystem to win.</em></h1>
+        <p class="fw-sub">We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI.</p>
         <div class="body">[What it gets us to — e.g. Astrid opened up as a platform, the first community-built tools, N active creators — and over what timeframe.]</div>
       </div>
       <div class="vis">
@@ -1108,7 +1144,9 @@
 
 
 <div class="chrome">
+  <button id="prevBtn" class="navb" type="button" aria-label="Previous slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
   <span id="count">1 / 12</span>
+  <button id="nextBtn" class="navb" type="button" aria-label="Next slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
   <div class="bar"><i id="fill"></i></div>
   <button id="ovBtn" type="button">All titles (O)</button>
 </div>
@@ -1118,6 +1156,7 @@
   const ver = 'f'; // the deck is Version F; F-scoped styles and scripts key off html[data-ver="f"]
   let slides = [];
   const count = document.getElementById('count'), fill = document.getElementById('fill');
+  const prevBtn = document.getElementById('prevBtn'), nextBtn = document.getElementById('nextBtn');
   const ov = document.getElementById('overview'), list = document.getElementById('list');
   let i = 0;
 
@@ -1126,6 +1165,7 @@
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
     count.textContent = `${i + 1} / ${slides.length}`;
+    prevBtn.disabled = i === 0; nextBtn.disabled = i === slides.length - 1;
     fill.style.width = `${((i + 1) / slides.length) * 100}%`;
     history.replaceState(null, '', `${location.pathname}#${i + 1}`);
   };
@@ -1156,6 +1196,8 @@
   });
   document.getElementById('deck').addEventListener('click', (e) => go(i + (e.clientX < innerWidth / 3 ? -1 : 1)));
   document.getElementById('ovBtn').onclick = () => toggleOv();
+  prevBtn.onclick = () => go(i - 1);
+  nextBtn.onclick = () => go(i + 1);
   let tx = null;
   addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
   addEventListener('touchend', (e) => {
