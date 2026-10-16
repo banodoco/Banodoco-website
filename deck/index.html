@@ -1211,6 +1211,17 @@
   let i = 0;
   let initialized = false, turnController = null;
   window.deckNav = { from: null, to: 0, dir: 0, rest: false, signal: null };
+  // One viewport notification for the slide pictures. A phone's browser chrome can
+  // report several sizes in one gesture; only lay out after the last one.
+  const resizeSubscribers = new Set();
+  let resizeTimer = 0;
+  window.deckOnResize = (fn) => { resizeSubscribers.add(fn); return () => resizeSubscribers.delete(fn); };
+  const scheduleResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => resizeSubscribers.forEach((fn) => fn()), 120);
+  };
+  addEventListener('resize', scheduleResize);
+  window.visualViewport?.addEventListener('resize', scheduleResize);
 
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));

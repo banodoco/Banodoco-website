@@ -99,6 +99,15 @@
     if (e.key === 'Escape') hide();
   }, true);
   addEventListener('touchend', (e) => { if (open) e.stopPropagation(); }, true);
+  window.deckOnResize(() => {
+    if (!open) return;
+    const r = open.getBoundingClientRect();
+    at = fit(r.width / r.height);
+    Object.assign(frame.style, {
+      transition: 'none', transform: 'none', left: `${at.x}px`, top: `${at.y}px`, width: `${at.w}px`, height: `${at.h}px`,
+    });
+    requestAnimationFrame(() => { if (open) frame.style.transition = ''; });
+  });
 
   playing(slide.classList.contains('on'));
 })();
