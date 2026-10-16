@@ -470,9 +470,9 @@
     }
   };
 
-  // The mark rides on its own canvas, moved into place. Its art is redrawn only while it changes: once it has drawn
-  // itself in and holds still (the large crown behind the last slide's words) it is left as it is, and the crown folds
-  // away by the canvas's transform rather than by redrawing.
+  // The mark rides on its own canvas, moved into place. Its art is redrawn only while it changes: the opening mark as
+  // it draws itself in and rides out; the large crown behind the last slide's words is drawn once, at its finished art,
+  // and comes in and folds away by the canvas's opacity and scale (crown(), uncrown()).
   let markBox = 0, markKey = '';
   const drawMarkLayer = () => {
     if (!mark) {
@@ -480,14 +480,14 @@
       return;
     }
     const B = Math.ceil(mark.size * 1.5 + 16);
-    const fold = mark.crown && mark.folding !== undefined ? 1 - 0.94 * mark.shrink : 1;
-    const tf = `translate(${(mark.x - B / 2).toFixed(1)}px, ${(mark.y - B / 2).toFixed(1)}px)${fold < 1 ? ` scale(${fold.toFixed(4)})` : ''}`;
-    if (markCv.style.transform !== tf) markCv.style.transform = tf;
+    const tl = `${(mark.x - B / 2).toFixed(1)}px ${(mark.y - B / 2).toFixed(1)}px`;
+    if (markCv.style.translate !== tl) markCv.style.translate = tl;
     // Its own resolution, budgeted by pixels rather than capped like the full-screen network: the small marks (the
     // opening, the thread's tip) are drawn at up to 3x so they stay crisp on a phone; a surface that would pass about
     // 1.5 megapixels there (the large faint crown) is drawn at the network's 2x.
     const md = (B * Math.min(3, devicePixelRatio || 1)) ** 2 > 1.5e6 ? Math.min(2, devicePixelRatio || 1) : Math.min(3, devicePixelRatio || 1);
-    const key = `${B}|${md}|${mark.x}|${mark.y}|${fold < 1 ? 0 : mark.shrink}|${Math.min(mark.t, 1.2)}`;
+    const art = mark.crown ? { ...mark, t: 2, shrink: 0 } : mark;
+    const key = `${B}|${md}|${mark.x}|${mark.y}|${art.shrink}|${Math.min(art.t, 1.2)}`;
     if (key === markKey) return;
     markKey = key;
     if (B !== markBox || markCv.width !== Math.round(B * md)) {
@@ -499,7 +499,7 @@
     mg.clearRect(0, 0, B, B);
     mg.lineCap = 'round';
     mg.lineJoin = 'round';
-    drawMark(mg, fold < 1 ? { ...mark, shrink: 0 } : mark, B / 2, B / 2);
+    drawMark(mg, art, B / 2, B / 2);
   };
 
   // The settled ground, then what is still growing on it, softened under the text together; then the passing
@@ -814,9 +814,18 @@
     const c = crownAt() || { x: at.x, y: at.y, size: 160 };
     mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: 0.3 };
     zones.push(Object.assign(disc(mark.x, mark.y, c.size * 0.42), { crown: true, a: now ? 1 : 0 }));
+    markCv.getAnimations().forEach((a) => a.cancel());
+    if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
     wake();
   };
-  const uncrown = () => { if (mark && mark.crown) { mark.folding = 0; wake(); } };
+  const uncrown = () => {
+    if (!mark || !mark.crown) return;
+    mark.folding = 0; // step() times it; the canvas folds into its middle as it fades
+    const cs = getComputedStyle(markCv), from = { opacity: cs.opacity, scale: cs.scale === 'none' ? '1' : cs.scale };
+    markCv.getAnimations().forEach((a) => a.cancel());
+    markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    wake();
+  };
 
   // First load: the mark draws itself in the middle of the screen over its
   // name, then rides a growing thread out to the slide's node, shrinking and
@@ -842,6 +851,7 @@
     textOf(current).forEach((el) => mask(el, anchor, 0));
     clearNet();
     mark = { x: c.x, y: c.y, t: 0, size, shrink: 0, trail: null, shed: 0 };
+    markCv.getAnimations().forEach((an) => an.cancel());
     wake();
     opening = { timers: [], trail: null };
     name.classList.remove('is-resting');
