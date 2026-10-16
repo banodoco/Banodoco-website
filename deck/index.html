@@ -1438,12 +1438,31 @@
   const pendingTurns = [];
   let turn = null, pace = 1;
   let backlogDeadline = 0;
+  const BACK_PACE = 1.6; // A calm step back keeps the full reverse motion, about two seconds for the long ones.
+  const BACK_CHAIN_PACE = 2.2; // A back following another recent back gets out of the viewer's way sooner.
+  const BACK_CHAIN_MS = 4000; // Four seconds after a back lands, the next back returns to the calm pace.
+  const FLICK_PACE = 4; // A viewer flicking through slides sees each hand-off but lands quickly.
+  const FLICK_COUNT = 3; // Three accepted steps qualify as a flick.
+  const FLICK_WINDOW_MS = 2000; // Those steps must arrive within two seconds.
+  const FLICK_REVERSAL_MS = 1000; // A quick reversal after a landing also qualifies as a flick.
+  const FLICK_RESET_MS = 3000; // A calm gap between presses ends flick mode.
+  const pressHistory = [];
+  let flicking = false, lastPressAt = -Infinity, lastTurnEndAt = -Infinity, lastTurnDir = 0, lastBackEndAt = -Infinity;
+  const notePress = (dir) => {
+    const now = performance.now();
+    if (now - lastPressAt >= FLICK_RESET_MS) { pressHistory.length = 0; flicking = false; }
+    lastPressAt = now;
+    pressHistory.push(now);
+    while (pressHistory[0] < now - FLICK_WINDOW_MS) pressHistory.shift();
+    if (pressHistory.length >= FLICK_COUNT ||
+        (dir !== lastTurnDir && lastTurnDir && now - lastTurnEndAt <= FLICK_REVERSAL_MS)) flicking = true;
+  };
   // Virtual milliseconds through the network arrival and the picture's entry,
   // with room for the longest node path. The final queued turn is not in this
-  // budget: it STARTS by the deadline, then plays at normal speed.
+  // budget: it STARTS by the deadline, then plays at its chosen step pace.
   const turnBudgets = [3200, 4300, 4000, 5600, 3400, 5000, 5600, 4000, 4000, 3200, 3200];
   const hurry = () => {
-    if (!turn || !pendingTurns.length) { setPace(1); return; }
+    if (!turn || !pendingTurns.length) { setPace(turn?.basePace || 1); return; }
     const elapsed = turn.ceiling ? turn.ceilingMs - turn.ceiling.left : 0;
     let remaining = Math.max(250, turn.budget - elapsed), target = i;
     for (const queued of pendingTurns.slice(0, -1)) {
@@ -1453,7 +1472,7 @@
     // Leave a few frames per hand-off for timers, arrival and layout. At 16×
     // even the short stage morphs still have several painted frames.
     const available = Math.max(100, backlogDeadline - performance.now() - pendingTurns.length * 48);
-    setPace(Math.min(16, Math.max(4, remaining / available)));
+    setPace(Math.min(16, Math.max(FLICK_PACE, remaining / available)));
   };
   // A timer's remaining time is measured on the same clock as the slide builds.
   // Its handle can be cancelled even after the underlying timeout is rescheduled.
@@ -1505,6 +1524,9 @@
   const finishTurn = () => {
     if (!turn || !turn.network || !turn.entry) return;
     window.deckCancelLater(turn.ceiling);
+    lastTurnEndAt = performance.now();
+    lastTurnDir = turn.dir;
+    if (turn.dir < 0) lastBackEndAt = lastTurnEndAt;
     turn = null;
     setPace(1);
     if (pendingTurns.length) queueMicrotask(() => {
@@ -1566,8 +1588,11 @@
     const back = stepped && dir < 0 && to === from - 1 && !reversePair;
     window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, back, signal: turnController.signal };
     const ceilingMs = from === null ? 18000 : 12000;
-    turn = { to, network: reduced, entry: reduced, ceiling: null, ceilingMs, rewinding: false,
+    const basePace = !stepped ? 1 : flicking ? FLICK_PACE : dir < 0
+      ? (performance.now() - lastBackEndAt < BACK_CHAIN_MS ? BACK_CHAIN_PACE : BACK_PACE) : 1;
+    turn = { to, dir: stepped ? dir : 0, basePace, network: reduced, entry: reduced, ceiling: null, ceilingMs, rewinding: false,
       budget: from === null ? 6500 : turnBudgets[to] };
+    setPace(basePace);
     document.documentElement.dataset.dir = String(dir);
     i = to;
     initialized = true;
@@ -1589,6 +1614,10 @@
   };
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
+    pressHistory.length = 0;
+    flicking = false;
+    lastTurnDir = 0;
+    lastBackEndAt = -Infinity;
     if (initialized && to === i) { pendingTurns.length = 0; setPace(1); return; }
     pendingTurns.length = 0;
     turn = null;
@@ -1599,6 +1628,7 @@
     if (!slides.length || reduced) { go(i + dir, mode); return; }
     const target = i + pendingTurns.reduce((n, queued) => n + queued.dir, 0) + dir;
     if (target < 0 || target >= slides.length) return;
+    notePress(dir);
     if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, true); return; }
     pendingTurns.push({ dir, mode });
     backlogDeadline = performance.now() + 1500;
