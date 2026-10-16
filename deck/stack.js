@@ -469,12 +469,11 @@
   // build: { t0, from5, src } while the stack is assembling; ambient afterwards.
   let build = null, amb = null;
   // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place.
-  // open: every plane is in place, so the tour starts while the threads, leaders and roots finish, and the first
-  // layer's card opens as its flag comes in rather than once the whole build has run.
+  // card: the top layer has landed, and its card opens as the words arrive, so the landing is never without one.
+  // open: every plane is in place, so the tour takes over while the threads, leaders and roots finish.
   const FROM5 = { a: { 0: [0.05, 1.3], 1: [0.12, 1.42], 3: [0.2, 1.62] }, spread: [1.0, 2.1], low: { 2: [1.25, 2.15], 4: [1.5, 2.4] }, fade: [0.25, 0.45, 0.72, 0.56, 0.86],
-    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], open: 2.4, end: 3.4 };
-  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], open: 1.45, end: 2.25 };
-  const SOON = 450; // ms: landing at rest, the first card opens this soon
+    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, open: 2.4, end: 3.4 };
+  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, open: 1.45, end: 2.25 };
   const demo = document.querySelector('[data-astrid-demo]');
   const slide5 = demo && demo.closest('.slide');
   const snapFrom5 = () => {
@@ -521,7 +520,9 @@
   const stepBuild = (t) => {
     const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
     // (Not while the entry is being hurried on to the next slide: no card opens just as the slide leaves.)
-    if (!amb && e >= T0.open && !(window.deckPace?.() > 1)) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
+    const hurried = window.deckPace?.() > 1;
+    if (!amb && openI < 0 && e >= T0.card && !hurried) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
+    if (!amb && e >= T0.open && !hurried) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
       st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
       clearGhosts();
       amb = { t }; tourFrom(0, t);
@@ -569,7 +570,7 @@
     if (!amb) { apply(); draw(); }
     if (e >= T0.end) {
       build = null;
-      if (amb) { vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; } else { settleAll(); amb = { t }; tourFrom(0, t + SOON); }
+      if (amb) { vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; } else { settleAll(); amb = { t }; tourFrom(0, t + 1100); }
       window.deckEntryDone?.(slide);
     }
   };
@@ -707,7 +708,7 @@
     if (still || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
       window.deckEntryDone?.(slide);
-      if (!still) { amb = { t: now() }; tourFrom(0, now() + SOON); play(); wake(); }
+      if (!still) { amb = { t: now() }; tourFrom(0, now()); play(); wake(); } // landing at rest: the first card is open as it lands
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
