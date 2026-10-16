@@ -935,7 +935,7 @@
     .body { font-size: 1.05rem; }
     .m-collage { aspect-ratio: 4 / 3; }
     .m-grid4 img { max-height: 200px; }
-    .chrome { gap: 0.5rem; padding: 0.35rem 12px; font-size: 0.75rem; }
+    .chrome { gap: 0.5rem; padding: 0.35rem max(12px, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); font-size: 0.75rem; }
     .chrome button { padding: 0.4rem 0.55rem; }
     .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
     .chrome .navb i { width: 30px; height: 30px; }
@@ -957,7 +957,7 @@
      the bottom ~72 px. */
   @media (orientation: landscape) and (max-height: 500px) {
     .slide { padding: 12px max(24px, 6vw) 76px; }
-    .chrome { gap: 0.5rem; padding: 0.35rem 12px; font-size: 0.75rem; }
+    .chrome { gap: 0.5rem; padding: 0.35rem max(12px, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); font-size: 0.75rem; }
     .chrome button { padding: 0.4rem 0.55rem; }
     .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
     .chrome .navb i { width: 30px; height: 30px; }
