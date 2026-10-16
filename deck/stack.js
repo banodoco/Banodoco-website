@@ -294,7 +294,7 @@
     // so every flag stays in reach. Near the foot of the screen the card rides up instead of pushing a flag off.
     geo.place = cards.map((_, j) => {
       const B = geo.base, T = B.slice(), lo = H - 58;
-      if (low) return { top: clamp(B[j] - ch[j] / 2, 12, H - 76 - ch[j]), flags: T };
+      if (low) return { top: Math.max(12, clamp(B[j] - ch[j] / 2, 12, H - 76 - ch[j])), flags: T }; // never above the top
       let top = clamp(B[j] - 22, 14, H - 72 - ch[j]);
       for (let pass = 0; pass < 2; pass++) {
         const bot = top + ch[j];
