@@ -1017,6 +1017,7 @@
     armed = false; hov.fill(0); hoT.fill(0);
     T = T_HAND; ta = Math.min(ta, HAND_END);
     unhanding = { snapped: false, shown: false, fade: 0 };
+    window.AstridFlowers.holdCore?.(true); // the core is drawn here until it has landed in slide 8's lens
     flSlide.classList.add('dt-return', 'dt-await');
     window.deckRewinding?.(flSlide);
     signal?.addEventListener('abort', endUnhand, { once: true });
@@ -1041,6 +1042,10 @@
   const endUnhand = () => {
     if (!unhanding) return;
     unhanding = null;
+    // Slide 8 takes its core back in this frame, and this layer lets go of its own (everything else here is gone by
+    // now, or stands where slide 8's own crowd stands), so there is never a second mink.
+    window.AstridFlowers?.holdCore?.(false);
+    if (stageOf() < 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height); }
     flSlide.classList.remove('dt-return', 'dt-await');
     window.deckRewound?.(flSlide);
     if (stageOf() >= 0) return;
