@@ -127,7 +127,7 @@
   let W = 0, H = 0, dpr = 1, k = 1, LW = 1, small = false, cell = 3, CAP = 4000;
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  let core = null, field = null, apps = [], dots = [], countBox = null, textBox = null, coreBox = null, lim = null, S = null, labelH = 20;
+  let core = null, field = null, apps = [], appBase = 0, dots = [], countBox = null, textBox = null, coreBox = null, lim = null, S = null, labelH = 20;
   let grid = new Map(), sp = 6, widths = new Map(); // widths: each name's measured width at the current size
 
   const put = (el, x, y, ax, ay, size) => {
@@ -164,7 +164,7 @@
   };
   const add = (d) => { dots.push(d); const kk = key(d.x, d.y); (grid.get(kk) || grid.set(kk, []).get(kk)).push(d); return d; };
   const person = (x, y, extra) => ({
-    x, y, r: (small ? 0.9 : 1.0) * Math.max(0.8, k) * (0.85 + rnd() * 0.55), a0: 0.27 + rnd() * 0.2, lights: [],
+    x, y, r: (small ? 0.9 : 1.0) * Math.max(0.8, k) * (0.85 + rnd() * 0.55), a0: 0.27 + rnd() * 0.2, lights: [], firstLit: extra.lights?.[0]?.t ?? Infinity,
     ph: rnd() * TAU, f: 0.35 + rnd() * 0.6, w: (1 + rnd() * 2.2) * k, bright: rnd() < 0.14, ...extra,
   });
   // How far the crowd reaches by app n: at first the open ground right of Astrid; then, from about the twentieth app,
@@ -193,6 +193,7 @@
   const lightAt = (d, t) => { let L = null; for (const l of d.lights) { if (l.t <= t) L = l; else break; } return L; };
 
   // ---- The apps, made one at a time as they are due, the same way every time for a given screen ---------------
+  // Keep only the visible/recent window. Absolute indices keep launch timing and labels unchanged.
   const makeApp = (n) => {
     const niche = NICHES[n % NICHES.length], name = niche.names[Math.floor(n / NICHES.length) % niche.names.length];
     const reg = regionOf(n), r = (small ? 9 : 13) * k;
@@ -208,7 +209,10 @@
         const px = lerp(cx0, cx1, rnd()), py = lerp(cy0, cy1, rnd());
         if (hit(textBox, px, py, (small ? 24 : 64) * k) || hit(countBox, px, py, (small ? 24 : 56) * k) || hit(coreBox, px, py, (small ? 24 : 60) * k)) continue;
         let dmin = Infinity;
-        for (let j = Math.max(0, n - 24); j < n; j++) dmin = Math.min(dmin, Math.hypot((px - apps[j].x) / 1.2, py - apps[j].y));
+        for (let j = Math.max(appBase, n - 24); j < n; j++) {
+          const prior = apps[j - appBase];
+          if (prior) dmin = Math.min(dmin, Math.hypot((px - prior.x) / 1.2, py - prior.y));
+        }
         const score = dmin + rnd() * 20 * k;
         if (score > best) { best = score; x = px; y = py; }
       }
@@ -237,7 +241,10 @@
       const dd = Math.hypot((d.x - x) / 1.25, (d.y - y) / 0.9);
       if (dd >= R * 1.08) return;
       const t = Math.max(light(dd), d.t0 + 0.4), last = d.lights[d.lights.length - 1];
-      if (!last || t - last.t > 10) d.lights.push({ t, app: n });
+      if (!last || t - last.t > 10) {
+        d.lights.push({ t, app: n });
+        if (!Number.isFinite(d.firstLit)) d.firstLit = t;
+      }
     });
     const room = CAP - dots.length - (small ? 20 : 60);
     const want = Math.min(room, Math.round((n < FIRST.length ? 34 + 4 * n : 42 + rnd() * 34) * (small ? 0.5 : 1)));
@@ -251,13 +258,14 @@
       got++;
     }
     apps.push(app);
+    if (apps.length > WINDOW) { apps.shift(); appBase++; }
     // And the crowd beyond keeps growing with each, reaching further as it goes.
     const far = 1 - 0.3 * spread(n);
     scatter(Math.round((n < FIRST.length ? 40 : 34) * (small ? 0.3 : 1)), (small ? 7 : 8) * k * far, () => app.T + 0.3 + rnd() * 1.8, reg,
       (px, py) => apps.some((a) => a.i > n - 4 && Math.hypot((px - a.x) / 1.25, (py - a.y) / 0.9) < a.R * 1.1), far);
     return app;
   };
-  const ensure = (t) => { if (!core) return; while (launchAt(apps.length) <= t + 0.05) makeApp(apps.length); };
+  const ensure = (t) => { if (!core) return; while (launchAt(appBase + apps.length) <= t + 0.05) makeApp(appBase + apps.length); };
 
   const layout = () => {
     const b = root.getBoundingClientRect();
@@ -310,7 +318,7 @@
     widths = new Map();
     pool.forEach((p) => { p.el.style.fontSize = measure.style.fontSize; p.text = ''; p.o = -1; p.el.style.opacity = '0'; });
     // The world before any app reaches it: sparse, fading in from Astrid outwards.
-    apps = []; dots = []; grid = new Map(); sp = small ? 5 : 6 * k;
+    apps = []; appBase = 0; dots = []; grid = new Map(); sp = small ? 5 : 6 * k;
     const reg0 = regionOf(0), span = W - field.x0;
     scatter(small ? 200 : 520, (small ? 9 : 10) * k, (x) => 0.1 + clamp((x - field.x0) / span) * 0.9 + rnd() * 0.3, reg0);
     return true;
@@ -435,8 +443,11 @@
     while (n >= 0 && apps[n].T > tc) n--;
     if (n < 0) return 0;
     let v = 0, i = n;
-    for (; i >= 0 && tc - apps[i].T < 1.5; i--) v += (reachOf(i) - reachOf(i - 1)) * ease(c01(apps[i].T, 1.5));
-    return v + reachOf(i);
+    for (; i >= 0 && tc - apps[i].T < 1.5; i--) {
+      const index = apps[i].i;
+      v += (reachOf(index) - reachOf(index - 1)) * ease(c01(apps[i].T, 1.5));
+    }
+    return v + reachOf(i >= 0 ? apps[i].i : appBase - 1);
   };
   const sig2 = (x) => { if (x <= 0) return 0; const p = Math.pow(10, Math.floor(Math.log10(x)) - 1); return Math.round(x / p) * p; };
   const fmt = (v) => { // two significant figures, then the unit: 720,000 · 7.5 million · 140 million · 1.5 billion
@@ -491,7 +502,12 @@
         if (qa <= 0) continue;
         [x, y] = pos(d);
       }
-      const Lt = d.lights.length ? lightAt(d, tc) : null, first = Lt ? d.lights[0].t : Infinity;
+      if (d.lights.length > 8) {
+        let lastPast = -1;
+        for (let j = 0; j < d.lights.length; j++) if (d.lights[j].t <= tc) lastPast = j;
+        if (lastPast > 0) d.lights.splice(0, lastPast);
+      }
+      const Lt = d.lights.length ? lightAt(d, tc) : null, first = d.firstLit;
       const lit = Lt ? smooth(clamp((tc - first) / 0.4)) : 0, since = Lt ? tc - Lt.t : Infinity, fl = since < 3 ? Math.exp(-since * 2.6) : 0;
       const tw = 0.78 + 0.22 * Math.sin(ta * d.f * 1.7 + d.ph);
       // Fresh, then warm for a while, then a quieter cream long after, so the newest communities stand out.
@@ -529,7 +545,7 @@
     // The core: from slide 7's place, or tracing itself. The builders' machines fold into it. Now and then, as an
     // app fires, the mink's eye glints.
     let pose = 'profile';
-    for (let i = Math.max(0, apps.length - 3); i < apps.length; i++) if (i % 4 === 0 && tc >= apps[i].L - 0.05 && tc < apps[i].L + 0.22) pose = 'glint';
+    for (let i = Math.max(0, apps.length - 3); i < apps.length; i++) if (apps[i].i % 4 === 0 && tc >= apps[i].L - 0.05 && tc < apps[i].L + 0.22) pose = 'glint';
     if (from) {
       const q = easeIO(k01(0, 1.1));
       const c = { x: lerp(from.core.x, core.x, q), y: lerp(from.core.y, core.y, q) };
@@ -569,7 +585,7 @@
   const labels = () => {
     tc = ta - off;
     const using = new Array(POOL).fill(null);
-    for (let i = Math.max(0, apps.length - POOL); i < apps.length; i++) { const l = labelAt(apps[i]); if (l) using[i % POOL] = { a: apps[i], ...l }; }
+    for (let i = Math.max(0, apps.length - POOL); i < apps.length; i++) { const l = labelAt(apps[i]); if (l) using[apps[i].i % POOL] = { a: apps[i], ...l }; }
     pool.forEach((p, j) => {
       const u = using[j];
       if (!u) { if (p.o !== 0) { p.el.style.opacity = '0'; p.o = 0; } return; }
@@ -684,7 +700,7 @@
       const b = root.getBoundingClientRect(), v = (x, y) => ({ x: b.left + x, y: b.top + y });
       const recent = apps.length ? apps[Math.max(0, apps.length - 12)].i : 0, fresh = [], rest = [];
       for (const d of dots) {
-        if (!d.lights.length || tc < d.lights[0].t + 0.2 || tc < d.t0 + 0.3) continue;
+        if (!d.lights.length || tc < d.firstLit + 0.2 || tc < d.t0 + 0.3) continue;
         const Lt = lightAt(d, tc);
         (Lt.app >= recent ? fresh : rest).push([d, Lt.app]);
       }
