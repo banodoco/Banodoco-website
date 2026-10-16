@@ -428,6 +428,8 @@
   .as-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; display: none; }
   .as-panel { transition: opacity .45s ease; } .as-panel > * { transition: opacity .5s ease .2s; }
   .as.is-morphing .as-panel, .as.is-morphing .as-panel > * { opacity: 0; transition: none; }
+  /* Going back to slide 4, the panels fade as their frames fold back into the rings (demo.js). */
+  .as.as-unmorph .as-panel, .as.as-unmorph .as-panel > *, .as.as-unmorph .as-try { opacity: 0; transition: opacity .45s ease; }
   .as-seat::before, .as-seat::after { transition: opacity .6s ease; }
   .as.is-morphing .as-seat::before, .as.is-morphing .as-seat::after, .as.is-minkless .as-mink { opacity: 0; transition: none; }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
@@ -1536,8 +1538,8 @@
     const dir = from === null ? 0 : Math.sign(to - from);
     if (turnController) turnController.abort();
     turnController = new AbortController();
-    // These two neighboring groups have their own approved reverse motion.
-    const reversePair = (from === 4 && to === 3) || (from !== null && from >= 8 && to >= 8);
+    // Slides 9–11 are one picture moving between them: its own motion plays both ways.
+    const reversePair = from !== null && from >= 8 && to >= 8;
     // Any other step back lands the earlier slide at rest while the picture plays its hand-off in reverse (back);
     // a jump back (hash, overview, history, Home) just lands at rest.
     const back = stepped && dir < 0 && to === from - 1 && !reversePair;

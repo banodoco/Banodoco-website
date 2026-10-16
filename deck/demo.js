@@ -386,11 +386,11 @@
     }
     return out;
   };
-  const startMorph = (snap) => {
+  const startMorph = (snap, back = false) => {
     const W = innerWidth, H = innerHeight, d = Math.min(2, devicePixelRatio || 1);
     sky.width = Math.round(W * d); sky.height = Math.round(H * d);
     sky.style.display = 'block';
-    root.classList.add('is-morphing', 'is-minkless');
+    if (!back) root.classList.add('is-morphing', 'is-minkless'); // (folding back, the editor is whole as it begins)
     sizeMink();
     const chat = root.querySelector('.as-chat').getBoundingClientRect(), edit = root.querySelector('.as-edit').getBoundingClientRect();
     const mr = minkCv.getBoundingClientRect();
@@ -529,7 +529,7 @@
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
     // Coming back from slide 6 the finished editor waits, hidden, for the stack to fold back into it (dt-await).
-    const busy = (morph ? drawMorph(t) : false) | stepBeats(slide.classList.contains('dt-await') ? 0 : dt) | stepMink(t);
+    const busy = (morph ? (morph.back ? unmorph(t) : drawMorph(t)) : false) | stepBeats(slide.classList.contains('dt-await') || morph?.back ? 0 : dt) | stepMink(t);
     drawPic(t);
     ticking = false;
     if (busy || requested) { requested = false; raf = requestAnimationFrame(tick); }
@@ -549,6 +549,7 @@
   const start = (fromCore) => {
     if (motionBlocked()) { pendingStart = fromCore; return; }
     pendingStart = null;
+    root.classList.remove('as-unmorph', 'is-morphing', 'is-minkless'); // folded away on the way back to slide 4
     // Also warm direct #5 entry.
     window.warmDeckMedia(slide);
     running = true;
@@ -572,6 +573,7 @@
     paused = false; pausedTime = 0; pendingStart = null; pausedVideos = [];
     if (raf) cancelAnimationFrame(raf);
     raf = 0; requested = false;
+    if (morph?.back) endUnmorph();
     if (morph) endMorph();
     softenNet(false);
     mink.seq = null; mink.hover = null;
@@ -581,19 +583,73 @@
   };
   window.AstridDemo = { turn, root };
 
+  // ---- Going back to slide 4 ------------------------------------------------------------------
+  // A step back: the morph from slide 4 played backwards. The panels fade as their frames fold back into the two
+  // rings, the chat and editor layers shrink back into them, the mink dissolves from the neck up as her outline
+  // rises back into the lens's, and the community's motes come home; then slide 4's own picture stands in its place.
+  const pace = () => window.deckPace?.() || 1;
+  const fold = () => {
+    const snap = window.AstridCore && window.AstridCore.snapshot(); // slide 4 has settled before this runs
+    if (!snap) return false;
+    startMorph(snap, true); // the same paths, measured from the editor as it stands (it hides slide 4's picture)
+    morph.back = { e: MORPH.end - 1e-3, last: 0, shown: false };
+    morph.steps = { resolve: true, handoff: true, turn: true };
+    slide.classList.add('dt-rewind');
+    coreSlide.classList.add('dt-return', 'dt-await');
+    window.deckRewinding?.(coreSlide);
+    window.deckNav?.signal?.addEventListener('abort', () => { if (morph?.back) { endUnmorph(); stop(); } }, { once: true });
+    wake();
+    return true;
+  };
+  const unmorph = (t) => {
+    const b = morph.back;
+    b.e = Math.max(0, b.e - Math.min(0.05 * pace(), (t - (b.last || t)) / 1000)); // now() runs at the turn's pace
+    b.last = t;
+    const e = b.e;
+    morph.steps = { resolve: e >= MORPH.resolve, handoff: e >= MORPH.handoff, turn: true };
+    if (e < MORPH.resolve + 0.5) root.classList.add('as-unmorph'); // the panels fade as their frames come back (as they faded in)
+    root.classList.toggle('is-morphing', e < MORPH.resolve);
+    root.classList.toggle('is-minkless', e < MORPH.handoff);
+    if (!b.shown && e <= 0.7) { b.shown = true; coreSlide.classList.remove('dt-await'); } // its labels come back as it forms
+    morph.t0 = t - e * 1000;
+    drawMorph(t);
+    if (e <= 0) { endUnmorph(); leave(); return false; }
+    return true;
+  };
+  const endUnmorph = () => {
+    if (!morph?.back) return;
+    window.AstridCore?.show(); // the very picture the flight layer has just drawn
+    endMorph();
+    sky.width = 0; sky.height = 0; // the flight layer is only needed in flight
+    root.classList.add('is-minkless'); // the editor and its mink stay folded away as slide 5 fades (until it next starts)
+    slide.classList.replace('dt-rewind', 'dt-rewound');
+    coreSlide.classList.remove('dt-return', 'dt-await');
+    window.deckRewound?.(coreSlide);
+  };
+
   const coreHost = document.querySelector('[data-astrid-core]');
   const coreSlide = coreHost && coreHost.closest('.slide');
+  const leave = () => {
+    if (slide.classList.contains('on')) return;
+    stop();
+    const signal = window.deckNav?.signal;
+    const timer = setTimeout(() => { if (!slide.classList.contains('on')) clearAll(); }, 700);
+    signal?.addEventListener('abort', () => clearTimeout(timer), { once: true });
+  };
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
+    if (morph?.back) { endUnmorph(); if (on) stop(); }
     if (on) start(!!coreSlide && !coreSlide.classList.contains('on') && records.some((r) => r.target === coreSlide));
-    else { stop(); const signal = window.deckNav?.signal; const timer = setTimeout(() => { if (!slide.classList.contains('on')) clearAll(); }, 700); signal?.addEventListener('abort', () => clearTimeout(timer), { once: true }); }
+    else if (coreSlide?.classList.contains('on') && window.deckNav?.back && !still && running && !paused && !morph && fold()) { /* folding back into slide 4 */ }
+    else leave();
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
+    if (motionBlocked() && morph?.back) { endUnmorph(); leave(); return; } // a reverse never waits behind the overview
     if (motionBlocked()) {
       if (!running || paused) return;
       pausedAt = performance.now(); paused = true;
@@ -616,6 +672,7 @@
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
+    if (morph?.back) { endUnmorph(); leave(); } // its paths were measured on the old screen
     if (!slide.classList.contains('on')) return;
     if (morph) { endMorph(); settledState(); td = -1; wait = 0; }
     layout();

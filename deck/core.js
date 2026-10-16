@@ -1050,6 +1050,7 @@
       };
     },
     hide() { canvas.style.opacity = '0'; },
+    show() { canvas.style.opacity = ''; }, // slide 5 folding back into this picture: it is whole again
   };
 
   if (slide.classList.contains('on')) { wasOn = true; enter(false); }
