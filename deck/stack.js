@@ -237,7 +237,8 @@
     view.oy = (Rg.t + Rg.b) / 2 - ((box.t + box.b) / 2) * k;
     world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
     dpr = Math.min(2, devicePixelRatio || 1);
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
+    if (cv.width !== pixelW || cv.height !== pixelH) { cv.width = pixelW; cv.height = pixelH; }
     cell = Math.max(1, Math.round(k * 3.4));
     // Settled geometry, in screen px: the corners the threads tie together, the flags' places, the roots.
     const corners = cw.map((c) => Object.fromEntries(Object.entries(c).map(([key, p]) => [key, toS(p)])));
@@ -663,6 +664,7 @@
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
     running = true;
+    layout();
     slide.classList.remove('st-arrive');
     softenNet(true);
     flags.forEach((f) => { f.tabIndex = 0; });

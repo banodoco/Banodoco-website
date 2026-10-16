@@ -181,9 +181,13 @@
     ceil = l.height ? l.top - s.top - 10 : h - 40;
   };
   const resize = () => {
-    w = stage.clientWidth; h = stage.clientHeight;
-    dpr = Math.min(2, devicePixelRatio || 1);
-    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    const nextW = stage.clientWidth, nextH = stage.clientHeight;
+    const nextDpr = Math.min(2, devicePixelRatio || 1);
+    const pixelW = Math.round(nextW * nextDpr), pixelH = Math.round(nextH * nextDpr);
+    if (canvas.width !== pixelW || canvas.height !== pixelH) {
+      canvas.width = pixelW; canvas.height = pixelH;
+    }
+    w = nextW; h = nextH; dpr = nextDpr;
     measure();
   };
   if (text) new ResizeObserver(measure).observe(text); // fonts landing reflow the headline
@@ -517,8 +521,8 @@
 
   const start = (arriving) => {
     if (running || !slide.classList.contains('on') || document.hidden) return;
+    resize();
     running = true; last = 0;
-    measure();
     if (arriving) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
     else { glide = 0; boost = 0; since = 9; settled = 1; shift = { x: 0, y: 0, age: 9 }; motes = []; aim(); }
     frameRaf = requestAnimationFrame(frame);

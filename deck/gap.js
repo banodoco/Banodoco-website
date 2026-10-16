@@ -163,10 +163,13 @@
   const later = (ms, f) => timers.push(setTimeout(f, ms));
   const size = () => {
     const dpr = Math.min(2, devicePixelRatio || 1);
-    sky.width = Math.round(innerWidth * dpr);
-    sky.height = Math.round(innerHeight * dpr);
+    const width = Math.round(innerWidth * dpr), height = Math.round(innerHeight * dpr);
+    if (sky.width !== width || sky.height !== height) {
+      sky.width = width; sky.height = height;
+    }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
+  size();
   // Where each disc will be once the slide has finished rising into place.
   const lift = () => { const m = getComputedStyle(slide).transform; return m && m !== 'none' ? new DOMMatrixReadOnly(m).f : 0; };
   const disc = (el, dy) => {
@@ -179,8 +182,8 @@
   // Without the field to fly from: the axes draw, then the tools bloom one by one.
   const enter = (lead = 0) => {
     reset();
-    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); return; }
     size();
+    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); return; }
     const dy = lift();
     tools.forEach((el, i) => {
       const p = disc(el, dy);
@@ -312,8 +315,8 @@
   if (fieldSlide) watch.observe(fieldSlide, { attributes: true, attributeFilter: ['class'] });
   if (slide.classList.contains('on')) begin();
   window.deckOnResize(() => {
-    if (!slide.classList.contains('on')) return;
     size();
+    if (!slide.classList.contains('on')) return;
     if (!flying) return;
     // Flight endpoints were measured in the old viewport. Finish at the new
     // chart instead of leaving old pixel coordinates suspended over it.
