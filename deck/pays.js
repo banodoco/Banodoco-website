@@ -81,11 +81,11 @@
   // Drawn in the reference's own units (1672 x 941), scaled by k about the middle.
   // The core: a lens centred at (750, 415), 136 wide and 226 tall, in those units.
   const CORE_REF = { cx: 750, cy: 415, w: 136, h: 226 };
-  // On a phone the picture is scaled as one (k) above the text. Beside the text on the left, it is laid out
-  // in the room to the right: positions stretch by kx across and ky down, while sizes (circles, the lens,
-  // the mink, dots) scale by k so nothing is squashed.
+  // On a phone the picture sits above the text, positions stretched down by ky (across by k). Beside the text on
+  // the left, it is laid out in the room to the right: positions stretch by kx across and ky down. Either way,
+  // sizes (circles, the lens, the mink, dots) scale by k so nothing is squashed.
   let W = 0, H = 0, dpr = 1, k = 1, kx = 1, ky = 1, ox = 0, oy = 0, LW = 1, small = false;
-  const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
+  const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * ky, P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
   let machines = [], feeds = [], lens = null, lensLines = [], arcs = [], rays = [], boundary = null, cell = 3;
@@ -103,10 +103,13 @@
     small = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
     const num = slide.querySelector('.num'), top = num.getBoundingClientRect().top - b.top;
     const low = !small && H <= 500; // a phone on its side: less air round the picture, and the footer to clear
-    if (small) { // above the text, scaled as one; the picture spans reference x 150..1580 and y 70..760
-      k = Math.min((W - 24) / 1430, (top - 60) / 690);
+    if (small) { // the picture spans reference x 150..1580 and y 70..760
+      // Upright, the picture and the words are one group (the phone CSS centres the words under the picture's
+      // room): it stands half as tall again as its width allows, and its foot sits 34 px above the label.
+      k = Math.min((W - 24) / 1430, (top - 74) / 690);
+      ky = Math.min(1.5 * k, (top - 74) / 690);
       ox = W / 2 - 29 * k;
-      oy = Math.max(40 + 345 * k, top * 0.5);
+      oy = Math.max(40, top - 34 - 690 * ky) + 345 * ky;
     } else { // to the right of the text: from ~96 px past the text column to 64 px short of the edge, centred down the slide
       const text = slide.querySelector('.split > :first-child').getBoundingClientRect();
       const left = text.right - b.left + (low ? 48 : 96), right = W - (low ? 32 : 64); // the builders keep ~96 px of air after the text

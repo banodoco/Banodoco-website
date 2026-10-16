@@ -482,10 +482,17 @@
   .pa-side span { display: block; font-size: .78em; color: #b8a98f; font-style: italic; }
   .pa-core { color: #f0c67e; }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
-    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-left: max(16px, 9vw); padding-bottom: 92px; }
+    /* Upright, as on slide 4, the picture and the words are one group in the middle of the screen: the words are
+       centred under the picture's room (40 px + the picture, 72.38vw - 17.4 px tall at the phone's scale, + a 34 px
+       gap), and pays.js hangs the picture just above the label. The words take slide 4's size. */
+    html[data-ver="f"] .pa-host { justify-content: center; padding-left: max(16px, 9vw); padding-top: calc(72.38vw + 56.6px); padding-bottom: 90px; }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
     html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: center; }
-    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 20ch; margin: 0 auto; }
+    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.6rem, 7vw, 2.2rem); max-width: 20ch; margin: 0 auto; }
+  }
+  /* A short upright screen has no room to centre the group: the words go to the foot, the picture above them. */
+  @media (max-width: 760px) and (orientation: portrait) and (max-height: 640px) {
+    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-top: 40px; }
   }
   /* Version F, slide 6: where it goes (stack.js). The text on the left; on the right slide 5's product taken apart into
      one exploded stack of thin planes (preview, timeline, agent, tools & effects, models / runtime), tied by fine gold
