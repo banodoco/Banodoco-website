@@ -15,6 +15,7 @@
   const FILM = 16 / 9; // every film here is 16:9
   let open = null;
   const primed = new Map(); // tile → its film's poster, fetched on the first hover
+  const resting = new Map(); // tile → the timer that brings its still back
   const overviewOpen = () => document.getElementById('overview')?.classList.contains('on');
   const posterOf = (tile) => `${STREAM}/${tile.dataset.film}/thumbnails/thumbnail.jpg?time=${tile.dataset.at}s&height=720`;
 
@@ -31,16 +32,16 @@
     v.pause();
     if (!tile.classList.contains('is-live')) return;
     // Leaving the slide, the frame it shows stays until slide 2 has sampled it, then the still comes back.
-    clearTimeout(tile.rest);
-    tile.rest = setTimeout(() => {
+    clearTimeout(resting.get(tile));
+    resting.set(tile, setTimeout(() => {
       if (!v.paused) return;
       tile.classList.remove('is-live');
       setTimeout(() => { if (v.paused) v.currentTime = 0; }, 350);
-    }, slide.classList.contains('on') ? 0 : 1000);
+    }, slide.classList.contains('on') ? 0 : 1000));
   };
   tiles.forEach((tile) => {
     const v = tile.querySelector('video');
-    v.addEventListener('playing', () => { clearTimeout(tile.rest); tile.classList.add('is-live'); });
+    v.addEventListener('playing', () => { clearTimeout(resting.get(tile)); tile.classList.add('is-live'); });
     tile.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') preview(tile, true); });
     tile.addEventListener('pointerleave', () => preview(tile, false));
   });
