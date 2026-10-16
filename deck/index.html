@@ -1554,7 +1554,9 @@
       : hurrying ? 'Animations sped up to keep pace' : `Animations on · ${pointerWord} to turn off`;
   };
   let toldTimer = 0;
-  motionBtn.addEventListener('click', () => {
+  motionBtn.addEventListener('click', (e) => {
+    // A click or tap leaves no focus behind, or the arrow keys that follow would show its focus ring and label.
+    if (e.detail) motionBtn.blur();
     if (!reduced) {
       motionOff = !motionOff;
       try { if (motionOff) localStorage.setItem('deck-motion', 'off'); else localStorage.removeItem('deck-motion'); } catch {}
