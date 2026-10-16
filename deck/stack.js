@@ -463,9 +463,12 @@
   // build: { t0, from5, src } while the stack is assembling; ambient afterwards.
   let build = null, amb = null;
   // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place.
+  // open: every plane is in place, so the tour starts while the threads, leaders and roots finish, and the first
+  // layer's card opens as its flag comes in rather than once the whole build has run.
   const FROM5 = { a: { 0: [0.05, 1.3], 1: [0.12, 1.42], 3: [0.2, 1.62] }, spread: [1.0, 2.1], low: { 2: [1.25, 2.15], 4: [1.5, 2.4] }, fade: [0.25, 0.45, 0.72, 0.56, 0.86],
-    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, rt: [2.0, 3.4], end: 3.4 };
-  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, rt: [1.0, 2.25], end: 2.25 };
+    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], open: 2.4, end: 3.4 };
+  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], open: 1.45, end: 2.25 };
+  const SOON = 450; // ms: landing at rest, the first card opens this soon
   const demo = document.querySelector('[data-astrid-demo]');
   const slide5 = demo && demo.closest('.slide');
   const snapFrom5 = () => {
@@ -510,8 +513,16 @@
   };
   const k01 = (e, [a, b]) => clamp((e - a) / (b - a));
   const stepBuild = (t) => {
-    const e = (t - build.t0) / 1000;
-    if (build.from5) {
+    const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
+    if (!amb && e >= T0.open) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
+      st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
+      clearGhosts();
+      amb = { t }; tourFrom(0, t);
+    }
+    if (amb) { // only the threads, the leaders and the roots are still drawing
+      vis.sh = k01(e, T0.sh); vis.rt = k01(e, T0.rt);
+      vis.lb = PL.map((_, i) => clamp((e - T0.lb - i * T0.lbGap) / T0.lbDur));
+    } else if (build.from5) {
       const T = FROM5, src = build.src.planes, sp = easeIO(k01(e, T.spread)), mid = PL[2].cy;
       for (const i of [0, 1, 3]) { // rendering, timeline, agent: from slide 5's panels, tilting into the stack
         const p = PL[i], s = st[i], qa = easeIO(k01(e, T.a[i])), f = src[i];
@@ -536,7 +547,7 @@
       } else if (e >= T.mink[1]) { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c); }
       minkCv.style.opacity = '1';
       vis.sh = k01(e, T.sh); vis.rt = k01(e, T.rt);
-      vis.lb = PL.map((_, i) => clamp((e - T.lb - i * 0.1) / 0.55));
+      vis.lb = PL.map((_, i) => clamp((e - T.lb - i * T.lbGap) / T.lbDur));
     } else {
       const T = QUICK;
       for (let i = 0; i < 5; i++) { // from the foundation up
@@ -546,11 +557,10 @@
       const qm = (e - T.mink[0]) / T.mink[1];
       if (qm > 0) { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c, clamp(qm)); minkCv.style.opacity = '1'; }
       vis.sh = k01(e, T.sh); vis.rt = k01(e, T.rt);
-      vis.lb = PL.map((_, i) => clamp((e - T.lb - i * 0.07) / 0.45));
+      vis.lb = PL.map((_, i) => clamp((e - T.lb - i * T.lbGap) / T.lbDur));
     }
-    apply();
-    draw();
-    if (e >= (build.from5 ? FROM5.end : QUICK.end)) { build = null; settleAll(); amb = { t }; tourFrom(0, t + 1100); }
+    if (!amb) { apply(); draw(); }
+    if (e >= T0.end) { build = null; vis.sh = 1; vis.lb = PL.map(() => 1); vis.rt = 1; }
   };
 
   // ---- The tour, and hover ------------------------------------------------------------------------
@@ -637,7 +647,8 @@
   let running = false, raf = 0;
   const step = (t) => {
     if (build) stepBuild(t);
-    else { if (amb) stepTour(t); stepMink(t); }
+    if (amb) stepTour(t);
+    if (!build) stepMink(t);
     stepHead();
   };
   const tick = () => {
@@ -684,7 +695,7 @@
     flags.forEach((f) => { f.tabIndex = 0; });
     if (still || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
-      if (!still) { amb = { t: now() }; tourFrom(0, now() + 1100); play(); wake(); }
+      if (!still) { amb = { t: now() }; tourFrom(0, now() + SOON); play(); wake(); }
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
@@ -757,7 +768,7 @@
   window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
     if (!slide.classList.contains('on')) return;
-    const interrupted = !!build || (!amb && !still);
+    const interrupted = !amb && (!!build || !still); // once the tour has begun (even as the build finishes), it carries on
     layout();
     softenNet(true);
     if (interrupted) {
