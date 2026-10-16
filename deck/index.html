@@ -147,29 +147,60 @@
     font: italic 400 0.95rem "Cormorant Garamond", serif; color: #b8a98f99; }
   .gp-zone { font-size: 1.05rem; color: #b8a98f66; letter-spacing: .03em; }
   .gp.is-labelled .gp-ax, .gp.is-labelled .gp-zone { opacity: 1; }
-  .gp-dot { all: unset; position: absolute; z-index: 1; display: inline-flex; align-items: center; height: 24px; border-radius: 12px; cursor: default;
-    transform: translate(-12px, -50%); background: #15110d; border: 1px solid color-mix(in srgb, var(--c) 65%, transparent);
-    opacity: 0; transition: opacity .35s ease, box-shadow .3s ease, background-color .3s ease; }
+  /* Each tool is a small disc: its own logo (assets/logos), ringed and haloed in its group's colour. The halo breathes
+     on its own slow clock; in focus the disc lifts and glows, its name and note open, its neighbours ease away and a
+     thread draws to the empty corner (gap.js). --m (0 → 1) is the orb-to-logo morph as each one lands. */
+  .gp { --d: clamp(20px, min(1.98vw, 2.88vh), 28px); }
+  .gp-dot { all: unset; position: absolute; z-index: 1; display: inline-flex; align-items: center; height: var(--d); border-radius: calc(var(--d) / 2); cursor: default;
+    transform: translate(calc(var(--d) / -2), -50%); translate: var(--nx, 0px) var(--ny, 0px);
+    opacity: 0; transition: translate .9s cubic-bezier(.22, .7, .3, 1), box-shadow .35s ease, background-color .35s ease; }
   .gp-dot.is-in { opacity: 1; }
-  .gp-dot i { flex: none; width: 22px; text-align: center; font: 600 8.5px/1 "DM Sans", system-ui, sans-serif; letter-spacing: .03em; font-style: normal; color: var(--c); }
+  .gp-dot::before { content: ""; position: absolute; z-index: -1; top: 50%; left: calc(var(--d) / 2); width: calc(var(--d) + 16px); aspect-ratio: 1;
+    translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: calc(.6 * var(--m, 1));
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 55%, transparent), color-mix(in srgb, var(--c) 18%, transparent) 70%, transparent);
+    animation: gp-idle var(--bp, 7s) ease-in-out var(--bd, 0s) infinite paused; }
+  .slide.on .gp-dot::before { animation-play-state: running; }
+  @keyframes gp-idle { 0%, 100% { scale: .94; } 50% { scale: 1.07; } }
+  .gp-dot i { flex: none; position: relative; display: grid; place-items: center; width: var(--d); height: var(--d); border-radius: 50%;
+    background: var(--bg, #17120d); box-shadow: 0 0 0 1.5px var(--c), 0 0 9px color-mix(in srgb, var(--c) 30%, transparent);
+    transition: transform .55s cubic-bezier(.2, .9, .3, 1.15), box-shadow .55s ease; }
+  .gp-dot i img { display: block; width: var(--fit, 100%); height: var(--fit, 100%); border-radius: 50%; object-fit: contain;
+    opacity: var(--m, 1); scale: calc(.7 + .3 * var(--m, 1)); }
+  .gp-dot i.is-inset img { border-radius: 0; }
+  .gp-dot i em { font: 600 calc(var(--d) * .36)/1 "DM Sans", system-ui, sans-serif; letter-spacing: .02em; font-style: normal; color: var(--c);
+    opacity: var(--m, 1); scale: calc(.7 + .3 * var(--m, 1)); }
   .gp-dot b { max-width: 0; overflow: hidden; white-space: nowrap; font: 400 0.92rem/1 "EB Garamond", serif; color: var(--ink);
     transition: max-width .4s cubic-bezier(.3, 0, .2, 1), padding .4s cubic-bezier(.3, 0, .2, 1); }
-  .gp-dot span { position: absolute; left: 0; top: calc(100% + 7px); width: 15rem; padding: 0.45rem 0.65rem; border-radius: 5px;
+  .gp-dot span { position: absolute; left: 0; top: calc(100% + 8px); width: 15rem; padding: 0.45rem 0.65rem; border-radius: 5px;
     background: #1a1510f2; border: 1px solid #ffffff1a; border-left: 1px solid var(--c); box-shadow: 0 10px 28px #000a;
     font: italic 400 0.86rem/1.35 "EB Garamond", serif; color: var(--soft); text-align: left; white-space: normal;
     opacity: 0; transform: translateY(-4px); transition: opacity .25s ease, transform .25s ease; pointer-events: none; }
-  .gp-dot:hover, .gp-dot:focus-visible, .gp-dot.is-open { z-index: 6; background: #1c1611; box-shadow: 0 0 18px color-mix(in srgb, var(--c) 40%, transparent); }
-  .gp-dot:hover b, .gp-dot:focus-visible b, .gp-dot.is-open b { max-width: 13rem; padding-right: 0.75rem; }
+  .gp-dot:hover, .gp-dot:focus-visible, .gp-dot.is-open { z-index: 6; background: #1c1611;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 28%, transparent), 0 8px 24px #0009; }
+  .gp-dot:hover i, .gp-dot:focus-visible i, .gp-dot.is-open i { transform: translateY(-1px) scale(1.16);
+    box-shadow: 0 0 0 1.5px var(--c), 0 0 16px 2px color-mix(in srgb, var(--c) 50%, transparent); }
+  .gp-dot:hover::before, .gp-dot:focus-visible::before, .gp-dot.is-open::before { opacity: 1; }
+  .gp-dot:hover b, .gp-dot:focus-visible b, .gp-dot.is-open b { max-width: 13rem; padding: 0 0.8rem 0 0.6rem; }
   .gp-dot:hover span, .gp-dot:focus-visible span, .gp-dot.is-open span { opacity: 1; transform: none; transition-delay: .12s; }
-  .gp-dot.is-flip { flex-direction: row-reverse; transform: translate(calc(-100% + 12px), -50%); }
-  .gp-dot.is-flip:hover b, .gp-dot.is-flip:focus-visible b, .gp-dot.is-flip.is-open b { padding: 0 0 0 0.75rem; }
+  .gp-dot.is-flip { flex-direction: row-reverse; transform: translate(calc(-100% + var(--d) / 2), -50%); }
+  .gp-dot.is-flip::before { left: auto; right: calc(var(--d) / 2); translate: 50% -50%; }
+  .gp-dot.is-flip:hover b, .gp-dot.is-flip:focus-visible b, .gp-dot.is-flip.is-open b { padding: 0 0.6rem 0 0.8rem; }
   .gp-dot.is-flip span { left: auto; right: 0; }
-  .gp-dot.is-low span { top: auto; bottom: calc(100% + 7px); transform: translateY(4px); }
+  .gp-dot.is-low span { top: auto; bottom: calc(100% + 8px); transform: translateY(4px); }
+  .gp-thread { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  .gp-thread.is-on { opacity: 1; transition-duration: .15s; }
+  .gp-thread path { fill: none; stroke: url(#gp-thread-ink); stroke-width: 1; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .gp-thread.is-drawn path { stroke-dashoffset: 0; transition: stroke-dashoffset var(--draw, .7s) cubic-bezier(.45, 0, .2, 1); }
+  .gp-thread stop:first-child { stop-opacity: .6; }
+  .gp-thread stop:last-child { stop-color: #f0c67e; stop-opacity: .45; }
   .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0.6rem; cursor: help;
     opacity: 0; transition: opacity .8s ease .2s; }
   .gp.is-labelled .gp-empty { opacity: 1; }
   .gp-empty i { width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e; box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12;
     animation: gp-breathe 4.5s ease-in-out infinite; }
+  .gp-empty i { transition: filter .7s ease; }
+  .slide:not(.on) .gp-empty i { animation-play-state: paused; }
+  .gp-empty.is-reached i { filter: brightness(1.3) drop-shadow(0 0 5px #f0c87755); }
   .gp-empty span { font: italic 400 1.1rem "Cormorant Garamond", serif; color: #f0c67e; white-space: nowrap; }
   .gp-q { position: absolute; left: 50%; top: 16px; margin-left: -0.25em; font: italic 500 1.15rem "Cormorant Garamond", serif; color: #f0c67e;
     pointer-events: none; animation: gp-rise 1.7s ease-out forwards; }
@@ -177,6 +208,7 @@
     100% { opacity: 0; transform: translate(var(--dx), -70px) scale(1.15); } }
   @keyframes gp-breathe { 50% { box-shadow: 0 0 60px #e0ab5e36, inset 0 0 26px #e0ab5e22; } }
   .gp-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .gp-dot::before { animation: none; } .gp-dot, .gp-dot i { transition: none; } }
   /* Version F, slide 4: Astrid as an abstract picture (core.js). Text centred at the bottom; above it two overlapping
      rings, agent and interface, whose lens is the core; extensions hang below each; the community orbits it all. */
   html[data-ver="f"] .ac-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
@@ -869,29 +901,29 @@
           <span class="gp-zone" style="left:3%;top:3%">Open tools</span>
           <span class="gp-zone" style="right:3%;bottom:3%">Closed tools</span>
           <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i></i><span>Nothing here — yet</span></button>
-          <button class="gp-dot" type="button" style="left:14%;top:10%;--c:#e0ab5e"><i>Cu</i><b>ComfyUI</b><span>Node graph that runs nearly every open model. Endlessly capable, but you wire it yourself.</span></button>
-          <button class="gp-dot" type="button" style="left:5%;top:20%;--c:#e0ab5e"><i>Df</i><b>Diffusers</b><span>Hugging Face&#x27;s Python library. Anything is possible, in code.</span></button>
-          <button class="gp-dot" type="button" style="left:27%;top:17%;--c:#e0ab5e"><i>AT</i><b>ai-toolkit</b><span>Train your own LoRAs for image and video models. Config files and a big GPU.</span></button>
-          <button class="gp-dot" type="button" style="left:41%;top:12%;--c:#e0ab5e"><i>Sw</i><b>SwarmUI</b><span>A friendlier front end over ComfyUI. Still a power tool.</span></button>
-          <button class="gp-dot" type="button" style="left:36%;top:26%;--c:#e0ab5e"><i>W2</i><b>Wan2GP</b><span>Runs Wan and other open video models on modest GPUs. Install, then many options.</span></button>
-          <button class="gp-dot" type="button" style="left:22%;top:30%;--c:#e0ab5e"><i>FP</i><b>FramePack</b><span>Long, smooth video on smaller GPUs. One model, one job.</span></button>
-          <button class="gp-dot" type="button" style="left:8%;top:36%;--c:#e0ab5e"><i>Ko</i><b>kohya_ss</b><span>The classic LoRA trainer. Dozens of settings.</span></button>
-          <button class="gp-dot" type="button" style="left:30%;top:40%;--c:#e0ab5e"><i>A1</i><b>AUTOMATIC1111</b><span>The original open image web UI, extended by hundreds of plugins.</span></button>
-          <button class="gp-dot" type="button" style="left:44%;top:38%;--c:#e0ab5e"><i>In</i><b>InvokeAI</b><span>A polished open canvas for images. Narrower than a node graph.</span></button>
-          <button class="gp-dot" type="button" style="left:17%;top:46%;--c:#e0ab5e"><i>De</i><b>Deforum</b><span>Animation by keyframed parameters. Powerful, famously fiddly.</span></button>
-          <button class="gp-dot" type="button" style="left:33%;top:56%;--c:#b8a98f"><i>Pi</i><b>Pinokio</b><span>One-click installs for open AI apps. Each app is its own world.</span></button>
-          <button class="gp-dot" type="button" style="left:45%;top:62%;--c:#b8a98f"><i>Fo</i><b>Fooocus</b><span>Simple open image generation. Few knobs to turn.</span></button>
-          <button class="gp-dot" type="button" style="left:14%;top:70%;--c:#b8a98f"><i>Nb</i><b>Colab notebooks</b><span>Someone&#x27;s notebook for one model. Works until a dependency moves.</span></button>
-          <button class="gp-dot is-low" type="button" style="left:36%;top:78%;--c:#b8a98f"><i>HF</i><b>Hugging Face Spaces</b><span>Try one model in the browser. Queue for a GPU; few controls.</span></button>
-          <button class="gp-dot" type="button" style="left:62%;top:55%;--c:#9fb5c8"><i>Rw</i><b>Runway</b><span>Polished video tools. What one team builds.</span></button>
-          <button class="gp-dot" type="button" style="left:57%;top:65%;--c:#9fb5c8"><i>Kl</i><b>Kling</b><span>A strong video model behind an app. Its settings, its limits.</span></button>
-          <button class="gp-dot is-flip" type="button" style="left:73%;top:60%;--c:#9fb5c8"><i>MJ</i><b>Midjourney</b><span>Beautiful images in a distinct house style. One team’s model.</span></button>
-          <button class="gp-dot is-flip" type="button" style="left:82%;top:60%;--c:#9fb5c8"><i>So</i><b>Sora</b><span>Easy, impressive video. A closed model with its own rules.</span></button>
-          <button class="gp-dot is-flip is-low" type="button" style="left:69%;top:72%;--c:#9fb5c8"><i>Lu</i><b>Luma Dream Machine</b><span>Simple video generation from one team’s models.</span></button>
-          <button class="gp-dot is-flip" type="button" style="left:86%;top:69%;--c:#9fb5c8"><i>Pk</i><b>Pika</b><span>Playful effects and edits. Easy, and fixed.</span></button>
-          <button class="gp-dot is-low" type="button" style="left:55%;top:79%;--c:#9fb5c8"><i>Kr</i><b>Krea</b><span>Many models wrapped in one slick app. Few deep controls.</span></button>
-          <button class="gp-dot is-flip is-low" type="button" style="left:78%;top:83%;--c:#9fb5c8"><i>Hi</i><b>Higgsfield</b><span>Preset camera moves and effects. The presets are the ceiling.</span></button>
-          <button class="gp-dot is-flip is-low" type="button" style="left:92%;top:86%;--c:#9fb5c8"><i>CC</i><b>CapCut</b><span>Effortless edits for social. AI features as fixed presets.</span></button>
+          <button class="gp-dot" type="button" style="left:14%;top:10%;--c:#e0ab5e"><i style="--bg:#211927"><img src="../assets/logos/comfyui.png" alt="" decoding="async"></i><b>ComfyUI</b><span>Node graph that runs nearly every open model. Endlessly capable, but you wire it yourself.</span></button>
+          <button class="gp-dot" type="button" style="left:5%;top:20%;--c:#e0ab5e"><i class="is-inset" style="--bg:#fff;--fit:84%"><img src="../assets/logos/diffusers.png" alt="" decoding="async"></i><b>Diffusers</b><span>Hugging Face&#x27;s Python library. Anything is possible, in code.</span></button>
+          <button class="gp-dot" type="button" style="left:27%;top:17%;--c:#e0ab5e"><i style="--bg:#000"><img src="../assets/logos/ai-toolkit.png" alt="" decoding="async"></i><b>ai-toolkit</b><span>Train your own LoRAs for image and video models. Config files and a big GPU.</span></button>
+          <button class="gp-dot" type="button" style="left:41%;top:12%;--c:#e0ab5e"><i class="is-inset" style="--fit:86%"><img src="../assets/logos/swarmui.png" alt="" decoding="async"></i><b>SwarmUI</b><span>A friendlier front end over ComfyUI. Still a power tool.</span></button>
+          <button class="gp-dot" type="button" style="left:36%;top:26%;--c:#e0ab5e"><i class="is-inset" style="--bg:#f8f2ea;--fit:74%"><img src="../assets/logos/wan2gp.png" alt="" decoding="async"></i><b>Wan2GP</b><span>Runs Wan and other open video models on modest GPUs. Install, then many options.</span></button>
+          <button class="gp-dot" type="button" style="left:22%;top:30%;--c:#e0ab5e"><i><em>FP</em></i><b>FramePack</b><span>Long, smooth video on smaller GPUs. One model, one job.</span></button>
+          <button class="gp-dot" type="button" style="left:8%;top:36%;--c:#e0ab5e"><i><em>Ko</em></i><b>kohya_ss</b><span>The classic LoRA trainer. Dozens of settings.</span></button>
+          <button class="gp-dot" type="button" style="left:30%;top:40%;--c:#e0ab5e"><i><em>A1</em></i><b>AUTOMATIC1111</b><span>The original open image web UI, extended by hundreds of plugins.</span></button>
+          <button class="gp-dot" type="button" style="left:44%;top:38%;--c:#e0ab5e"><i class="is-inset" style="--bg:#e6fd13;--fit:74%"><img src="../assets/logos/invokeai.png" alt="" decoding="async"></i><b>InvokeAI</b><span>A polished open canvas for images. Narrower than a node graph.</span></button>
+          <button class="gp-dot" type="button" style="left:17%;top:46%;--c:#e0ab5e"><i style="--bg:#000"><img src="../assets/logos/deforum.png" alt="" decoding="async"></i><b>Deforum</b><span>Animation by keyframed parameters. Powerful, famously fiddly.</span></button>
+          <button class="gp-dot" type="button" style="left:33%;top:56%;--c:#b8a98f"><i style="--bg:#fff"><img src="../assets/logos/pinokio.png" alt="" decoding="async"></i><b>Pinokio</b><span>One-click installs for open AI apps. Each app is its own world.</span></button>
+          <button class="gp-dot" type="button" style="left:45%;top:62%;--c:#b8a98f"><i><em>Fo</em></i><b>Fooocus</b><span>Simple open image generation. Few knobs to turn.</span></button>
+          <button class="gp-dot" type="button" style="left:14%;top:70%;--c:#b8a98f"><i class="is-inset" style="--fit:80%"><img src="../assets/logos/colab.png" alt="" decoding="async"></i><b>Colab notebooks</b><span>Someone&#x27;s notebook for one model. Works until a dependency moves.</span></button>
+          <button class="gp-dot is-low" type="button" style="left:36%;top:78%;--c:#b8a98f"><i class="is-inset" style="--fit:78%"><img src="../assets/logos/hf-spaces.png" alt="" decoding="async"></i><b>Hugging Face Spaces</b><span>Try one model in the browser. Queue for a GPU; few controls.</span></button>
+          <button class="gp-dot" type="button" style="left:62%;top:55%;--c:#9fb5c8"><i style="--bg:#efeee6"><img src="../assets/logos/runway.png" alt="" decoding="async"></i><b>Runway</b><span>Polished video tools. What one team builds.</span></button>
+          <button class="gp-dot" type="button" style="left:57%;top:65%;--c:#9fb5c8"><i style="--bg:#000"><img src="../assets/logos/kling.png" alt="" decoding="async"></i><b>Kling</b><span>A strong video model behind an app. Its settings, its limits.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:73%;top:60%;--c:#9fb5c8"><i style="--bg:#fff"><img src="../assets/logos/midjourney.png" alt="" decoding="async"></i><b>Midjourney</b><span>Beautiful images in a distinct house style. One team’s model.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:82%;top:60%;--c:#9fb5c8"><i style="--bg:#05479f"><img src="../assets/logos/sora.png" alt="" decoding="async"></i><b>Sora</b><span>Easy, impressive video. A closed model with its own rules.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:69%;top:72%;--c:#9fb5c8"><i style="--bg:#fff"><img src="../assets/logos/luma.png" alt="" decoding="async"></i><b>Luma Dream Machine</b><span>Simple video generation from one team’s models.</span></button>
+          <button class="gp-dot is-flip" type="button" style="left:86%;top:69%;--c:#9fb5c8"><i style="--bg:#fff"><img src="../assets/logos/pika.png" alt="" decoding="async"></i><b>Pika</b><span>Playful effects and edits. Easy, and fixed.</span></button>
+          <button class="gp-dot is-low" type="button" style="left:55%;top:79%;--c:#9fb5c8"><i style="--bg:#f8f8f8"><img src="../assets/logos/krea.png" alt="" decoding="async"></i><b>Krea</b><span>Many models wrapped in one slick app. Few deep controls.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:78%;top:83%;--c:#9fb5c8"><i style="--bg:#d1fe17"><img src="../assets/logos/higgsfield.png" alt="" decoding="async"></i><b>Higgsfield</b><span>Preset camera moves and effects. The presets are the ceiling.</span></button>
+          <button class="gp-dot is-flip is-low" type="button" style="left:92%;top:86%;--c:#9fb5c8"><i style="--bg:#fff"><img src="../assets/logos/capcut.png" alt="" decoding="async"></i><b>CapCut</b><span>Effortless edits for social. AI features as fixed presets.</span></button>
         </div>
       </div>
     </div>
