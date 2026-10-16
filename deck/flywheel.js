@@ -148,7 +148,7 @@
   // On a phone the same picture stands upright: artists along the top, everyone else along the bottom,
   // so inspire runs down the right of the ring and equip back up its left.
   const TALL = {
-    ring: [[200, 330, 118, 118], [200, 400, 92, 92], [200, 410, 132, 268]],
+    ring: [[200, 330, 118, 118], [200, 400, 92, 92], [200, 402, 132, 250]],
     lens: [[200, 334, 60, 94], null, null],
     artR: [19, 6, 6],
     artists: [ // two staggered rows along the top, the first on the right (where its thread meets the ring)
@@ -164,10 +164,10 @@
     cards: [
       { at: [[200, 330], [108, 222], [96, 88]], th: [225, 225, 232] },
       { at: [[200, 330], [292, 222], [304, 88]], th: [315, 315, 308] },
-      { at: [[200, 330], [150, 584], [150, 735]], th: [135, 125, 110] },
-      { at: [[200, 330], [300, 584], [300, 735]], th: [45, 55, 70] },
+      { at: [[200, 330], [150, 584], [150, 748]], th: [135, 125, 110] },
+      { at: [[200, 330], [300, 584], [300, 748]], th: [45, 55, 70] },
     ],
-    cw: [40, 150, 120],
+    cw: [40, 140, 120],
     span: [[8, 392, 20, 640], [26, 374, 152, 650], [30, 370, 40, 790]],
   };
   // Where the artists' threads meet the ring, and the others' (degrees); a phone turns them a quarter.
