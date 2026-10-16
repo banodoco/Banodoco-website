@@ -528,7 +528,8 @@
     ticking = true;
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
-    const busy = (morph ? drawMorph(t) : false) | stepBeats(dt) | stepMink(t);
+    // Coming back from slide 6 the finished editor waits, hidden, for the stack to fold back into it (dt-await).
+    const busy = (morph ? drawMorph(t) : false) | stepBeats(slide.classList.contains('dt-await') ? 0 : dt) | stepMink(t);
     drawPic(t);
     ticking = false;
     if (busy || requested) { requested = false; raf = requestAnimationFrame(tick); }

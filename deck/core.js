@@ -857,12 +857,80 @@
     timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) reset(); }, 700));
   };
 
+  // ---- Going back to slide 3 -------------------------------------------------------------
+  // A step back: the arrival played backwards. The picture ungrows in reverse order (the orbit, the extensions, the
+  // panels and the constellation, the outline, the rings) down to the bright node in the lens; then the node lifts
+  // off as the empty ring and flies back to its corner of the chart, which fades back in to meet it.
+  const unpace = () => window.deckPace?.() || 1;
+  let unbuilding = null;
+  const unbuild = () => {
+    const signal = window.deckNav?.signal;
+    stop();
+    timers.forEach(window.deckCancelLater); timers = [];
+    armed = false;
+    if (waiting) { waiting.disconnect(); waiting = null; }
+    gifts = []; pend = []; pulses = []; flare = 0; plan = PLAN.length;
+    hot = pinned = null; card.classList.remove('is-on'); slide.style.cursor = '';
+    // Whatever the community added since goes back the way the first places came: in order, from the middle out.
+    sides.forEach((sd) => sd.slots.forEach((x) => { if (x.state !== 'none') { x.shown = 0; if (x.state === 'full') x.filledAt = 0; } x.flash = 0; }));
+    pace = 0.7; // the pace of a second visit
+    ta = Math.min(ta, T.orbit + 0.85); // the last of the orbit is in by here
+    slide.classList.add('dt-rewind');
+    gapSlide.classList.add('dt-return', 'dt-await');
+    window.deckRewinding?.(gapSlide);
+    unbuilding = { last: 0, raf: 0, seeded: false, shown: false, at: 0 };
+    signal?.addEventListener('abort', endUnbuild, { once: true });
+    unbuilding.raf = requestAnimationFrame(unstep);
+  };
+  const unstep = (now) => {
+    const u = unbuilding;
+    if (!u) return;
+    u.raf = 0;
+    const dt = Math.min(0.05, (now - (u.last || now)) / 1000) * unpace();
+    u.last = now;
+    ta -= dt / pace;
+    if (labelled > 1 && ta < T.orbit + 0.3) { labelled = 1; root.classList.remove('is-community'); }
+    if (labelled > 0 && ta < 0.8) { labelled = 0; root.classList.remove('is-labelled'); }
+    if (!u.seeded && ta <= 0) { // the node lifts off as the ring, the arrival's flight played backwards
+      u.seeded = true;
+      html.classList.remove('ac-quiet');
+      slide.classList.replace('dt-rewind', 'dt-rewound');
+      if (launch()) seedEl.getAnimations({ subtree: true }).forEach((a) => a.reverse());
+    }
+    if (u.seeded) {
+      u.at += dt;
+      if (!u.shown && u.at >= FLIGHT - 0.6) { u.shown = true; gapSlide.classList.remove('dt-await'); } // the chart fades in as it arrives
+      const flying = seedEl ? seedEl.getAnimations({ subtree: true }) : []; // the engine hurries the seed with the turn
+      if (u.at >= FLIGHT + 0.05 && flying.every((a) => a.playState === 'finished')) { endUnbuild(); return; }
+    }
+    if (ta > -0.4) draw();
+    u.raf = requestAnimationFrame(unstep);
+  };
+  const endUnbuild = () => {
+    const u = unbuilding;
+    if (!u) return;
+    unbuilding = null;
+    if (u.raf) cancelAnimationFrame(u.raf);
+    slide.classList.replace('dt-rewind', 'dt-rewound');
+    gapSlide.classList.remove('dt-return', 'dt-await');
+    html.classList.remove('ac-quiet');
+    dropSeed();
+    if (!slide.classList.contains('on')) reset();
+    window.deckRewound?.(gapSlide);
+  };
+
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
-    if (!on) { leave(); return; }
+    if (unbuilding) endUnbuild();
+    if (!on) {
+      const toGap = gapSlide && gapSlide.classList.contains('on') && ring && window.deckNav?.back && !still && running && rings.length && ta >= T.end;
+      if (toGap) { unbuild(); return; }
+      leave();
+      return;
+    }
     const fromGap = !still && gapSlide && !gapSlide.classList.contains('on') && records.some((r) => r.target === gapSlide);
     enter(!!fromGap);
   });

@@ -650,7 +650,7 @@
     raf = 0;
     if (!running || paused) return;
     const t = now();
-    step(t);
+    if (build && build.back) { if (!unfold(t)) return; } else step(t);
     raf = requestAnimationFrame(tick);
   };
   const wake = () => { if (running && !paused && !raf) raf = requestAnimationFrame(tick); };
@@ -728,18 +728,80 @@
     video.pause();
   };
 
+  // ---- Going back to slide 5 ------------------------------------------------------------------
+  // A step back: the arrival from slide 5 played backwards. The roots draw back in, the threads and the flags go, the
+  // effects and the runtime sink away, and the rendering, timeline and agent planes untilt and fold back into exact
+  // copies of slide 5's panels, the mink flying back to her seat; slide 5 fades in beneath them and the stack goes.
+  const pace = () => window.deckPace?.() || 1;
+  const fold = () => {
+    const signal = window.deckNav?.signal;
+    clearTimers();
+    clearTimeout(leaving); Object.assign(hold, { hover: -1, focus: -1, pin: -1 }); guide.on = false; guide.a = 0;
+    show(-1); lit.fill(0);
+    flags.forEach((f) => { f.tabIndex = -1; });
+    restMink();
+    slide.classList.add('dt-rewind');
+    slide5.classList.add('dt-return', 'dt-await');
+    window.deckRewinding?.(slide5);
+    // From the settled stack, the arrival's clock runs back from its end.
+    build = { back: true, from5: true, src: null, t0: 0, e: FROM5.end - 1e-3, last: 0, shown: false };
+    signal?.addEventListener('abort', endFold, { once: true });
+    wake();
+  };
+  const unfold = (t) => {
+    const b = build;
+    if (!b.src) { // slide 5 has drawn its settled editor by now: copy its panels as they stand
+      b.src = snapFrom5();
+      if (!b.src) { endFold(); return false; }
+    }
+    // Just before the copies show, their pictures are taken again: slide 5's preview may only now have caught up.
+    if (!b.fresh && b.e <= 1.1) { b.fresh = true; repaintGhosts(); }
+    const d = Math.min(0.05 * pace(), (t - (b.last || t)) / 1000); // now() runs at the turn's pace
+    b.last = t;
+    b.e = Math.max(0, b.e - d);
+    if (b.shown) b.since += d;
+    // Slide 5 fades in under the copies as they settle onto its panels; once it is whole, the copies go.
+    if (!b.shown && b.e <= 0.3) { b.shown = true; b.since = 0; slide5.classList.remove('dt-await'); }
+    if (b.e <= 0 && b.since >= 0.65) { endFold(); return false; }
+    b.t0 = t - b.e * 1000;
+    stepBuild(t);
+    stepHead();
+    return true;
+  };
+  const repaintGhosts = () => Object.keys(SRC).forEach((i) => {
+    const from = demo.querySelector(SRC[i])?.querySelectorAll('canvas') || [], to = ghosts[i].querySelectorAll('canvas');
+    from.forEach((cs, j) => { const c = to[j]; if (!c || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
+  });
+  const endFold = () => {
+    if (!build || !build.back) return;
+    build = null;
+    clearGhosts(); // slide 5's own panels stand exactly where their copies were
+    slide.classList.replace('dt-rewind', 'dt-rewound');
+    slide5?.classList.remove('dt-return', 'dt-await');
+    if (slide5) window.deckRewound?.(slide5);
+    if (slide.classList.contains('on')) return;
+    stop();
+    timers.push(setTimeout(() => { if (!slide.classList.contains('on')) hideAll(); }, 700));
+  };
+
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
-    if (!on) { stop(); timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return; }
+    endFold();
+    if (!on) {
+      const to5 = !!slide5 && slide5.classList.contains('on') && window.deckNav?.back && !still && running && !paused && amb && !build;
+      if (to5) { fold(); return; }
+      stop(); timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return;
+    }
     const from5 = !still && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
     start(from5);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
+    if (motionBlocked() && build?.back) endFold(); // a reverse never waits behind the overview
     if (motionBlocked()) {
       if (!running || paused) return;
       pausedAt = performance.now(); paused = true;
@@ -763,6 +825,7 @@
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
+    endFold();
     if (!slide.classList.contains('on')) return;
     const interrupted = !!build || (!amb && !still);
     layout();

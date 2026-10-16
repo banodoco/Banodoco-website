@@ -650,7 +650,7 @@
         if (d.bright) halo(x, y, 6 * Math.max(0.6, k), 0.3 * a);
         dot(x, y, d.r, CORE, a);
       }
-      if (!live && ta > 1) hand.done = true;
+      if (!live && ta > 1 && !unhanding) hand.done = true;
     }
 
     // The initiatives: a thread from the ring out to each card, where it plugs in.
@@ -676,7 +676,7 @@
       const h = routeFor(mo), u = clamp((ta - mo.t0) / mo.dur), d = (0.8 * u + 0.2 * smooth(u)) * h.total;
       const tail = 64 * Math.max(0.6, k) * (1 + 0.3 * boost);
       const plug = mo.kind === 'plug', fade = smooth(clamp(u / 0.06)) * smooth(clamp((1 - u) / (plug ? 0.25 : 0.04)));
-      const a = (mo.kind === 'eq' || mo.kind === 'hop' ? 0.8 : 1) * fade * (0.85 + 0.25 * boost) * (plug ? chipQ(mo.c) : pa);
+      const a = (mo.kind === 'eq' || mo.kind === 'hop' ? 0.8 : 1) * fade * (0.85 + 0.25 * boost) * (plug ? chipQ(mo.c) : pa) * (unhanding ? 1 - unhanding.fade : 1);
       if (a <= 0.003) continue;
       for (let s = 0; s < 4; s++) stroke(h, Math.max(0, d - tail * (1 - s / 4)), d, (0.6 + s * 0.35) * LW, NODE, a * (0.18 + s * 0.16));
       const p = at(h, d);
@@ -935,7 +935,7 @@
     if (!running) return;
     const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
     last = now;
-    advance(dt);
+    if (unhanding) { if (!unstep(dt)) return; } else advance(dt);
     frame();
     raf = requestAnimationFrame(tick);
   };
@@ -1005,13 +1005,61 @@
     frame();
     start();
   };
+  // ---- Going back to slide 8 ----------------------------------------------------------------------
+  // A step back: the hand-off from slide 8 played backwards. The circulation dies away, the links, the groups and
+  // the artists draw back in, the ring closes up, and slide 8's people (now drawn here) drift back out of the
+  // circles into their places in the crowd while the lens glides back to the core; slide 8 fades in beneath.
+  const HAND_END = 2.6; // everything of the hand-off is in by here
+  let unhanding = null;
+  const unhand = () => {
+    const signal = window.deckNav?.signal;
+    timers.forEach(window.deckCancelLater); timers = [];
+    armed = false; hov.fill(0); hoT.fill(0);
+    T = T_HAND; ta = Math.min(ta, HAND_END);
+    unhanding = { snapped: false, shown: false, fade: 0 };
+    flSlide.classList.add('dt-return', 'dt-await');
+    window.deckRewinding?.(flSlide);
+    signal?.addEventListener('abort', endUnhand, { once: true });
+    start();
+  };
+  const unstep = (dt) => {
+    const u = unhanding;
+    if (!u.snapped) { // slide 8 has settled its crowd by now: its people, where they stand, are where these go back to
+      const snap = window.AstridFlowers.snapshot();
+      if (!snap) { endUnhand(); return false; }
+      u.snapped = true;
+      hand = { core: snap.core, k: snap.k, dots: assign(snap.people, snap.core.x), done: false };
+    }
+    ta -= dt; // the tick's dt runs at the turn's pace
+    spin += dt * 0.05;
+    setOp(labels.astrid, smooth(k01(T.lens + 0.6, 0.5))); // its fade back out (place() only redraws on a change of layout)
+    u.fade = Math.min(1, u.fade + dt / 0.3);
+    if (!u.shown && ta <= 0.5) { u.shown = true; flSlide.classList.remove('dt-await'); } // slide 8's crowd, under its people
+    if (ta <= 0) { endUnhand(); return false; }
+    return true;
+  };
+  const endUnhand = () => {
+    if (!unhanding) return;
+    unhanding = null;
+    flSlide.classList.remove('dt-return', 'dt-await');
+    window.deckRewound?.(flSlide);
+    if (stageOf() >= 0) return;
+    root.classList.remove('is-on');
+    html.classList.remove('fw-quiet');
+    stop(); armed = false;
+    timers.push(setTimeout(() => { if (stageOf() < 0) reset(); }, 700));
+  };
+
   let shown = -1;
   const follow = (records) => {
     const now = stageOf();
     if (now === shown) return;
     const was = shown;
     shown = now;
+    endUnhand();
     if (now < 0) { // left the three slides
+      const to8 = was === 0 && flSlide && flSlide.classList.contains('on') && window.deckNav?.back && !still && begun && !morph && m === 0 && running && window.AstridFlowers;
+      if (to8) { unhand(); return; }
       root.classList.remove('is-on');
       html.classList.remove('fw-quiet');
       stop(); armed = false;
@@ -1043,12 +1091,13 @@
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { endUnhand(); stop(); }
     else if (stageOf() >= 0 && begun) start();
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
+    endUnhand();
     const target = stageOf();
     if (target < 0 || !layout()) return;
     if (armed || hand || morph || !begun) {
