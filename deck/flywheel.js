@@ -197,9 +197,9 @@
   const ENTRY = [189, 186, 183, 180, 177, 174, 171], EXIT = [-14, 0, 14];
   // A phone on its side: too short for cards above and below, so on 10 and 11 they sit on the ring as icons, three
   // a side (tapped open), and the picture spans only the ring.
-  const SIDE = [215, 325, 145, 35, 180, 0];
+  const SIDE = [[230, 310, 130, 50, 180, 0], [215, 325, 145, 35, 180, 0]]; // 10's ring is flatter, so its icons spread wider
   const SHORT = { ...WIDE,
-    cards: WIDE.cards.map((c, i) => ({ at: [c.at[0], 'ring', 'ring'], th: [c.th[0], SIDE[i], SIDE[i]] })),
+    cards: WIDE.cards.map((c, i) => ({ at: [c.at[0], 'ring', 'ring'], th: [c.th[0], SIDE[0][i], SIDE[1][i]] })),
     artistsLabel: [[270, 96], ...WIDE.artistsLabel.slice(1)], // clear of the first artist at this small scale
     span: [WIDE.span[0], [500, 1170, 330, 612], [258, 1412, 153, 757]] };
 

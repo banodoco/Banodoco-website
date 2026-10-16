@@ -409,7 +409,7 @@
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     html[data-ver="f"] .as-host { padding-top: 52px; }
     html[data-ver="f"] .as-host h1 { font-size: clamp(1.4rem, 5.8vw, 1.8rem); max-width: 22ch; }
-    .as { margin: 6px 0 76px; }
+    .as { margin: 6px 0 0; } /* the slide's own 90 px foot already clears the footer */
     .as-stage { width: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, .75fr) minmax(0, 1.5fr); }
     .as-chat { grid-column: 1; grid-row: 2; } .as-edit { grid-column: 1; grid-row: 3; padding: 6px; gap: 6px; }
     .as-tl { --as-hcol: 52px; } .as-th em { display: none; }
@@ -417,18 +417,20 @@
     /* Slimmer lanes (demo.js sets their heights inline), so the preview keeps its room. */
     .as-tl > .as-th:nth-child(3), .as-lane[data-track="V2"] { height: 30px !important; }
     .as-tl > .as-th:nth-child(5), .as-lane[data-track="V1"] { height: 44px !important; }
+    .as-clip .as-kind { display: none; } /* no room for both badges on a slim clip; its name stays */
   }
-  /* A rotated phone uses the two-column editor, but has too little height for
-     its full timeline. Keep the player open and the same two panels readable. */
-  @media (min-width: 761px) and (max-height: 500px) {
-    html[data-ver="f"] .as-host { padding-top: 14px; }
-    html[data-ver="f"] .as-host .num { margin-bottom: 6px; }
-    html[data-ver="f"] .as-host h1 { max-width: 38em; font-size: clamp(1.15rem, 2vw, 1.45rem); line-height: 1.04; }
-    .as { margin: 2px 0 48px; }
-    .as-stage { row-gap: 4px; }
-    .as-edit { padding: 5px; gap: 4px; }
-    .as-player { padding: 4px; }
-    .as-tl > .as-th, .as-tl > .as-lane { height: 26px !important; }
+  /* A phone with its browser's bars showing: the headline in fewer, longer lines, so the editor keeps its preview. */
+  @media (max-width: 760px) and (orientation: portrait) and (max-height: 740px) {
+    html[data-ver="f"] .as-host h1 { max-width: none; font-size: 1.3rem; }
+    .as-stage { grid-template-rows: auto minmax(0, .6fr) minmax(0, 1.5fr); }
+    /* 1 and 3: slightly smaller words, so the collage and the chart (fitted to what is left) stay a good size. */
+    .slide.vc-host, .slide.gap-host { padding-top: 56px; }
+    .vc-host .split h1, .gap-host .split h1 { font-size: 1.6rem; }
+    .vc-host .body, .gap-host .body { font-size: .98rem; line-height: 1.45; }
+    /* 6: smaller words and a shorter card slot, so the stack under them keeps some size. */
+    html[data-ver="f"] .slide.st-host h1 { font-size: 1.3rem; }
+    .st .st-ch { font-size: 17px; } .st .st-card p { font-size: 12.5px; margin-bottom: 5px; } .st .st-card ul { gap: 3px; }
+    .st .st-card li b { font-size: 13.5px; } .st .st-card li span { font-size: 12px; } .st .st-card em { margin-top: 6px; padding-top: 5px; }
   }
 
   /* Version F, slide 7: how it pays (pays.js). Text centred at the bottom as on slide 4; above it, in the same
@@ -735,6 +737,11 @@
     .gp-dot span { width: 12rem; }
     .gp-dot[style*="left: 55%"] span, .gp-dot[style*="left: 57%"] span, .gp-dot[style*="left: 62%"] span { left: auto; right: 0; }
   }
+  /* On a phone the discs are large for the chart: the corner names and "easy to use" step clear of them. */
+  @media (max-width: 760px), (orientation: landscape) and (max-height: 500px) {
+    .gp-zone[style*="top"] { translate: 0 -.65em; } .gp-zone[style*="bottom"] { translate: 0 .55em; }
+    .gp-ax[style*="right"] { translate: 0 calc(-100% - .5em); }
+  }
 
   /* Version E, slide 2: the ecosystem as a quiet orbiting field (scatter-field.js). */
   .sf { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s ease 0.15s; user-select: none; -webkit-user-select: none; }
@@ -940,8 +947,8 @@
     .d-community img { max-height: 220px; }
     /* 1 and 3: the picture takes the room left under the text (whatever the browser's bars leave), never running
        under the footer. */
-    .vc-host > .split, .gap-host > .split { flex: 1 1 auto; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
-    .vc-host .vis, .gap-host .vis { min-height: 0; container-type: size; justify-content: center; }
+    .vc-host > .split, .gap-host > .split { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
+    .vc-host .vis, .gap-host .vis { flex: 1 1 0; min-height: 0; container-type: size; justify-content: center; }
     .vc { width: min(100cqw, 100cqh - 3rem); }
     .gp { width: min(100cqw, 100cqh); }
   }
@@ -955,39 +962,44 @@
     .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
     .chrome .navb i { width: 30px; height: 30px; }
     html[data-ver="f"] .split > :first-child > .num { margin-bottom: .55rem; }
-    .split h1 { font-size: clamp(1.25rem, 6.2vh, 1.75rem); }
+    .split h1 { font-size: clamp(1.25rem, 6.2svh, 1.75rem); }
     .body { margin-top: .9rem; font-size: .95rem; line-height: 1.45; }
     html[data-ver="f"] .sf-host { padding-top: 34px; }
-    html[data-ver="f"] .sf-host h1 { font-size: clamp(1.3rem, 6.4vh, 1.8rem); max-width: 34ch; }
+    html[data-ver="f"] .sf-host h1 { font-size: clamp(1.3rem, 6.4svh, 1.8rem); max-width: 34ch; }
     .gap-host .body { font-size: .88rem; }
-    .gp { width: min(100%, 100vh - 96px); }
+    .gp { width: min(100%, 100svh - 96px); }
+    .vc { width: min(100%, 62svh); } /* the height the browser's bars leave */
     html[data-ver="f"] .ac-host { padding-bottom: 80px; }
-    html[data-ver="f"] .ac-host h1 { font-size: clamp(1.3rem, 6.4vh, 1.8rem); max-width: 26em; }
-    /* 5: the text beside the editor, so the panels keep their height. */
-    html[data-ver="f"] .as-host { flex-direction: row; align-items: center; padding-top: 12px; text-align: left; }
+    html[data-ver="f"] .ac-host h1 { font-size: clamp(1.3rem, 6.4svh, 1.8rem); max-width: 26em; }
+    /* 5: the text beside the editor, so the player and the timeline keep their height. */
+    html[data-ver="f"] .as-host { flex-direction: row; align-items: center; padding-top: 12px; padding-bottom: 56px; text-align: left; }
     html[data-ver="f"] .as-host > .split { width: 30%; justify-items: start; }
-    html[data-ver="f"] .as-host h1 { font-size: clamp(1.05rem, 5vh, 1.4rem); margin: 0; }
+    html[data-ver="f"] .as-host h1 { font-size: clamp(1.05rem, 5svh, 1.4rem); line-height: 1.04; margin: 0; }
     .as { align-self: stretch; margin: 0 0 0 22px; }
-    .as-stage { grid-template-columns: minmax(0, 36fr) minmax(0, 64fr); }
+    .as-stage { grid-template-columns: minmax(0, 36fr) minmax(0, 64fr); row-gap: 4px; }
+    .as-edit { padding: 5px; gap: 4px; }
+    .as-player { padding: 4px; }
+    .as-tl { --as-hcol: 64px; } .as-th em { display: none; }
     .as-msg, .as-step { font-size: 10.5px; }
-    .as-tl > .as-th:nth-child(3), .as-lane[data-track="V2"] { height: 30px !important; }
-    .as-tl > .as-th:nth-child(5), .as-lane[data-track="V1"] { height: 44px !important; }
+    .as-tl > .as-th:nth-child(3), .as-lane[data-track="V2"] { height: 26px !important; }
+    .as-tl > .as-th:nth-child(5), .as-lane[data-track="V1"] { height: 36px !important; }
+    .as-clip .as-kind { display: none; }
     html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 1fr) minmax(0, 28vw); }
-    html[data-ver="f"] .st-host h1 { font-size: clamp(1.15rem, 5.6vh, 1.6rem); }
+    html[data-ver="f"] .st-host h1 { font-size: clamp(1.15rem, 5.6svh, 1.6rem); }
     .st-card { padding: 9px 12px 10px 14px; }
     .st-ch { font-size: 17px; } .st-card p { font-size: 13px; margin-bottom: 6px; }
     .st-card li b { font-size: 14px; } .st-card li span { font-size: 12.5px; }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(240px, 34vw) minmax(0, 1fr); }
-    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.25rem, 6.2vh, 1.75rem); }
+    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.25rem, 6.2svh, 1.75rem); }
     html[data-ver="f"] .fl-host { padding-top: 30px; }
     html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 46vw); }
-    html[data-ver="f"] .fl-host h1 { font-size: clamp(1.2rem, 5.8vh, 1.65rem); }
+    html[data-ver="f"] .fl-host h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); }
     html[data-ver="f"] .fw-host { padding-bottom: 80px; }
-    html[data-ver="f"] .fw-host h1 { font-size: clamp(1.2rem, 5.8vh, 1.65rem); max-width: 30em; }
+    html[data-ver="f"] .fw-host h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); max-width: 30em; }
     .fw-stat { margin-top: .5rem; font-size: .95rem; }
-    html[data-ver="f"] .fw-top { padding-top: 12px; padding-bottom: 0; }
+    html[data-ver="f"] .fw-top { padding-top: 26px; padding-bottom: 0; } /* room for the node over the label */
     html[data-ver="f"] .fw-raise { padding-top: 85px; padding-bottom: 76px; } /* the halo rings the mark and the words */
-    html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.2rem, 5.8vh, 1.65rem); max-width: 20em; }
+    html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); max-width: 20em; }
     .fw-sub { margin-top: .6rem; font-size: .92rem; line-height: 1.4; }
   }
 </style>
