@@ -23,7 +23,8 @@
   clips.forEach((v) => v.addEventListener('loadeddata', () => {
     if (slide.classList.contains('on') && !open && !still && !document.hidden && !overviewOpen()) v.play().catch(() => {});
   }));
-  const syncMotion = () => playing(slide.classList.contains('on') && !open);
+  // Coming back from slide 2 the films hold the frame the field's motes were made of until they are back (dt-await).
+  const syncMotion = () => playing(slide.classList.contains('on') && !open && !slide.classList.contains('dt-await'));
   new MutationObserver(syncMotion)
     .observe(slide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', syncMotion);
