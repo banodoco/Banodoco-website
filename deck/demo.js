@@ -25,12 +25,13 @@
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
   const videos = [...root.querySelectorAll('.as-media video')];
-  const gradedVideos = videos.map((video, i) => {
-    if (i === 0) return null;
+  const gradeSources = [null, '../assets/astrid/passing-shapes-graded.mp4', '../assets/astrid/quiet-finish-graded.mp4'];
+  const gradedVideos = videos.map((_, i) => {
+    if (!gradeSources[i]) return null;
     const graded = document.createElement('video');
-    graded.src = new URL(video.getAttribute('src').replace('.mp4', '-graded.mp4'), document.baseURI).href;
+    graded.src = new URL(gradeSources[i], document.baseURI).href;
     graded.muted = true; graded.playsInline = true; graded.preload = 'auto';
-    graded.setAttribute('aria-hidden', 'true');
+    graded.dataset.graded = 'true'; graded.setAttribute('aria-hidden', 'true');
     root.querySelector('.as-media').appendChild(graded);
     graded.load();
     return graded;
