@@ -9,8 +9,8 @@
 // seconds a mote runs round it into a side and fills the socket, and a new
 // socket appears next in line; now and then an extension is used and a pulse
 // runs up into the core. Slide 4's own network node feeds the lens from below.
-// Arriving from slide 3, the empty "Nothing here — yet" ring flies up and
-// becomes the core's bright node. Hovering (or tapping) an extension names it.
+// Arriving from slide 3, the empty ring flies up (its question mark fading as
+// it lifts off) and becomes the core's bright node. Hovering (or tapping) an extension names it.
 (() => {
   const root = document.querySelector('[data-astrid-core]');
   if (!root) return;
@@ -750,7 +750,7 @@
     seedEl = document.createElement('div');
     seedEl.className = 'ac-seed';
     seedEl.setAttribute('aria-hidden', 'true');
-    seedEl.innerHTML = '<i></i><b></b>';
+    seedEl.innerHTML = '<i></i><em>?</em><b></b>';
     document.body.appendChild(seedEl);
     launchAt = performance.now();
     ring.style.visibility = 'hidden';
@@ -765,6 +765,8 @@
       { transform: 'scale(.5) rotate(50deg)', opacity: 0.9, offset: 0.6 },
       { transform: 'scale(.1) rotate(90deg)', opacity: 0 },
     ], { duration: FLIGHT * 1000, easing: 'ease-in', fill: 'forwards' });
+    seedEl.querySelector('em').animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.4 }, { opacity: 0, transform: 'scale(.6)' }],
+      { duration: FLIGHT * 1000, easing: 'ease-in', fill: 'forwards' });
     seedEl.querySelector('b').animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.45 }, { opacity: 1, transform: 'scale(1.3)' }],
       { duration: FLIGHT * 1000, fill: 'forwards' });
     return true;

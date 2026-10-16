@@ -217,8 +217,8 @@
   .gp-zone { font-size: 1.05rem; color: #b8a98f66; letter-spacing: .03em; }
   .gp.is-labelled .gp-ax, .gp.is-labelled .gp-zone { opacity: 1; }
   /* Each tool is a small disc: its own logo (assets/logos), ringed and haloed in its group's colour. The halo breathes
-     on its own slow clock; in focus the disc lifts and glows, its name and note open, its neighbours ease away and a
-     thread draws to the empty corner (gap.js). --m (0 → 1) is the orb-to-logo morph as each one lands. */
+     on its own slow clock; in focus the disc lifts and glows, its name and note open and its neighbours ease away
+     (gap.js). --m (0 → 1) is the orb-to-logo morph as each one lands. */
   .gp { --d: clamp(20px, min(1.98vw, 2.88vh), 28px); }
   .gp-dot { all: unset; position: absolute; z-index: 1; display: inline-flex; align-items: center; height: var(--d); border-radius: calc(var(--d) / 2); cursor: default;
     transform: translate(calc(var(--d) / -2), -50%); translate: var(--nx, 0px) var(--ny, 0px);
@@ -257,21 +257,14 @@
   .gp-dot.is-flip:hover b, .gp-dot.is-flip:focus-visible b, .gp-dot.is-flip.is-open b { padding: 0 0.6rem 0 0.8rem; }
   .gp-dot.is-flip span { left: auto; right: 0; }
   .gp-dot.is-low span { top: auto; bottom: calc(100% + 8px); transform: translateY(4px); }
-  .gp-thread { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
-  .gp-thread.is-on { opacity: 1; transition-duration: .15s; }
-  .gp-thread path { fill: none; stroke: url(#gp-thread-ink); stroke-width: 1; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
-  .gp-thread.is-drawn path { stroke-dashoffset: 0; transition: stroke-dashoffset var(--draw, .7s) cubic-bezier(.45, 0, .2, 1); }
-  .gp-thread stop:first-child { stop-opacity: .6; }
-  .gp-thread stop:last-child { stop-color: #f0c67e; stop-opacity: .45; }
-  .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0.6rem; cursor: help;
+  .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; cursor: help;
     opacity: 0; transition: opacity .8s ease .2s; }
   .gp.is-labelled .gp-empty { opacity: 1; }
+  /* The empty corner: a dashed ring with a question mark in its middle. */
   .gp-empty i { width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e; box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12;
     animation: gp-breathe 4.5s ease-in-out infinite; }
-  .gp-empty i { transition: filter .7s ease; }
+  .gp-empty i, .ac-seed em { display: grid; place-items: center; font: italic 500 1.6rem/1 "Cormorant Garamond", serif; color: #f0c67e; }
   .slide:not(.on) .gp-empty i { animation-play-state: paused; }
-  .gp-empty.is-reached i { filter: brightness(1.3) drop-shadow(0 0 5px #f0c87755); }
-  .gp-empty span { font: italic 400 1.1rem "Cormorant Garamond", serif; color: #f0c67e; white-space: nowrap; }
   .gp-q { position: absolute; left: 50%; top: 16px; margin-left: -0.25em; font: italic 500 1.15rem "Cormorant Garamond", serif; color: #f0c67e;
     pointer-events: none; animation: gp-rise 1.7s ease-out forwards; }
   @keyframes gp-rise { 0% { opacity: 0; transform: translate(0, 0) scale(.7); } 20% { opacity: .9; }
@@ -310,6 +303,7 @@
   .ac-seed { position: fixed; left: 0; top: 0; z-index: 2; width: 0; height: 0; pointer-events: none; }
   .ac-seed i { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e;
     box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12; }
+  .ac-seed em { position: absolute; left: -24px; top: -24px; width: 50px; height: 50px; } /* the empty ring's question mark */
   .ac-seed b { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; opacity: 0;
     background: radial-gradient(circle at 40% 35%, #fffaf0, #ffd991 55%, #e0ab5e); box-shadow: 0 0 14px #ffd991aa; }
   /* Version F, slide 5: Astrid herself (demo.js). Text centred on top; the mink presiding just beneath it; then the
@@ -1016,8 +1010,10 @@
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); transition: width 0.5s ease; }
   .chrome button { background: none; border: 1px solid #ffffff22; color: var(--soft); font: inherit; padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; }
   .chrome button:hover { color: var(--ink); border-color: var(--gold); }
-  .chrome #ovBtn { position: relative; }
-  .chrome #ovBtn::before { content: ""; position: absolute; inset: -7px 0; }
+  /* The wordmark's place at the left of the row: an invisible copy at its resting size (dot-transitions.js rests the
+     22 px .dt-name at .58 over it, and the opening glides it here). */
+  .chrome .brand { flex: none; visibility: hidden; white-space: nowrap;
+    font: 400 calc(22px * .58)/1 "DM Sans", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
   /* Previous / next: quiet gold rings either side of the counter. Outside the deck, so the click-thirds never see them. */
   .chrome .navb { position: relative; display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
   .chrome .navb::before { content: ""; position: absolute; inset: -7px; }
@@ -1069,7 +1065,6 @@
     .m-collage { aspect-ratio: 4 / 3; }
     .m-grid4 img { max-height: 200px; }
     .chrome { gap: 0.5rem; padding: 0.35rem max(12px, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); font-size: 0.75rem; }
-    .chrome button { padding: 0.4rem 0.55rem; }
     .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
     .chrome .navb i { width: 30px; height: 30px; }
     .chrome .bar { min-width: 8px; }
@@ -1086,12 +1081,11 @@
     .gp { width: min(100cqw, 100cqh); }
   }
   /* A phone on its side (or any short, wide window) keeps the wide compositions, drawn smaller: everything sits
-     between the top edge and the deck's footer (the wordmark over the counter, arrows and All titles), which takes
-     the bottom ~72 px. */
+     between the top edge and the deck's footer (one row: the wordmark, the progress bar, and the counter between
+     its arrows), which takes the bottom ~56 px. */
   @media (orientation: landscape) and (max-height: 500px) {
     .slide { padding: 12px max(24px, 6vw) 76px; }
     .chrome { gap: 0.5rem; padding: 0.35rem max(12px, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); font-size: 0.75rem; }
-    .chrome button { padding: 0.4rem 0.55rem; }
     .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
     .chrome .navb i { width: 30px; height: 30px; }
     html[data-ver="f"] .split > :first-child > .num { margin-bottom: .55rem; }
@@ -1208,7 +1202,7 @@
           <span class="gp-ax" style="right:2%;top:51.5%">easy to use →</span>
           <span class="gp-zone" style="left:3%;top:3%">Open tools</span>
           <span class="gp-zone" style="right:3%;bottom:3%">Closed tools</span>
-          <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i></i><span>Nothing here — yet</span></button>
+          <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i>?</i></button>
           <button class="gp-dot" type="button" style="left:14%;top:10%;--c:#e0ab5e"><i style="--bg:#211927"><img src="../assets/logos/comfyui.png" alt="" decoding="async"></i><b>ComfyUI</b><span>Node graph that runs nearly every open model. Endlessly capable, but you wire it yourself.</span></button>
           <button class="gp-dot" type="button" style="left:5%;top:20%;--c:#e0ab5e"><i class="is-inset" style="--bg:#fff;--fit:84%"><img src="../assets/logos/diffusers.png" alt="" decoding="async"></i><b>Diffusers</b><span>Hugging Face&#x27;s Python library. Anything is possible, in code.</span></button>
           <button class="gp-dot" type="button" style="left:27%;top:17%;--c:#e0ab5e"><i style="--bg:#000"><img src="../assets/logos/ai-toolkit.png" alt="" decoding="async"></i><b>ai-toolkit</b><span>Train your own LoRAs for image and video models. Config files and a big GPU.</span></button>
@@ -1417,11 +1411,11 @@
 
 
 <div class="chrome">
+  <span class="brand" aria-hidden="true">Mycelial</span>
+  <div class="bar"><i id="fill"></i></div>
   <button id="prevBtn" class="navb" type="button" aria-label="Previous slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
   <span id="count">1 / 12</span>
   <button id="nextBtn" class="navb" type="button" aria-label="Next slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
-  <div class="bar"><i id="fill"></i></div>
-  <button id="ovBtn" type="button">All titles (O)</button>
 </div>
 
 <script>
@@ -1673,7 +1667,6 @@
     selectedOnMouseup = false;
     if (!selected) step(e.clientX < innerWidth / 3 ? -1 : 1);
   });
-  document.getElementById('ovBtn').onclick = () => toggleOv();
   prevBtn.onclick = () => step(-1);
   nextBtn.onclick = () => step(1);
   let tx = null;
