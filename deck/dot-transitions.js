@@ -27,20 +27,83 @@
   const net = document.createElement('canvas');
   net.className = 'dt-net';
   net.setAttribute('aria-hidden', 'true');
-  document.body.append(net, dot);
-  const g = net.getContext('2d');
+  // The Mycelial mark (the opening, and the crown on the last slide) has a small canvas of its own, so whatever
+  // quiets the network behind a slide's picture never fades the mark.
+  const markCv = document.createElement('canvas');
+  markCv.className = 'dt-mark';
+  markCv.setAttribute('aria-hidden', 'true');
+  document.body.append(net, markCv, dot);
+  const g = net.getContext('2d'), mg = markCv.getContext('2d');
+  // Settled threads are drawn once into an offscreen layer and leave the frame loop, so the network can spread
+  // across the whole screen while each frame only draws what is still growing or glowing.
+  const ground = document.createElement('canvas'), gg = ground.getContext('2d');
 
   // ---- The network ---------------------------------------------------------
   // A hypha is a polyline that grows along its length. Fresh threads glow,
   // then settle to a faint trace; kept ones (a node's tuft) stay faintly,
   // the rest fade away.
   const THREAD = '240,200,119', NODE = '255,217,145';
+  const REST = 0.42; // what a lasting thread settles to, as a share of its fresh glow
   let hyphae = [], blooms = [], nodes = [], netOn = false, netLast = 0, dpr = 1;
+  let vw = innerWidth, vh = innerHeight;
+  // The settled network as geometry, so a resize can redraw it in place: { pts, w, a } threads and { x, y, a } nodes.
+  let baked = [];
+  const CAP = 6000; // past this the network is full: new threads still glow on their way, then fade instead of staying
+
+  const bakeLine = (pts, w, a) => {
+    gg.strokeStyle = `rgba(${THREAD},${a.toFixed(3)})`;
+    gg.lineWidth = w;
+    gg.beginPath();
+    gg.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) gg.lineTo(pts[i][0], pts[i][1]);
+    gg.stroke();
+  };
+  const bakeDot = (x, y, a) => {
+    gg.fillStyle = `rgba(${NODE},${a.toFixed(3)})`;
+    gg.beginPath(); gg.arc(x, y, 1.25, 0, 7); gg.fill();
+  };
+  const rebake = () => {
+    gg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gg.clearRect(0, 0, vw, vh);
+    gg.lineCap = 'round';
+    gg.lineJoin = 'round';
+    for (const b of baked) b.pts ? bakeLine(b.pts, b.w, b.a) : bakeDot(b.x, b.y, b.a);
+  };
+
+  // How much of the screen the network has reached: thread length per cell of a coarse grid, measured so that
+  // the same reading means the same density on any screen (one unit is 90 px of thread per 90 × 90 px), a phone
+  // a little fuller.
+  const GX = 16, GY = 10;
+  let cover = new Float32Array(GX * GY), junctions = [];
+  const note = (pts) => {
+    const cw = vw / GX, ch = vh / GY, unit = Math.max(32, (cw * ch) / 90);
+    for (let i = 1; i < pts.length; i++) {
+      const cx = Math.floor((pts[i][0] + pts[i - 1][0]) / 2 / cw), cy = Math.floor((pts[i][1] + pts[i - 1][1]) / 2 / ch);
+      if (cx >= 0 && cy >= 0 && cx < GX && cy < GY) cover[cy * GX + cx] += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) / unit;
+    }
+    // Points new threads can set off from (shared with the geometry, so they move with it on a resize).
+    for (let i = 0; i < pts.length; i += 7) {
+      if (junctions.length < 1600) junctions.push(pts[i]);
+      else junctions[Math.floor(rnd() * junctions.length)] = pts[i];
+    }
+  };
 
   const size = () => {
     dpr = Math.min(2, devicePixelRatio || 1);
-    net.width = Math.round(innerWidth * dpr);
-    net.height = Math.round(innerHeight * dpr);
+    const sx = innerWidth / vw, sy = innerHeight / vh;
+    vw = innerWidth; vh = innerHeight;
+    net.width = ground.width = Math.round(vw * dpr);
+    net.height = ground.height = Math.round(vh * dpr);
+    if (sx !== 1 || sy !== 1) {
+      const seen = new Set();
+      for (const b of baked) {
+        if (!b.pts) { b.x *= sx; b.y *= sy; continue; }
+        if (seen.has(b.pts)) continue;
+        seen.add(b.pts);
+        for (const p of b.pts) { p[0] *= sx; p[1] *= sy; }
+      }
+    }
+    rebake();
   };
   size();
 
@@ -78,11 +141,13 @@
 
   const hypha = (pts, o = {}) => {
     const len = lengths(pts);
+    const full = baked.length > CAP && !o.keep;
     const h = {
       pts, len, total: len[len.length - 1], grown: 0, age: -(o.delay || 0), after: 0, done: false,
-      width: o.width || 0.8, alpha: o.alpha || 0.45, speed: o.speed || 300, duration: o.duration || 0,
-      keep: !!o.keep, rest: o.rest ?? 0.38, glow: 1, smooth: !!o.smooth, fade: o.fade || 4.5, branches: o.branches || [], depth: o.depth || 0, onDone: o.onDone || null,
+      width: o.width || 0.8, alpha: o.alpha || 0.45, speed: o.speed || 300, duration: o.duration || 0, tip: o.tip ?? 1,
+      keep: !!o.keep, rest: full ? 0 : o.rest ?? REST, glow: 1, smooth: !!o.smooth, fade: o.fade || 4.5, branches: o.branches || [], depth: o.depth || 0, onDone: o.onDone || null,
     };
+    if (h.keep || h.rest) note(pts);
     hyphae.push(h);
     wake();
     return h;
@@ -115,8 +180,8 @@
   };
   // The old node's tuft dims to a trace like everything else (the new node grows its own).
   const release = () => {
-    hyphae.forEach((h) => { if (h.keep) { h.keep = false; h.rest = h.rest || 0.38; } });
-    nodes.forEach((n) => { if (n.keep) { n.keep = false; n.rest = n.rest || 0.4; } });
+    hyphae.forEach((h) => { if (h.keep) { h.keep = false; h.rest = h.rest || REST; } });
+    nodes.forEach((n) => { if (n.keep) { n.keep = false; n.rest = n.rest || REST; } });
   };
 
   // How bright a thread should be now: fresh threads glow, then settle to a
@@ -137,6 +202,46 @@
   };
   let mark = null; // { x, y, t, size, shrink, trail, shed }
 
+  // Side-branches sprout where the thread has grown past them.
+  const sprout = (h) => {
+    for (const b of h.branches) {
+      if (b.done || h.grown < b.at) continue;
+      b.done = true;
+      const p = pointAt(h, b.at);
+      nodes.push({ x: p.x, y: p.y, age: 0, keep: h.keep, rest: h.rest });
+      const pts = curl(p.x, p.y, p.ang + b.side * (0.5 + rnd() * 0.6), b.length);
+      hypha(pts, { width: h.width * 0.7, alpha: h.alpha * 0.8, speed: 140 + rnd() * 90, keep: h.keep, rest: h.rest, depth: h.depth + 1, tip: h.tip,
+        branches: h.depth < 1 && rnd() < 0.55 ? plan(lengths(pts).at(-1), h.depth + 1) : [] });
+    }
+  };
+  // A lasting thread that has settled to its trace goes into the ground layer; so does a settled node.
+  const settled = (h) => h.done && !h.keep && h.rest > 0 && h.age >= 0 && h.after > 1 && Math.abs(h.glow - h.rest) < 0.02;
+  const bake = (h) => {
+    const b = { pts: h.pts, w: h.width, a: h.alpha * h.rest };
+    baked.push(b);
+    bakeLine(b.pts, b.w, b.a);
+  };
+  const bakeNode = (n) => {
+    const b = { x: n.x, y: n.y, a: n.rest * 0.6 };
+    baked.push(b);
+    bakeDot(b.x, b.y, b.a);
+  };
+  // Grow everything still growing to its end at once and settle it (a resize, or reduced motion).
+  const ripen = () => {
+    for (let i = 0; i < hyphae.length; i++) { // branches sprouting here join the end of the list and ripen in turn
+      const h = hyphae[i];
+      h.onDone = null;
+      if (h.age < 0) h.age = 0;
+      h.grown = h.total;
+      sprout(h);
+      h.done = true; h.after = 99; h.glow = target(h);
+    }
+    nodes.forEach((n) => { n.age = 99; });
+    blooms = [];
+    hyphae = hyphae.filter((h) => { if (settled(h)) { bake(h); return false; } return h.keep || h.rest > 0; });
+    nodes = nodes.filter((n) => { if (n.keep) return true; if (n.rest) bakeNode(n); return false; });
+  };
+
   const step = (dt) => {
     for (const h of hyphae) {
       h.age += dt;
@@ -146,15 +251,7 @@
         h.grown = h.duration
           ? h.total * (h.smooth ? 0.5 - 0.5 * Math.cos(Math.PI * k) : (1 - Math.pow(1 - k, 2.2)) * clamp(k * 3))
           : Math.min(h.total, h.grown + h.speed * dt);
-        for (const b of h.branches) {
-          if (b.done || h.grown < b.at) continue;
-          b.done = true;
-          const p = pointAt(h, b.at);
-          nodes.push({ x: p.x, y: p.y, age: 0, keep: h.keep, rest: h.rest });
-          const pts = curl(p.x, p.y, p.ang + b.side * (0.5 + rnd() * 0.6), b.length);
-          hypha(pts, { width: h.width * 0.7, alpha: h.alpha * 0.8, speed: 140 + rnd() * 90, keep: h.keep, rest: h.rest, depth: h.depth + 1,
-            branches: h.depth < 1 && rnd() < 0.55 ? plan(lengths(pts).at(-1), h.depth + 1) : [] });
-        }
+        sprout(h);
         if (h.grown >= h.total - 0.01) {
           h.grown = h.total; h.done = true;
           if (h.onDone) { const f = h.onDone; h.onDone = null; f(); }
@@ -184,26 +281,39 @@
         }
       }
     }
-    // Resting threads stay as a trace; passing ones (through the text) go entirely.
-    hyphae = hyphae.filter((h) => h.keep || h.rest || h.age < 0 || !h.done || h.after < h.fade);
-    nodes = nodes.filter((n) => n.keep || n.rest || n.age < 5);
+    // Resting threads stay as a trace (in the ground layer once settled); passing ones (through the text) go entirely.
+    hyphae = hyphae.filter((h) => {
+      if (settled(h)) { bake(h); return false; }
+      return h.keep || h.rest || h.age < 0 || !h.done || h.after < h.fade;
+    });
+    nodes = nodes.filter((n) => {
+      if (n.keep) return true;
+      if (n.rest) { if (n.age > 3) { bakeNode(n); return false; } return true; }
+      return n.age < 5;
+    });
     blooms = blooms.filter((b) => b.age < 0.9);
+    for (const z of zones) {
+      if (z.wait > 0) { z.wait -= dt; continue; }
+      z.a += (z.to - z.a) * (1 - Math.exp(-dt / 0.3));
+    }
+    zones = zones.filter((z) => z.to > 0 || z.a > 0.01);
   };
 
-  const drawMark = (m) => {
+  // The mark, drawn on its own canvas around (cx, cy).
+  const drawMark = (g, m, cx, cy) => {
     const k = m.t;
     const S = (m.size * (1 - 0.94 * m.shrink)) / 54; // px per unit; the ring spans 54 units
-    const at = (x, y) => [m.x + (x - 32) * S, m.y + (y - 32) * S];
+    const at = (x, y) => [cx + (x - 32) * S, cy + (y - 32) * S];
     const fade = 1 - 0.55 * m.shrink;
-    const halo = g.createRadialGradient(m.x, m.y, 0, m.x, m.y, 36 * S);
+    const halo = g.createRadialGradient(cx, cy, 0, cx, cy, 36 * S);
     halo.addColorStop(0, `rgba(${NODE},${(0.1 * clamp(k / 1) * fade).toFixed(3)})`);
     halo.addColorStop(1, `rgba(${NODE},0)`);
     g.fillStyle = halo;
-    g.beginPath(); g.arc(m.x, m.y, 36 * S, 0, 7); g.fill();
+    g.beginPath(); g.arc(cx, cy, 36 * S, 0, 7); g.fill();
     g.strokeStyle = `rgba(${THREAD},${(0.8 * fade).toFixed(3)})`;
-    g.lineWidth = Math.max(0.6, S * 0.66);
-    g.beginPath(); g.arc(m.x, m.y, 27 * S, -Math.PI / 2, -Math.PI / 2 + clamp(k / 0.8) * Math.PI * 2); g.stroke();
-    g.lineWidth = Math.max(0.5, S * 0.5);
+    g.lineWidth = Math.max(m.crown ? 1.1 : 0.6, S * 0.66);
+    g.beginPath(); g.arc(cx, cy, 27 * S, -Math.PI / 2, -Math.PI / 2 + clamp(k / 0.8) * Math.PI * 2); g.stroke();
+    g.lineWidth = Math.max(m.crown ? 0.9 : 0.5, S * 0.5);
     MARK.curves.forEach(([x0, y0, qx, qy, x1, y1], i) => {
       const p = clamp((k - 0.2 - i * 0.05) / 0.5);
       if (p <= 0) return;
@@ -229,15 +339,88 @@
     });
   };
 
-  const draw = () => {
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, innerWidth, innerHeight);
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
+  // Under the text the network is softened, never removed: a soft-edged shape of the text's lines, cut from the
+  // drawn network at CUT strength. Slides that soften the network themselves (an inline mask) keep theirs.
+  const CUT = 0.72;
+  const zone = (els) => {
+    const rs = [];
+    const range = document.createRange();
+    for (const el of els) {
+      range.selectNodeContents(el);
+      const trim = el.classList.contains('num') ? 0.3 : 0.18; // the label hugs its glyphs, clear of the node above it
+      for (const r of range.getClientRects()) if (r.width > 1 && r.height > 1) rs.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height, trim });
+    }
+    if (!rs.length) return null;
+    const P = 18;
+    const x0 = Math.min(...rs.map((r) => r.left)) - 2 * P, y0 = Math.min(...rs.map((r) => r.top)) - 2 * P;
+    const w = Math.max(...rs.map((r) => r.right)) + 2 * P - x0, h = Math.max(...rs.map((r) => r.bottom)) + 2 * P - y0;
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+    const c = cv.getContext('2d');
+    c.scale(dpr, dpr);
+    c.filter = `blur(${P * 0.55}px)`;
+    c.fillStyle = '#000';
+    for (const r of rs) {
+      const py = r.height * r.trim;
+      c.beginPath();
+      c.roundRect(r.left - x0 - P * 0.6, r.top - y0 + py - P * 0.25, r.width + P * 1.2, r.height - 2 * py + P * 0.5, 10);
+      c.fill();
+    }
+    return { cv, x: x0, y: y0, w, h, a: 0, to: 1 };
+  };
+  // A soft disc, under the crown, so the mark reads cleanly over a full network.
+  const disc = (x, y, r) => {
+    const R = r * 1.5, cv = document.createElement('canvas');
+    cv.width = cv.height = Math.ceil(2 * R * dpr);
+    const c = cv.getContext('2d'), grad = c.createRadialGradient(R * dpr, R * dpr, 0, R * dpr, R * dpr, R * dpr);
+    grad.addColorStop(0, '#000');
+    grad.addColorStop(0.6, '#000');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, cv.width, cv.height);
+    return { cv, x: x - R, y: y - R, w: 2 * R, h: 2 * R, a: 0, to: 1 };
+  };
+  let zones = [], chrome = null;
+  // The text block of a slide: its column, the label included.
+  const lines = (s) => textOf(s).flatMap((col) => [...col.children]);
+  // The deck's own chrome: the wordmark, the counter and its buttons.
+  const chromeEls = () => [name, ...document.querySelectorAll('.chrome #count, .chrome button')];
+  const soften = () => {
+    const own = !net.style.maskImage;
+    g.globalCompositeOperation = 'destination-out';
+    for (const z of own ? [chrome, ...zones] : [chrome, ...zones.filter((z) => z.crown)]) {
+      if (!z || z.a <= 0.005) continue;
+      g.globalAlpha = z.a * CUT;
+      g.drawImage(z.cv, z.x, z.y, z.w, z.h);
+    }
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
+  };
+
+  // A soft light, drawn once: growing tips and blooms are stamped with it rather than building a gradient each frame.
+  const glowDot = document.createElement('canvas');
+  glowDot.width = glowDot.height = 64;
+  {
+    const c = glowDot.getContext('2d'), grad = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, `rgba(${NODE},1)`);
+    grad.addColorStop(1, `rgba(${NODE},0)`);
+    c.fillStyle = grad;
+    c.fillRect(0, 0, 64, 64);
+  }
+  const stamp = (x, y, r, a) => {
+    if (a <= 0.003) return;
+    g.globalAlpha = Math.min(1, a);
+    g.drawImage(glowDot, x - r, y - r, 2 * r, 2 * r);
+    g.globalAlpha = 1;
+  };
+
+  const drawThreads = (lasting) => {
     for (const h of hyphae) {
+      if (!!(h.keep || h.rest) !== lasting) continue;
       const glow = h.glow;
       if (glow <= 0.005 || h.grown <= 0) continue;
-      const tip = pointAt(h, h.grown);
+      const end = h.grown >= h.total;
+      const tip = end ? { x: h.pts.at(-1)[0], y: h.pts.at(-1)[1], i: h.pts.length - 1 } : pointAt(h, h.grown);
       g.beginPath();
       g.moveTo(h.pts[0][0], h.pts[0][1]);
       for (let i = 1; i < tip.i; i++) g.lineTo(h.pts[i][0], h.pts[i][1]);
@@ -252,37 +435,68 @@
         g.moveTo(from.x, from.y);
         for (let i = from.i; i < tip.i; i++) g.lineTo(h.pts[i][0], h.pts[i][1]);
         g.lineTo(tip.x, tip.y);
-        g.strokeStyle = `rgba(${NODE},${Math.min(1, h.alpha * 1.7).toFixed(3)})`;
+        g.strokeStyle = `rgba(${NODE},${Math.min(1, h.alpha * 1.7 * h.tip).toFixed(3)})`;
         g.lineWidth = h.width + 0.5;
         g.stroke();
-        const r = h.depth ? 4 : 9;
-        const halo = g.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, r);
-        halo.addColorStop(0, `rgba(${NODE},${h.depth ? 0.45 : 0.75})`);
-        halo.addColorStop(1, `rgba(${NODE},0)`);
-        g.fillStyle = halo;
-        g.beginPath(); g.arc(tip.x, tip.y, r, 0, 7); g.fill();
+        stamp(tip.x, tip.y, h.depth ? 4 : 9, (h.depth ? 0.45 : 0.75) * h.tip);
       }
     }
+  };
+  const drawNodes = (lasting) => {
     for (const n of nodes) {
+      if (!!(n.keep || n.rest) !== lasting) continue;
       const a = (n.keep ? 0.35 + 0.35 * Math.exp(-n.age / 0.8)
         : n.rest ? n.rest * 0.6 + 0.4 * Math.exp(-n.age / 1.2) : 0.7 * clamp(1 - n.age / 5)) * clamp(n.age / 0.15);
       g.fillStyle = `rgba(${NODE},${a.toFixed(3)})`;
       g.beginPath(); g.arc(n.x, n.y, 1.25, 0, 7); g.fill();
     }
+  };
+
+  // The mark rides on its own small canvas, moved into place.
+  let markBox = 0;
+  const drawMarkLayer = () => {
+    if (!mark) {
+      if (markBox) { mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, markCv.width, markCv.height); markBox = 0; }
+      return;
+    }
+    const B = Math.ceil(mark.size * 1.5 + 16);
+    if (B !== markBox) {
+      markBox = B;
+      markCv.width = markCv.height = Math.round(B * dpr);
+      markCv.style.width = markCv.style.height = `${B}px`;
+    }
+    markCv.style.transform = `translate(${(mark.x - B / 2).toFixed(1)}px, ${(mark.y - B / 2).toFixed(1)}px)`;
+    mg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mg.clearRect(0, 0, B, B);
+    mg.lineCap = 'round';
+    mg.lineJoin = 'round';
+    drawMark(mg, mark, B / 2, B / 2);
+  };
+
+  // The settled ground, then what is still growing on it, softened under the text together; then the passing
+  // threads that draw the text in and out, the blooms, and the mark, all at full strength.
+  const draw = () => {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, net.width, net.height);
+    if (baked.length) g.drawImage(ground, 0, 0);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    drawThreads(true);
+    drawNodes(true);
+    soften();
+    drawThreads(false);
+    drawNodes(false);
     for (const b of blooms) {
       const e = clamp(b.age / 0.9);
-      const r = 5 + 30 * (1 - Math.pow(1 - e, 3));
-      const halo = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
-      halo.addColorStop(0, `rgba(${NODE},${(0.55 * (1 - e)).toFixed(3)})`);
-      halo.addColorStop(1, `rgba(${NODE},0)`);
-      g.fillStyle = halo;
-      g.beginPath(); g.arc(b.x, b.y, r, 0, 7); g.fill();
+      stamp(b.x, b.y, 5 + 30 * (1 - Math.pow(1 - e, 3)), 0.55 * (1 - e));
     }
-    if (mark) drawMark(mark);
+    drawMarkLayer();
   };
 
   // Runs only while something is growing, glowing or fading.
   const moving = () => (mark && (mark.trail || mark.folding !== undefined || mark.t < 1.6)) || blooms.length || nodes.some((n) => (n.keep || n.rest ? n.age < 3 : true))
+    || zones.some((z) => Math.abs(z.a - z.to) > 0.01)
     || hyphae.some((h) => h.age < 0 || !h.done || Math.abs(h.glow - target(h)) > 0.004 || !(h.keep || h.rest || h.after >= h.fade));
   const tick = (now) => {
     const dt = Math.min(0.05, (now - (netLast || now)) / 1000);
@@ -293,7 +507,73 @@
     else { netOn = false; netLast = 0; }
   };
   function wake() { if (!netOn) { netOn = true; netLast = 0; requestAnimationFrame(tick); } }
-  const clearNet = () => { hyphae = []; nodes = []; blooms = []; mark = null; draw(); };
+  const clearNet = () => {
+    hyphae = []; nodes = []; blooms = []; mark = null;
+    baked = []; junctions = []; cover = new Float32Array(GX * GY);
+    rebake();
+    draw();
+  };
+
+  // ---- Sprawl ----------------------------------------------------------------
+  // Besides the thread from node to node, every new slide grows the network out into ground it hasn't reached,
+  // the bottom-left first. By slide k it has reached FILL[k] of the screen's cells with at least DEPTH[k] cell
+  // widths of thread each. Going into slide 5 that jumps, and the network bursts out across the whole screen;
+  // by the last slides it fills it. Going back never takes any away, and once full it stops growing.
+  const FILL = [0.1, 0.24, 0.36, 0.48, 0.9, 0.92, 0.94, 0.96, 0.98, 1, 1];
+  const DEPTH = [0.7, 0.7, 0.75, 0.8, 0.85, 0.95, 1.05, 1.15, 1.25, 1.4, 1.5];
+  const short = (lvl) => {
+    let below = 0;
+    for (const c of cover) if (c < DEPTH[lvl]) below++;
+    return below - Math.floor((1 - FILL[lvl]) * GX * GY);
+  };
+  // Somewhere the network is thin: weighted towards the emptiest cells and, early on, the bottom-left.
+  const pickCell = (lvl) => {
+    let sum = 0;
+    const w = Array.from(cover, (c, i) => {
+      if (c >= DEPTH[lvl]) return 0;
+      const x = (i % GX + 0.5) / GX, y = (Math.floor(i / GX) + 0.5) / GY;
+      const v = Math.pow(1 - c / DEPTH[lvl], 2) * (lvl < 4 && x < 0.45 && y > 0.5 ? 3.5 : 1);
+      sum += v;
+      return v;
+    });
+    let r = rnd() * sum;
+    for (let i = 0; i < w.length; i++) if ((r -= w[i]) <= 0 && w[i] > 0) return i;
+    return -1;
+  };
+  // Set off from the nearest part of the network (one of the closest few of a sample).
+  const pickStart = (to) => {
+    if (!junctions.length) return null;
+    const near = [];
+    for (let k = 0; k < 70; k++) {
+      const p = junctions[Math.floor(rnd() * junctions.length)];
+      near.push([Math.hypot(p[0] - to.x, p[1] - to.y), p]);
+    }
+    near.sort((a, b) => a[0] - b[0]);
+    const p = near[Math.floor(rnd() * Math.min(3, near.length))][1];
+    return { x: p[0], y: p[1] };
+  };
+  const sprawl = (lvl, from, delay = 0) => {
+    lvl = clamp(lvl, 0, FILL.length - 1);
+    const need = short(lvl);
+    if (need <= 0) return;
+    const burst = need > 40; // a big step (into slide 5, or a jump ahead): many threads at once, fast, from all over
+    const most = burst ? 46 : 12;
+    const cw = vw / GX, ch = vh / GY;
+    for (let n = 0, tries = 0; n < most && tries < most * 3 && short(lvl) > 0; tries++) {
+      const cell = pickCell(lvl);
+      if (cell < 0) break;
+      const to = { x: (cell % GX + 0.15 + 0.7 * rnd()) * cw, y: (Math.floor(cell / GX) + 0.15 + 0.7 * rnd()) * ch };
+      const start = (burst && from && rnd() < 0.15) ? from : pickStart(to) || from;
+      if (!start) break;
+      const pts = wander(start, to);
+      const total = lengths(pts).at(-1);
+      if (total < 40) { cover[cell] += DEPTH[lvl]; continue; } // already there: count the cell as reached
+      hypha(pts, burst
+        ? { width: 0.75, alpha: 0.44, speed: 560 + rnd() * 320, delay: delay + rnd() * 0.55, branches: plan(total, 0), tip: 0.8 }
+        : { width: 0.75, alpha: 0.42, speed: 190 + rnd() * 110, delay: delay + 0.2 + rnd() * 1.1, branches: plan(total, 0), tip: 0.45 });
+      n++;
+    }
+  };
 
   // ---- Slides, text and the node --------------------------------------------
   // In F each slide's label sits inside its text column, directly above the
@@ -445,9 +725,16 @@
   };
 
   // The last slide: the node grows back into the mark, and folds away again on leaving.
-  const lastSlide = () => slides.filter((sl) => (sl.dataset.v || '').split(' ').includes(VER)).at(-1);
+  const deck = () => slides.filter((sl) => (sl.dataset.v || '').split(' ').includes(VER));
+  const lastSlide = () => deck().at(-1);
+  const levelOf = (s) => Math.max(0, deck().indexOf(s));
+  // The crown's size (a little smaller on a phone), and how far above the node it sits.
+  const crownSize = () => Math.round(clamp(Math.min(innerWidth, innerHeight) * 0.1, 60, 76));
+  const crownY = () => Math.round(crownSize() * 0.53);
   const crown = (at, now) => {
-    mark = { x: at.x, y: at.y - 36, t: now ? 2 : 0, size: 68, shrink: 0, trail: null, shed: 0, crown: true };
+    const size = crownSize();
+    mark = { x: at.x, y: at.y - crownY(), t: now ? 2 : 0, size, shrink: 0, trail: null, shed: 0, crown: true };
+    zones.push(Object.assign(disc(mark.x, mark.y, size * 0.5), { crown: true, a: now ? 1 : 0 }));
     dot.classList.add('is-moving');
     wake();
   };
@@ -493,6 +780,7 @@
       if (current === lastSlide()) crown(anchor);
       else { dot.classList.remove('is-moving'); pulse(1.8); bloom(anchor); }
       reveal(current, anchor, 60);
+      sprawl(levelOf(current), anchor, 0.15);
     };
     opening.timers.push(setTimeout(() => {
       if (!opening) return;
@@ -508,7 +796,15 @@
     return true;
   };
 
-  const settle = (grow) => {
+  // The node's own tuft and anything passing go; whatever else is growing settles where it is.
+  const keepGround = () => {
+    hyphae = hyphae.filter((h) => !h.keep && h.rest > 0);
+    nodes = nodes.filter((n) => !n.keep && n.rest);
+    mark = null;
+    ripen();
+  };
+  // wipe: start the network afresh (first load, switching version); otherwise the ground stays (a resize, a jump).
+  const settle = (grow, wipe) => {
     if (turning) turning.cancel();
     if (active()) adopt(); else restore();
     slides.forEach((sl) => sl.classList.remove('dt-leaving', 'dt-release', 'dt-entering'));
@@ -518,13 +814,25 @@
     const on = active() && !!anchor;
     dot.classList.toggle('is-on', on);
     net.classList.toggle('is-on', on);
+    markCv.classList.toggle('is-on', on);
     dot.classList.remove('is-moving');
-    clearNet();
+    if (wipe) clearNet(); else keepGround();
     nameRest();
+    const ch = zone(chromeEls());
+    chrome = ch && Object.assign(ch, { a: 1 });
+    const z = on && zone(lines(current));
+    zones = z ? [Object.assign(z, { a: 1 })] : [];
+    draw();
     if (!on) return;
     place(anchor);
     current.dispatchEvent(new CustomEvent('dt-arrive'));
-    if (still) return;
+    if (still) { // the network at this slide's reach, at once, and the crown already formed on the last slide
+      sprawl(levelOf(current), anchor);
+      ripen();
+      if (current === lastSlide()) crown(anchor, true);
+      draw();
+      return;
+    }
     bloom(anchor);
     if (!grow) { hyphae.forEach((h) => { h.age = 0; h.grown = h.total; h.done = true; h.after = 5; h.glow = target(h); }); blooms = []; }
     if (current === lastSlide()) crown(anchor, !grow);
@@ -556,6 +864,8 @@
     const from = { x: (anchor ? anchor.x : 0) + drift.x, y: (anchor ? anchor.y : 0) + drift.y };
     clearText(prev);
     uncrown();
+    zones.forEach((z) => { z.to = 0; z.wait = z.crown ? 0.2 : 0.45; }); // the old text's softening lifts once it is drawn in
+    wake();
 
     // 1. Threads reach across the old text and draw it back into its node.
     prev.classList.add('dt-leaving');
@@ -571,8 +881,10 @@
     const arrive = () => {
       if (done) return;
       place(to);
-      if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - 36, age: 0 }); crown(to); }
+      if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - crownY(), age: 0 }); crown(to); }
       else { dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to); }
+      const z = zone(lines(next));
+      if (z) zones.push(z);
       next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
       const shown = reveal(next, to, 60);
       tweens.push(...shown);
@@ -588,6 +900,7 @@
     timers.push(setTimeout(() => {
       if (done) return;
       release();
+      sprawl(levelOf(next), from);
       const far = Math.hypot(to.x - from.x, to.y - from.y) > 6;
       if (!far) { arrive(); return; }
       dot.classList.add('is-moving');
@@ -604,7 +917,11 @@
     const prev = current;
     current = next;
     endOpening();
-    if (!active() || still || !prev || !next || prev.classList.contains('out')) { settle(true); if (active() && current && anchor && !still) reveal(current, anchor, 200); return; }
+    if (!active() || still || !prev || !next || prev.classList.contains('out')) {
+      settle(true);
+      if (active() && current && anchor && !still) { reveal(current, anchor, 200); sprawl(levelOf(current), anchor, 0.2); }
+      return;
+    }
     turn(prev, next);
   });
   slides.forEach((sl) => follow.observe(sl, { attributes: true, attributeFilter: ['class'] }));
@@ -616,14 +933,22 @@
     if (now === was) return;
     was = now;
     endOpening();
-    settle(true);
-    if (now && current && anchor && !still) reveal(current, anchor, 250);
+    settle(true, true);
+    if (now && current && anchor && !still) { reveal(current, anchor, 250); sprawl(levelOf(current), anchor, 0.25); }
   }).observe(html, { attributes: true, attributeFilter: ['data-ver'] });
 
-  addEventListener('resize', () => { size(); if (!turning && !opening) settle(false); });
-  settle(true);
+  // A resize keeps the network, stretched to the new screen; the node and the text's softening find their places.
+  let resized = 0;
+  addEventListener('resize', () => {
+    if (!turning && !opening) keepGround();
+    size();
+    draw();
+    clearTimeout(resized);
+    resized = setTimeout(() => { if (!turning && !opening) settle(false); }, 150);
+  });
+  settle(true, true);
   if (!open()) {
     html.classList.remove('dt-intro'); // hidden before first paint, but there is no opening to play
-    if (active() && current && anchor && !still) reveal(current, anchor, 350);
+    if (active() && current && anchor && !still) { reveal(current, anchor, 350); sprawl(levelOf(current), anchor, 0.3); }
   }
 })();
