@@ -737,6 +737,15 @@
 
   let current = slides.find((s) => s.classList.contains('on')) || null;
   let anchor = null, turning = null;
+  // The thread each slide's node was reached by, from the slide before: a step back runs back along it.
+  const trails = new Map();
+  const trailBack = (prev, next, from, to) => {
+    const t = trails.get(prev);
+    if (!t || t.prev !== next) return null;
+    const a = t.pts[0], b = t.pts.at(-1);
+    if (Math.hypot(a[0] - to.x, a[1] - to.y) > 24 || Math.hypot(b[0] - from.x, b[1] - from.y) > 24) return null; // moved since (a resize)
+    return [[from.x, from.y], ...t.pts.slice(1, -1).reverse().map(([x, y]) => [x, y]), [to.x, to.y]];
+  };
   let drift = { x: 0, y: 0 }, trail = { x: 0, y: 0 }, t = 0, last = 0;
   const clearText = (s) => s && textOf(s).forEach((el) => { el.style.transform = ''; unmask(el); });
 
@@ -967,9 +976,12 @@
       const far = Math.hypot(to.x - from.x, to.y - from.y) > 6;
       if (!far) { arrive(); return; }
       dot.classList.add('is-moving');
-      const pts = wander(from, to);
+      // A step back runs back along the thread it came by, lighting it as it passes; no new thread grows.
+      const way = window.deckNav?.back ? trailBack(prev, next, from, to) : null;
+      const pts = way || wander(from, to);
       const total = lengths(pts).at(-1);
-      hypha(pts, { width: 1.05, alpha: 0.55, duration: clamp(total / 950, 0.45, 1.05), branches: plan(total, 0), onDone: arrive });
+      hypha(pts, { width: 1.05, alpha: 0.55, duration: clamp(total / 950, 0.45, 1.05), onDone: arrive, ...(way ? { rest: 0 } : { branches: plan(total, 0) }) });
+      if (!way && (window.deckNav?.dir || 0) > 0) trails.set(next, { prev, pts });
     }, 340));
   };
 
@@ -980,7 +992,7 @@
     const prev = current;
     current = next;
     endOpening();
-    if (!active() || still || window.deckNav?.rest || !prev || !next || prev.classList.contains('out')) {
+    if (!active() || still || (window.deckNav?.rest && !window.deckNav?.back) || !prev || !next || prev.classList.contains('out')) {
       settle(true);
       if (active() && current && anchor && !still) {
         reveal(current, anchor, 200);
