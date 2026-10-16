@@ -538,7 +538,12 @@
     window.warmDeckMedia(slide);
     running = true;
     layout();
-    if (still || window.deckNav?.rest) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
+    if (still || window.deckNav?.rest) {
+      settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true });
+      // Back at rest: the finished editor, its preview playing, until the loop's own reset starts the demo again.
+      if (!still) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
+      return;
+    }
     clearAll();
     td = 0; wait = 0;
     const snap = fromCore && window.AstridCore && window.AstridCore.snapshot();
