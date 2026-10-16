@@ -34,10 +34,7 @@
   const ICON = {
     film: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',
     fx: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>',
-    audio: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>',
   };
-  const EYE = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg>';
-  const LOCK = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const TRACKS = [
     { id: 'V2', name: 'Effects', icon: 'fx', h: 40 },
     { id: 'V1', name: 'Video', icon: 'film', h: 60 },
@@ -84,8 +81,6 @@
   const anchors = [...root.querySelectorAll('.as-media img')];
 
   // The mink
-  // Poses: profile, glint (her eye flash), facing, focus (eyes lit). She is drawn
-  // cell by cell at a whole number of CSS pixels per art pixel, never smoothed.
   const HEAD = 3; // spare rows above her for the hop and the float
   let cell = 4, dpr = 1;
   const mink = { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null };
@@ -165,7 +160,6 @@
     const s = Math.min(w / 16, h / 9) * 0.86, dw = 16 * s, dh = 9 * s, dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2);
     pg.drawImage(src, dx, dy, dw, dh);
     const seqT = view.mode === 'play' ? view.seq : -1;
-    // audio-reactive-colour: a colour look over its span, swept on when it first lands.
     if (view.colour && seqT >= 8) {
       const sx = dx + dw * view.sweep, pulse = 0.5 + 0.5 * Math.sin(t / 260);
       pg.save();
@@ -186,7 +180,6 @@
         pg.fillStyle = gr; pg.fillRect(sx - e, dy, e + 2 * pdpr, dh);
       }
     }
-    // text-card, type-on: the title types itself on over its span.
     if (view.title >= 0 && seqT >= 0 && seqT < 8) {
       const n = Math.min(TITLE.length, Math.floor(((t - view.title) / 1000) * 16));
       if (n > 0) {
@@ -307,7 +300,6 @@
     stepHead(dt);
     return true;
   };
-  // What each beat does to the editor, a seconds into its work (p: where it was last frame).
   const act = (bi, a, p) => {
     const at = (x) => p < x && a >= x;
     const touch = (el, on) => el.classList.toggle('is-touched', on);
@@ -358,7 +350,6 @@
   const sg = sky.getContext('2d');
   let morph = null;
   const MORPH = { rings: [0.05, 1.15], fly: [0, 1.1], outline: [0.1, 0.9], pixels: [0.85, 0.45], resolve: 1.05, handoff: 1.35, turn: 1.55, end: 1.75, demo: 4.0 };
-  // A rounded rectangle as n points spaced evenly round it, clockwise from the top centre.
   const roundRect = (b, rad, n) => {
     const { left: l, top: t, right: r, bottom: bt } = b, pts = [];
     const arc = (cx, cy, a0) => { for (let i = 1; i <= 8; i++) { const a = a0 + (i / 8) * (Math.PI / 2); pts.push([cx + Math.cos(a) * rad, cy + Math.sin(a) * rad]); } };
@@ -393,7 +384,6 @@
     const frames = [roundRect(chat, 12, N), roundRect(edit, 12, N)];
     const rings = snap.rings.map((r, side) => ({ ...r, cx: r.x + ox, cy: r.y + oy, target: frames[side],
       strands: r.strands.map((st) => st.map(([x, y]) => [x + ox, y + oy])) }));
-    // Where the mink's outline (in the 16 x 16 icon's units) lies over her pixels (the 23 x 20 profile).
     const sprite = ([fx, fy]) => [origin.x + fx * 1.44 * cell, origin.y + ((fy - 1.5) * 1.345 + 0.5) * cell];
     const outlineTo = M.smooth(M.OUTLINE, 10).map(sprite), throatTo = M.smooth(M.THROAT, 10).map(sprite);
     const P = M.POSES.profile, cells = [];
@@ -576,7 +566,6 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) videos.forEach((v) => v.pause()); });
   let resizing = 0;
   addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (slide.classList.contains('on')) { layout(); if (still) drawPic(now()); } }, 100); });
-  // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays
   videos.forEach((v) => v.addEventListener('loadeddata', () => { if (still && slide.classList.contains('on')) drawPic(now()); }));
 
