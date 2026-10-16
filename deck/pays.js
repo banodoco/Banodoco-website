@@ -359,6 +359,7 @@
 
   const advance = (dt) => {
     ta += dt;
+    if (ta >= END && !fly) window.deckEntryDone?.(slide);
     if (ta < AMBIENT) return;
     // A builder publishes something; it reaches the core; a wave goes out to everyone.
     if (ta >= nextPulse) { pulses.push({ i: Math.floor(Math.random() * 3), t0: ta }); nextPulse = ta + 2.2 + Math.random() * 1.6; }
@@ -370,7 +371,7 @@
   const tick = (now) => {
     raf = 0;
     if (!running) return;
-    const dt = Math.min(0.05, (now - (last || now)) / 1000);
+    const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
     last = now;
     advance(dt);
     draw();
@@ -379,7 +380,7 @@
   const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on')) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
-    timers.forEach(clearTimeout); timers = [];
+    timers.forEach(window.deckCancelLater); timers = [];
     pulses = []; waves = []; ta = 0; fly = null;
     root.classList.remove('is-labelled');
     canvas.style.transition = ''; canvas.style.opacity = ''; Object.values(labels).forEach((el) => { el.style.opacity = ''; });
@@ -388,16 +389,16 @@
   const begin = () => {
     reset();
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); if (!still) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
+    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); window.deckEntryDone?.(slide); if (!still) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
     ta = -0.2; nextPulse = AMBIENT + 0.3;
-    timers.push(setTimeout(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), 1400));
+    timers.push(window.deckLater(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
+    timers.push(window.deckLater(() => root.classList.add('is-labelled'), 1400));
     start();
   };
   const enter = () => {
     armed = true;
     // Grow once the network has reached this slide's node (or soon after, if it never says).
-    timers.push(setTimeout(() => { if (armed) { armed = false; begin(); } }, 1500));
+    timers.push(window.deckLater(() => { if (armed) { armed = false; begin(); } }, 1500));
   };
   slide.addEventListener('dt-arrive', () => { if (armed && slide.classList.contains('on')) { armed = false; begin(); } });
   // From slide 6: its mink (stack.js paints her on .st-mink) powers up and crosses into this slide's lens.
@@ -418,10 +419,10 @@
     fly = { t0: ta, x, y, c: u0, motes, landed: ta + FLY.charge + FLY.travel };
     stMink = el; el.style.visibility = 'hidden';
     slide.classList.add('pa-arrive');
-    timers.push(setTimeout(() => slide.classList.remove('pa-arrive'), 900));
-    timers.push(setTimeout(showStackMink, (FLY.charge + FLY.travel) * 1000 + 200)); // slide 6 has faded away by then
-    timers.push(setTimeout(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 400));
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), (FLY.charge + FLY.travel + 0.4) * 1000));
+    timers.push(window.deckLater(() => slide.classList.remove('pa-arrive'), 900));
+    timers.push(window.deckLater(showStackMink, (FLY.charge + FLY.travel) * 1000 + 200)); // slide 6 has faded away by then
+    timers.push(window.deckLater(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 400));
+    timers.push(window.deckLater(() => root.classList.add('is-labelled'), (FLY.charge + FLY.travel + 0.4) * 1000));
     nextPulse = AMBIENT + 0.3;
     start();
     return true;
@@ -439,7 +440,7 @@
     } else {
       armed = false; stop(); fly = null; showStackMink(); slide.classList.remove('pa-arrive');
       document.documentElement.classList.remove('pa-quiet');
-      timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
+      timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) reset(); }, 700));
     }
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
@@ -454,7 +455,7 @@
     if (!slide.classList.contains('on')) return;
     const interrupted = armed || !!fly || ta < END;
     if (interrupted) {
-      timers.forEach(clearTimeout); timers = [];
+      timers.forEach(window.deckCancelLater); timers = [];
       armed = false; fly = null; showStackMink();
       slide.classList.remove('pa-arrive');
       ta = Math.max(ta, AMBIENT);

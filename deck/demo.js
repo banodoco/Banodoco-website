@@ -12,7 +12,13 @@
   let paused = false, pausedAt = 0, pausedTime = 0;
   let pendingStart = null, pausedVideos = [];
   const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
-  const now = () => (paused ? pausedAt : performance.now()) - pausedTime;
+  let paceOffset = 0, paceAt = performance.now();
+  const now = () => {
+    const real = (paused ? pausedAt : performance.now()) - pausedTime;
+    paceOffset += Math.max(0, real - paceAt) * ((window.deckPace?.() || 1) - 1);
+    paceAt = real;
+    return real + paceOffset;
+  };
 
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
@@ -506,6 +512,7 @@
   const smoothstep = (k) => k * k * (3 - 2 * k);
   const endMorph = () => {
     morph = null;
+    window.deckEntryDone?.(slide);
     sg.setTransform(1, 0, 0, 1, 0, 0);
     sg.clearRect(0, 0, sky.width, sky.height);
     sky.style.display = 'none';
@@ -547,6 +554,7 @@
     layout();
     if (still || window.deckNav?.rest) {
       settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true });
+      window.deckEntryDone?.(slide);
       // Back at rest: the finished editor, its preview playing, until the loop's own reset starts the demo again.
       if (!still) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
       return;
@@ -555,6 +563,7 @@
     td = 0; wait = 0;
     const snap = fromCore && window.AstridCore && window.AstridCore.snapshot();
     if (snap) { startMorph(snap); wait = MORPH.demo; }
+    else window.deckLater(() => window.deckEntryDone?.(slide), 1800);
     wake();
   };
   const stop = () => {
