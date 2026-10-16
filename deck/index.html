@@ -6,14 +6,60 @@
 <title>Mycelial Deck</title>
 <script>
   // Version F opens with the Mycelial mark: hide the slide before first paint (dot-transitions.js takes over).
+  const root = document.documentElement;
+  const intro = window.__deckIntro = {
+    initialized: false, failed: false,
+    fail() {
+      if (!root.classList.contains('dt-intro')) return;
+      this.failed = true;
+      root.classList.remove('dt-intro', 'dt-unveil', 'dt-font-wait');
+      // A script that fails partway through may have masked the text already.
+      document.querySelectorAll('.slide').forEach((slide, index) => {
+        slide.classList.toggle('on', index === 0);
+        slide.classList.remove('dt-entering', 'dt-leaving', 'dt-release');
+        slide.inert = index !== 0;
+      });
+      document.querySelectorAll('.slide:first-child .split > :first-child').forEach(el => {
+        el.style.webkitMaskImage = el.style.maskImage = '';
+        el.style.transform = '';
+      });
+    }
+  };
   try {
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('dt-intro');
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('dt-intro', 'dt-font-wait');
   } catch (e) {}
+  addEventListener('error', e => {
+    if ((e.filename || e.target?.src || '').includes('/dot-transitions.js')) intro.fail();
+  }, true);
+  addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { if (!intro.initialized) intro.fail(); }, 4000);
+  }, { once: true });
 </script>
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=EB+Garamond:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap">
+<link rel="preload" href="../assets/fonts/deck/dm-sans-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/deck/cormorant-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* The same Latin and Latin-ext face files previously served by Google Fonts. */
+  @font-face { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/cormorant-italic-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/cormorant-italic-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/cormorant-italic-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/cormorant-italic-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/cormorant-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/cormorant-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/cormorant-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/cormorant-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/eb-garamond-italic-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/eb-garamond-italic-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/eb-garamond-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/eb-garamond-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 500; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: swap; src: url(../assets/fonts/deck/inter-normal-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "DM Sans"; font-weight: 400; font-display: swap; src: url(../assets/fonts/deck/dm-sans-regular.woff2) format("woff2"); }
+  @font-face { font-family: "DM Sans"; font-weight: 500 600; font-display: swap; src: url(../assets/fonts/deck/dm-sans-medium.woff2) format("woff2"); }
   /* Text-only working draft of the investment deck (2026-10-06). The story
      first; visual language to follow the homepage later. */
   :root {
@@ -99,8 +145,6 @@
   .slide.sf-arrive .sf { transition: none; }
 
   /* Version F (dot-transitions.js): a dot above the text draws it in and out between slides. */
-  @font-face { font-family: "DM Sans"; font-weight: 400; font-display: swap; src: url(../assets/fonts/mycelial/dm-sans-regular.ttf) format("truetype"); }
-  @font-face { font-family: "DM Sans"; font-weight: 500 600; font-display: swap; src: url(../assets/fonts/mycelial/dm-sans-medium.ttf) format("truetype"); }
   .dt-name { position: fixed; left: 0; top: 0; z-index: 2; transform-origin: 0 50%; pointer-events: none; white-space: nowrap;
     font: 400 22px/1 "DM Sans", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #f7ebd7;
     opacity: 0; transition: opacity .7s ease; }
@@ -108,6 +152,7 @@
   html[data-ver="f"] .dt-name.is-on.is-resting { opacity: .5; }
   /* The opening: nothing of the slide shows until the mark lands; then the text is revealed and the rest fades in. */
   html.dt-intro .slide.on > :not(.split), html.dt-intro .slide.on > .split > * { opacity: 0; }
+  html.dt-font-wait .dt-net, html.dt-font-wait .dt-dot, html.dt-font-wait .dt-mark, html.dt-font-wait .dt-name { visibility: hidden; }
   html.dt-unveil .slide.on > :not(.split), html.dt-unveil .slide.on > .split > :not(:first-child) { transition: opacity 1.1s ease; }
   html[data-ver="f"] .slide { transform: none; }
   /* The network lies underneath everything, like ground the slides sit on. */
