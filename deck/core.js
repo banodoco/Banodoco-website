@@ -927,14 +927,11 @@
     wasOn = on;
     if (unbuilding) endUnbuild();
     if (!on) {
-      setTimeout(() => { if (!slide.classList.contains('on') && !lent) freeLayers(); }, 700);
       const toGap = gapSlide && gapSlide.classList.contains('on') && ring && window.deckNav?.back && !still && running && rings.length && ta >= T.end;
       if (toGap) { unbuild(); return; }
       leave();
       return;
     }
-    // Slide 5's layers, allocated once this slide is up and the page is idle.
-    if (!still) setTimeout(() => idleSoon(() => { if (slide.classList.contains('on') && !lent) sizeLayers(); }), 1500);
     const fromGap = !still && gapSlide && !gapSlide.classList.contains('on') && records.some((r) => r.target === gapSlide);
     enter(!!fromGap);
   });
@@ -1023,8 +1020,8 @@
   // Going on to slide 5, this picture turns into the real product: slide 5 takes its geometry
   // and its layers (painted on their own canvases) and carries them into its panels.
   // They are painted at the press (slide 4 breathes, so they are painted as it stands), on three canvases allocated
-  // ahead, while slide 4 rests, and reused, so the press allocates nothing (three full-screen canvases there set off a
-  // full garbage collection in the press frame). They are let go once the deck has left slides 4 and 5.
+  // ahead, while slide 4 or 5 is up (the hand-off runs both ways), and reused, so the press allocates nothing (three
+  // full-screen canvases there set off a full garbage collection in the press frame). Leaving both lets them go.
   const layerCv = { agent: null, face: null, outer: null };
   let lent = false; // slide 5's morph is drawing them
   const sizeLayers = () => {
@@ -1071,8 +1068,19 @@
       };
     },
     hide() { canvas.style.opacity = '0'; },
-    release() { lent = false; if (!slide.classList.contains('on')) freeLayers(); }, // slide 5's morph is done with them
+    show() { canvas.style.opacity = ''; }, // slide 5 folding back into this picture: it is whole again
+    release() { lent = false; if (!near45()) freeLayers(); }, // slide 5's morph is done with them
   };
 
-  if (slide.classList.contains('on')) { wasOn = true; enter(false); if (!still) setTimeout(() => idleSoon(() => { if (slide.classList.contains('on') && !lent) sizeLayers(); }), 1500); }
+  // The hand-off's layers: allocated once slide 4 or 5 is up and the page is idle, let go once both are left.
+  const demoSlide = document.querySelector('[data-astrid-demo]')?.closest('.slide');
+  const near45 = () => slide.classList.contains('on') || !!demoSlide?.classList.contains('on');
+  const keepLayers = () => {
+    if (near45()) { if (!still) setTimeout(() => idleSoon(() => { if (near45() && !lent) sizeLayers(); }), 1500); }
+    else setTimeout(() => { if (!near45() && !lent) freeLayers(); }, 700);
+  };
+  const keep = new MutationObserver(keepLayers);
+  [slide, demoSlide].filter(Boolean).forEach((s) => keep.observe(s, { attributes: true, attributeFilter: ['class'] }));
+  keepLayers();
+  if (slide.classList.contains('on')) { wasOn = true; enter(false); }
 })();

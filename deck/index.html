@@ -428,6 +428,8 @@
   .as-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; display: none; }
   .as-panel { transition: opacity .45s ease; } .as-panel > * { transition: opacity .5s ease .2s; }
   .as.is-morphing .as-panel, .as.is-morphing .as-panel > * { opacity: 0; transition: none; }
+  /* Going back to slide 4, the panels fade as their frames fold back into the rings (demo.js). */
+  .as.as-unmorph .as-panel, .as.as-unmorph .as-panel > *, .as.as-unmorph .as-try { opacity: 0; transition: opacity .45s ease; }
   .as-seat::before, .as-seat::after { transition: opacity .6s ease; }
   .as.is-morphing .as-seat::before, .as.is-morphing .as-seat::after, .as.is-minkless .as-mink { opacity: 0; transition: none; }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
@@ -483,10 +485,17 @@
   .pa-side span { display: block; font-size: .78em; color: #b8a98f; font-style: italic; }
   .pa-core { color: #f0c67e; }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
-    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-left: max(16px, 9vw); padding-bottom: 92px; }
+    /* Upright, as on slide 4, the picture and the words are one group in the middle of the screen: the words are
+       centred under the picture's room (40 px + the picture, 72.38vw - 17.4 px tall at the phone's scale, + a 34 px
+       gap), and pays.js hangs the picture just above the label. The words take slide 4's size. */
+    html[data-ver="f"] .pa-host { justify-content: center; padding-left: max(16px, 9vw); padding-top: calc(72.38vw + 56.6px); padding-bottom: 90px; }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
     html[data-ver="f"] .pa-host > .split > :first-child { grid-column: 1; text-align: center; }
-    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.5rem, 6.4vw, 2rem); max-width: 20ch; margin: 0 auto; }
+    html[data-ver="f"] .pa-host h1 { font-size: clamp(1.6rem, 7vw, 2.2rem); max-width: 20ch; margin: 0 auto; }
+  }
+  /* A short upright screen has no room to centre the group: the words go to the foot, the picture above them. */
+  @media (max-width: 760px) and (orientation: portrait) and (max-height: 640px) {
+    html[data-ver="f"] .pa-host { justify-content: flex-end; padding-top: 40px; }
   }
   /* Version F, slide 6: where it goes (stack.js). The text on the left; on the right slide 5's product taken apart into
      one exploded stack of thin planes (preview, timeline, agent, tools & effects, models / runtime), tied by fine gold
@@ -1124,6 +1133,18 @@
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); max-width: 20em; }
     .fw-sub { margin-top: .6rem; font-size: .92rem; line-height: 1.4; }
   }
+  /* 6 on a short phone on its side: a card has only the height between the top and the footer (H - 88 px), so its
+     type tightens in two steps (a 320 px screen, such as a Galaxy S9+, the most), keeping every line. */
+  @media (orientation: landscape) and (max-height: 400px) {
+    .st-card { padding: 7px 11px 8px 12px; }
+    .st-ch { font-size: 15.5px; } .st-card p { font-size: 12px; line-height: 1.22; margin: 2px 0 5px; }
+    .st-card ul { gap: 2px; } .st-card li { line-height: 1.18; }
+    .st-card li b { font-size: 13px; } .st-card li span { font-size: 11.5px; }
+    .st-card em { margin-top: 5px; padding-top: 4px; font-size: 12.5px; }
+  }
+  @media (orientation: landscape) and (max-height: 340px) {
+    .st-card p { font-size: 11.5px; } .st-card li b { font-size: 12.5px; } .st-card li span { font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -1536,8 +1557,8 @@
     const dir = from === null ? 0 : Math.sign(to - from);
     if (turnController) turnController.abort();
     turnController = new AbortController();
-    // These two neighboring groups have their own approved reverse motion.
-    const reversePair = (from === 4 && to === 3) || (from !== null && from >= 8 && to >= 8);
+    // Slides 9–11 are one picture moving between them: its own motion plays both ways.
+    const reversePair = from !== null && from >= 8 && to >= 8;
     // Any other step back lands the earlier slide at rest while the picture plays its hand-off in reverse (back);
     // a jump back (hash, overview, history, Home) just lands at rest.
     const back = stepped && dir < 0 && to === from - 1 && !reversePair;
