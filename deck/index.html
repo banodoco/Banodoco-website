@@ -114,7 +114,9 @@
   .dt-net { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
   html[data-ver="f"] body { background: transparent; }
   .dt-dot { position: fixed; left: 0; top: 0; z-index: 2; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
-  html[data-ver="f"] .dt-net.is-on, html[data-ver="f"] .dt-dot.is-on { opacity: 1; }
+  /* The Mycelial mark has its own small canvas over the network, never quieted with it. */
+  .dt-mark { position: fixed; left: 0; top: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .5s ease; }
+  html[data-ver="f"] .dt-net.is-on, html[data-ver="f"] .dt-dot.is-on, html[data-ver="f"] .dt-mark.is-on { opacity: 1; }
   .dt-dot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%;
     background: radial-gradient(circle at 40% 35%, #fff1cf, #f0c877 55%, #c98f3e); box-shadow: 0 0 10px #ffd99177; transition: opacity .25s ease; }
   .dt-dot.is-moving i { opacity: 0; }
@@ -183,8 +185,8 @@
   html[data-ver="f"] .ac-host > .split { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   html[data-ver="f"] .ac-host h1 { max-width: 18.4em; margin: 0 auto; text-wrap: balance; font-size: clamp(2rem, 3.7vw, 3.7rem); }
   html[data-ver="f"] .ac-host .num { font-size: clamp(1rem, 1.35vw, 1.5rem); }
-  /* While the picture is up, the network the earlier slides left behind steps back; slide 4's own node stays. */
-  html[data-ver="f"].ac-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the picture is up, the network the earlier slides left behind steps back a little; slide 4's own node stays. */
+  html[data-ver="f"].ac-quiet .dt-net.is-on { opacity: .55; transition: opacity .6s ease; }
   .ac-host > .num, .ac-host > .split { position: relative; z-index: 1; }
   .ac-nw { white-space: nowrap; }
   .ac { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
@@ -345,8 +347,8 @@
   /* From slide 6 the slide shows at once, so the mink's power-up can play over the stack as it recedes. */
   .slide.pa-arrive { transition: none; }
   html[data-ver="f"] .pa-host .body, html[data-ver="f"] .pa-host .vis, html[data-ver="f"] .pa-host .e-note { display: none; }
-  /* While the picture is up, the network the earlier slides left behind steps back, as on slide 4. */
-  html[data-ver="f"].pa-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the picture is up, the network the earlier slides left behind steps back a little, as on slide 4. */
+  html[data-ver="f"].pa-quiet .dt-net.is-on { opacity: .6; transition: opacity .6s ease; }
   .pa-host > .num, .pa-host > .split { position: relative; z-index: 1; }
   .pa { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .pa-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -514,7 +516,7 @@
   html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 36vw); }
   html[data-ver="f"] .fl-host h1 { max-width: 13.6em; font-size: clamp(1.7rem, 2.55vw, 2.9rem); text-wrap: balance; }
   html[data-ver="f"] .fl-host .body, html[data-ver="f"] .fl-host .vis { display: none; }
-  html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  html[data-ver="f"].fl-quiet .dt-net.is-on { opacity: .5; transition: opacity .6s ease; }
   .fl-host > .num, .fl-host > .split { position: relative; z-index: 1; }
   .fl { position: absolute; inset: 0; z-index: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .fl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -546,8 +548,8 @@
   html[data-ver="f"] .fw-raise h1 { max-width: 13em; font-size: clamp(2.1rem, 3.7vw, 3.9rem); }
   /* Slide 10: the text at the very top, the wheel and its initiatives below it (9 bottom, 10 top, 11 middle). */
   html[data-ver="f"] .fw-top { justify-content: flex-start; padding-top: max(40px, 5.6vh); padding-bottom: 0; }
-  /* While the wheel is up, the network the earlier slides left behind steps back, as on slides 4 and 8. */
-  html[data-ver="f"].fw-quiet .dt-net.is-on { opacity: .17; transition: opacity .6s ease; }
+  /* While the wheel is up, the network the earlier slides left behind steps back a little, as on slides 4 and 8. */
+  html[data-ver="f"].fw-quiet .dt-net.is-on { opacity: .6; transition: opacity .6s ease; }
   .fw-alt { position: absolute; inset: 0; pointer-events: none; }
   .fw { position: fixed; inset: 0; z-index: -1; pointer-events: none; user-select: none; -webkit-user-select: none; opacity: 0; transition: opacity .5s ease; }
   html[data-ver="f"] .fw.is-on { opacity: 1; }
