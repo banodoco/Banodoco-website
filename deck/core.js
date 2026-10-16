@@ -865,21 +865,31 @@
   if (gapSlide) watch.observe(gapSlide, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
 
-  let resizing = 0;
-  addEventListener('resize', () => {
-    clearTimeout(resizing);
-    resizing = setTimeout(() => {
-      if (!slide.classList.contains('on') || !rings.length) return;
-      const states = sides.map((sd) => sd.slots.map((x) => x.state));
-      dropSeed();
-      if (!layout()) return;
-      settle(states);
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on') || !rings.length) return;
+    const interrupted = armed || ta < T.end || !!seedEl;
+    const state = sides.map((sd) => sd.slots.map((x) => ({ state: x.state, shown: x.shown, filledAt: x.filledAt, flash: x.flash })));
+    // A contribution in flight lands at its own socket; the rest of the
+    // community keeps its existing clock and filled slots.
+    for (const gift of gifts) Object.assign(state[gift.x.side][gift.x.i], { state: 'full', filledAt: ta - 2 });
+    dropSeed();
+    if (!layout()) return;
+    sides.forEach((sd, i) => sd.slots.forEach((x, j) => Object.assign(x, state[i][j])));
+    gifts = []; pend = []; pulses = [];
+    sides.forEach((sd) => {
+      if (sd.slots.filter(isFull).length >= CAP || sd.slots.some((x) => x.state === 'socket')) return;
+      const next = sd.slots.find((x) => x.state === 'none');
+      if (next) { next.state = 'socket'; next.shown = ta - 1; }
+    });
+    if (interrupted) {
+      settle(state.map((sd) => sd.map((x) => x.state)));
       armed = false;
-      hot = pinned = null;
-      card.classList.remove('is-on');
-      draw();
-      start();
-    }, 120);
+      timers.forEach(clearTimeout); timers = [];
+    }
+    hot = pinned = null;
+    card.classList.remove('is-on');
+    draw();
+    start();
   });
 
   // ---- Hovering ---------------------------------------------------------------------
@@ -920,7 +930,7 @@
   slide.addEventListener('click', (e) => {
     if (!rings.length) return;
     const p = local(e);
-    const x = pick(p, touched ? 12 : 4);
+    const x = pick(p, touched ? 22 : 4);
     if (x) { e.stopPropagation(); pinned = pinned === x ? null : x; show(); return; }
     const inRings = rings.some((r) => Math.hypot(p.x - r.c.x, p.y - r.c.y) < RR * k);
     if (inRings) { e.stopPropagation(); if (!still && ta > T.end) use(); return; }

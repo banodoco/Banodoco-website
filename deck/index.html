@@ -117,8 +117,10 @@
   .vc { position: relative; width: min(100%, 62vh); aspect-ratio: 1; margin: 0 auto;
     transition: transform .9s cubic-bezier(.6, 0, .3, 1), opacity .8s ease; }
   .slide:not(.on) .vc { transform: scale(.32); opacity: 0; }
-  .vc-tile { all: unset; position: absolute; overflow: hidden; border-radius: 4px; cursor: zoom-in; background: #15110d;
+  .vc-tile { all: unset; position: absolute; overflow: visible; border-radius: 4px; cursor: zoom-in; background: #15110d;
     box-shadow: 0 10px 30px #0008; transition: transform .4s ease, box-shadow .4s ease; }
+  .vc-tile::before { content: ""; position: absolute; inset: -1px 0; }
+  .vc-tile video { border-radius: 4px; }
   .vc-tile video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .88; transition: opacity .4s ease; }
   .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
   .vc-tile:hover video { opacity: 1; }
@@ -200,6 +202,7 @@
   .gp-dot { all: unset; position: absolute; z-index: 1; display: inline-flex; align-items: center; height: var(--d); border-radius: calc(var(--d) / 2); cursor: default;
     transform: translate(calc(var(--d) / -2), -50%); translate: var(--nx, 0px) var(--ny, 0px);
     opacity: 0; transition: translate .9s cubic-bezier(.22, .7, .3, 1), box-shadow .35s ease, background-color .35s ease; }
+  .gp-dot::after { content: ""; position: absolute; inset: -12px; }
   .gp-dot.is-in { opacity: 1; }
   .gp-dot::before { content: ""; position: absolute; z-index: -1; top: 50%; left: calc(var(--d) / 2); width: calc(var(--d) + 16px); aspect-ratio: 1;
     translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: calc(.6 * var(--m, 1));
@@ -299,6 +302,7 @@
   .as-stage { position: absolute; left: 50%; top: 0; bottom: 0; width: min(1180px, 100%); transform: translateX(-50%);
     display: grid; grid-template-columns: minmax(0, 31fr) minmax(0, 69fr); grid-template-rows: auto minmax(0, 1fr); column-gap: var(--as-gap); row-gap: 12px; }
   .as-seat { grid-column: 1 / -1; position: relative; height: calc(var(--as-cell, 4px) * 21 + 6px); }
+  .as .as-mink { width: 0; height: 0; }
   /* A quiet way to go and try it: just above the editor's top-right corner, level with the mink's seat, in the deck's
      small-label voice (clear of the deck's chrome bar at the bottom). Opens in a new tab. */
   .as-try { position: absolute; right: 4px; top: calc(var(--as-cell, 4px) * 21 + 6px - 1.6em); z-index: 1; font: italic 400 1.05rem/1.2 "Cormorant Garamond", serif;
@@ -411,6 +415,18 @@
     .as-tl { --as-hcol: 52px; } .as-th em { display: none; }
     .as-msg, .as-step { font-size: 10px; } .as-composer { display: none; }
   }
+  /* A rotated phone uses the two-column editor, but has too little height for
+     its full timeline. Keep the player open and the same two panels readable. */
+  @media (min-width: 761px) and (max-height: 500px) {
+    html[data-ver="f"] .as-host { padding-top: 14px; }
+    html[data-ver="f"] .as-host .num { margin-bottom: 6px; }
+    html[data-ver="f"] .as-host h1 { max-width: 38em; font-size: clamp(1.15rem, 2vw, 1.45rem); line-height: 1.04; }
+    .as { margin: 2px 0 48px; }
+    .as-stage { row-gap: 4px; }
+    .as-edit { padding: 5px; gap: 4px; }
+    .as-player { padding: 4px; }
+    .as-tl > .as-th, .as-tl > .as-lane { height: 26px !important; }
+  }
 
   /* Version F, slide 7: how it pays (pays.js). Text centred at the bottom as on slide 4; above it, in the same
      gold-thread language, the few builders running Astrid locally, the core, and everyone else on the hosted version. */
@@ -480,6 +496,7 @@
     border: 1px solid rgb(240 200 119 / .4); background: rgb(24 20 15 / .9); box-shadow: 0 8px 22px rgb(0 0 0 / .45);
     font: italic 400 18px/1 "Cormorant Garamond", serif; letter-spacing: .01em; color: #ecc57e;
     opacity: calc(var(--in, 0) * var(--dim, 1)); transition: opacity .35s ease .22s, border-color .3s ease, background-color .3s ease; }
+  .st-flag::before { content: ""; position: absolute; inset: -10px 0; }
   .st-flag i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; box-shadow: 0 0 8px rgb(255 214 150 / .6); }
   .st-flag::after { content: "+"; font: 300 13px/1 Inter, system-ui, sans-serif; font-style: normal; color: #b8a98f; }
   .st-flag:hover { border-color: rgb(255 214 150 / .8); background: rgb(36 29 21 / .96); }
@@ -716,6 +733,7 @@
     .gap-host .split { grid-template-columns: minmax(0, 1fr); }
     .gap-host .split > :first-child { order: 0; text-align: left; }
     .gp-dot span { width: 12rem; }
+    .gp-dot[style*="left: 55%"] span, .gp-dot[style*="left: 57%"] span, .gp-dot[style*="left: 62%"] span { left: auto; right: 0; }
   }
 
   /* Version E, slide 2: the ecosystem as a quiet orbiting field (scatter-field.js). */
@@ -861,7 +879,8 @@
   .chrome button { background: none; border: 1px solid #ffffff22; color: var(--soft); font: inherit; padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; }
   .chrome button:hover { color: var(--ink); border-color: var(--gold); }
   /* Previous / next: quiet gold rings either side of the counter. Outside the deck, so the click-thirds never see them. */
-  .chrome .navb { display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
+  .chrome .navb { position: relative; display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
+  .chrome .navb::before { content: ""; position: absolute; inset: -7px; }
   .chrome .navb i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgb(240 200 119 / .32); background: rgb(13 10 7 / .6); transition: border-color .25s ease, background-color .25s ease, color .25s ease; }
   @media (hover: hover) { .chrome .navb:hover:not(:disabled) i { border-color: rgb(255 214 150 / .8); background: rgb(240 200 119 / .1); color: #ffd991; } }
   .chrome .navb:focus-visible { outline: none; } .chrome .navb:focus-visible i { outline: 1px solid #f0c67e; outline-offset: 2px; }
@@ -1207,6 +1226,17 @@
   let i = 0;
   let initialized = false, turnController = null;
   window.deckNav = { from: null, to: 0, dir: 0, rest: false, signal: null };
+  // One viewport notification for the slide pictures. A phone's browser chrome can
+  // report several sizes in one gesture; only lay out after the last one.
+  const resizeSubscribers = new Set();
+  let resizeTimer = 0;
+  window.deckOnResize = (fn) => { resizeSubscribers.add(fn); return () => resizeSubscribers.delete(fn); };
+  const scheduleResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => resizeSubscribers.forEach((fn) => fn()), 120);
+  };
+  addEventListener('resize', scheduleResize);
+  window.visualViewport?.addEventListener('resize', scheduleResize);
 
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
@@ -1273,11 +1303,14 @@
   prevBtn.onclick = () => go(i - 1);
   nextBtn.onclick = () => go(i + 1);
   let tx = null;
-  addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .vc-box, .st-card, .st-flag') };
+  }, { passive: true });
   addEventListener('touchend', (e) => {
     if (tx === null) return;
-    const dx = e.changedTouches[0].clientX - tx; tx = null;
-    if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1));
+    const dx = e.changedTouches[0].clientX - tx.x, dy = e.changedTouches[0].clientY - tx.y, interactive = tx.interactive; tx = null;
+    if (!interactive && Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) go(i + (dx < 0 ? 1 : -1));
   });
 
   const fromHash = (mode = 'none') => go((parseInt(location.hash.slice(1), 10) || 1) - 1, mode);

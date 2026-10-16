@@ -868,7 +868,20 @@
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : stageOf() >= 0 && begun && start()));
-  addEventListener('resize', () => { if (stageOf() >= 0 && layout()) { lastM = -1; minkAt = null; frame(); } });
+  window.deckOnResize(() => {
+    const target = stageOf();
+    if (target < 0 || !layout()) return;
+    if (armed || hand || morph || !begun) {
+      timers.forEach(clearTimeout); timers = [];
+      if (waiting) { waiting.disconnect(); waiting = null; }
+      armed = false; begun = true; hand = null; morph = null;
+      m = target;
+      ta = Math.max(ta, T.chips + 1);
+      if (m >= 1) { attach = { dir: 1, t0: ta - T.chips - 1 }; boost = 1; pulsed = chips.map(() => true); }
+    }
+    lastM = -1; minkAt = null; flyCell = 0;
+    frame(); start();
+  });
 
   // Clicks on the picture never turn the slide; clicks on the words still do.
   const inPicture = (x, y) => {

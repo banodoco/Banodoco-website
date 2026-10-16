@@ -186,8 +186,26 @@
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     measure();
   };
-  new ResizeObserver(resize).observe(stage);
   if (text) new ResizeObserver(measure).observe(text); // fonts landing reflow the headline
+  window.deckOnResize(() => {
+    if (!slide.classList.contains('on')) return;
+    const oldW = w, oldH = h;
+    resize();
+    if (oldW && oldH) {
+      const sx = w / oldW, sy = h / oldH;
+      shift.x *= sx; shift.y *= sy;
+      for (const m of motes) { m.sx0 *= sx; m.sy0 *= sy; m.cw *= sx; m.ch *= sy; }
+      if (pointer) { pointer.x *= sx; pointer.y *= sy; }
+    }
+    if (motes.length) {
+      motes = [];
+      glide = 0; boost = 0; since = 9; settled = 1;
+      shift = { x: 0, y: 0, age: 9 };
+      collageSlide?.classList.remove('vc-dissolve');
+      slide.classList.remove('sf-arrive');
+    }
+    aim();
+  });
 
   // E: the field opens in the right half beside the text. F: below the text, full width.
   const below = () => document.documentElement.dataset.ver === 'f' || w <= 760;
