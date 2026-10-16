@@ -249,7 +249,7 @@
     frameRaf = 0;
     if (!running) return;
     if (!still) frameRaf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - (last || now)) / 1000);
+    const dt = Math.min(0.05, (now - (last || now)) / 1000) * (since < 2.5 ? (window.deckPace?.() || 1) : 1);
     last = now;
     if (!w || !h) return;
     const ease = (rate) => 1 - Math.exp(-rate * dt);
@@ -260,6 +260,7 @@
     // The arrival rush: the burst past slide 1's films is quick, then it eases
     // off more slowly, so slowing down and the heading's glide home settle together.
     since += dt;
+    if (since >= 2.5) window.deckEntryDone?.(slide);
     glide *= Math.exp(-(2.2 - 1.25 * (t => t * t * (3 - 2 * t))(clamp((since - 0.6) / 0.8))) * dt);
     const dz = dt * 0.36 * (speed + boost + glide);
     clock += dt; held += dt; shift.age += dt;
@@ -451,8 +452,8 @@
     collageSlide.classList.add('vc-dissolve'); // both slides hold still while they cross
     slide.classList.add('sf-arrive');
     const clear = () => { collageSlide.classList.remove('vc-dissolve'); slide.classList.remove('sf-arrive'); };
-    const timer = setTimeout(clear, 900);
-    window.deckNav?.signal?.addEventListener('abort', () => { clearTimeout(timer); clear(); }, { once: true });
+    const timer = window.deckLater(clear, 900);
+    window.deckNav?.signal?.addEventListener('abort', () => { window.deckCancelLater(timer); clear(); }, { once: true });
     resize(); aim();
     const base = stage.getBoundingClientRect();
     // The collage's centre, which the picture bursts outward from.

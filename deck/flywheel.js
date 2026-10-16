@@ -752,6 +752,7 @@
       m = lerp(morph.from, morph.to, easeIO(q));
       if (q >= 1) { m = morph.to; morph = null; }
     }
+    if (!morph && begun && ta >= T.chips) window.deckEntryDone?.(hosts[stageOf()]);
     // Once the initiatives are on, the wheel turns a little faster and brighter; on 11, gently again.
     const target = m >= 0.9 ? (m > 1.5 ? 0.6 : 1) : 0;
     boost += (target - boost) * (1 - Math.exp(-dt / 0.9));
@@ -788,7 +789,7 @@
   const tick = (now) => {
     raf = 0;
     if (!running) return;
-    const dt = Math.min(0.05, (now - (last || now)) / 1000);
+    const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
     last = now;
     advance(dt);
     frame();
@@ -797,7 +798,7 @@
   const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on')) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
-    timers.forEach(clearTimeout); timers = [];
+    timers.forEach(window.deckCancelLater); timers = [];
     if (waiting) { waiting.disconnect(); waiting = null; }
     stop();
     begun = false; armed = false; morph = null; motes = []; ta = 0; boost = 0; attach = { dir: 0, t0: 0 }; lastM = -1; pulsed = chips.map(() => false);
@@ -821,6 +822,7 @@
       if (m >= 1) [[0, 0.5], [1, 0.3], [2, 0.6], [3, 0.4], [4, 0.45], [5, 0.35]].forEach(([c, u]) => motes.push({ kind: 'plug', c, span: Math.PI, t0: 30 - u, dur: 1 }));
       else [['in', 1, 0, 0.42], ['in', 4, 1, 0.66], ['in', 6, 2, 0.3], ['eq', 2, 2, 0.5], ['eq', 5, 0, 0.72], ['hop', 0, 0, 0.5]].forEach(([kind, a, b, u]) => motes.push({ kind, a, b, t0: 30 - u, dur: 1 }));
       frame();
+      window.deckEntryDone?.(hosts[stageOf()]);
       return;
     }
     ta = -0.15; nextMote = T.motes;
@@ -837,7 +839,7 @@
     const on = hosts[stageOf()];
     if (on && arrived.s === on && performance.now() - arrived.t < 80) { whenOpen(begin); return; } // already there (a settle, or reduced motion)
     armed = true;
-    timers.push(setTimeout(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
+    timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
   };
   let arrived = { s: null, t: -1e9 };
   hosts.forEach((s) => s.addEventListener('dt-arrive', () => {
@@ -868,7 +870,7 @@
       root.classList.remove('is-on');
       html.classList.remove('fw-quiet');
       stop(); armed = false;
-      timers.push(setTimeout(() => { if (stageOf() < 0) reset(); }, 700));
+      timers.push(window.deckLater(() => { if (stageOf() < 0) reset(); }, 700));
       return;
     }
     html.classList.toggle('fw-quiet', now < 2); // not on 11, where the deck's Mycelial mark forms
@@ -903,7 +905,7 @@
     const target = stageOf();
     if (target < 0 || !layout()) return;
     if (armed || hand || morph || !begun) {
-      timers.forEach(clearTimeout); timers = [];
+      timers.forEach(window.deckCancelLater); timers = [];
       if (waiting) { waiting.disconnect(); waiting = null; }
       armed = false; begun = true; hand = null; morph = null;
       m = target;

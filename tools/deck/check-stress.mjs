@@ -133,9 +133,11 @@ async function run(browser, id, description, action, options = {}) {
     page.on('pageerror', e => rec.errors.push(`page: ${e.message}`));
     page.on('console', m => { if (m.type() === 'error') rec.errors.push(`console: ${m.text()}`); });
     const check = async (label, expected) => {
-      // Allow the approved 4–5 s choreography to finish, then check twice so
-      // a late callback cannot silently re-mask the landing after its first pass.
-      await sleep(5000);
+      // Adjacent presses now queue. Inspect only after every requested hand-off
+      // and the target slide's own entry have completed.
+      await page.waitForFunction(() => !turn && pendingTurns.length === 0,
+        null, { timeout: 90000 });
+      await sleep(400);
       const first = await deadline(snapshot(page), 'Inspect first landing');
       await sleep(250);
       const state = await deadline(snapshot(page), 'Inspect stable landing');
@@ -145,7 +147,7 @@ async function run(browser, id, description, action, options = {}) {
       console.error(`  ${label}: ${failures.length ? failures.join('; ') : 'PASS'}`);
     };
     await page.goto(url.href, { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => !document.documentElement.classList.contains('dt-intro'), null, { timeout: 30000 });
+    await page.waitForFunction(() => !document.documentElement.classList.contains('dt-intro'), null, { timeout: 60000 });
     await check('opening', 1);
     await action({ page, check, rec });
   } catch (e) {
