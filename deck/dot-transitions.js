@@ -800,14 +800,20 @@
 
   // ---- The name, the opening and the ending ----------------------------------
   // The site's wordmark. On first load it sits beneath the mark, then settles
-  // small into the bottom-left corner, like the site's own signature.
+  // small into the deck's footer, left of the progress bar, like the site's own
+  // signature: onto the footer's invisible copy of it (.chrome .brand).
   const name = document.createElement('div');
   name.className = 'dt-name';
   name.textContent = 'Mycelial';
   name.setAttribute('aria-hidden', 'true');
   document.body.appendChild(name);
   const nameAt = (x, y, k) => `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translateY(-50%) scale(${k})`;
-  const nameCorner = () => nameAt(Math.max(16, innerWidth * 0.024), innerHeight - 62, 0.58);
+  const nameSlot = document.querySelector('.chrome .brand');
+  const nameCorner = () => {
+    const r = nameSlot && nameSlot.getBoundingClientRect();
+    if (!r || !r.width) return nameAt(Math.max(16, innerWidth * 0.024), innerHeight - 62, 0.58);
+    return nameAt(r.left, r.top + r.height / 2, parseFloat(getComputedStyle(nameSlot).fontSize) / 22);
+  };
   const nameRest = () => {
     name.getAnimations().forEach((a) => a.cancel());
     name.style.transform = nameCorner();
