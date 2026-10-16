@@ -157,5 +157,9 @@ window.AstridMink = (() => {
     out.push(pts[pts.length - 1].slice());
     return out;
   };
-  return { GRID, COLORS, POSES, OUTLINE, THROAT, EYE, NOSE, EAR, EARMARK, BOX, smooth };
+  // Where the pixel mink (the profile pose) sits in a lens, in art pixels from the lens's centre to her frame's: her
+  // dark outline vanishes against the ground, and what reads is her fur, which fills the frame across but sits a
+  // pixel low in it (its mass lower still, under the tall head); so she is raised to bring that to the lens's middle.
+  const LENS = { x: 0, y: -1.3 };
+  return { GRID, COLORS, POSES, OUTLINE, THROAT, EYE, NOSE, EAR, EARMARK, BOX, LENS, smooth };
 })();
