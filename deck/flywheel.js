@@ -799,8 +799,8 @@
     } else if (fly.style.opacity !== '0') fly.style.opacity = '0';
   };
   // Slide 10's cards grow into their fuller cards, from the small card's box (or its icon's, on a phone) to the
-  // whole card, kept on screen; the small card stays beneath. Transform, clip and opacity only: each fuller card is
-  // sized (from slide 10's own card width) and measured once a layout.
+  // whole card, kept on screen; the small card steps out beneath. Each fuller card is sized (from slide 10's own card
+  // width) and measured once a layout.
   let wordsBottom = 0;
   const placeFulls = () => {
     if (!fulls.length) return;
@@ -825,18 +825,17 @@
       }
       const FH = fullH[i], fits = Math.min(1, (W - 2 * m_) / fullW), roomy = (bottom - words) / FH >= fits * 0.9;
       const top_ = roomy ? words : m_, s1 = Math.min(fits, (bottom - top_) / FH);
-      const s0 = Math.min(v.w / fullW, s1), h0 = Math.min(FH, v.h / s0), icon = v.o < 0.5;
-      const y0 = icon ? clamp(fullSH[i] / 2 - h0 / 2, 0, FH - h0) : 0; // from an icon: round the middle of its picture
-      const top = lerp(y0, 0, g), bot = lerp(y0 + h0, FH, g), s = lerp(s0, s1, g);
+      const s0 = Math.min(v.w / fullW, s1), icon = v.o < 0.5;
+      // It starts at the small card's width, its picture over the small card's (an icon's middle over its picture's),
+      // and grows to the whole card where it fits. Transform and opacity only, so a grow repaints nothing.
+      const a0 = icon ? fullSH[i] / 2 : (v.h / s0) / 2, s = lerp(s0, s1, g);
       const hw = (fullW * s1) / 2, hh = (FH * s1) / 2;
       const tx = clamp(v.x, m_ + hw, W - m_ - hw), ty = clamp(v.y, top_ + hh, bottom - hh);
-      const cx = lerp(v.x, tx, g), cy = lerp(v.y, ty, g), ax = fullW / 2, ay = (top + bot) / 2;
+      const cx = lerp(v.x, tx, g), cy = lerp(v.y, ty, g), ax = fullW / 2, ay = lerp(a0, FH / 2, g);
       if (el.style.visibility) el.style.visibility = '';
       el.style.pointerEvents = grT[i] ? 'auto' : 'none';
       el.style.transform = `translate(${(cx - ax * s).toFixed(1)}px, ${(cy - ay * s).toFixed(1)}px) scale(${s.toFixed(4)})`;
-      el.style.clipPath = g >= 0.999 ? '' : `inset(${top.toFixed(1)}px 0 ${(FH - bot).toFixed(1)}px 0 round ${lerp(icon ? h0 / 2 : 7 / s0, 7, g).toFixed(1)}px)`;
-      setOp(el, smooth(clamp(g / 0.3)) * chipQ(i));
-      setOp(el.lastChild, smooth(clamp((g - 0.45) / 0.4))); // the link comes in last
+      setOp(el, smooth(clamp(g / 0.35)) * chipQ(i));
     });
   };
   const drawPose = (cx2, u, d) => { // the profile pose at u CSS px per art pixel, d device px per CSS px
