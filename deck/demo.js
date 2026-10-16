@@ -1,4 +1,4 @@
-// Slide 5: Astrid generates, animates, then grades three light studies.
+// Slide 5 demo.
 (() => {
   const root = document.querySelector('[data-astrid-demo]');
   const M = window.AstridMink;
@@ -13,7 +13,7 @@
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
   const videos = [...root.querySelectorAll('.as-media video')];
-  // Clip 0 is never graded. Only the two graded clips get media elements.
+  // No twin for clip 0.
   const gradeSources = ['../assets/astrid/passing-shapes-graded.mp4', '../assets/astrid/quiet-finish-graded.mp4'];
   const gradedVideos = [null, ...gradeSources.map((source) => {
     const graded = document.createElement('video');
@@ -133,7 +133,7 @@
   minkCv.addEventListener('click', (e) => { e.stopPropagation(); if (!still) turn(); });
 
   // The preview
-  // mode: none | still (an anchor image) | play (the motion clips, as a sequence).
+  // mode: none | still | play.
   const view = { mode: 'none', i: -1, seq: -1, rate: 1, title: -1, colour: false, sweep: 0 };
   const noise = document.createElement('canvas');
   noise.width = noise.height = 128;
@@ -527,7 +527,7 @@
   };
   const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
   const start = (fromCore) => {
-    // Navigation warms these from slide 4; direct #5 entry also needs warming.
+    // Also warm direct #5 entry.
     window.warmDeckMedia(slide);
     running = true;
     layout();
