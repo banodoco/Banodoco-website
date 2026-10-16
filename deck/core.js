@@ -382,6 +382,7 @@
 
   const advance = (dt) => {
     ta += ta < T.end ? dt / pace : dt;
+    if (ta >= T.end) window.deckEntryDone?.(slide);
     flare *= Math.exp(-dt / 0.9);
     if (labelled < 1 && ta >= 0.8) { labelled = 1; root.classList.add('is-labelled'); }
     if (labelled < 2 && ta >= T.orbit + 0.3) { labelled = 2; root.classList.add('is-community'); }
@@ -717,7 +718,7 @@
       frameRaf = 0;
       if (id !== loop || !running) return;
       frameRaf = requestAnimationFrame(tick);
-      const dt = Math.min(0.05, (now - (last || now)) / 1000);
+      const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
       last = now;
       advance(dt);
       draw();
@@ -770,7 +771,7 @@
   };
 
   const reset = () => {
-    timers.forEach(clearTimeout);
+    timers.forEach(window.deckCancelLater);
     timers = [];
     if (!slide.classList.contains('on')) html.classList.remove('ac-quiet');
     dropSeed();
@@ -801,7 +802,7 @@
     reset();
     if (!layout()) return false;
     visits++;
-    if (still || window.deckNav?.rest) { ta = 0; settle(); draw(); if (!still) { html.classList.add('ac-quiet'); start(); } return false; }
+    if (still || window.deckNav?.rest) { ta = 0; settle(); draw(); window.deckEntryDone?.(slide); if (!still) { html.classList.add('ac-quiet'); start(); } return false; }
     pace = visits > 1 ? 0.7 : 1;
     ta = -9; // dark until the network arrives
     if (fromGap && launch()) pace = 1;
@@ -809,16 +810,17 @@
     armed = true;
     if (!fromGap && performance.now() - lastArrive < 400) { arrive(); return true; } // the network got here first (a jump)
     // If the network never says it has arrived (e.g. it was interrupted), grow anyway.
-    timers.push(setTimeout(() => arrive(), fromGap ? 1700 : 1500));
+    timers.push(window.deckLater(() => arrive(), fromGap ? 1700 : 1500));
     return true;
   };
   const arrive = () => {
     if (!armed || !slide.classList.contains('on')) return;
     armed = false;
-    ta = seedEl ? -Math.max(0.15, FLIGHT - (performance.now() - launchAt) / 1000) : -0.3; // the seed lands on the eye at 0
+    const seedAge = seedEl?.getAnimations()[0]?.currentTime;
+    ta = seedEl ? -Math.max(0.15, FLIGHT - (typeof seedAge === 'number' ? seedAge : performance.now() - launchAt) / 1000) : -0.3; // the seed lands on the eye at 0
     nextGift = AMBIENT + 0.2; nextUse = AMBIENT + PLAN.length * GAP + 4; plan = 0;
     // The network that brought us here steps back so the picture reads.
-    timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, 150));
+    timers.push(window.deckLater(() => { if (slide.classList.contains('on')) html.classList.add('ac-quiet'); }, 150));
     start();
   };
   let lastArrive = -1e9;
@@ -852,7 +854,7 @@
     card.classList.remove('is-on');
     slide.style.cursor = '';
     // The stage fades with the slide's other content; clear it once out of sight.
-    timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
+    timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) reset(); }, 700));
   };
 
   let wasOn = false;
@@ -892,7 +894,7 @@
     if (interrupted) {
       settle(state.map((sd) => sd.map((x) => x.state)));
       armed = false;
-      timers.forEach(clearTimeout); timers = [];
+      timers.forEach(window.deckCancelLater); timers = [];
     }
     hot = pinned = null;
     card.classList.remove('is-on');

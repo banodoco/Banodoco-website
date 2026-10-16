@@ -28,7 +28,13 @@
   let paused = false, pausedAt = 0, pausedTime = 0;
   let pendingStart = null, pausedVideos = [];
   const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
-  const now = () => (paused ? pausedAt : performance.now()) - pausedTime;
+  let paceOffset = 0, paceAt = performance.now();
+  const now = () => {
+    const real = (paused ? pausedAt : performance.now()) - pausedTime;
+    paceOffset += Math.max(0, real - paceAt) * ((window.deckPace?.() || 1) - 1);
+    paceAt = real;
+    return real + paceOffset;
+  };
   const RAD = Math.PI / 180;
 
   // ---- The scene -----------------------------------------------------------------------------
@@ -550,7 +556,7 @@
     }
     apply();
     draw();
-    if (e >= (build.from5 ? FROM5.end : QUICK.end)) { build = null; settleAll(); amb = { t }; tourFrom(0, t + 1100); }
+    if (e >= (build.from5 ? FROM5.end : QUICK.end)) { build = null; settleAll(); amb = { t }; tourFrom(0, t + 1100); window.deckEntryDone?.(slide); }
   };
 
   // ---- The tour, and hover ------------------------------------------------------------------------
@@ -672,7 +678,7 @@
     pendingBuild = false;
     begin(false); play(); wake();
   };
-  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
+  const clearTimers = () => { timers.forEach(window.deckCancelLater); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
     if (motionBlocked()) { pendingStart = from5; return; }
     window.warmDeckMedia?.(slide);
@@ -684,12 +690,13 @@
     flags.forEach((f) => { f.tabIndex = 0; });
     if (still || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
+      window.deckEntryDone?.(slide);
       if (!still) { amb = { t: now() }; tourFrom(0, now() + 1100); play(); wake(); }
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
       slide.classList.add('st-arrive');
-      timers.push(setTimeout(() => slide.classList.remove('st-arrive'), 900));
+      timers.push(window.deckLater(() => slide.classList.remove('st-arrive'), 900));
       try { video.currentTime = 2; } catch (e) { /* not loaded */ }
       begin(true); play(); wake();
       return;
@@ -697,11 +704,11 @@
     hideAll();
     const go = beginWhenReady;
     if (html.classList.contains('dt-intro')) { // a first load: the Mycelial mark plays first
-      waitArrive = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waitArrive.disconnect(); waitArrive = null; timers.push(setTimeout(go, 250)); } });
+      waitArrive = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waitArrive.disconnect(); waitArrive = null; timers.push(window.deckLater(go, 250)); } });
       waitArrive.observe(html, { attributes: true, attributeFilter: ['class'] });
       return;
     }
-    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(setTimeout(go, 1300))); // if the network never says it has arrived
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(window.deckLater(go, 1300))); // if the network never says it has arrived
   };
   slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
   const stop = () => {
@@ -726,7 +733,7 @@
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
-    if (!on) { stop(); timers.push(setTimeout(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return; }
+    if (!on) { stop(); timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return; }
     const from5 = !still && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
     start(from5);
   });
