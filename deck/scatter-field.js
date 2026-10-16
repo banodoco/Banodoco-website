@@ -164,26 +164,41 @@
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 
   let w = 0, h = 0, dpr = 1, F = 1, cx = 0, cy = 0;
-  let speed = 1, boost = 0, roll = 0, camX = 0, camY = 0, steerX = 0, steerY = 0;
+  let speed = 1, boost = 0, glide = 0, since = 9, roll = 0, camX = 0, camY = 0, steerX = 0, steerY = 0, leadX = 0, leadY = 0, settled = 1;
   // Arriving from slide 1 the vanishing point starts at the collage, holds, then glides home.
   let shift = { x: 0, y: 0, age: 9 };
   let pointer = null, touched = false, hot = null, front = null, f = 0, shown = null, keyHover = null, keyLock = null, lastLit;
   let featured = null, held = 0, live = 0, clock = 0, running = false, last = 0;
   const tags = labels.map((el) => ({ el, item: null }));
 
+  // Names and cards live in the lower screen: below the headline (floor) and
+  // above the legend (ceil), never behind either.
+  const text = slide.querySelector('.split > :first-child');
+  let floor = 0, ceil = 0;
+  const measure = () => {
+    const s = stage.getBoundingClientRect(), t = text && text.getBoundingClientRect(), l = legend.getBoundingClientRect();
+    floor = Math.max(h * 0.48, t && t.height ? t.bottom - s.top + h * 0.06 : h * 0.5);
+    ceil = l.height ? l.top - s.top - 10 : h - 40;
+  };
   const resize = () => {
     w = stage.clientWidth; h = stage.clientHeight;
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    measure();
   };
   new ResizeObserver(resize).observe(stage);
+  if (text) new ResizeObserver(measure).observe(text); // fonts landing reflow the headline
 
   // E: the field opens in the right half beside the text. F: below the text, full width.
   const below = () => document.documentElement.dataset.ver === 'f' || w <= 760;
   const aim = () => {
     if (below()) { cx = w / 2; cy = h * 0.68; F = Math.min(w * 0.42, h * 0.62) * 0.75; }
     else { cx = w * 0.7; cy = h * 0.48; F = Math.min(w * 0.5, h) * 0.38; }
-    const k = shift.age < 0 ? 1 : 1 - (t => t * t * (3 - 2 * t))(clamp(shift.age / 1.6));
+    // The glide home is one unhurried curve: it sets off with no jolt (zero
+    // speed and acceleration), peaks gently about a second in, and fades out
+    // over a long tail, so the heading drifts into place rather than turning.
+    const g = shift.age * 1.8;
+    const k = shift.age < 0 ? 1 : (1 + g + g * g / 2) * Math.exp(-g);
     cx += shift.x * k; cy += shift.y * k;
     cosR = Math.cos(roll); sinR = Math.sin(roll);
   };
@@ -218,16 +233,24 @@
     const wantSpeed = still ? 0 : front ? 0.08 : hot ? 0.04 : 1;
     speed += (wantSpeed - speed) * ease(2.5);
     boost *= Math.exp(-2.2 * dt); // scroll momentum settles back to the drift
-    const dz = dt * 0.36 * (speed + boost);
+    // The arrival rush: the burst past slide 1's films is quick, then it eases
+    // off more slowly, so slowing down and the heading's glide home settle together.
+    since += dt;
+    glide *= Math.exp(-(2.2 - 1.25 * (t => t * t * (3 - 2 * t))(clamp((since - 0.6) / 0.8))) * dt);
+    const dz = dt * 0.36 * (speed + boost + glide);
     clock += dt; held += dt; shift.age += dt;
     roll += dt * 0.025 * speed;
-    // Steering stays where the mouse left it; no snap back to centre.
+    // Steering stays where the mouse left it; no snap back to centre. It eases
+    // in two stages (no lurch when the mouse first moves), and just after an
+    // arrival it wakes gradually, so the flight settles before the hand steers.
+    settled = Math.min(1, settled + dt / 2.5);
     if (pointer) { steerX = (pointer.x / w - 0.5) * 0.9; steerY = (pointer.y / h - 0.5) * 0.6; }
-    camX += (steerX - camX) * ease(1.6);
-    camY += (steerY - camY) * ease(1.6);
-    // Labels and hovering stay clear of the headline.
+    const sr = 3.2 * settled * settled * (3 - 2 * settled);
+    leadX += (steerX - leadX) * ease(sr); camX += (leadX - camX) * ease(sr);
+    leadY += (steerY - leadY) * ease(sr); camY += (leadY - camY) * ease(sr);
+    // Labels and hovering stay in the lower screen, clear of the headline.
     const low = below();
-    const clear = (n) => (low ? n.sy > h * 0.5 : n.sx > w * 0.5);
+    const clear = (n) => (low ? n.sy > floor + 6 : n.sx > w * 0.5);
     aim();
     const grain = Math.sqrt(F / 240);
 
@@ -237,9 +260,10 @@
       q = place(n);
       n.sx = q.x; n.sy = q.y; n.p = q.p; n.a = q.a; n.vis = q.a > 0.05;
     }
-    // Hover: the dot under the pointer, nearer bodies winning ties.
+    // Hover: the dot under the pointer, nearer bodies winning ties. Not while
+    // still arriving: a pointer resting where it clicked shouldn't brake the flight.
     hot = null;
-    if (pointer) {
+    if (pointer && settled > 0.7) {
       let best = Infinity;
       for (const n of named) {
         if (!n.vis || !clear(n)) continue;
@@ -270,7 +294,7 @@
       ctx.globalAlpha = clamp((0.09 + 0.6 * clamp(q.p / 1.6)) * q.a * kin * calm);
       const s = clamp(1.7 * q.p, 0.45, 4) * grain;
       // Near motes streak faintly outward: the sense of moving forward.
-      const sx = q.x, sy = q.y, streak = Math.min(90, q.p * q.p * Math.abs(speed + boost) * 1.6);
+      const sx = q.x, sy = q.y, streak = Math.min(90, q.p * q.p * Math.abs(speed + boost + glide) * 1.6);
       if (streak > 1.4) {
         const k = streak / Math.hypot(sx - cx, sy - cy || 1);
         ctx.lineWidth = s * 0.7;
@@ -323,18 +347,22 @@
 
     // The name belongs to whichever body is approaching nearest the middle.
     // It holds a moment before handing over, so the label never flickers, and
-    // gives way after a few seconds so the names keep turning over.
-    const tired = held > 5.5;
+    // gives way after a couple of seconds so the names keep turning over at
+    // an even, unhurried beat.
+    const tired = held > 2.6;
     let best = null, bestScore = 0;
     for (const n of named) {
       n.score = 0;
-      if (!n.vis || n.a < 0.6 || n.z > 3.2 || !clear(n) || (low ? n.sy < h * 0.56 : n.sx < w * 0.53) || (n.rest > clock && n !== featured)) continue;
+      // A name needs room above its dot, under the headline and over the
+      // legend; a new one needs a little more, so it can travel before it must go.
+      const room = n === featured ? 0 : h * 0.05;
+      if (!n.vis || n.a < 0.6 || n.z > 3.2 || !clear(n) || (low ? n.sy - n.rad - 62 - room < floor || n.sy > ceil - room : n.sx < w * 0.53) || (n.rest > clock && n !== featured)) continue;
       const dx = (n.sx - cx) / (F * 0.55), dy = (n.sy - cy) / (F * 0.55);
       n.score = n.p * Math.exp(-(dx * dx + dy * dy));
       if (n.score > bestScore && !(tired && n === featured)) { bestScore = n.score; best = n; }
     }
-    const keep = featured && !tired && featured.score > 0.05 && (featured.score > bestScore * 0.6 || held < 1.8);
-    if (!keep && best !== featured && (best || held > 1.8)) {
+    const keep = featured && !tired && featured.score > 0.05 && (featured.score > bestScore * 0.5 || held < 1.6);
+    if (!keep && best !== featured && (best || held > 1.6)) {
       if (featured) featured.rest = clock + 14; // let others have a turn
       featured = best; held = 0;
       tags.push(tags.shift()); // the old label fades where it is; the new one takes over
@@ -351,7 +379,7 @@
       const half = tag.el.offsetWidth / 2 + 6;
       const lo = low ? half : w * 0.5 + half;
       const x = clamp(it.sx, lo, Math.max(lo, w - half));
-      const y = Math.max((low ? h * 0.5 : 0) + tag.el.offsetHeight + 4, it.sy - it.rad - 8);
+      const y = Math.max((low ? floor + 2 : 4) + tag.el.offsetHeight, it.sy - it.rad - 8);
       tag.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%) scale(${(0.9 + 0.12 * clamp(it.p / 2)).toFixed(3)})`;
     });
 
@@ -366,9 +394,11 @@
       const flip = target.sx > (low ? w * 0.6 : w * 0.78);
       const gap = target.rad + 12;
       const bx = target.sx + (flip ? -gap : gap), by = target.sy;
-      const x = bx + (cx - bx) * e, y = by + (cy - by) * e;
+      const x = bx + (cx - bx) * e, scale = 0.92 + 0.2 * e, half = (card.offsetHeight * scale) / 2;
+      let y = by + (cy - by) * e;
+      if (low) y = Math.max(floor + half, Math.min(y, h - half - 8)); // the card's top never rises behind the text
       const px = (flip ? -100 : 0) + (flip ? 50 : -50) * e;
-      card.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${px.toFixed(1)}%, -50%) scale(${(0.92 + 0.2 * e).toFixed(3)})`;
+      card.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${px.toFixed(1)}%, -50%) scale(${scale.toFixed(3)})`;
     }
   };
 
@@ -449,7 +479,8 @@
   const start = (arriving) => {
     if (running || !slide.classList.contains('on') || document.hidden) return;
     running = true; last = 0;
-    if (arriving) boost = Math.max(boost, 3.5); // arriving, we fly in past slide 1's collage
+    measure();
+    if (arriving) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
     requestAnimationFrame(frame);
   };
   const stop = () => { running = false; pointer = null; };
@@ -498,7 +529,7 @@
     if (!pick && touched && pointer) { // a tap lands before the next frame has looked
       let best = 28 * 28;
       for (const n of named) {
-        if (!n.vis || (below() ? n.sy < h * 0.5 : n.sx < w * 0.5)) continue;
+        if (!n.vis || (below() ? n.sy < floor + 6 : n.sx < w * 0.5)) continue;
         const dd = (n.sx - pointer.x) ** 2 + (n.sy - pointer.y) ** 2;
         if (dd < best) { best = dd; pick = n; }
       }
