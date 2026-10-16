@@ -526,7 +526,7 @@
   };
 
   const start = (arriving) => {
-    if (running || !slide.classList.contains('on') || document.hidden) return;
+    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     resize();
     running = true; last = 0;
     if (arriving && !still) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
