@@ -1358,27 +1358,54 @@
     return handle;
   };
   const pacedAnimations = new Map();
+  const animationRoots = new Set();
+  const animationEvents = ['animationstart', 'transitionrun', 'transitionstart'];
   let animationRaf = 0;
+  // CSS start events bubble from these roots. WAAPI creation sites request the
+  // same refresh explicitly; no document-wide or continuous animation scan.
+  window.deckSyncAnimations = () => {
+    if (pace !== 1 && !animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
+  };
+  const watchAnimationRoots = (roots) => {
+    for (const root of animationRoots) if (!roots.has(root)) {
+      animationEvents.forEach(event => root.removeEventListener(event, window.deckSyncAnimations, true));
+      animationRoots.delete(root);
+    }
+    for (const root of roots) if (!animationRoots.has(root)) {
+      animationEvents.forEach(event => root.addEventListener(event, window.deckSyncAnimations, true));
+      animationRoots.add(root);
+    }
+  };
   const syncAnimations = () => {
     animationRaf = 0;
     if (pace === 1) {
       pacedAnimations.forEach((rate, animation) => { try { animation.playbackRate = rate; } catch {} });
       pacedAnimations.clear();
+      watchAnimationRoots(new Set());
       return;
     }
-    for (const animation of document.getAnimations()) {
-      const target = animation.effect?.target;
-      if (!(target instanceof Element) || !target.closest('.slide, .dt-dot, .dt-net, .dt-mark, .dt-name, .ac-seed')) continue;
-      if (!pacedAnimations.has(animation)) pacedAnimations.set(animation, animation.playbackRate);
-      animation.playbackRate = pacedAnimations.get(animation) * pace;
+    const roots = new Set([
+      slides[window.deckNav.from], slides[window.deckNav.to],
+      ...document.querySelectorAll('.dt-dot, .dt-net, .dt-mark, .dt-name, .ac-seed'),
+    ].filter(Boolean));
+    watchAnimationRoots(roots);
+    const active = new Set();
+    for (const root of roots) for (const animation of root.getAnimations({ subtree: true })) active.add(animation);
+    for (const [animation, rate] of pacedAnimations) if (!active.has(animation)) {
+      try { animation.playbackRate = rate; } catch {}
+      pacedAnimations.delete(animation);
     }
-    if (!animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
+    for (const animation of active) {
+      if (!pacedAnimations.has(animation)) pacedAnimations.set(animation, animation.playbackRate);
+      const rate = pacedAnimations.get(animation) * pace;
+      if (animation.playbackRate !== rate) animation.playbackRate = rate;
+    }
   };
   const setPace = (value) => {
     if (pace === value) return;
     pace = value;
     if (value === 1) { if (animationRaf) cancelAnimationFrame(animationRaf); syncAnimations(); }
-    else if (!animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
+    else window.deckSyncAnimations();
   };
   const finishTurn = () => {
     if (!turn || !turn.network || !turn.entry) return;
@@ -1393,10 +1420,10 @@
     });
   };
   window.deckTurnDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl && !turn.network) { turn.network = true; finishTurn(); hurry(); }
+    if (turn && slides[turn.to] === slideEl && !turn.network) { turn.network = true; finishTurn(); hurry(); window.deckSyncAnimations(); }
   };
   window.deckEntryDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl && !turn.entry) { turn.entry = true; finishTurn(); hurry(); }
+    if (turn && slides[turn.to] === slideEl && !turn.entry) { turn.entry = true; finishTurn(); hurry(); window.deckSyncAnimations(); }
   };
   // One viewport notification for the slide pictures. A phone's browser chrome can
   // report several sizes in one gesture; only lay out after the last one.
@@ -1439,6 +1466,7 @@
     initialized = true;
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
+    window.deckSyncAnimations();
     if (!(i === 0 && document.documentElement.classList.contains('dt-intro'))) warmMedia(slides[i]);
     warmMedia(slides[i + 1]);
     count.textContent = `${i + 1} / ${slides.length}`;
