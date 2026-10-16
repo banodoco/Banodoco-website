@@ -820,7 +820,8 @@
   // The mink, as on slide 5: hovering flashes her eye; clicking turns her to face you and back.
   minkCv.addEventListener('pointerenter', () => { if (still || build || mk.seq || mk.pose !== 'profile') return; mk.hover = now(); });
   minkCv.addEventListener('click', (e) => { e.stopPropagation(); if (!still && !build && !mk.seq) { mk.hover = null; mk.seq = now(); } });
-  video.addEventListener('loadeddata', () => { if (still) stepHead(); });
+  // Loading resets the film to paused, so one that arrives after the slide has started (a cold load) plays then.
+  video.addEventListener('loadeddata', () => { if (still) stepHead(); else play(); });
 
   layout();
   hideAll();
