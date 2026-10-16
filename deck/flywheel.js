@@ -289,7 +289,7 @@
       kk = Math.min(kh, kv);
       ox = W / 2; oy = cy;
     }
-    if (s === 1) kk = Math.min(kk, 1.0); // 10's picture stays a calm size
+    if (s === 1) kk = Math.min(kk, tall ? 1.15 : 1.0); // 10's picture stays a calm size (upright, it fills more of the room under the words)
     // Labels and chip captions are type, not picture: keep their measured widths inside the right margin.
     for (const [rx_, px] of rightOf(s)) if (rx_ > cxRef) kk = Math.min(kk, (W - mx - px - ox) / (rx_ - cxRef));
     return { k: kk, X: (rx) => ox + (rx - cxRef) * kk, Y: (ry) => oy + (ry - cyRef) * kk };
@@ -358,6 +358,9 @@
     // once took there; the mark now forms large and faint behind the words, inside the halo).
     const lab = hosts[2].querySelector('.num');
     if (lab) { const r = stages[2].ring, need = r[1] - (lab.getBoundingClientRect().top - 13 - 36 - 34 - (short ? 0 : iconR()) - (tall ? 8 : 10)); if (r[3] < need) r[3] = need; }
+    // On its side the halo is held by the height, with room either side: it opens wider, so the icons below the
+    // words stand clear of them.
+    if (short) { const r = stages[2].ring; r[2] = Math.max(r[2], Math.min(r[2] * 1.2, W / 2 - Math.max(24, Math.min(64, W * 0.045)) - iconR() - 6)); }
     // Cards that sit on the ring (the icons) take their places on it now its size is known.
     stages.forEach((st, s) => st.cards.forEach((c, i) => {
       if (R.cards[i].at[s] !== 'ring') return;
