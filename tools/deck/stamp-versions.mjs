@@ -30,7 +30,7 @@ try {
   console.error(`Provide a valid site base URL, for example https://banodoco.github.io/Banodoco-website/: ${error.message}`);
   process.exit(2);
 }
-const ogImageUrl = new URL(`deck/mycelial-og.jpg?v=${version}`, baseUrl).href;
+const ogImageUrl = new URL(`mycelial/mycelial-og.jpg?v=${version}`, baseUrl).href;
 
 const allowed = /\.(?:js|mjs|css|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mov|woff2?|ttf|otf|eot)$/i;
 
@@ -48,7 +48,7 @@ function stamp(raw, relativeFile) {
   let sitePath;
   if (pathname.startsWith('/')) sitePath = pathname.slice(1);
   else sitePath = path.posix.normalize(path.posix.join(path.posix.dirname(relativeFile), pathname));
-  if (!(sitePath.startsWith('assets/') || sitePath.startsWith('deck/'))) return raw;
+  if (!(sitePath.startsWith('assets/') || sitePath.startsWith('mycelial/'))) return raw;
 
   const params = new URLSearchParams(query);
   params.set('v', version);
@@ -66,13 +66,13 @@ function rewriteSrcset(value, relativeFile) {
 function rewrite(text, relativeFile, extension) {
   let result = text;
   if (/\.html?$/i.test(extension)) {
-    if (relativeFile === 'deck/index.html') {
+    if (relativeFile === 'mycelial/index.html') {
       let replaced = false;
       result = result.replace(/(<meta\s+property=["']og:image["']\s+content=["'])[^"']*(["'])/i, (_all, before, after) => {
         replaced = true;
         return `${before}${ogImageUrl}${after}`;
       });
-      if (!replaced) throw new Error('Failed to set the Open Graph image URL in deck/index.html.');
+      if (!replaced) throw new Error('Failed to set the Open Graph image URL in mycelial/index.html.');
     }
     result = result.replace(/(\b(?:src|href|poster|srcset)\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix, quote, value) => {
       const next = /\bsrcset\s*=/i.test(prefix) ? rewriteSrcset(value, relativeFile) : stamp(value, relativeFile);
@@ -115,7 +115,7 @@ async function filesUnder(directory) {
   return files;
 }
 
-const deckDirectory = path.join(output, 'deck');
+const deckDirectory = path.join(output, 'mycelial');
 const files = await filesUnder(deckDirectory);
 let changed = 0;
 for (const file of files) {
