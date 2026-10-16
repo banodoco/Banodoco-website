@@ -1,5 +1,5 @@
 // Version F, slide 6: where it goes. Slide 5's product taken apart into one exploded stack of thin
-// floating planes on the left, the text on the right, top to bottom: rendering, the timeline, effects, the agent's tools,
+// floating planes on the left, the text on the right, top to bottom: rendering, editing, effects, the agent's tools,
 // and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
 // perches on the top plane.
 // Each layer has a named flag sticking out to the left on a fine gold leader. Hovering, focusing or
@@ -47,9 +47,9 @@
     { name: 'Rendering', short: 'Rendering', line: 'What turns the timeline into frames. Swap it and the same edit becomes a new kind of film.',
       ex: [['Remotion', 'video as React code'], ['Three.js', 'live 3D scenes'], ['HyperFrames by HeyGen', 'HTML to video'], ['HTML, CSS &amp; canvas', 'the web’s own tools']],
       foot: 'or plug in a renderer of your own' },
-    { name: 'Timeline', short: 'Timeline', line: 'Helpers on the timeline that make an edit easier to see and to shape.',
+    { name: 'Editing', short: 'Editing', line: 'Ways to shape the cut itself: find the moment, trim it, time it to the music.',
       ex: [['Transcript view', 'edit by editing the words'], ['Beat markers', 'cuts that land on the beat'], ['Shot lists &amp; storyboards', 'plan, then fill in'], ['Captions', 'timed, styled text']],
-      foot: 'build your own helper' },
+      foot: 'or build an editing tool of your own' },
     { name: 'Effects', short: 'Effects', line: 'Looks and graphics over the footage, made and shared by the community.',
       ex: [['<code>type-on</code> · <code>text-card</code>', 'self-writing titles'], ['<code>audio-reactive-colour</code>', 'colour on the beat'], ['Shader looks &amp; film grain', 'texture for a whole film'], ['Motion graphics', 'animated type and shapes']],
       foot: 'community-made, or make your own' },
