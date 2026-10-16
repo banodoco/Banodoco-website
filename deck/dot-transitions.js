@@ -946,9 +946,37 @@
     clearTimeout(resized);
     resized = setTimeout(() => { if (!turning && !opening) settle(false); }, 150);
   });
+  // Keep the initial settle (and its dt-arrive event) in its original place.
+  // Only the opening waits for the fonts; slide scripts below still initialize
+  // after this event and watch dt-intro exactly as before.
   settle(true, true);
-  if (!open()) {
-    html.classList.remove('dt-intro'); // hidden before first paint, but there is no opening to play
-    if (active() && current && anchor && !still) { reveal(current, anchor, 350); sprawl(levelOf(current), anchor, 0.3); }
+  const first = current;
+  const startOpening = () => {
+    if (window.__deckIntro?.failed) return;
+    html.classList.remove('dt-font-wait');
+    // A very early click can change the active slide while the fonts load.
+    if (current !== first) { if (turning) turning.cancel(); settle(true, true); }
+    if (!open()) {
+      html.classList.remove('dt-intro'); // hidden before first paint, but there is no opening to play
+      if (active() && current && anchor && !still) { reveal(current, anchor, 350); sprawl(levelOf(current), anchor, 0.3); }
+    }
+  };
+  if (window.__deckIntro) window.__deckIntro.initialized = true;
+  if (!active() || still || !document.fonts) startOpening();
+  else {
+    let started = false;
+    const launch = () => { if (started) return; started = true; clearTimeout(ceiling); startOpening(); };
+    const ceiling = setTimeout(launch, 2500);
+    try {
+      const fonts = document.fonts;
+      const needed = [
+        fonts.load('400 22px "DM Sans"', 'MYCELIAL'),
+        fonts.load('400 72px "Cormorant Garamond"', 'Mycelial'),
+        fonts.load('italic 400 16px "Cormorant Garamond"', '01'),
+        fonts.load('italic 500 72px "Cormorant Garamond"', 'Mycelial'),
+        fonts.load('400 20px "EB Garamond"', 'Mycelial')
+      ];
+      Promise.allSettled([...needed, fonts.ready]).then(launch);
+    } catch (e) { launch(); }
   }
 })();
