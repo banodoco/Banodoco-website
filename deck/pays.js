@@ -114,7 +114,12 @@
       ky = Math.min((H - (low ? 120 : 230)) / 690, 1.0);
       k = Math.min(ky, kx * 1.35, 1.05);
       ox = left + 52 * k - 63 * kx; // the builders' circles (reference x 213) sit just inside the left edge
-      oy = low ? (H - 64) / 2 : H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
+      // The picture's middle (reference y 415, the lens) on the headline's horizon, so the two read as one line;
+      // measured by layout (offsets), not by boxes, which the slide's entry and the text's drift move.
+      const h1 = slide.querySelector('h1');
+      let mid = h1.offsetHeight / 2;
+      for (let n = h1; n && n !== slide; n = n.offsetParent) mid += n.offsetTop;
+      oy = low ? (H - 64) / 2 : clamp(mid, 40 + 330 * ky, H - 100 - 330 * ky);
     }
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
@@ -165,7 +170,7 @@
     // Labels.
     labels.local.style.fontSize = labels.hosted.style.fontSize = `${Math.max(small ? 10.5 : 13, 23 * k).toFixed(1)}px`;
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
-    put(labels.local, X(150), Y(168), 0, 0.5);
+    put(labels.local, X(150), Y(118), 0, 0.5); // the two sides' names share a line, either side of the boundary's top
     put(labels.hosted, X(1170), Y(118), 0.5, 0.5);
     put(labels.core, lens.c.x + 4 * k, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5);
     return true;
