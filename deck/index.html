@@ -544,6 +544,7 @@
   html[data-ver="f"] .fw-host .cap, html[data-ver="f"] .fw-host .e-note { display: none; }
   html[data-ver="f"] .fw-raise { justify-content: center; padding-bottom: 4vh; }
   html[data-ver="f"] .fw-raise h1 { max-width: 13em; font-size: clamp(2.1rem, 3.7vw, 3.9rem); }
+  .fw-sub { max-width: 30em; margin: 1.1rem auto 0; font-size: clamp(1.02rem, 1.3vw, 1.25rem); line-height: 1.5; color: var(--soft); text-wrap: balance; }
   /* Slide 10: the text at the very top, the wheel and its initiatives below it (9 bottom, 10 top, 11 middle). */
   html[data-ver="f"] .fw-top { justify-content: flex-start; padding-top: max(40px, 5.6vh); padding-bottom: 0; }
   /* While the wheel is up, the network the earlier slides left behind steps back, as on slides 4 and 8. */
@@ -574,8 +575,18 @@
   .fw-cbody span { font: italic 400 .9em/1.28 "Cormorant Garamond", serif; color: #cbbfa9; }
   .fw-cbody a, .fw-cbody em { margin-top: .2em; font: italic 500 .88em/1.2 "Cormorant Garamond", serif; color: #f0c67e; text-decoration: none; letter-spacing: .02em; }
   .fw-cbody em { color: #a39684; }
-  .fw-cards.is-live .fw-cbody a { pointer-events: auto; }
+  .fw-cards.is-live .fw-card { pointer-events: auto; }
+  .fw-card.is-compact .fw-cbody span { display: none; }
+  .fw-card.is-icon { cursor: pointer; }
   .fw-cbody a:hover, .fw-cbody a:focus-visible { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; outline: none; }
+  /* Astrid's card: a still of slide 5's editor, its preview over its timeline, and the mink's seat. */
+  .fw-astrid { position: relative; display: flex; flex-direction: column; gap: 5%; height: 100%; padding: 5% 5% 4%; background: #24211b; }
+  .fw-astrid > img { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: cover; border-radius: 3px; filter: brightness(.84) saturate(.92); }
+  .fw-tl { position: relative; flex: none; display: flex; gap: 2px; height: 22%; padding: 2px 2px 2px 24%; border-radius: 3px; background: #1b1915; border: 1px solid #4a4337; }
+  .fw-tl i { flex: 1; border-radius: 2px; background-size: cover; background-position: center; border: 1px solid #4a4337; }
+  .fw-tl b { position: absolute; top: 0; bottom: 0; left: 46%; width: 2px; background: #38bdf8; box-shadow: 0 0 5px #38bdf880; }
+  .fw-seat { position: absolute; left: 5.5%; bottom: 4%; image-rendering: pixelated; opacity: 0; }
+  .fw-fly { position: absolute; left: 0; top: 0; z-index: 4; image-rendering: pixelated; opacity: 0; pointer-events: none; }
   /* ArtCompute's stat band in its own terminal palette (artcompute.org: ground #0a0a0a, neon green, violet). */
   .fw-ac { display: flex; flex-direction: column; justify-content: center; gap: .6em; height: 100%; padding: .55em .75em; background: #0a0a0a;
     font: 500 .68em/1.15 ui-monospace, "SF Mono", Menlo, monospace; color: #8a8a8a; letter-spacing: .05em; }
@@ -584,6 +595,16 @@
   .fw-ac-stats b { font-size: 1.6em; font-weight: 600; color: #ededed; }
   .fw-ac-stats b.g { color: #39ff14; } .fw-ac-stats b.v { color: #a78bfa; }
   .fw-ac-l { margin-bottom: -.2em; text-transform: uppercase; font-size: .78em; color: #6e6e6e; }
+  .fw-ac .fw-avs img { width: 2.6em; height: 2.6em; margin-left: -.5em; filter: saturate(.55) sepia(.2) brightness(.92); }
+  .fw-ac .fw-avs img:first-child { margin-left: 0; }
+  /* Banodoco's card: its homepage card, the community's own daily digest from the Discord, with a blurple rule. */
+  .fw-dc { display: flex; flex-direction: column; justify-content: center; gap: .45em; height: 100%; padding: .6em .8em; background: #1e1f22; }
+  .fw-dc-ch { font: 500 .62em/1 ui-monospace, "SF Mono", Menlo, monospace; color: #949ba4; letter-spacing: .04em; }
+  .fw-dc-t { padding-left: .55em; border-left: 2px solid #5865f2; font: 500 .74em/1.3 "Inter", system-ui, sans-serif; color: #f2f3f5; }
+  .fw-dc-p { display: flex; align-items: center; gap: .55em; font: italic 400 .86em/1 "Cormorant Garamond", serif; color: #b8a98f; }
+  .fw-dc-p b { font-style: normal; font-weight: 500; color: #ecc57e; }
+  .fw-dc-p .fw-avs img { width: 1.9em; height: 1.9em; margin-left: -.4em; filter: saturate(.55) sepia(.2) brightness(.92); }
+  .fw-dc-p .fw-avs img:first-child { margin-left: 0; }
   .fw-avs { display: flex; align-items: center; }
   .fw-avs img { width: 2.6em; height: 2.6em; border-radius: 50%; border: 1px solid #0a0a0a; margin-left: -.5em; object-fit: cover; }
   .fw-avs img:first-child { margin-left: 0; }
@@ -599,8 +620,10 @@
     html[data-ver="f"] .fw-top { padding: 52px 24px 0; }
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.25rem, 5.6vw, 1.6rem); max-width: 8.6em; }
     .fw-cbody span { display: none; }
+    .fw-dc { gap: .3em; padding: .35em .5em; } .fw-dc-ch { display: none; } .fw-dc-t { font-size: .62em; }
     .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-ac-l { display: none; } .fw-ac-stats > span { padding: .35em .4em; }
     .fw-stat { margin-top: .6rem; font-size: 1rem; }
+    .fw-sub { margin-top: .7rem; font-size: .95rem; line-height: 1.4; max-width: 17em; }
   }
 
   @media (max-width: 760px) {
@@ -1027,7 +1050,7 @@
   </section>
 
   <section class="slide fw-host fw-top" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The flywheel grown bigger round a glowing core, with our four initiatives round it, each plugging energy into the ring: Arca Gidan, an open source AI art competition; 2RP, an art and tech publication; ArtCompute, micro-grants for open AI work; ADOS, events that bring the community together; Astrid sits in the corner"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel grown wider round a glowing core, with six cards round it, each plugging energy into the ring: above, Arca Gidan, an open source AI art competition, ArtCompute, micro-grants for open AI work, and Astrid, a new kind of video editor; below, Banodoco, the community’s home with 20,000+ people, 2RP, a publication coming soon, and ADOS, events that bring the community together"></div>
     <div class="num">10<span class="act">How we accelerate it</span></div>
 <div class="split">
       <div>
@@ -1044,11 +1067,12 @@
   </section>
 
   <section class="slide fw-host fw-raise" data-v="f">
-    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a halo round the words, with the four initiatives round it and Astrid in the corner"></div>
+    <div class="fw-alt" role="img" aria-label="The flywheel opened out into a halo round the words, with the six as icons on it: Arca Gidan, ArtCompute and Astrid above, Banodoco, 2RP and ADOS below"></div>
     <div class="num">11<span class="act">The raise</span></div>
     <div class="split">
       <div>
         <h1>Join us: we’re raising $1M from angels and small funds <em>who want the open ecosystem to win.</em></h1>
+        <p class="fw-sub">We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI.</p>
         <div class="body">[What it gets us to — e.g. Astrid opened up as a platform, the first community-built tools, N active creators — and over what timeframe.]</div>
       </div>
       <div class="vis">
