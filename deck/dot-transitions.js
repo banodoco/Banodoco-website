@@ -88,22 +88,35 @@
     }
   };
 
-  const size = () => {
+  // How much the settled network is stretched across, against down, from the shape it grew in.
+  let warp = 1;
+  // A small resize (an address bar coming or going) stretches the network to the new screen, unseen. A change of
+  // shape (a phone turned, a window made much wider or narrower) would flatten its threads, so there the network
+  // keeps its shape: it is scaled evenly, the slide's node (from, to) or else the middle staying put in it, and
+  // size() says so, for the ground it no longer reaches to be grown over.
+  const size = (from, to) => {
     dpr = Math.min(2, devicePixelRatio || 1);
-    const sx = innerWidth / vw, sy = innerHeight / vh;
+    let sx = innerWidth / vw, sy = innerHeight / vh;
+    const o = from || { x: vw / 2, y: vh / 2 };
     vw = innerWidth; vh = innerHeight;
+    const n = to || { x: vw / 2, y: vh / 2 };
     net.width = ground.width = Math.round(vw * dpr);
     net.height = ground.height = Math.round(vh * dpr);
-    if (sx !== 1 || sy !== 1) {
+    const w = warp * sx / sy, even = w > 1.25 || w < 0.8;
+    if (even) { const k = Math.sqrt(sx * sy); sx = k / Math.sqrt(warp); sy = k * Math.sqrt(warp); warp = 1; } else warp = w;
+    if (sx !== 1 || sy !== 1 || even) {
+      const [ox, oy, nx, ny] = even ? [o.x, o.y, n.x, n.y] : [0, 0, 0, 0];
       const seen = new Set();
       for (const b of baked) {
-        if (!b.pts) { b.x *= sx; b.y *= sy; continue; }
+        if (!b.pts) { b.x = nx + (b.x - ox) * sx; b.y = ny + (b.y - oy) * sy; continue; }
         if (seen.has(b.pts)) continue;
         seen.add(b.pts);
-        for (const p of b.pts) { p[0] *= sx; p[1] *= sy; }
+        for (const p of b.pts) { p[0] = nx + (p[0] - ox) * sx; p[1] = ny + (p[1] - oy) * sy; }
       }
+      if (even) { cover = new Float32Array(GX * GY); junctions = []; seen.forEach(note); }
     }
     rebake();
+    return even;
   };
   size();
 
@@ -526,7 +539,7 @@
   window.addEventListener('deck-overview', syncNetMotion);
   const clearNet = () => {
     hyphae = []; nodes = []; blooms = []; mark = null;
-    baked = []; junctions = []; cover = new Float32Array(GX * GY);
+    baked = []; junctions = []; cover = new Float32Array(GX * GY); warp = 1;
     rebake();
     draw();
   };
@@ -992,17 +1005,16 @@
     if (now && current && anchor && !still) { reveal(current, anchor, 250); sprawl(levelOf(current), anchor, 0.25); }
   }).observe(html, { attributes: true, attributeFilter: ['data-ver'] });
 
-  // A resize keeps the network, stretched to the new screen; the node and the text's softening find their places.
+  // A resize keeps the network (see size), growing it at once over ground a new shape of screen leaves bare;
+  // the node and the text's softening find their places.
   window.deckOnResize(() => {
-    if (turning || opening) {
-      endOpening();
-      size();
-      settle(false);
-      return;
-    }
+    const busy = turning || opening;
+    endOpening();
     keepGround();
-    size();
+    const was = anchor;
     anchor = current ? anchorOf(current) : null;
+    if (size(was, anchor) && anchor && active()) { sprawl(levelOf(current), anchor); ripen(); }
+    if (busy) { settle(false); return; }
     if (anchor) place(anchor);
     nameRest();
     const ch = zone(chromeEls());
