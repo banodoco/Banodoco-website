@@ -1326,6 +1326,8 @@
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
     if (initialized && to === i) return;
+    // A slide never comes on behind the overview: its scene would start paused and miss its entry.
+    if (ov.classList.contains('on')) toggleOv(false);
     const from = initialized ? i : null;
     const dir = from === null ? 0 : Math.sign(to - from);
     if (turnController) turnController.abort();
