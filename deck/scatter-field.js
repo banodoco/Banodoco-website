@@ -408,7 +408,8 @@
       tags[0].item = featured;
     }
     const quiet = !hot && !front && !motes.length; // no names while the films come apart
-    live += ((quiet && featured ? 1 : 0) - live) * ease(3);
+    const liveTarget = quiet && featured ? 1 : 0;
+    live = still ? liveTarget : live + (liveTarget - live) * ease(3);
     tags.forEach((tag, i) => {
       const it = tag.item;
       tag.el.classList.toggle('is-on', i === 0 && quiet && !!it && it.vis);
@@ -422,7 +423,7 @@
     });
 
     // The card: beside a hovered dot, or drawn to the centre when clicked.
-    f += ((front ? 1 : 0) - f) * ease(6);
+    f = still ? (front ? 1 : 0) : f + ((front ? 1 : 0) - f) * ease(6);
     const target = front || (f > 0.02 ? shown : hot);
     if (target !== shown) { if (target) fill(card, target, true); shown = target; }
     card.classList.toggle('is-on', !!target);
@@ -609,7 +610,7 @@
     front = pick && pick !== front ? pick : null;
     if (still) scheduleFrame();
   });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && running) front = null; });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && running) { front = null; if (still) scheduleFrame(); } });
 
   resize();
   start();
