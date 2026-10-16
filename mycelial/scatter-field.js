@@ -373,7 +373,8 @@
         const alpha = glow * q.a * (rewind ? smooth(clamp(rewind.t / 0.35)) : clamp((5.6 - m.age) / 2));
         if (alpha <= 0.01) { if (rewind) left.push(m); continue; }
         ctx.globalAlpha = alpha;
-        if (m.color !== ink) { ink = m.color; ctx.fillStyle = ink; }
+        const tint = m.inks[Math.round(e * INK_STEPS)]; // from its colour in the picture to its colour as a star
+        if (tint !== ink) { ink = tint; ctx.fillStyle = ink; }
         ctx.fillRect(x - mw / 2, y - mh / 2, mw, mh);
         left.push(m);
       }
@@ -497,6 +498,25 @@
     aim();
     motes = tileMotes(base);
   };
+  // A mote leaves the picture in its own colour and arrives in the field as a star of the same hue, lighter and softer
+  // like the field's own kinds, so a dark film still comes apart into light rather than into the black.
+  const INK_STEPS = 6;
+  const inkCache = new Map();
+  const unsampled = Array(INK_STEPS + 1).fill(TYPES.model.color);
+  const inksOf = (r, g, b) => {
+    const key = (r << 16) | (g << 8) | b;
+    if (inkCache.has(key)) return inkCache.get(key);
+    const hi = Math.max(r, g, b) / 255, lo = Math.min(r, g, b) / 255, l = (hi + lo) / 2, c = hi - lo;
+    const sat = c ? c / (1 - Math.abs(2 * l - 1)) : 0;
+    const L = 0.7, k = c ? ((1 - Math.abs(2 * L - 1)) * Math.min(sat, 0.42)) / c : 0; // the star: same hue, softer, lighter
+    const star = [r, g, b].map((v) => (L + (v / 255 - l) * k) * 255);
+    const inks = Array.from({ length: INK_STEPS + 1 }, (_, i) => {
+      const t = i / INK_STEPS;
+      return `rgb(${[r, g, b].map((v, j) => Math.round(v + (star[j] - v) * t)).join(',')})`;
+    });
+    inkCache.set(key, inks);
+    return inks;
+  };
   // Each tile, sampled into a grid of motes in its own colours, placed in the world where the camera sees it now.
   const tileMotes = (base) => {
     const motes = [];
@@ -527,13 +547,13 @@
           const xr = ((sx0 - cx) / F) * z + camX, yr = ((sy0 - cy) / F) * z + camY;
           motes.push({
             x: xr * cosR + yr * sinR, y: -xr * sinR + yr * cosR, z, sx0, sy0, cw: cw + 0.6, ch: ch + 0.6, age: 0,
-            color: px ? `rgb(${px[k] | 7},${px[k + 1] | 7},${px[k + 2] | 7})` : TYPES.model.color, // a little coarse, so colours repeat
+            inks: px ? inksOf(px[k] | 7, px[k + 1] | 7, px[k + 2] | 7) : unsampled, // a little coarse, so colours repeat
             delay: 0.05 + Math.hypot(i / cols - 0.5, j / rows - 0.5) * 0.5 + rnd() * 0.3,
           });
         }
       }
     }
-    motes.sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : 0)); // draw colour by colour
+    motes.sort((a, b) => (a.inks[0] < b.inks[0] ? -1 : a.inks[0] > b.inks[0] ? 1 : 0)); // draw colour by colour
     return motes;
   };
 
