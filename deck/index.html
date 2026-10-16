@@ -429,6 +429,8 @@
     .slide.vc-host, .slide.gap-host { padding-top: 56px; }
     .vc-host .split h1, .gap-host .split h1 { font-size: 1.6rem; }
     .vc-host .body, .gap-host .body { font-size: .98rem; line-height: 1.45; }
+    /* 2: a little smaller, so the field above the words keeps its room. */
+    html[data-ver="f"] .sf-host h1 { font-size: 1.75rem; }
     /* 6: smaller words and a shorter card slot, so the stack under them keeps some size. */
     html[data-ver="f"] .slide.st-host h1 { font-size: 1.3rem; }
     .st .st-ch { font-size: 17px; } .st .st-card p { font-size: 12.5px; margin-bottom: 5px; } .st .st-card ul { gap: 3px; }
@@ -795,6 +797,13 @@
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     .sf-stage { -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); mask-image: linear-gradient(to bottom, rgb(0 0 0 / .25), rgb(0 0 0 / .3) 45%, #000 70%); }
     .sf-legend { left: 16px; right: 16px; width: auto; bottom: 86px; } /* clear of the wordmark */
+    /* Upright, the field fills the top of the screen and the words sit at the foot, on the legend (scatter-field.js
+       sets --sf-key to the legend's height and --sf-top to the label's top, and keeps names and cards above it).
+       The field quietens just above the words, as it does behind them on the wide slide. */
+    html[data-ver="f"] .sf-host { justify-content: flex-end; padding-bottom: calc(110px + var(--sf-key, 2.8rem)); }
+    html[data-ver="f"] .sf-stage {
+      -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / .7), #000 12%, #000 calc(var(--sf-top, 55%) - 70px), rgb(0 0 0 / .26) calc(var(--sf-top, 55%) + 10px), rgb(0 0 0 / .2)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45));
+      mask-image: linear-gradient(to bottom, rgb(0 0 0 / .7), #000 12%, #000 calc(var(--sf-top, 55%) - 70px), rgb(0 0 0 / .26) calc(var(--sf-top, 55%) + 10px), rgb(0 0 0 / .2)), linear-gradient(to right, rgb(0 0 0 / .45), #000 14%, #000 86%, rgb(0 0 0 / .45)); }
   }
   .body b { color: var(--ink); font-weight: 400; font-style: italic; }
   .split { display: grid; grid-template-columns: 1fr minmax(260px, 40vw); gap: 4vw; align-items: center; }
