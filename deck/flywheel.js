@@ -887,6 +887,7 @@
     }
     ta -= dt; // the tick's dt runs at the turn's pace
     spin += dt * 0.05;
+    setOp(labels.astrid, smooth(k01(T.lens + 0.6, 0.5))); // its fade back out (place() only redraws on a change of layout)
     u.fade = Math.min(1, u.fade + dt / 0.3);
     if (!u.shown && ta <= 0.5) { u.shown = true; flSlide.classList.remove('dt-await'); } // slide 8's crowd, under its people
     if (ta <= 0) { endUnhand(); return false; }

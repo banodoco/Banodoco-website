@@ -754,10 +754,13 @@
       b.src = snapFrom5();
       if (!b.src) { endFold(); return false; }
     }
-    b.e -= Math.min(0.05 * pace(), (t - (b.last || t)) / 1000); // now() runs at the turn's pace
+    const d = Math.min(0.05 * pace(), (t - (b.last || t)) / 1000); // now() runs at the turn's pace
     b.last = t;
-    if (!b.shown && b.e <= 0.5) { b.shown = true; slide5.classList.remove('dt-await'); } // its panels, under their copies
-    if (b.e <= 0) { endFold(); return false; }
+    b.e = Math.max(0, b.e - d);
+    if (b.shown) b.since += d;
+    // Slide 5 fades in under the copies as they settle onto its panels; once it is whole, the copies go.
+    if (!b.shown && b.e <= 0.3) { b.shown = true; b.since = 0; slide5.classList.remove('dt-await'); }
+    if (b.e <= 0 && b.since >= 0.65) { endFold(); return false; }
     b.t0 = t - b.e * 1000;
     stepBuild(t);
     stepHead();
