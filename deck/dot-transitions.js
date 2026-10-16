@@ -826,7 +826,13 @@
     if (!on) return;
     place(anchor);
     current.dispatchEvent(new CustomEvent('dt-arrive'));
-    if (still) { sprawl(levelOf(current), anchor); ripen(); draw(); return; }
+    if (still) { // the network at this slide's reach, at once, and the crown already formed on the last slide
+      sprawl(levelOf(current), anchor);
+      ripen();
+      if (current === lastSlide()) crown(anchor, true);
+      draw();
+      return;
+    }
     bloom(anchor);
     if (!grow) { hyphae.forEach((h) => { h.age = 0; h.grown = h.total; h.done = true; h.after = 5; h.glow = target(h); }); blooms = []; }
     if (current === lastSlide()) crown(anchor, !grow);
