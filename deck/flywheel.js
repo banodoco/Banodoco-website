@@ -926,12 +926,16 @@
   // An icon opens into its card while it's hovered or focused; a tap opens it (and closes the others).
   chips.forEach((el, i) => {
     const open = (on) => { hoT[i] = on ? 1 : 0; if (!running && begun) frame(); };
+    let pointerType = '';
+    el.addEventListener('pointerdown', (e) => { pointerType = e.pointerType; });
     el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') open(true); });
     el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') open(false); });
     el.addEventListener('focusin', () => open(true));
     el.addEventListener('focusout', () => open(false));
     el.addEventListener('click', (e) => {
-      if (e.target.closest('a') || e.pointerType === 'mouse') return;
+      const source = pointerType || e.pointerType;
+      pointerType = '';
+      if (e.target.closest('a') || source === 'mouse') return;
       const on = !hoT[i];
       chips.forEach((_, j) => { hoT[j] = 0; });
       open(on);

@@ -116,8 +116,19 @@
 
   // Taps (and clicks) open a tool the way hovering does, and never turn the slide.
   root.addEventListener('click', (e) => {
-    const hit = e.target.closest('.gp-dot, .gp-empty');
+    let hit = e.target.closest('.gp-dot, .gp-empty');
     if (!hit) return;
+    if (hit.matches('.gp-dot')) {
+      let nearest = null, nearestDistance = Infinity;
+      for (const dot of tools) {
+        const box = dot.getBoundingClientRect();
+        const icon = dot.querySelector('i').getBoundingClientRect();
+        if (e.clientX < box.left - 12 || e.clientX > box.right + 12 || e.clientY < box.top - 12 || e.clientY > box.bottom + 12) continue;
+        const distance = Math.hypot(e.clientX - (icon.left + icon.width / 2), e.clientY - (icon.top + icon.height / 2));
+        if (distance < nearestDistance) { nearest = dot; nearestDistance = distance; }
+      }
+      if (nearest) hit = nearest;
+    }
     e.stopPropagation();
     const open = !hit.classList.contains('is-open');
     root.querySelectorAll('.is-open').forEach((el) => el.classList.remove('is-open'));

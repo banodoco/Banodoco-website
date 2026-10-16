@@ -675,6 +675,7 @@
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
     if (motionBlocked()) { pendingStart = from5; return; }
+    window.warmDeckMedia?.(slide);
     pendingStart = null;
     running = true;
     layout();

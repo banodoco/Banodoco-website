@@ -257,7 +257,8 @@
     100% { opacity: 0; transform: translate(var(--dx), -70px) scale(1.15); } }
   @keyframes gp-breathe { 50% { box-shadow: 0 0 60px #e0ab5e36, inset 0 0 26px #e0ab5e22; } }
   .gp-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
-  @media (prefers-reduced-motion: reduce) { .gp-dot::before { animation: none; } .gp-dot, .gp-dot i { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .gp-dot::before, .gp-empty i { animation: none; } .gp-dot, .gp-dot i { transition: none; } }
+  html.deck-overview-open .slide, html.deck-overview-open .slide * { animation-play-state: paused !important; }
   /* Version F, slide 4: Astrid as an abstract picture (core.js). Text centred at the bottom; above it two overlapping
      rings, agent and interface, whose lens is the core; extensions hang below each; the community orbits it all. */
   html[data-ver="f"] .ac-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
@@ -1325,6 +1326,8 @@
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
     if (initialized && to === i) return;
+    // A slide never comes on behind the overview: its scene would start paused and miss its entry.
+    if (ov.classList.contains('on')) toggleOv(false);
     const from = initialized ? i : null;
     const dir = from === null ? 0 : Math.sign(to - from);
     if (turnController) turnController.abort();
@@ -1348,6 +1351,7 @@
   };
   const toggleOv = (on = !ov.classList.contains('on')) => {
     ov.classList.toggle('on', on);
+    document.documentElement.classList.toggle('deck-overview-open', on);
     dispatchEvent(new Event('deck-overview'));
   };
 

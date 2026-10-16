@@ -209,6 +209,7 @@
       slide.classList.remove('sf-arrive');
     }
     aim();
+    scheduleFrame();
   });
 
   // E: the field opens in the right half beside the text. F: below the text, full width.
@@ -247,7 +248,7 @@
   const frame = (now) => {
     frameRaf = 0;
     if (!running) return;
-    frameRaf = requestAnimationFrame(frame);
+    if (!still) frameRaf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - (last || now)) / 1000);
     last = now;
     if (!w || !h) return;
@@ -424,6 +425,11 @@
       card.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${px.toFixed(1)}%, -50%) scale(${scale.toFixed(3)})`;
     }
   };
+  const scheduleFrame = () => {
+    if (!running || frameRaf) return;
+    if (still) last = 0;
+    frameRaf = requestAnimationFrame(frame);
+  };
 
   // Slide 1's films come apart: each tile is sampled into a grid of motes in
   // its own colours, placed in the world exactly where the camera sees the
@@ -520,12 +526,12 @@
   };
 
   const start = (arriving) => {
-    if (running || !slide.classList.contains('on') || document.hidden) return;
+    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     resize();
     running = true; last = 0;
-    if (arriving) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
+    if (arriving && !still) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
     else { glide = 0; boost = 0; since = 9; settled = 1; shift = { x: 0, y: 0, age: 9 }; motes = []; aim(); }
-    frameRaf = requestAnimationFrame(frame);
+    scheduleFrame();
   };
   const stop = () => { running = false; pointer = null; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
   const watch = new MutationObserver((records) => {
@@ -550,9 +556,9 @@
     const r = stage.getBoundingClientRect();
     pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  slide.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') locate(e); });
-  slide.addEventListener('pointerdown', (e) => { touched = e.pointerType === 'touch'; if (touched) locate(e); });
-  slide.addEventListener('pointerleave', () => { pointer = null; });
+  slide.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') { locate(e); if (still) scheduleFrame(); } });
+  slide.addEventListener('pointerdown', (e) => { touched = e.pointerType === 'touch'; if (touched) { locate(e); if (still) scheduleFrame(); } });
+  slide.addEventListener('pointerleave', () => { pointer = null; if (still) scheduleFrame(); });
   // Scroll to fly: down goes forward, up goes back, with momentum. If the
   // slide itself has to scroll (a short window), scrolling stays scrolling.
   slide.addEventListener('wheel', (e) => {
@@ -561,8 +567,8 @@
     const lines = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? h : 1;
     boost = clamp(boost + e.deltaY * lines * 0.006, -8, 12);
   }, { passive: false });
-  legend.addEventListener('pointerover', (e) => { keyHover = e.target.closest('.sf-key')?.dataset.type || null; });
-  legend.addEventListener('pointerleave', () => { keyHover = null; });
+  legend.addEventListener('pointerover', (e) => { keyHover = e.target.closest('.sf-key')?.dataset.type || null; if (still) scheduleFrame(); });
+  legend.addEventListener('pointerleave', () => { keyHover = null; if (still) scheduleFrame(); });
 
   // Clicks on a dot, a key or an open card stay here; anywhere else the deck
   // turns the slide as usual.
@@ -572,6 +578,7 @@
       e.stopPropagation();
       keyLock = keyLock === key.dataset.type ? null : key.dataset.type;
       keys.forEach((k) => k.classList.toggle('is-on', k.dataset.type === keyLock));
+      if (still) scheduleFrame();
       return;
     }
     let pick = hot;
@@ -586,6 +593,7 @@
     if (!pick && !front) return;
     e.stopPropagation();
     front = pick && pick !== front ? pick : null;
+    if (still) scheduleFrame();
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && running) front = null; });
 
