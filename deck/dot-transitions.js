@@ -984,7 +984,7 @@
       const way = window.deckNav?.back ? trailBack(prev, next, from, to) : null;
       const pts = way || wander(from, to);
       const total = lengths(pts).at(-1);
-      hypha(pts, { width: 1.05, alpha: 0.55, duration: clamp(total / 950, 0.45, 1.05), onDone: arrive, ...(way ? { rest: 0 } : { branches: plan(total, 0) }) });
+      hypha(pts, { width: 1.05, alpha: 0.55, duration: clamp(total / 950, 0.45, 1.05), onDone: arrive, ...(way ? { rest: 0, fade: 2.4 } : { branches: plan(total, 0) }) });
       if (!way && (window.deckNav?.dir || 0) > 0) trails.set(next, { prev, pts });
     }, 340));
   };
