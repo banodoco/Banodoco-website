@@ -920,7 +920,7 @@
   slide.addEventListener('click', (e) => {
     if (!rings.length) return;
     const p = local(e);
-    const x = pick(p, touched ? 12 : 4);
+    const x = pick(p, touched ? 22 : 4);
     if (x) { e.stopPropagation(); pinned = pinned === x ? null : x; show(); return; }
     const inRings = rings.some((r) => Math.hypot(p.x - r.c.x, p.y - r.c.y) < RR * k);
     if (inRings) { e.stopPropagation(); if (!still && ta > T.end) use(); return; }
