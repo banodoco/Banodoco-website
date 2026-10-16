@@ -483,15 +483,19 @@
     const fold = mark.crown && mark.folding !== undefined ? 1 - 0.94 * mark.shrink : 1;
     const tf = `translate(${(mark.x - B / 2).toFixed(1)}px, ${(mark.y - B / 2).toFixed(1)}px)${fold < 1 ? ` scale(${fold.toFixed(4)})` : ''}`;
     if (markCv.style.transform !== tf) markCv.style.transform = tf;
-    const key = `${B}|${dpr}|${mark.x}|${mark.y}|${fold < 1 ? 0 : mark.shrink}|${Math.min(mark.t, 1.2)}`;
+    // Its own resolution, budgeted by pixels rather than capped like the full-screen network: the small marks (the
+    // opening, the thread's tip) are drawn at up to 3x so they stay crisp on a phone; a surface that would pass about
+    // 1.5 megapixels there (the large faint crown) is drawn at the network's 2x.
+    const md = (B * Math.min(3, devicePixelRatio || 1)) ** 2 > 1.5e6 ? Math.min(2, devicePixelRatio || 1) : Math.min(3, devicePixelRatio || 1);
+    const key = `${B}|${md}|${mark.x}|${mark.y}|${fold < 1 ? 0 : mark.shrink}|${Math.min(mark.t, 1.2)}`;
     if (key === markKey) return;
     markKey = key;
-    if (B !== markBox || markCv.width !== Math.round(B * dpr)) {
+    if (B !== markBox || markCv.width !== Math.round(B * md)) {
       markBox = B;
-      markCv.width = markCv.height = Math.round(B * dpr);
+      markCv.width = markCv.height = Math.round(B * md);
       markCv.style.width = markCv.style.height = `${B}px`;
     }
-    mg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mg.setTransform(md, 0, 0, md, 0, 0);
     mg.clearRect(0, 0, B, B);
     mg.lineCap = 'round';
     mg.lineJoin = 'round';
