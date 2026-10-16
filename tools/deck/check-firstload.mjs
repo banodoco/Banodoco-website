@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 
-const [base = 'http://127.0.0.1:8181/deck/index.html', size = '1440x900'] = process.argv.slice(2);
+const [base = 'http://127.0.0.1:8181/mycelial/index.html', size = '1440x900'] = process.argv.slice(2);
 const [width, height] = size.split('x').map(Number);
 if (!/^https?:\/\//.test(base) || !width || !height) {
   console.error('Usage: node tools/deck/check-firstload.mjs <base-url> <width>x<height>');
