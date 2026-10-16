@@ -390,7 +390,11 @@
   const nine = () => 1 - smooth(clamp((m - 0.08) / 0.42));
   // The lens folds into the core as the mink leaves it for her card; she flies from 9's centre to the Astrid card.
   const lensA = () => 1 - smooth(clamp((m - 0.25) / 0.4));
-  const flightQ = () => (m >= 1 ? 1 : smooth(clamp((m - 0.28) / 0.62)));
+  // She sets off for her card as the stage starts to change, and flies with it, into her seat as her card comes whole.
+  // Timed on the morph's own progress, not on m, whose ease starts slowly and kept her waiting in the middle (and as a
+  // function of m alone, 10→9 plays it back: she leaves her seat as the cards go in and lands as the lens closes round her).
+  const unease = (v) => (v < 0.5 ? Math.cbrt(v / 4) : 1 - Math.cbrt(2 * (1 - v)) / 2); // easeIO's inverse
+  const flightQ = () => (m >= 1 ? 1 : m <= 0 ? 0 : smooth(clamp(unease(m) / 0.7)));
   const seatCell = () => (tall || short ? 1 : 2);
   // A card's own openness: whole on 10, an icon on 11 (and on a phone); hovered, focused or tapped, it opens again.
   const iconR = () => (tall ? 23 : short ? 22 : 32);
@@ -588,7 +592,7 @@
       }
       const u = hq < 0.5 ? hand.core.cell : cell;
       const mx = lerp(hand ? 3 * hand.k : 2 * ks, 2 * ks, hq), my = lerp(hand ? 6 * hand.k : 0, 6 * (lens[3] / 176), hq);
-      if (fq <= 0) { paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u); minkAt = [lens[0] + mx, lens[1] + my]; } // once she's off, she flies above the cards
+      if (fq <= 0.001) { paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u); minkAt = [lens[0] + mx, lens[1] + my]; } // once she's off, she flies above the cards
     }
 
     // The core of the ecosystem, where Astrid was: a soft light with a few motes turning round it, and fine
@@ -750,6 +754,7 @@
       if (i === 1) seatIn = inCard(seat, el);
     });
     let live = root.classList.contains('is-on');
+    const fq = flightQ(), arrive = smooth(clamp((fq - 0.9) / 0.1)); // she becomes her icon's logo only as she gets there
     cur.cards.forEach(([x, y], i) => { // 3. placing
       const el = chips[i], q = chipQ(i), h = cardH[i], mh = mediaH[i];
       const [fx, fy, fz] = CARDS[i].crop, o = Math.max(ob, hov[i]), c = Math.min(mh, w) * fz;
@@ -773,7 +778,7 @@
       if (fc) { // the icon's own face over its crop: it goes first as the icon opens, and comes back last as it closes
         const fk = `${cx0.toFixed(1)},${cy0.toFixed(1)},${c.toFixed(1)}`;
         if (fc.dataset.k !== fk) { fc.dataset.k = fk; Object.assign(fc.style, { left: `${(cx0 - 1).toFixed(1)}px`, top: `${(cy0 - 1).toFixed(1)}px`, width: `${(c + 2).toFixed(1)}px`, height: `${(c + 2).toFixed(1)}px`, fontSize: `${(c / 10).toFixed(2)}px` }); } // a pixel over the crop's edge, so none of the picture shows round it
-        setOp(fc, 1 - smooth(clamp((o - 0.04) / 0.36)));
+        setOp(fc, (1 - smooth(clamp((o - 0.04) / 0.36))) * (i === 1 ? arrive : 1));
       }
       el.style.zIndex = hov[i] > 0.02 || gro[i] > 0.02 ? '3' : '';
       setOp(el, q * (1 - smooth(clamp((gro[i] - 0.25) / 0.2)))); // under its fuller card, once that has come in, it steps out
@@ -789,7 +794,7 @@
     // is part of her card, in its seat: she opens, closes and stacks with it, so a neighbour opened over her covers
     // her like the rest of her card (she used to ride a layer above every card, and had to hide whenever any other
     // card opened, which left her icon an empty corner of the editor). On 11, and on a phone, her icon is her logo.
-    const fq = flightQ(), landed = fq >= 0.999;
+    const landed = fq >= 0.999;
     setOp(seat, landed ? 1 : 0);
     if (fq > 0.001 && !landed && begun && vis[1] && seatAt) {
       const L0 = stages[0].lens, v = vis[1];
@@ -797,8 +802,9 @@
       const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
       const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1), ...gro.filter((_, j) => j !== 1)); // never over a neighbour opened above her
-      const into = (1 - v.o) * smooth(clamp((fq - 0.8) / 0.2)); // flying into her icon, she becomes its logo
-      paintFly(lerp(sx, tx, fq), lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, u, (1 - into) * (1 - other));
+      const into = (1 - v.o) * arrive; // flying into her icon, she becomes its logo
+      // As she becomes the logo she is drawn onto its middle, so the two never stand apart.
+      paintFly(lerp(lerp(sx, tx, fq), tx, into), lerp(lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, ty, into), u, (1 - into) * (1 - other));
     } else if (fly.style.opacity !== '0') fly.style.opacity = '0';
   };
   // Slide 10's cards grow into their fuller cards, from the small card's box (or its icon's, on a phone) to the
