@@ -70,11 +70,13 @@
     for (const b of baked) b.pts ? bakeLine(b.pts, b.w, b.a) : bakeDot(b.x, b.y, b.a);
   };
 
-  // How much of the screen the network has reached: thread length per cell of a coarse grid, in cell widths.
+  // How much of the screen the network has reached: thread length per cell of a coarse grid, measured so that
+  // the same reading means the same density on any screen (one unit is 90 px of thread per 90 × 90 px), a phone
+  // a little fuller.
   const GX = 16, GY = 10;
   let cover = new Float32Array(GX * GY), junctions = [];
   const note = (pts) => {
-    const cw = vw / GX, ch = vh / GY, unit = (cw + ch) / 2;
+    const cw = vw / GX, ch = vh / GY, unit = Math.max(32, (cw * ch) / 90);
     for (let i = 1; i < pts.length; i++) {
       const cx = Math.floor((pts[i][0] + pts[i - 1][0]) / 2 / cw), cy = Math.floor((pts[i][1] + pts[i - 1][1]) / 2 / ch);
       if (cx >= 0 && cy >= 0 && cx < GX && cy < GY) cover[cy * GX + cx] += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) / unit;
@@ -726,10 +728,13 @@
   const deck = () => slides.filter((sl) => (sl.dataset.v || '').split(' ').includes(VER));
   const lastSlide = () => deck().at(-1);
   const levelOf = (s) => Math.max(0, deck().indexOf(s));
-  const CROWN = 76, CROWN_Y = 40; // the crown's size, and how far above the node it sits
+  // The crown's size (a little smaller on a phone), and how far above the node it sits.
+  const crownSize = () => Math.round(clamp(Math.min(innerWidth, innerHeight) * 0.1, 60, 76));
+  const crownY = () => Math.round(crownSize() * 0.53);
   const crown = (at, now) => {
-    mark = { x: at.x, y: at.y - CROWN_Y, t: now ? 2 : 0, size: CROWN, shrink: 0, trail: null, shed: 0, crown: true };
-    zones.push(Object.assign(disc(mark.x, mark.y, CROWN * 0.5), { crown: true, a: now ? 1 : 0 }));
+    const size = crownSize();
+    mark = { x: at.x, y: at.y - crownY(), t: now ? 2 : 0, size, shrink: 0, trail: null, shed: 0, crown: true };
+    zones.push(Object.assign(disc(mark.x, mark.y, size * 0.5), { crown: true, a: now ? 1 : 0 }));
     dot.classList.add('is-moving');
     wake();
   };
@@ -870,7 +875,7 @@
     const arrive = () => {
       if (done) return;
       place(to);
-      if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - CROWN_Y, age: 0 }); crown(to); }
+      if (next === lastSlide()) { blooms.push({ x: to.x, y: to.y - crownY(), age: 0 }); crown(to); }
       else { dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to); }
       const z = zone(lines(next));
       if (z) zones.push(z);
