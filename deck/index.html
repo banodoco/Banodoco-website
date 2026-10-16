@@ -1360,7 +1360,7 @@
       const li = document.createElement('li');
       if (s.classList.contains('placeholder')) li.className = 'ph';
       li.innerHTML = `<span>${k + 1}</span>${s.querySelector('h1').textContent}`;
-      li.onclick = () => { go(k); toggleOv(false); };
+      li.onclick = () => { toggleOv(false); go(k); };
       list.appendChild(li);
     });
   };
@@ -1398,7 +1398,7 @@
   });
 
   const fromHash = (mode = 'none') => go((parseInt(location.hash.slice(1), 10) || 1) - 1, mode);
-  addEventListener('popstate', () => fromHash());
+  addEventListener('popstate', () => { if (ov.classList.contains('on')) toggleOv(false); fromHash(); });
   addEventListener('hashchange', fromHash);
   // One fetch and one object URL serve every video element that reuses a file.
   const warmedMedia = new Map();
