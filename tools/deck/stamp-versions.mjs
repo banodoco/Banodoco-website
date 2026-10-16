@@ -60,8 +60,12 @@ function rewrite(text, relativeFile, extension) {
       const next = /\bsrcset\s*=/i.test(prefix) ? rewriteSrcset(value, relativeFile) : stamp(value, relativeFile);
       return `${prefix}${quote}${next}${quote}`;
     });
+    result = result.replace(/(\bstyle\s*=\s*)(["'])(.*?)\2/gi, (_all, prefix, quote, value) =>
+      `${prefix}${quote}${rewriteCssUrls(value, relativeFile)}${quote}`);
+    result = result.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (_all, open, css, close) =>
+      `${open}${rewriteCssUrls(css, relativeFile)}${close}`);
   }
-  result = result.replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, (_all, quote, value) => `url(${quote}${stamp(value, relativeFile)}${quote})`);
+  if (/\.css$/i.test(extension)) result = rewriteCssUrls(result, relativeFile);
 
   if (/\.(?:js|mjs)$/i.test(extension)) {
     // In JS, only inspect quoted/template strings. This catches paths embedded
@@ -76,6 +80,11 @@ function rewrite(text, relativeFile, extension) {
     });
   }
   return result;
+}
+
+function rewriteCssUrls(text, relativeFile) {
+  return text.replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, (_all, quote, value) =>
+    `url(${quote}${stamp(value, relativeFile)}${quote})`);
 }
 
 async function filesUnder(directory) {
