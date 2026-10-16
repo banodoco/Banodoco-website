@@ -893,7 +893,12 @@
   };
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : stageOf() >= 0 && begun && start()));
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (stageOf() >= 0 && begun) start();
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
     const target = stageOf();
     if (target < 0 || !layout()) return;

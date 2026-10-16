@@ -444,7 +444,12 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (stackSlide) watch.observe(stackSlide, { attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : slide.classList.contains('on') && ta > 0 && start()));
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (slide.classList.contains('on') && ta > 0) start();
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
     if (!slide.classList.contains('on')) return;
     const interrupted = armed || !!fly || ta < END;

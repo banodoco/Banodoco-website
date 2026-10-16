@@ -533,7 +533,12 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (collageSlide) watch.observe(collageSlide, { attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (slide.classList.contains('on')) start(false);
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
 
   // Mouse and pen steer; on touch a tap is the hover. The field is the slide's
   // backdrop, so it listens on the slide itself.

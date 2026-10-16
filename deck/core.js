@@ -863,7 +863,12 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (gapSlide) watch.observe(gapSlide, { attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (slide.classList.contains('on')) start();
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
 
   window.deckOnResize(() => {
     if (!slide.classList.contains('on') || !rings.length) return;

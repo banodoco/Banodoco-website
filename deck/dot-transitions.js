@@ -722,7 +722,7 @@
     textOf(current).forEach((el) => { el.style.transform = `translate(${trail.x.toFixed(2)}px, ${trail.y.toFixed(2)}px)`; });
   };
   document.addEventListener('visibilitychange', syncIdle);
-  addEventListener('deck-overview', syncIdle);
+  window.addEventListener('deck-overview', syncIdle);
   syncIdle();
 
   const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
