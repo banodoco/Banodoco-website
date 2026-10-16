@@ -387,7 +387,7 @@
   const begin = () => {
     reset();
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); if (!still) start(); return; }
+    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); if (!still) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
     ta = -0.2; nextPulse = AMBIENT + 0.3;
     timers.push(setTimeout(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
     timers.push(setTimeout(() => root.classList.add('is-labelled'), 1400));
