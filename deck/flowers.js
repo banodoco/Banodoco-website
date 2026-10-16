@@ -480,12 +480,13 @@
     ensure(tc);
     g.lineCap = 'round'; g.lineJoin = 'round';
     const n0 = Math.max(0, apps.length - WINDOW);
+    const fc = crowdA(); // going back to slide 7, all but its own people fade as they draw back
     // The threads, behind everything: drawn out as each app flies, settling to a fine trace that fades with age.
     for (let i = n0; i < apps.length; i++) {
       const a = apps[i], q = fly(c01(a.L, a.F));
       if (q <= 0) continue;
       const age = Math.max(0, tc - a.T), rank = apps.length - 1 - i;
-      const al = lerp(0.62, 0.2, smooth(c01(a.T, 2.4))) * Math.exp(-age / 34) * (1 - smooth(clamp((rank - (WINDOW - 16)) / 12)));
+      const al = lerp(0.62, 0.2, smooth(c01(a.T, 2.4))) * Math.exp(-age / 34) * (1 - smooth(clamp((rank - (WINDOW - 16)) / 12))) * fc;
       if (al < 0.012) continue;
       stroke(a.thread, 0, a.thread.total * q, 0.9 * LW, THREAD, al);
       if (q >= 1 && age < 30) { const m = at(a.thread, a.thread.total * 0.55); node(m.x, m.y, 0.55, 0.7 * smooth(c01(a.T, 0.5)) * (1 - age / 30)); }
@@ -514,12 +515,13 @@
       // Fresh, then warm for a while, then a quieter cream long after, so the newest communities stand out.
       const rest = lerp(d.bright ? 0.72 : 0.6, d.bright ? 0.56 : 0.44, smooth(clamp((since - 18) / 30)));
       const warm = lerp(rest, d.bright ? 1 : 0.82, Math.exp(-since / 9));
-      const aDim = qa * d.a0 * tw * (1 - lit) * (1 - srcLit);
-      const aLit = qa * Math.max(lit * warm * (0.86 + 0.14 * tw) + 0.35 * fl, srcLit * (d.bright ? 0.9 : 0.62));
+      const own = d.src ? 1 : fc;
+      const aDim = qa * d.a0 * tw * (1 - lit) * (1 - srcLit) * own;
+      const aLit = qa * Math.max(lit * warm * (0.86 + 0.14 * tw) + 0.35 * fl, srcLit * (d.bright ? 0.9 : 0.62)) * own;
       const r = d.r * (1 + 0.45 * Math.max(lit, srcLit) + 0.7 * fl);
       if (aDim > 0.02) lvDim[Math.min(LEV, Math.round(aDim * LEV))].push(x, y, r);
       if (aLit > 0.02) lvLit[Math.min(LEV, Math.round(Math.min(1, aLit) * LEV))].push(x, y, r);
-      if (fl > 0.05) halo(x, y, 7 * hk * (1 + fl), 0.45 * fl * qa);
+      if (fl > 0.05) halo(x, y, 7 * hk * (1 + fl), 0.45 * fl * qa * own);
       else if (d.bright && since < 6) halo(x, y, 5 * hk, 0.22 * aLit * (1 - since / 6));
     }
     flush(lvDim, CROWD); flush(lvLit, CORE);
@@ -529,7 +531,7 @@
     for (let i = Math.max(0, apps.length - 6); i < apps.length; i++) {
       const a = apps[i], u = c01(a.T, 1.3);
       if (u <= 0 || u >= 1) continue;
-      g.lineWidth = 0.8 * LW; g.strokeStyle = `rgba(${THREAD},${(0.24 * (1 - u) * smooth(clamp(u * 5))).toFixed(3)})`;
+      g.lineWidth = 0.8 * LW; g.strokeStyle = `rgba(${THREAD},${(0.24 * (1 - u) * smooth(clamp(u * 5)) * fc).toFixed(3)})`;
       g.beginPath(); g.ellipse(a.x, a.y, a.R * 1.3 * ease(u), a.R * 0.95 * ease(u), 0, 0, TAU); g.stroke();
     }
     // A soft scrim of night under each name that shows, so the crowd and the threads sit behind its words.
@@ -539,7 +541,7 @@
       const l = labelAt(apps[i]);
       if (!l) continue;
       const a = apps[i];
-      g.fillStyle = `rgba(${BG},${(0.82 * l.o).toFixed(3)})`;
+      g.fillStyle = `rgba(${BG},${(0.82 * l.o * fc).toFixed(3)})`;
       g.beginPath(); g.roundRect(l.x - 4 * k, l.y + 1 * k, a.w + 8 * k, a.h - 2 * k, 6 * k); g.fill();
     }
     g.restore();
@@ -573,14 +575,14 @@
       if (u <= 0) continue;
       if (u < 1) {
         const p = at(a.thread, a.thread.total * fly(u)), sc = 0.5 + 0.5 * ease(clamp(u * 3));
-        halo(p.x, p.y, 12 * k, 0.55);
-        glyph(a, p.x + a.r * fly(u), p.y, a.r * sc, smooth(clamp(u * 4)), 0.4);
+        halo(p.x, p.y, 12 * k, 0.55 * fc);
+        glyph(a, p.x + a.r * fly(u), p.y, a.r * sc, smooth(clamp(u * 4)) * fc, 0.4);
         continue;
       }
       const shrink = smooth(c01(a.T + HOLD + 0.2, 0.8)), rank = apps.length - 1 - i;
       const keep = 1 - smooth(clamp((rank - (WINDOW - 16)) / 12));
-      if (shrink > 0) node(a.x, a.y, 0.6, 0.8 * smooth(clamp((shrink - 0.4) / 0.6)) * keep);
-      if (shrink < 1) glyph(a, a.x, a.y, a.r * (1 - 0.75 * shrink), 1 - shrink, Math.exp(-(tc - a.T) * 2));
+      if (shrink > 0) node(a.x, a.y, 0.6, 0.8 * smooth(clamp((shrink - 0.4) / 0.6)) * keep * fc);
+      if (shrink < 1) glyph(a, a.x, a.y, a.r * (1 - 0.75 * shrink), (1 - shrink) * fc, Math.exp(-(tc - a.T) * 2));
     }
   };
   const labels = () => {
@@ -592,7 +594,8 @@
       if (!u) { if (p.o !== 0) { p.el.style.opacity = '0'; p.o = 0; } return; }
       if (p.text !== u.a.name) { p.el.textContent = u.a.name; p.text = u.a.name; }
       if (!(Math.abs(p.x - u.x) <= 0.05 && Math.abs(p.y - u.y) <= 0.05)) { p.el.style.transform = `translate(${u.x.toFixed(1)}px, ${u.y.toFixed(1)}px)`; p.x = u.x; p.y = u.y; }
-      if (!(Math.abs(p.o - u.o) <= 0.004)) { p.el.style.opacity = u.o.toFixed(3); p.o = u.o; }
+      const o = u.o * crowdA();
+      if (!(Math.abs(p.o - o) <= 0.004)) { p.el.style.opacity = o.toFixed(3); p.o = o; }
     });
     showCount();
     if (apps.length && tc >= apps[0].T + 0.05) root.classList.add('is-counting'); // fades in as the first reach rolls up
@@ -606,7 +609,7 @@
     if (!running) return;
     const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
     last = now;
-    advance(dt);
+    if (back7) { if (!step7(dt)) return; } else advance(dt);
     draw(); labels();
     raf = requestAnimationFrame(tick);
   };
@@ -666,12 +669,68 @@
   };
   const paysHost = document.querySelector('[data-astrid-pays]');
   const paysSlide = paysHost && paysHost.closest('.slide');
+
+  // ---- Going back to slide 7 --------------------------------------------------------------------------------------
+  // A step back: the hand-off from slide 7 played backwards. Its people leave their places in the crowd and drift back
+  // to where they stood on slide 7, the builders' machines open back out of the core, and the core glides back into
+  // slide 7's lens; the rest of the crowd, the apps and their names fade as they draw back. Slide 7 fades in under them.
+  // The crowd's own clock holds still (tc), so nothing it has grown since is replayed; only the hand-off runs back.
+  const BACK7 = 2.2; // the hand-off is complete by here
+  let back7 = null;
+  const crowdA = () => (back7 ? smooth(clamp((ta - 0.9) / (BACK7 - 0.9))) : 1);
+  const unhand7 = () => {
+    const snap = window.AstridPays.snapshot();
+    if (!snap) return false;
+    const signal = window.deckNav?.signal;
+    timers.forEach(window.deckCancelLater); timers = [];
+    const tc0 = ta - off;
+    const b = root.getBoundingClientRect(), v = (p) => ({ ...p, x: p.x - b.left, y: p.y - b.top });
+    const sk = snap.k || k, mink = snap.mink ? { x: snap.mink.x - snap.core.x, y: snap.mink.y - snap.core.y } : { x: 4 * sk, y: 8 * sk };
+    from = { core: v(snap.core), machines: (snap.machines || []).map(v), mink, rest: [] };
+    // Each of its people is carried back by the nearest person in the crowd, as the hand-off matched them.
+    dots.forEach((d) => { delete d.src; }); // (any left from the way in)
+    const free = new Set(dots.filter((d) => tc0 >= d.t0 + 0.6));
+    (snap.people || []).map(v).forEach((p, i) => {
+      let best = null, bd = Infinity;
+      for (const d of free) { const dd = Math.hypot(d.x - p.x, d.y - p.y); if (dd < bd) { bd = dd; best = d; } }
+      if (best) { free.delete(best); best.src = { x: p.x, y: p.y, d: 0.2 + (i % 17) * 0.035 }; } else from.rest.push(p);
+    });
+    ta = BACK7; off = ta - tc0;
+    slide.classList.add('dt-rewind');
+    paysSlide.classList.add('dt-return', 'dt-await');
+    window.deckRewinding?.(paysSlide);
+    back7 = { tc0, shown: false, since: 0 };
+    signal?.addEventListener('abort', end7, { once: true });
+    return true;
+  };
+  const step7 = (dt) => {
+    ta = Math.max(0, ta - dt);
+    off = ta - back7.tc0;
+    coreLabel.style.opacity = count.style.opacity = crowdA().toFixed(3);
+    if (back7.shown) back7.since += dt;
+    // Slide 7 fades in under its people as the core settles into its lens; once it is whole, this picture goes.
+    if (!back7.shown && ta <= 0.2) { back7.shown = true; back7.since = 0; paysSlide.classList.remove('dt-await'); }
+    if (ta <= 0 && back7.since >= 0.65) { end7(); return false; }
+    return true;
+  };
+  const end7 = () => {
+    if (!back7) return;
+    back7 = null;
+    slide.classList.replace('dt-rewind', 'dt-rewound');
+    paysSlide.classList.remove('dt-return', 'dt-await');
+    if (!slide.classList.contains('on')) {
+      stop(); html.classList.remove('fl-quiet');
+      timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
+    }
+    window.deckRewound?.(paysSlide);
+  };
   slide.addEventListener('dt-arrive', () => { if (armed && slide.classList.contains('on')) { armed = false; whenOpen(begin); } });
   let wasOn = false;
   const watch = new MutationObserver((records) => {
     const on = slide.classList.contains('on');
     if (on === wasOn) return;
     wasOn = on;
+    end7();
     if (on) {
       reset();
       if (window.deckNav?.rest) { whenOpen(begin); return; }
@@ -681,6 +740,8 @@
       layout(); draw(); armed = true;
       timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
+      const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !still && running && !handed && ta - off >= END && ta >= BACK7 && !!window.AstridPays; // any hand-off in is long done
+      if (to7) { armed = false; gen++; if (waiting) { waiting.disconnect(); waiting = null; } if (unhand7()) return; }
       armed = false; gen++; stop(); html.classList.remove('fl-quiet');
       if (waiting) { waiting.disconnect(); waiting = null; }
       timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) reset(); }, 700));
@@ -689,12 +750,13 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (paysSlide) watch.observe(paysSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { end7(); stop(); }
     else if (slide.classList.contains('on') && ta > 0) start();
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
+    end7(); // its people's way back was measured on the old screen
     if (!slide.classList.contains('on')) return;
     // layout rebuilds the crowd in the new geometry. Keep its clock: draw()
     // deterministically recreates every app already due at that phase.

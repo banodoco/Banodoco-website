@@ -701,7 +701,7 @@
     raf = requestAnimationFrame(tick);
   };
   const wake = () => { if (running && !paused && !raf) raf = requestAnimationFrame(tick); };
-  const play = () => { if (!still && running && !paused) video.play().catch(() => {}); };
+  const play = () => { if (!still && running && !paused && !build?.back) video.play().catch(() => {}); }; // not while folding back
 
   // As on slide 5, the network stays visible behind; only where its threads pass behind the text are they softened.
   // Only ever clear a mask this slide set, so a neighbour that set its own (slide 5) keeps it.
@@ -792,6 +792,7 @@
     window.deckRewinding?.(slide5);
     // From the settled stack, the arrival's clock runs back from its end.
     amb = null; // the tour is over: the planes are the build's again
+    video.pause(); // its film holds its frame as the plane folds back into slide 5's preview
     build = { back: true, from5: true, src: null, t0: 0, e: FROM5.end - 1e-3, last: 0, shown: false };
     signal?.addEventListener('abort', endFold, { once: true });
     wake();
