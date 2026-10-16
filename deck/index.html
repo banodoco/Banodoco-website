@@ -257,13 +257,14 @@
   .gp-dot.is-flip:hover b, .gp-dot.is-flip:focus-visible b, .gp-dot.is-flip.is-open b { padding: 0 0.6rem 0 0.8rem; }
   .gp-dot.is-flip span { left: auto; right: 0; }
   .gp-dot.is-low span { top: auto; bottom: calc(100% + 8px); transform: translateY(4px); }
-  .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0.6rem; cursor: help;
+  .gp-empty { all: unset; position: absolute; z-index: 2; transform: translate(-50%, -50%); display: grid; justify-items: center; cursor: help;
     opacity: 0; transition: opacity .8s ease .2s; }
   .gp.is-labelled .gp-empty { opacity: 1; }
+  /* The empty corner: a dashed ring with a question mark in its middle. */
   .gp-empty i { width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e; box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12;
     animation: gp-breathe 4.5s ease-in-out infinite; }
+  .gp-empty i, .ac-seed em { display: grid; place-items: center; font: italic 500 1.6rem/1 "Cormorant Garamond", serif; color: #f0c67e; }
   .slide:not(.on) .gp-empty i { animation-play-state: paused; }
-  .gp-empty span { font: italic 400 1.1rem "Cormorant Garamond", serif; color: #f0c67e; white-space: nowrap; }
   .gp-q { position: absolute; left: 50%; top: 16px; margin-left: -0.25em; font: italic 500 1.15rem "Cormorant Garamond", serif; color: #f0c67e;
     pointer-events: none; animation: gp-rise 1.7s ease-out forwards; }
   @keyframes gp-rise { 0% { opacity: 0; transform: translate(0, 0) scale(.7); } 20% { opacity: .9; }
@@ -302,6 +303,7 @@
   .ac-seed { position: fixed; left: 0; top: 0; z-index: 2; width: 0; height: 0; pointer-events: none; }
   .ac-seed i { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; border-radius: 50%; border: 1px dashed #f0c67e;
     box-shadow: 0 0 40px #e0ab5e22, inset 0 0 20px #e0ab5e12; }
+  .ac-seed em { position: absolute; left: -24px; top: -24px; width: 50px; height: 50px; } /* the empty ring's question mark */
   .ac-seed b { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; opacity: 0;
     background: radial-gradient(circle at 40% 35%, #fffaf0, #ffd991 55%, #e0ab5e); box-shadow: 0 0 14px #ffd991aa; }
   /* Version F, slide 5: Astrid herself (demo.js). Text centred on top; the mink presiding just beneath it; then the
@@ -1198,7 +1200,7 @@
           <span class="gp-ax" style="right:2%;top:51.5%">easy to use →</span>
           <span class="gp-zone" style="left:3%;top:3%">Open tools</span>
           <span class="gp-zone" style="right:3%;bottom:3%">Closed tools</span>
-          <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i></i><span>Nothing here — yet</span></button>
+          <button class="gp-empty" type="button" style="left:76%;top:24%" aria-label="Powerful and easy to use: nothing here yet"><i>?</i></button>
           <button class="gp-dot" type="button" style="left:14%;top:10%;--c:#e0ab5e"><i style="--bg:#211927"><img src="../assets/logos/comfyui.png" alt="" decoding="async"></i><b>ComfyUI</b><span>Node graph that runs nearly every open model. Endlessly capable, but you wire it yourself.</span></button>
           <button class="gp-dot" type="button" style="left:5%;top:20%;--c:#e0ab5e"><i class="is-inset" style="--bg:#fff;--fit:84%"><img src="../assets/logos/diffusers.png" alt="" decoding="async"></i><b>Diffusers</b><span>Hugging Face&#x27;s Python library. Anything is possible, in code.</span></button>
           <button class="gp-dot" type="button" style="left:27%;top:17%;--c:#e0ab5e"><i style="--bg:#000"><img src="../assets/logos/ai-toolkit.png" alt="" decoding="async"></i><b>ai-toolkit</b><span>Train your own LoRAs for image and video models. Config files and a big GPU.</span></button>
