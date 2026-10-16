@@ -177,7 +177,7 @@
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    small = W <= 760;
+    small = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
     const num = slide.querySelector('.num');
     const nb = num.getBoundingClientRect();
         const top = nb.top - b.top; // the label's top: the picture sits above it

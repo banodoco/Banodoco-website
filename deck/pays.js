@@ -100,27 +100,28 @@
     W = b.width; H = b.height;
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    small = W <= 760;
+    small = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
     const num = slide.querySelector('.num'), top = num.getBoundingClientRect().top - b.top;
+    const low = !small && H <= 500; // a phone on its side: less air round the picture, and the footer to clear
     if (small) { // above the text, scaled as one; the picture spans reference x 150..1580 and y 70..760
       k = Math.min((W - 24) / 1430, (top - 60) / 690);
       ox = W / 2 - 29 * k;
       oy = Math.max(40 + 345 * k, top * 0.5);
     } else { // to the right of the text: from ~96 px past the text column to 64 px short of the edge, centred down the slide
       const text = slide.querySelector('.split > :first-child').getBoundingClientRect();
-      const left = text.right - b.left + 96, right = W - 64; // the builders keep ~96 px of air after the text
+      const left = text.right - b.left + (low ? 48 : 96), right = W - (low ? 32 : 64); // the builders keep ~96 px of air after the text
       kx = (right - left - 20) / 1430;
-      ky = Math.min((H - 230) / 690, 1.0);
+      ky = Math.min((H - (low ? 120 : 230)) / 690, 1.0);
       k = Math.min(ky, kx * 1.35, 1.05);
       ox = left + 52 * k - 63 * kx; // the builders' circles (reference x 213) sit just inside the left edge
-      oy = H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
+      oy = low ? (H - 64) / 2 : H / 2 - 20 * ky; // the picture's middle (reference y 415) a touch above the slide's middle, as the text is
     }
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     seed = 20261015;
     // The builders' machines, and their threads into the core's left side.
     // The core: three strands of a lens, nodes at its tips and on its sides.
     // The mink is this slide's hero: as large a whole-number cell as fits (4 beside the text), the lens widened to hold her.
-    cell = small ? 1 : k >= 0.45 ? 4 : 3;
+    cell = small ? 1 : low ? 2 : k >= 0.45 ? 4 : 3;
     const lw0 = small ? CORE_REF.w * k : Math.max(CORE_REF.w * k, 23 * cell + 40);
     lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: lw0, h: Math.max(CORE_REF.h * k, lw0 * 1.66) };
     const lensL = { x: lens.c.x - lens.w / 2, y: lens.c.y }, lensR = { x: lens.c.x + lens.w / 2, y: lens.c.y };

@@ -195,9 +195,16 @@
   };
   // Where the artists' threads meet the ring, and the others' (degrees); a phone turns them a quarter.
   const ENTRY = [189, 186, 183, 180, 177, 174, 171], EXIT = [-14, 0, 14];
+  // A phone on its side: too short for cards above and below, so on 10 and 11 they sit on the ring as icons, three
+  // a side (tapped open), and the picture spans only the ring.
+  const SIDE = [215, 325, 145, 35, 180, 0];
+  const SHORT = { ...WIDE,
+    cards: WIDE.cards.map((c, i) => ({ at: [c.at[0], 'ring', 'ring'], th: [c.th[0], SIDE[i], SIDE[i]] })),
+    artistsLabel: [[270, 96], ...WIDE.artistsLabel.slice(1)], // clear of the first artist at this small scale
+    span: [WIDE.span[0], [500, 1170, 330, 612], [258, 1412, 153, 757]] };
 
   // ---- Layout ---------------------------------------------------------------------------------
-  let W = 0, H = 0, dpr = 1, tall = false, R = WIDE, cell = 3;
+  let W = 0, H = 0, dpr = 1, tall = false, short = false, R = WIDE, cell = 3;
   let stages = [null, null, null]; // per slide: the picture in viewport pixels
   const colOf = (s) => s.querySelector(':scope > .split > :first-child');
   const fit = (s) => {
@@ -216,10 +223,10 @@
       kk = Math.min(kh, kv);
       ox = W / 2; cyRef = (y0 + y1) / 2; oy = (top + bottom) / 2;
     } else {
-      const cy = c.top + c.height / 2;
+      const cy = short ? (c.top - 75 + c.bottom) / 2 : c.top + c.height / 2; // on its side, round the mark and the words together
       const kh = Math.min((W / 2 - mx) / Math.max(cxRef - x0, x1 - cxRef), 1.15);
       cyRef = R.ring[2][1];
-      const kv = Math.min((cy - (tall ? 20 : 24)) / (cyRef - y0), (H - (tall ? 56 : 64) - cy) / (y1 - cyRef));
+      const kv = Math.min((cy - (tall ? 20 : short ? 8 : 24)) / (cyRef - y0), (H - (tall ? 56 : short ? 74 : 64) - cy) / (y1 - cyRef));
       kk = Math.min(kh, kv);
       ox = W / 2; oy = cy;
     }
@@ -248,7 +255,7 @@
       inspire: P(R.inspire[s]),
       equip: P(R.equip[s]),
       cards: R.cards.map((c) => (c.at[s] === 'ring' ? [0, 0, c.th[s]] : [...P(c.at[s]), c.th[s]])),
-      cw: R.cw[s] * kk,
+      cw: short ? Math.max(170, R.cw[s] * kk) : R.cw[s] * kk, // an icon opens to a readable card
     };
   };
   const mixed = (a, b, f) => {
@@ -274,7 +281,8 @@
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     tall = W <= 760 && H > W;
-    R = tall ? TALL : WIDE;
+    short = !tall && H <= 500;
+    R = tall ? TALL : short ? SHORT : WIDE;
     // Type first (it sets the labels' widths), from the room there is; then the picture round it.
     const kBase = tall ? Math.min((W - 24) / 400, (H * 0.6) / 640) : Math.min((W / 2 - 64) / 795, (H * 0.64) / 600);
     root.style.fontSize = `${clamp(22 * (tall ? kBase * 0.55 : kBase), tall ? 10.5 : 12.5, 22).toFixed(1)}px`;
@@ -283,7 +291,7 @@
     // On 11 the deck's Mycelial mark forms above the label (dot-transitions.js: 68 px, its middle 36 px over the node,
     // the node 13 px over the label): open the halo tall enough that its ring passes above the mark, never over it.
     const lab = hosts[2].querySelector('.num');
-    if (lab) { const r = stages[2].ring, need = r[1] - (lab.getBoundingClientRect().top - 13 - 36 - 34 - iconR() - (tall ? 8 : 10)); if (r[3] < need) r[3] = need; }
+    if (lab) { const r = stages[2].ring, need = r[1] - (lab.getBoundingClientRect().top - 13 - 36 - 34 - (short ? 0 : iconR()) - (tall ? 8 : 10)); if (r[3] < need) r[3] = need; }
     // Cards that sit on the ring (the icons) take their places on it now its size is known.
     stages.forEach((st, s) => st.cards.forEach((c, i) => {
       if (R.cards[i].at[s] !== 'ring') return;
@@ -314,10 +322,10 @@
   // The lens folds into the core as the mink leaves it for her card; she flies from 9's centre to the Astrid card.
   const lensA = () => 1 - smooth(clamp((m - 0.25) / 0.4));
   const flightQ = () => (m >= 1 ? 1 : smooth(clamp((m - 0.28) / 0.62)));
-  const seatCell = () => (tall ? 1 : 2);
+  const seatCell = () => (tall || short ? 1 : 2);
   // A card's own openness: whole on 10, an icon on 11 (and on a phone); hovered, focused or tapped, it opens again.
-  const iconR = () => (tall ? 23 : 32);
-  const openBase = () => (tall ? 0 : m <= 1 ? 1 : 1 - smooth(clamp((m - 1) / 0.8)));
+  const iconR = () => (tall ? 23 : short ? 22 : 32);
+  const openBase = () => (tall || short ? 0 : m <= 1 ? 1 : 1 - smooth(clamp((m - 1) / 0.8)));
   // The quiet core of the ecosystem at the centre on 10, once the lens has folded into it.
   const coreQ = () => smooth(clamp((m - 0.3) / 0.5)) * (1 - smooth(clamp((m - 1.1) / 0.4)));
 
@@ -667,7 +675,7 @@
       const L0 = stages[0].lens, sb = seat.getBoundingClientRect(), v = vis[1];
       const tx = lerp(v.x, sb.left + sb.width / 2, v.o), ty = lerp(v.y, sb.top + sb.height / 2, v.o);
       const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
-      const u = fq < 0.55 ? Math.max(tall ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
+      const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1)); // never over a neighbour opened above her
       paintFly(lerp(sx, tx, fq), lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, u, (fq < 0.999 ? 1 : chipQ(1)) * (1 - other));
     } else if (fly.style.opacity !== '0') fly.style.opacity = '0';
@@ -750,7 +758,7 @@
     if (m > 0 && m < 0.6) { const c = 1 - 0.14 * Math.sin(Math.PI * m / 0.6); cur = { ...cur, ring: [cur.ring[0], cur.ring[1], cur.ring[2] * c, cur.ring[3] * c] }; }
     // The lens waits for the artists and the groups to go into the circle, then folds into the core.
     if (m > 0 && m < 1) { const q = smooth(clamp((m - 0.3) / 0.7)); cur = { ...cur, lens: stages[0].lens.map((v, i) => lerp(v, stages[1].lens[i], q)) }; }
-    cell = tall ? 1 : Math.max(2, Math.round(2.45 * cur.k));
+    cell = tall ? 1 : Math.max(short ? 1 : 2, Math.round(2.45 * cur.k));
   };
   const frame = () => {
     if (m !== lastM || !cur) { settleCur(); lastM = m; }

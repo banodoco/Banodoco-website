@@ -197,7 +197,7 @@
 
   // ---- Layout ------------------------------------------------------------------------------------
   let dpr = 1, cell = 3, geo = null;
-  const CARDW = 300, FLAGW_M = 92, FLAG_PITCH = 40;
+  const CARDW = 300, CARDW_L = 240, FLAGW_M = 92, FLAG_PITCH = 40;
   let flagY = [];
   // A polyline with its running lengths, and a point a fraction q of the way along it.
   const polyline = (pts) => { const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, len, total: len.at(-1) }; };
@@ -210,7 +210,7 @@
   const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const layout = () => {
     const W = innerWidth, H = innerHeight;
-    view.mobile = W <= 760;
+    view.mobile = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
     stackUp();
     // The whole picture's extent in scene px: labels to callouts, the mink's head to the roots' ends.
     const S = PL.map(settledOf);
@@ -222,11 +222,14 @@
     const perchW = projW(S[0], S[0].w / 2 - 0.2 * S[0].w, -S[0].h / 2 + 2);
     const h1 = slide.querySelector('h1').getBoundingClientRect();
     // On a desktop the cards open in a column beside the flags; on a phone, in a slot between the text and the stack.
-    const cw0 = view.mobile ? W - 32 : CARDW;
+    // On a phone on its side the column is narrower and a card opens over the flags, which keep their places.
+    const low = !view.mobile && H <= 500;
+    const cw0 = view.mobile ? W - 32 : low ? CARDW_L : CARDW;
     cards.forEach((c) => { c.style.width = `${cw0}px`; });
     const ch = cards.map((c) => c.offsetHeight);
     const slotT = h1.bottom + 12, slotH = view.mobile ? Math.max(...ch) : 0;
-    const Rg = view.mobile ? { l: 10 + FLAGW_M, r: W - 8, t: slotT + slotH + 12, b: H - 70 } : { l: 48 + CARDW - 6, r: h1.left - 28, t: 22, b: H - 66 };
+    const Rg = view.mobile ? { l: 10 + FLAGW_M, r: W - 8, t: slotT + slotH + 12, b: H - 70 }
+      : low ? { l: 12 + CARDW_L - 6, r: h1.left - 20, t: 14, b: H - 76 } : { l: 48 + CARDW - 6, r: h1.left - 28, t: 22, b: H - 66 };
     const box = { l: callXw, r: Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12, t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
     const k = Math.min((Rg.r - Rg.l) / (box.r - box.l), (Rg.b - Rg.t) / (box.b - box.t));
     view.k = k;
@@ -242,7 +245,7 @@
     flags.forEach((el) => { el.style.left = `${callX.toFixed(1)}px`; });
     cards.forEach((c, i) => {
       if (view.mobile) { c.style.left = '16px'; c.style.top = `${slotT.toFixed(1)}px`; return; }
-      c.style.left = `${(callX + 4 - cw0).toFixed(1)}px`;
+      c.style.left = `${Math.max(8, callX + 4 - cw0).toFixed(1)}px`;
     });
     // The guide's ways between the flags: back along a leader, down the plane's left edge, across to the
     // next plane, along its edge and out to its flag; from the foundation it climbs the far-left thread home.
@@ -280,6 +283,7 @@
     // so every flag stays in reach. Near the foot of the screen the card rides up instead of pushing a flag off.
     geo.place = cards.map((_, j) => {
       const B = geo.base, T = B.slice(), lo = H - 58;
+      if (low) return { top: clamp(B[j] - ch[j] / 2, 12, H - 76 - ch[j]), flags: T };
       let top = clamp(B[j] - 22, 14, H - 72 - ch[j]);
       for (let pass = 0; pass < 2; pass++) {
         const bot = top + ch[j];

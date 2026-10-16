@@ -265,7 +265,7 @@
     W = b.width; H = b.height;
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    small = W <= 760;
+    small = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
     k = small ? clamp(W / 430, 0.72, 1) : clamp(Math.min(W / 1440, H / 900), 0.6, 1.3);
     LW = Math.max(0.75, Math.min(1.15, k * 1.1));
     cell = small ? 2 : Math.max(2, Math.round(3 * k));
@@ -283,7 +283,7 @@
     const ch = count.offsetHeight;
     coreLabel.style.fontSize = `${Math.max(small ? 13 : 14, 21 * k).toFixed(1)}px`;
     const lh = coreLabel.offsetHeight;
-    const bottom = small ? H - 100 : H - 78 * k; // on a phone, clear of the deck's footer (name, progress, titles)
+    const bottom = small ? H - 100 : H <= 500 ? H - 82 : H - 78 * k; // on a phone, clear of the deck's footer (name, progress, titles)
     if (!small) {
       // Astrid's column: its name, the lens, then the counter, in the space under the text.
       let h = 176 * k;
