@@ -518,7 +518,7 @@
   const tick = (now) => {
     netRaf = 0;
     if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { netOn = false; netLast = 0; return; }
-    const dt = Math.min(0.05, (now - (netLast || now)) / 1000);
+    const dt = Math.min(0.05, (now - (netLast || now)) / 1000) * (window.deckPace?.() || 1);
     netLast = now;
     step(dt);
     draw();
@@ -672,7 +672,7 @@
     const tick = (now) => {
       raf = 0;
       if (stopped || blocked()) return;
-      elapsed += now - (last || now);
+      elapsed += (now - (last || now)) * (window.deckPace?.() || 1);
       last = now;
       const k = clamp(elapsed / duration);
       if (elapsed >= 0) step(ease(k));
@@ -808,7 +808,7 @@
   let opening = null;
   const endOpening = () => {
     if (!opening) return;
-    opening.timers.forEach(clearTimeout);
+    opening.timers.forEach(window.deckCancelLater);
     if (opening.trail) opening.trail.onDone = null;
     opening = null;
     mark = null;
@@ -836,14 +836,15 @@
       mark = null;
       html.classList.add('dt-unveil'); // fade in from here on, never out
       html.classList.remove('dt-intro');
-      setTimeout(() => html.classList.remove('dt-unveil'), 1300);
+      window.deckLater(() => html.classList.remove('dt-unveil'), 1300);
       place(anchor);
       if (current === lastSlide()) crown(anchor);
       else { dot.classList.remove('is-moving'); pulse(1.8); bloom(anchor); }
-      reveal(current, anchor, 60);
+      if (current === slides[0]) window.deckEntryDone?.(current); // slide 1 has no separate picture build
+      Promise.all(reveal(current, anchor, 60)).then(() => window.deckTurnDone?.(current));
       sprawl(levelOf(current), anchor, 0.15);
     };
-    opening.timers.push(setTimeout(() => {
+    opening.timers.push(window.deckLater(() => {
       if (!opening) return;
       name.style.transitionDelay = '';
       name.classList.add('is-resting');
@@ -887,6 +888,8 @@
     if (!on) return;
     place(anchor);
     current.dispatchEvent(new CustomEvent('dt-arrive'));
+    if (current === slides[0]) window.deckEntryDone?.(current);
+    if (still) window.deckTurnDone?.(current);
     if (still) { // the network at this slide's reach, at once, and the crown already formed on the last slide
       sprawl(levelOf(current), anchor);
       ripen();
@@ -909,7 +912,7 @@
       cancel() {
         if (done) return;
         done = true;
-        timers.forEach(clearTimeout);
+        timers.forEach(window.deckCancelLater);
         tweens.forEach((tw) => tw.stop());
         anims.forEach((a) => a.cancel());
         hyphae.forEach((h) => { h.onDone = null; });
@@ -949,18 +952,19 @@
       const z = zone(lines(next));
       if (z) zones.push(z);
       next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
+      if (next === slides[0]) window.deckEntryDone?.(next);
       const shown = reveal(next, to, 60);
       tweens.push(...shown);
       prev.classList.add('dt-release'); // the old slide may fade now; its parts stay hidden
-      timers.push(setTimeout(() => {
+      timers.push(window.deckLater(() => {
         prev.classList.remove('dt-leaving', 'dt-release');
         clearText(prev);
       }, 700));
-      Promise.all(shown).then(finish);
+      Promise.all(shown).then(() => { finish(); window.deckTurnDone?.(next); });
     };
 
     // 2. The network grows across to the next node, or simply re-blooms in place.
-    timers.push(setTimeout(() => {
+    timers.push(window.deckLater(() => {
       if (done) return;
       release();
       sprawl(levelOf(next), from);
@@ -983,10 +987,11 @@
     if (!active() || still || window.deckNav?.rest || !prev || !next || prev.classList.contains('out')) {
       settle(true);
       if (active() && current && anchor && !still) {
-        reveal(current, anchor, 200);
+        Promise.all(reveal(current, anchor, 200)).then(() => window.deckTurnDone?.(current));
         // On a back landing the ground already reaches at least this slide.
         if (!window.deckNav?.rest) sprawl(levelOf(current), anchor, 0.2);
       }
+      if (current && still) window.deckTurnDone?.(current);
       return;
     }
     turn(prev, next);
