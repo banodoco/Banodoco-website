@@ -145,6 +145,8 @@
     tile.focus({ preventScroll: true });
   };
 
+  // The prize's name under the collage links to its site; following it leaves the slide where it is.
+  slide.querySelector('.vc-label a')?.addEventListener('click', (e) => e.stopPropagation());
   // A tile click opens its film instead of turning the slide.
   tiles.forEach((tile) => tile.addEventListener('click', (e) => {
     e.stopPropagation();
