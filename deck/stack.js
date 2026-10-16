@@ -763,6 +763,7 @@
     window.deckRewinding?.(slide5);
     // From the settled stack, the arrival's clock runs back from its end.
     amb = null; // the tour is over: the planes are the build's again
+    video.pause(); // its film holds its frame as the plane folds back into slide 5's preview
     build = { back: true, from5: true, src: null, t0: 0, e: FROM5.end - 1e-3, last: 0, shown: false };
     signal?.addEventListener('abort', endFold, { once: true });
     wake();
