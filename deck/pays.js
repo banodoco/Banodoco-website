@@ -177,7 +177,7 @@
     labels.core.style.fontSize = `${Math.max(small ? 11 : 14, 25 * k).toFixed(1)}px`;
     put(labels.local, X(150), Y(118), 0, 0.5); // the two sides' names share a line, either side of the boundary's top
     put(labels.hosted, X(1170), Y(118), 0.5, 0.5);
-    put(labels.core, lens.c.x + 4 * k, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5);
+    put(labels.core, lens.c.x + M.LENS.x * cell, lens.c.y - lens.h / 2 - 28 * k, 0.5, 0.5); // over her
     return true;
   };
 
@@ -259,6 +259,7 @@
   // From slide 6: where she starts (her canvas there, in this slide's coordinates) and the motes she gathers.
   let fly = null;
   const FLY = { charge: 0.85, travel: 1.25, land: 0.6 }; // seconds: power up, cross, settle
+  const inLens = () => ({ x: lens.c.x + M.LENS.x * cell, y: lens.c.y + M.LENS.y * cell }); // her centre, optically centred in the lens
   const paintMink = (x, y, a, glint = 0) => { // the real pixel mink, crisp, centred on (x, y), her eye lit by glint
     if (a <= 0 || (fly && ta < fly.landed)) return;
     const P2 = M.POSES.profile, G2 = M.POSES.glint, u = cell, w = P2[0].length * u, h = P2.length * u;
@@ -294,7 +295,8 @@
       for (const { h, w, a } of lensLines) { const mid = h.total / 2, half = mid * ql; stroke(h, mid - half, mid + half, w * LW, THREAD, a); }
       node(lens.c.x, lens.c.y - lens.h / 2, 1, ql); node(lens.c.x, lens.c.y + lens.h / 2, 1, ql);
     }
-    paintMink(lens.c.x + 4 * k, lens.c.y + 8 * k, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
+    const her = inLens();
+    paintMink(her.x, her.y, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
     // The builders: their machines, and their threads into the core.
     machines.forEach((m, i) => {
       const q = ease(k01(0.4 + i * 0.12, 0.6));
@@ -368,7 +370,7 @@
   // The power-up and the flight, in hand-off time h (0 when she leaves slide 6).
   const drawFly = () => {
     const f = fly, h = ta - f.t0, u0 = f.c, u1 = cell;
-    const end = { x: lens.c.x + 4 * k, y: lens.c.y + 8 * k }; // her centre in the lens, as paintMink draws her
+    const end = inLens(); // her centre in the lens, as paintMink draws her
     const T1 = FLY.charge, T2 = T1 + FLY.travel;
     if (h < T1) { // power up where she sits: her eye lights, motes gather into her, a ring of light, a little hop
       const c = { x: f.x + 11.5 * u0, y: f.y + 10 * u0 }, glint = smooth(clamp(h / 0.25));
@@ -613,7 +615,7 @@
       const b = root.getBoundingClientRect(), v = (p) => ({ x: b.left + p.x, y: b.top + p.y });
       return {
         core: { ...v(lens.c), w: lens.w, h: lens.h, cell },
-        mink: { ...v({ x: lens.c.x + 4 * k, y: lens.c.y + 8 * k }), cell }, // her centre, as paintMink draws her
+        mink: { ...v(inLens()), cell }, // her centre, as paintMink draws her
         machines: machines.map((m) => ({ ...v(m), r: m.r })),
         people: arcs.flatMap((a) => a.dots).map((d) => ({ ...v(d), r: d.r * Math.max(0.8, k), bright: d.bright })),
         k, lw: LW,

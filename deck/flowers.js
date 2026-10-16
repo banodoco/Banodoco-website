@@ -330,7 +330,8 @@
     const hw = w / 2 - inset, hh = h / 2 - inset * 0.6, cc = (hw * hw - hh * hh) / (2 * hw), R = hw - cc;
     return Array.from({ length: n + 1 }, (_, i) => { const y = -hh + (2 * hh * i) / n; return [c.x + side * (cc + Math.sqrt(Math.max(0, R * R - y * y))), c.y + y]; });
   };
-  const drawCore = (c, w, h, q, cellNow, a = 1, pose = 'profile', mo = { x: 3 * k, y: 6 * k }) => {
+  const inLens = (u) => ({ x: M.LENS.x * u, y: M.LENS.y * u }); // her centre from the lens's, optically centred (mink.js)
+  const drawCore = (c, w, h, q, cellNow, a = 1, pose = 'profile', mo = inLens(cellNow)) => {
     if (q <= 0) return;
     const kk = h / 176;
     halo(c.x, c.y, h * 0.6, 0.14 * q * a);
@@ -343,7 +344,7 @@
     node(c.x, c.y - h / 2, 1, q * a); node(c.x, c.y + h / 2, 1, q * a);
     // The mink, crisp, at a whole number of pixels per art pixel.
     const P2 = M.POSES[pose] || M.POSES.profile, u = cellNow, mw = P2[0].length * u, mh = P2.length * u;
-    const x0 = Math.round(c.x + mo.x - mw / 2), y0 = Math.round(c.y + mo.y - mh / 2); // slide 9 expects (3k, 6k)
+    const x0 = Math.round(c.x + mo.x - mw / 2), y0 = Math.round(c.y + mo.y - mh / 2);
     g.globalAlpha = smooth(clamp(q * 1.6 - 0.4)) * a;
     for (let j = 0; j < P2.length; j++) for (let i = 0; i < P2[0].length; i++) {
       const ch = P2[j][i];
@@ -553,7 +554,7 @@
     if (from) {
       const q = easeIO(k01(0, 1.1));
       const c = { x: lerp(from.core.x, core.x, q), y: lerp(from.core.y, core.y, q) };
-      const mo = { x: lerp(from.mink.x, 3 * k, q), y: lerp(from.mink.y, 6 * k, q) };
+      const mo = { x: lerp(from.mink.x, inLens(cell).x, q), y: lerp(from.mink.y, inLens(cell).y, q) };
       drawCore(c, lerp(from.core.w, core.w, q), lerp(from.core.h, core.h, q), 1, q < 0.5 ? from.core.cell : cell, 1, pose, mo);
       from.machines.forEach((m, i) => {
         const qm = easeIO(k01(0.1 + i * 0.08, 0.9)), a = 1 - qm;
@@ -652,7 +653,7 @@
     if (!layout()) return;
     const b = root.getBoundingClientRect(), v = (p) => ({ ...p, x: p.x - b.left, y: p.y - b.top });
     off = 0.9;
-    // Slide 7 gives its mink's centre (else paints her at its lens centre + (4, 8) × its k); she eases to (3, 6) × k.
+    // Slide 7 gives its mink's centre (else paints her at its lens centre + (4, 8) × its k); she eases to her place here.
     const sk = snap.k || k, mink = snap.mink ? { x: snap.mink.x - snap.core.x, y: snap.mink.y - snap.core.y } : { x: 4 * sk, y: 8 * sk };
     from = { core: v(snap.core), machines: (snap.machines || []).map(v), mink, rest: [] };
     // Its people drift out to the nearest places in the crowd, the rest fade; the crowd's own people come in after.
@@ -791,7 +792,7 @@
       const room = Math.max(0, HAND - fresh.length), step = rest.length / Math.max(1, room);
       const chosen = fresh.slice(0, HAND).concat(room ? rest.filter((_, i) => Math.floor(i % step) === 0).slice(0, room) : []);
       const people = chosen.map(([d, app]) => { d.handed = true; const [x, y] = pos(d); return { ...v(x, y), r: d.r * 1.45, bright: d.bright, app }; });
-      return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, apps: apps.filter((a) => tc >= a.T).slice(-12).map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
+      return { core: { ...v(core.x, core.y), w: core.w, h: core.h, cell }, mink: v(core.x + inLens(cell).x, core.y + inLens(cell).y), apps: apps.filter((a) => tc >= a.T).slice(-12).map((a) => ({ ...v(a.x, a.y), r: a.r })), people, k, lw: LW };
     },
     // Slide 9 brings the core back on a step back: this picture leaves it out until it has landed, then takes it
     // back in the same frame, so only one mink is ever on screen.

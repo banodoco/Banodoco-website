@@ -591,7 +591,7 @@
         }
       }
       const u = hq < 0.5 ? hand.core.cell : cell;
-      const mx = lerp(hand ? 3 * hand.k : 2 * ks, 2 * ks, hq), my = lerp(hand ? 6 * hand.k : 0, 6 * (lens[3] / 176), hq);
+      const mx = lerp(hand ? hand.mo.x : M.LENS.x * cell, M.LENS.x * cell, hq), my = lerp(hand ? hand.mo.y : M.LENS.y * cell, M.LENS.y * cell, hq);
       if (fq <= 0.001) { paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u); minkAt = [lens[0] + mx, lens[1] + my]; } // once she's off, she flies above the cards
     }
 
@@ -722,7 +722,7 @@
     if (!mChanged || !morph) layoutVersion++;
     const ql = k01(T.labels, 0.6);
     const lens = cur.lens;
-    put(labels.astrid, lens[0] + 3 * k * (1 - clamp(m)), lens[1] - lens[3] / 2 - lerp(22 * k, 13, clamp(m)), 0.5, 0.5); // over the lens, wherever she sits
+    put(labels.astrid, lens[0] + M.LENS.x * cell * (1 - clamp(m)), lens[1] - lens[3] / 2 - lerp(22 * k, 13, clamp(m)), 0.5, 0.5); // over the lens, wherever she sits
     put(labels.artists, cur.artistsLabel[0], cur.artistsLabel[1], 0.5, 0.5);
     cur.groups.forEach(([x, y], j) => {
       if (tall) put(labels[`g${j}`], x, y + cur.grpR + 5, 0.5, 0);
@@ -799,7 +799,8 @@
     if (fq > 0.001 && !landed && begun && vis[1] && seatAt) {
       const L0 = stages[0].lens, v = vis[1];
       const tx = lerp(v.x, seatAt[0], v.o), ty = lerp(v.y, seatAt[1], v.o);
-      const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
+      const c0 = Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)); // her cell in the lens on 9
+      const sx = minkAt ? minkAt[0] : L0[0] + M.LENS.x * c0, sy = minkAt ? minkAt[1] : L0[1] + M.LENS.y * c0;
       const u = fq < 0.55 ? Math.max(tall || short ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1), ...gro.filter((_, j) => j !== 1)); // never over a neighbour opened above her
       const into = (1 - v.o) * arrive; // flying into her icon, she becomes its logo
@@ -1004,9 +1005,11 @@
 
   // Slide 8 hands its core and its communities on (window.AstridFlowers), as slide 7 hands its own to slide 8.
   const flHost = document.querySelector('[data-astrid-flowers]'), flSlide = flHost && flHost.closest('.slide');
+  // Where slide 8's mink stands in its lens, from the lens's centre (as slide 8 gives it; before, (3, 6) × its k).
+  const minkIn = (snap) => (snap.mink ? { x: snap.mink.x - snap.core.x, y: snap.mink.y - snap.core.y } : { x: 3 * snap.k, y: 6 * snap.k });
   const handoff = (snap) => {
     begun = true; T = T_HAND; ta = 0; nextMote = T.motes; lastM = -1;
-    hand = { core: snap.core, k: snap.k, dots: [], done: false };
+    hand = { core: snap.core, k: snap.k, mo: minkIn(snap), dots: [], done: false };
     settleCur();
     hand.dots = assign(snap.people, snap.core.x);
     window.AstridFlowers.hide();
@@ -1038,7 +1041,7 @@
       const snap = window.AstridFlowers.snapshot();
       if (!snap) { endUnhand(); return false; }
       u.snapped = true;
-      hand = { core: snap.core, k: snap.k, dots: assign(snap.people, snap.core.x), done: false };
+      hand = { core: snap.core, k: snap.k, mo: minkIn(snap), dots: assign(snap.people, snap.core.x), done: false };
     }
     ta -= dt; // the tick's dt runs at the turn's pace
     spin += dt * 0.05;
