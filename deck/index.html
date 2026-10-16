@@ -1315,6 +1315,24 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pendingTurns = [];
   let turn = null, pace = 1;
+  let backlogDeadline = 0;
+  // Virtual milliseconds through the network arrival and the picture's entry,
+  // with room for the longest node path. The final queued turn is not in this
+  // budget: it STARTS by the deadline, then plays at normal speed.
+  const turnBudgets = [3200, 4300, 4000, 5600, 3400, 5000, 5600, 4000, 4000, 3200, 3200];
+  const hurry = () => {
+    if (!turn || !pendingTurns.length) { setPace(1); return; }
+    const elapsed = turn.ceiling ? turn.ceilingMs - turn.ceiling.left : 0;
+    let remaining = Math.max(250, turn.budget - elapsed), target = i;
+    for (const queued of pendingTurns.slice(0, -1)) {
+      target += queued.dir;
+      remaining += turnBudgets[target];
+    }
+    // Leave a few frames per hand-off for timers, arrival and layout. At 16×
+    // even the short stage morphs still have several painted frames.
+    const available = Math.max(100, backlogDeadline - performance.now() - pendingTurns.length * 48);
+    setPace(Math.min(16, Math.max(4, remaining / available)));
+  };
   // A timer's remaining time is measured on the same clock as the slide builds.
   // Its handle can be cancelled even after the underlying timeout is rescheduled.
   window.deckPace = () => pace;
@@ -1371,14 +1389,14 @@
       if (turn || !pendingTurns.length) return;
       const next = pendingTurns.shift();
       startTurn(i + next.dir, next.mode);
-      if (pendingTurns.length) setPace(4);
+      hurry();
     });
   };
   window.deckTurnDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl) { turn.network = true; finishTurn(); }
+    if (turn && slides[turn.to] === slideEl && !turn.network) { turn.network = true; finishTurn(); hurry(); }
   };
   window.deckEntryDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl) { turn.entry = true; finishTurn(); }
+    if (turn && slides[turn.to] === slideEl && !turn.entry) { turn.entry = true; finishTurn(); hurry(); }
   };
   // One viewport notification for the slide pictures. A phone's browser chrome can
   // report several sizes in one gesture; only lay out after the last one.
@@ -1413,7 +1431,9 @@
     // These two neighboring groups have their own approved reverse motion.
     const reversePair = (from === 4 && to === 3) || (from !== null && from >= 8 && to >= 8);
     window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, signal: turnController.signal };
-    turn = { to, network: reduced, entry: reduced, ceiling: null };
+    const ceilingMs = from === null ? 18000 : 12000;
+    turn = { to, network: reduced, entry: reduced, ceiling: null, ceilingMs,
+      budget: from === null ? 6500 : turnBudgets[to] };
     document.documentElement.dataset.dir = String(dir);
     i = to;
     initialized = true;
@@ -1429,12 +1449,12 @@
     else if (historyMode === 'push') history.pushState({ deckSlide: i + 1 }, '', url);
     if (!reduced) turn.ceiling = window.deckLater(() => {
       if (turn?.to === to) { turn.network = true; turn.entry = true; finishTurn(); }
-    }, from === null ? 18000 : 12000);
+    }, ceilingMs);
     else finishTurn();
   };
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
-    if (initialized && to === i) { pendingTurns.length = 0; return; }
+    if (initialized && to === i) { pendingTurns.length = 0; setPace(1); return; }
     pendingTurns.length = 0;
     turn = null;
     setPace(1);
@@ -1446,7 +1466,8 @@
     if (target < 0 || target >= slides.length) return;
     if (!turn && !pendingTurns.length) { startTurn(i + dir, mode); return; }
     pendingTurns.push({ dir, mode });
-    setPace(4);
+    backlogDeadline = performance.now() + 1500;
+    hurry();
   };
   const toggleOv = (on = !ov.classList.contains('on')) => {
     if (on) { pendingTurns.length = 0; setPace(1); }
