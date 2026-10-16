@@ -88,7 +88,7 @@
   const X = (rx) => ox + (rx - (small ? 836 : 150)) * (small ? k : kx), Y = (ry) => oy + (ry - 415) * (small ? k : ky), P = (rx, ry) => ({ x: X(rx), y: Y(ry) });
   let seed = 1;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  let machines = [], feeds = [], lens = null, arcs = [], rays = [], boundary = null, cell = 3;
+  let machines = [], feeds = [], lens = null, lensLines = [], arcs = [], rays = [], boundary = null, cell = 3;
 
   const put = (el, x, y, alignX, alignY) => {
     const w = el.offsetWidth, h = el.offsetHeight;
@@ -130,6 +130,8 @@
     const lw0 = small ? CORE_REF.w * k : Math.max(CORE_REF.w * k, 23 * cell + 40);
     lens = { c: P(CORE_REF.cx, CORE_REF.cy), w: lw0, h: Math.max(CORE_REF.h * k, lw0 * 1.66) };
     const lensL = { x: lens.c.x - lens.w / 2, y: lens.c.y }, lensR = { x: lens.c.x + lens.w / 2, y: lens.c.y };
+    // Its three strands, each side traced from the middle out (built once here, not every frame).
+    lensLines = [[0, 1.2, 0.95], [6 * k, 0.9, 0.55], [-4 * k, 0.8, 0.35]].flatMap(([inset, w, a]) => [-1, 1].map((side) => ({ h: line(lensPts(side, 40, inset)), w, a })));
     machines = [[213, 277, 'term'], [213, 424, 'gpu'], [213, 570, 'graph']].map(([x, y, kind], i) => ({ ...P(x, y), r: 52 * k, kind, i }));
     feeds = machines.map((m, i) => {
       const end = { x: lensL.x + 2 * k, y: lensL.y + (i - 1) * 12 * k };
@@ -286,12 +288,7 @@
     const ql = ease(k01(0.05, 1.0));
     halo(lens.c.x, lens.c.y, lens.h * 0.55, 0.12 * ql);
     if (ql > 0) {
-      [[0, 1.2, 0.95], [6 * k, 0.9, 0.55], [-4 * k, 0.8, 0.35]].forEach(([inset, w, a]) => {
-        for (const side of [-1, 1]) {
-          const h = line(lensPts(side, 40, inset)), mid = h.total / 2, half = mid * ql;
-          stroke(h, mid - half, mid + half, w * LW, THREAD, a);
-        }
-      });
+      for (const { h, w, a } of lensLines) { const mid = h.total / 2, half = mid * ql; stroke(h, mid - half, mid + half, w * LW, THREAD, a); }
       node(lens.c.x, lens.c.y - lens.h / 2, 1, ql); node(lens.c.x, lens.c.y + lens.h / 2, 1, ql);
     }
     paintMink(lens.c.x + 4 * k, lens.c.y + 8 * k, smooth(k01(0.5, 0.5)), ta - glintAt < 0.5 ? 1 : 0);
