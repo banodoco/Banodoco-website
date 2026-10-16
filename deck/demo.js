@@ -1,16 +1,4 @@
-// Version F, slide 5: Astrid herself. Beneath the text the mink presides over
-// the homepage's pieces, rebuilt in its dusk palette: the agent's chat beside
-// the editor's preview, both on the editor's timeline. A calm three-beat loop
-// plays, the chat and the editor changing in step:
-//   1. "Generate three light studies." Three stills appear on the timeline
-//      (a generating shimmer, then the picture).
-//   2. "Animate this, this and this." Each still becomes a moving clip: its
-//      filmstrip fills in and the preview plays it.
-//   3. "Add this effect." A community-made look is applied, and you see it
-//      happen: it sweeps across the playing picture.
-// Then a gentle reset. The media are the homepage's own light studies.
-// Hovering the mink flashes her eye; clicking her turns her to face you, eyes
-// lit, and back, as the homepage avatar does.
+// Slide 5: Astrid generates, animates, then grades three light studies.
 (() => {
   const root = document.querySelector('[data-astrid-demo]');
   const M = window.AstridMink;
@@ -25,24 +13,23 @@
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
   const videos = [...root.querySelectorAll('.as-media video')];
-  const gradeSources = [null, '../assets/astrid/passing-shapes-graded.mp4', '../assets/astrid/quiet-finish-graded.mp4'];
-  const gradedVideos = videos.map((_, i) => {
-    if (!gradeSources[i]) return null;
+  // Clip 0 is never graded. Only the two graded clips get media elements.
+  const gradeSources = ['../assets/astrid/passing-shapes-graded.mp4', '../assets/astrid/quiet-finish-graded.mp4'];
+  const gradedVideos = [null, ...gradeSources.map((source) => {
     const graded = document.createElement('video');
-    graded.src = new URL(gradeSources[i], document.baseURI).href;
-    graded.muted = true; graded.playsInline = true; graded.preload = 'auto';
+    graded.dataset.src = source;
+    graded.muted = true; graded.playsInline = true; graded.preload = 'none';
     graded.dataset.graded = 'true'; graded.setAttribute('aria-hidden', 'true');
     root.querySelector('.as-media').appendChild(graded);
-    graded.load();
     return graded;
-  });
+  })];
   const pic = root.querySelector('.as-pic'), pg = pic.getContext('2d');
   const tl = root.querySelector('.as-tl');
   const timeEl = root.querySelector('.as-time');
   const seat = root.querySelector('.as-seat');
   const minkCv = root.querySelector('.as-mink'), mg = minkCv.getContext('2d');
 
-  // ---- The timeline -------------------------------------------------------------
+  // The timeline
   const SPAN = 30;
   const ICON = {
     film: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',
@@ -77,7 +64,6 @@
   }
   const playhead = tl.querySelector('.as-playhead');
   const place = (el, at, len) => { el.style.left = `calc(${(at / SPAN) * 100}% + 1px)`; el.style.width = `calc(${(len / SPAN) * 100}% - 2px)`; };
-  // Each clip starts as an anchor image and becomes a moving clip in place: its filmstrip fills in over it.
   const anchorEls = CLIPS.map((c) => {
     const el = document.createElement('div');
     place(el, c.at, c.len);
@@ -97,7 +83,7 @@
   });
   const anchors = [...root.querySelectorAll('.as-media img')];
 
-  // ---- The mink ----------------------------------------------------------------
+  // The mink
   // Poses: profile, glint (her eye flash), facing, focus (eyes lit). She is drawn
   // cell by cell at a whole number of CSS pixels per art pixel, never smoothed.
   const HEAD = 3; // spare rows above her for the hop and the float
@@ -126,8 +112,6 @@
     minkCv.style.transform = `translateX(-${Math.round(23 * cell / 2)}px)`;
     paint(mink.pose, mink.lift, mink.glint);
   };
-  // Her click on the homepage: she turns to face you with a little hop, her eyes light
-  // half a second later and she floats a pixel or two, then she hops round and turns back.
   const TURN = [[0, 'facing'], [500, 'focus'], [1900, 'facing'], [2400, 'profile']];
   const turn = () => { if (!mink.seq) { mink.seq = { t0: now() }; wake(); } };
   const stepMink = (t) => {
@@ -153,9 +137,7 @@
   minkCv.addEventListener('pointerenter', () => { if (still || mink.seq || mink.pose !== 'profile') return; mink.hover = now(); wake(); });
   minkCv.addEventListener('click', (e) => { e.stopPropagation(); if (!still) turn(); });
 
-  // ---- The preview ----------------------------------------------------------------
-  // The playing clip drawn onto a canvas, so the look can be seen arriving: it sweeps
-  // across the picture, warming it and laying film grain over it.
+  // The preview
   // mode: none | still (an anchor image) | play (the motion clips, as a sequence).
   const view = { mode: 'none', i: -1, seq: -1, rate: 1, title: -1, colour: false, sweep: 0 };
   const noise = document.createElement('canvas');
@@ -189,7 +171,6 @@
       pg.save();
       pg.beginPath(); pg.rect(dx, dy, sx - dx, dh); pg.clip();
       const graded = gradedVideos[view.i];
-      // Cross-draw the pregraded twin through the same animated sweep mask.
       if (graded && graded.readyState >= 2) pg.drawImage(graded, dx, dy, dw, dh);
       pg.globalCompositeOperation = 'soft-light';
       const cg = pg.createLinearGradient(dx, dy, dx + dw, dy + dh);
@@ -253,7 +234,7 @@
     headTo(view.seq, true);
   };
 
-  // ---- The playhead and the clock read-outs ---------------------------------------------
+  // The playhead and the clock read-outs
   let headT = 0, headGoal = 0, total = 0;
   const headTo = (t, now_) => { headGoal = t; if (now_) headT = t; };
   const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -263,7 +244,7 @@
     timeEl.textContent = `${fmt(headT)} / ${fmt(total)}`;
   };
 
-  // ---- The three beats ------------------------------------------------------------------
+  // The three beats
   const BEATS = [
     { at: 0.4, ask: 'Generate three anchor images for a quiet light study.', reply: 'Here are three anchor images.', step: ['Generating three anchor images', 'qwen_image', '× 3'], dur: 2.1 },
     { at: 5.9, ask: 'Animate them.', reply: 'Animating each one from its anchor.', step: ['Animating the anchors', 'animated_video', '× 3'], dur: 3.7 },
@@ -369,12 +350,7 @@
     headTo(12, true); stepHead(0);
   };
 
-  // ---- From slide 4 ---------------------------------------------------------------------
-  // Going on from slide 4, its picture becomes this one: each ring draws itself out into its
-  // panel's frame, the constellation and the thread panels fly into the panels they stand for,
-  // the extensions and the orbit come apart into motes, and the gold outline of the mink becomes
-  // the real pixel mink between the panels. Then she turns to face you, her eyes light, and she
-  // turns back and settles, and the demo begins.
+  // From slide 4
   const sky = document.createElement('canvas');
   sky.className = 'as-flight';
   sky.setAttribute('aria-hidden', 'true');
@@ -423,7 +399,6 @@
     const P = M.POSES.profile, cells = [];
     P.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') cells.push({ x, y, ch, at: 0 }); }));
     cells.forEach((c) => { c.at = (c.y + (22 - c.x) * 0.35) / (19 + 22 * 0.35); }); // from the head down the neck
-    // The motes: each extension comes apart into a few that drift into its side's panel; the orbit's drift away.
     const motes = [];
     const rnd = Math.random;
     snap.slots.forEach((sl) => {
@@ -455,7 +430,6 @@
     sg.clearRect(0, 0, sky.width / d, sky.height / d);
     sg.lineCap = 'round'; sg.lineJoin = 'round';
     const k01 = ([a, b]) => clamp((e - a) / b);
-    // The constellation and the thread panels fly into the panels they stand for, fading as they land.
     const qf = easeIO(k01(MORPH.fly));
     for (const f of m.fly) {
       const s = lerp(1, f.to.s * 0.82, qf), x = lerp(f.from.x, f.to.x, qf), y = lerp(f.from.y, f.to.y, qf);
@@ -467,7 +441,6 @@
       sg.drawImage(f.img, m.snap.left, m.snap.top, m.snap.W, m.snap.H);
       sg.restore();
     }
-    // The extensions and the orbit: their picture gives way to motes.
     const qo = 1 - clamp(e / 0.3);
     if (qo > 0) { sg.globalAlpha = qo; sg.drawImage(m.snap.layers.outer, m.snap.left, m.snap.top, m.snap.W, m.snap.H); sg.globalAlpha = 1; }
     for (const p of m.motes) {
@@ -478,7 +451,6 @@
       sg.fillStyle = `rgba(255,217,145,${a.toFixed(3)})`;
       sg.beginPath(); sg.arc(x, y, p.r, 0, Math.PI * 2); sg.fill();
     }
-    // The rings draw themselves out into the panels' frames, their strands closing into one.
     const qr = easeIO(k01(MORPH.rings));
     const fa = 1 - clamp((e - MORPH.resolve - 0.1) / 0.45);
     if (fa > 0) {
@@ -498,7 +470,6 @@
         });
       });
     }
-    // The mink: her outline moves to her seat and her pixels fill in from the head down.
     const qm = easeIO(k01(MORPH.outline));
     const oa = 1 - clamp((e - MORPH.pixels[0] - 0.15) / 0.35);
     if (!m.steps.handoff) {
@@ -540,7 +511,7 @@
     root.classList.remove('is-morphing', 'is-minkless');
   };
 
-  // ---- Clock ----------------------------------------------------------------------------
+  // Clock
   let running = false, raf = 0, last = 0;
   const tick = (t) => {
     raf = 0;
@@ -552,8 +523,6 @@
     if (busy) raf = requestAnimationFrame(tick);
   };
   const wake = () => { if (running && !raf) { last = 0; raf = requestAnimationFrame(tick); } };
-  // The network stays visible behind this slide; only where its threads pass behind the headline are they
-  // softened, so the text reads cleanly.
   const net = document.querySelector('.dt-net');
   const softenNet = (on) => {
     if (!net) return;
@@ -566,6 +535,8 @@
   };
   const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
   const start = (fromCore) => {
+    // Navigation warms these from slide 4; direct #5 entry also needs warming.
+    window.warmDeckMedia(slide);
     running = true;
     layout();
     if (still) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
