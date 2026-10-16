@@ -836,7 +836,7 @@
       mark = null;
       html.classList.add('dt-unveil'); // fade in from here on, never out
       html.classList.remove('dt-intro');
-      window.deckLater(() => html.classList.remove('dt-unveil'), 1300);
+      setTimeout(() => html.classList.remove('dt-unveil'), 1300);
       place(anchor);
       if (current === lastSlide()) crown(anchor);
       else { dot.classList.remove('is-moving'); pulse(1.8); bloom(anchor); }
