@@ -182,9 +182,10 @@
     const nb = num.getBoundingClientRect();
         const top = nb.top - b.top; // the label's top: the picture sits above it
     if (small) {
-      k = Math.min((W / 2 - 4) / 520, (top - 70) / 560);
-      const ph = (590 - 30) * k;
-      oy = Math.max(40, (top - 10 - ph) / 2 + 10) + (290 - 30) * k;
+      // Upright, the picture and the words are one group (the phone CSS centres the words under the picture's room):
+      // the picture hangs 34 px above the label, never higher than 40 px from the top.
+      k = Math.min((W / 2 - 4) / 520, (top - 74) / 560);
+      oy = Math.max(40, top - 34 - (590 - 30) * k) + (290 - 30) * k;
     } else {
       k = Math.min(1.25, (W / 2 - 14) / 560, (top - 26) / (612 - 34));
       oy = top + (290 - 612) * k;

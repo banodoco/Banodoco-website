@@ -737,8 +737,15 @@
   }
 
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
-    html[data-ver="f"] .ac-host { padding-bottom: 92px; }
+    /* Upright, the rings and the words are one group in the middle of the screen: the words are centred in what is
+       left under the picture's room (40 px + the picture, 53.85vw - 4.3 px tall at the phone's scale, + a 34 px gap),
+       and core.js hangs the picture just above the label. */
+    html[data-ver="f"] .ac-host { justify-content: center; padding-top: calc(53.85vw + 69.7px); padding-bottom: 90px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); max-width: 22ch; text-wrap: balance; }
+  }
+  /* A very short upright screen has no room to centre the group: the words go to the foot, the picture above them. */
+  @media (max-width: 760px) and (orientation: portrait) and (max-height: 599px) {
+    html[data-ver="f"] .ac-host { justify-content: flex-end; padding-top: 40px; }
   }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     .gap-host .split { grid-template-columns: minmax(0, 1fr); }
