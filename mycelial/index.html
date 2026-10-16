@@ -141,6 +141,13 @@
   .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
   .vc-tile:hover img { opacity: 1; }
   .vc-tile:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  /* A quiet play cue, in the footer arrows' gold ring: it fades in with the hover. A touch screen has no hover, so there it
+     rests faintly on the lead tile alone: on all five it sat on every face and moth, and cluttered the collage. */
+  .vc-tile::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; box-sizing: border-box;
+    border-radius: 50%; border: 1px solid rgb(255 214 150 / .8); pointer-events: none; opacity: 0; transform: scale(.88); transition: opacity .3s ease, transform .3s ease;
+    background: rgb(13 10 7 / .55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M0 0L10 6L0 12z' fill='%23f0c67e'/%3E%3C/svg%3E") 56% 50% / 9px 11px no-repeat; }
+  .vc-tile:hover::after, .vc-tile:focus-visible::after { opacity: 1; transform: none; }
+  @media (hover: none) { .vc-tile:first-child::after { opacity: .6; transform: scale(.76); } }
   .vc-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.4rem 0.6rem 0.45rem; border-radius: 0 0 4px 4px; background: linear-gradient(transparent, #0d0a07cc);
     font: italic 400 0.85rem "Cormorant Garamond", serif; color: var(--ink); opacity: 0; transition: opacity .3s ease; }
   .vc-tile:hover .vc-cap, .vc-tile:focus-visible .vc-cap { opacity: 1; }
