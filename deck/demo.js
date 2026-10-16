@@ -155,20 +155,31 @@
     n.putImageData(d, 0, 0);
   }
   let grain = null, grainAt = 0, gx = 0, gy = 0, pdpr = 1;
+  // The preview is redrawn only when what it shows can have changed: a playing film (with its title and colour look)
+  // every frame, as before; an empty screen, a still, or a film not yet ready once. Its size on screen comes from a
+  // ResizeObserver rather than a layout read every frame.
+  let picCW = -1, picCH = -1, picKey = '';
   const sizePic = () => {
     const b = pic.getBoundingClientRect();
     pdpr = Math.min(2, devicePixelRatio || 1);
     pic.width = Math.max(1, Math.round(b.width * pdpr)); pic.height = Math.max(1, Math.round(b.height * pdpr));
     grain = pg.createPattern(noise, 'repeat');
+    picKey = ''; // sizing a canvas clears it
   };
+  new ResizeObserver((es) => { for (const e of es) { picCW = e.contentRect.width; picCH = e.contentRect.height; } }).observe(pic);
   const drawPic = (t) => {
-    if (Math.abs(pic.clientWidth * pdpr - pic.width) > 1 || Math.abs(pic.clientHeight * pdpr - pic.height) > 1) sizePic();
+    const cw = picCW < 0 ? pic.clientWidth : picCW, ch = picCH < 0 ? pic.clientHeight : picCH;
+    if (Math.abs(cw * pdpr - pic.width) > 1 || Math.abs(ch * pdpr - pic.height) > 1) sizePic();
+    const src = view.mode === 'still' ? anchors[view.i] : view.mode === 'play' ? videos[view.i] : null;
+    root.classList.toggle('has-pic', !!src);
+    const ready = !!src && (src.tagName === 'VIDEO' ? src.readyState >= 2 : src.complete);
+    const key = view.mode === 'play' && ready ? '' : `${view.mode}|${view.i}|${ready}`;
+    if (key && key === picKey) return; // the same picture as last frame
+    picKey = key;
     const w = pic.width, h = pic.height;
     pg.setTransform(1, 0, 0, 1, 0, 0);
     pg.clearRect(0, 0, w, h);
-    const src = view.mode === 'still' ? anchors[view.i] : view.mode === 'play' ? videos[view.i] : null;
-    root.classList.toggle('has-pic', !!src);
-    if (!src || (src.tagName === 'VIDEO' ? src.readyState < 2 : !src.complete)) return;
+    if (!ready) return;
     const s = Math.min(w / 16, h / 9) * 0.86, dw = 16 * s, dh = 9 * s, dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2);
     pg.drawImage(src, dx, dy, dw, dh);
     const seqT = view.mode === 'play' ? view.seq : -1;
@@ -245,10 +256,25 @@
   let headT = 0, headGoal = 0, total = 0;
   const headTo = (t, now_) => { headGoal = t; if (now_) headT = t; };
   const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  // The playhead moves by transform on its own layer, so a frame neither lays out nor repaints the editor under it: the
+  // same place as left: calc(var(--as-hcol) + (100% - var(--as-hcol) - 8px) * f), from the timeline's width and header
+  // column as last laid out (kept by a ResizeObserver). The clock's text is only replaced when its reading changes.
+  // Until its first step it stands where the stylesheet puts it, as before.
+  let tlW = 0, tlL = 0, hcol = 0, headF = null, headX = '', clock = '';
+  const measureTl = (w) => { tlW = w ?? parseFloat(getComputedStyle(tl).width); tlL = tl.getBoundingClientRect().left - 1; hcol = parseFloat(getComputedStyle(tl).getPropertyValue('--as-hcol')) || 0; };
+  const placeHead = () => {
+    if (headF === null) return;
+    // Whole device pixels, as the line was snapped when laid out (a layer at a fraction would be resampled, softer).
+    const d = devicePixelRatio || 1, at = hcol + (tlW - hcol - 8) * headF;
+    const x = `translateX(${((Math.round((tlL + at) * d) - Math.round(tlL * d)) / d).toFixed(4)}px)`;
+    if (x !== headX) { headX = x; playhead.style.transform = x; }
+  };
   const stepHead = (dt) => {
     headT += (headGoal - headT) * (1 - Math.exp(-dt / 0.12));
-    playhead.style.left = `calc(var(--as-hcol) + (100% - var(--as-hcol) - 8px) * ${(headT / SPAN).toFixed(4)})`;
-    timeEl.textContent = `${fmt(headT)} / ${fmt(total)}`;
+    headF = +(headT / SPAN).toFixed(4);
+    placeHead();
+    const c = `${fmt(headT)} / ${fmt(total)}`;
+    if (c !== clock) { clock = c; timeEl.textContent = c; }
   };
 
   // The three beats
@@ -386,9 +412,14 @@
     }
     return out;
   };
+  // The sky is allocated ahead, while slide 4 or 5 is up (allocating it in the press frame added to a full garbage
+  // collection there), cleared back to its first state as a morph begins, and let go once both slides are left.
+  const skySize = () => [Math.round(innerWidth * Math.min(2, devicePixelRatio || 1)), Math.round(innerHeight * Math.min(2, devicePixelRatio || 1))];
+  const freeSky = () => { sky.width = 0; sky.height = 0; };
   const startMorph = (snap, back = false) => {
     const W = innerWidth, H = innerHeight, d = Math.min(2, devicePixelRatio || 1);
-    sky.width = Math.round(W * d); sky.height = Math.round(H * d);
+    const [sw, sh] = skySize();
+    if (sky.width === sw && sky.height === sh && sg.reset) sg.reset(); else { sky.width = sw; sky.height = sh; }
     sky.style.display = 'block';
     if (!back) root.classList.add('is-morphing', 'is-minkless'); // (folding back, the editor is whole as it begins)
     sizeMink();
@@ -516,6 +547,7 @@
     sg.setTransform(1, 0, 0, 1, 0, 0);
     sg.clearRect(0, 0, sky.width, sky.height);
     sky.style.display = 'none';
+    window.AstridCore?.release?.();
     root.classList.remove('is-morphing', 'is-minkless');
   };
 
@@ -547,7 +579,8 @@
     net.style.maskMode = 'luminance';
     net.style.maskSize = '100% 100%';
   };
-  const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
+  const layout = () => { sizeMink(); sizePic(); measureTl(); placeHead(); if (slide.classList.contains('on')) softenNet(true); };
+  new ResizeObserver((es) => { for (const e of es) if (e.target === tl) { measureTl(e.contentRect.width); placeHead(); } }).observe(tl);
   const start = (fromCore) => {
     if (motionBlocked()) { pendingStart = fromCore; return; }
     pendingStart = null;
@@ -621,8 +654,7 @@
   const endUnmorph = () => {
     if (!morph?.back) return;
     window.AstridCore?.show(); // the very picture the flight layer has just drawn
-    endMorph();
-    sky.width = 0; sky.height = 0; // the flight layer is only needed in flight
+    endMorph(); // the sky is kept while slide 4 or 5 is up: the next turn between them flies on it
     root.classList.add('is-minkless'); // the editor and its mink stay folded away as slide 5 fades (until it next starts)
     slide.classList.replace('dt-rewind', 'dt-rewound');
     coreSlide.classList.remove('dt-return', 'dt-await');
@@ -650,6 +682,21 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
+  if (coreSlide && !still) { // the sky, ready while slide 4 or 5 is up; let go once both are left (unless a morph flies on it)
+    const idleSoon = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 100));
+    const near45 = () => coreSlide.classList.contains('on') || slide.classList.contains('on');
+    const keepSky = () => {
+      if (near45()) setTimeout(() => idleSoon(() => {
+        if (!near45() || morph) return;
+        const [sw, sh] = skySize();
+        if (sky.width !== sw || sky.height !== sh) { sky.width = sw; sky.height = sh; }
+      }), 1500);
+      else setTimeout(() => { if (!near45() && !morph) freeSky(); }, 700);
+    };
+    const keep = new MutationObserver(keepSky);
+    [coreSlide, slide].forEach((s) => keep.observe(s, { attributes: true, attributeFilter: ['class'] }));
+    keepSky();
+  }
   const syncMotion = () => {
     if (motionBlocked() && morph?.back) { endUnmorph(); leave(); return; } // a reverse never waits behind the overview
     if (motionBlocked()) {

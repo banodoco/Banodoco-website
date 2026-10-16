@@ -103,6 +103,12 @@
     models: `<span class="st-comfy">ComfyUI workflows</span><span class="st-mod">${I.cube}Wan</span><i class="st-link"></i><span class="st-mod">${I.cube}LTX-Video</span><i class="st-link"></i><span class="st-mod">${I.cube}Qwen Image</span><span class="st-gpu">${I.cloud}local GPU or cloud</span>`,
   };
 
+  // In Chromium the world is laid out at its size on screen (CSS zoom) rather than at the scene's size and scaled down:
+  // a plane under the perspective is rasterized at its laid-out size, so scale(k) had each rasterized at up to 1/k its
+  // pixels on screen. Every length in the world scales by k, its perspective included, so the picture is the same.
+  // WebKit lays a zoomed world out differently on a phone (its smallest type is held up, and the planes shift), so
+  // there, and in other engines, the world is still scaled.
+  const ZOOM = /\bChrome\//.test(navigator.userAgent);
   const world = document.createElement('div');
   world.className = 'st-world';
   world.style.perspective = `${PERSP}px`;
@@ -245,7 +251,11 @@
     view.k = k;
     view.ox = (Rg.l + Rg.r) / 2 - ((box.l + box.r) / 2) * k;
     view.oy = (Rg.t + Rg.b) / 2 - ((box.t + box.b) / 2) * k;
-    world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
+    if (ZOOM) {
+      const kz = +k.toFixed(4);
+      world.style.zoom = String(kz);
+      world.style.transform = `translate(${(+view.ox.toFixed(1) / kz).toFixed(4)}px, ${(+view.oy.toFixed(1) / kz).toFixed(4)}px)`;
+    } else world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
     dpr = Math.min(2, devicePixelRatio || 1);
     const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
     if (cv.width !== pixelW || cv.height !== pixelH) { cv.width = pixelW; cv.height = pixelH; }
@@ -367,11 +377,18 @@
   // rt: the roots' growth.
   const vis = { sh: 1, lb: PL.map(() => 1), rt: 1 };
   const GOLD = (a) => `rgba(240,200,119,${a.toFixed(3)})`;
+  // Each bead's glow is stamped from one sprite (the same radial light, .55 at its heart to nothing at 4r, faded by its
+  // alpha), not built as a new gradient for every bead in every frame.
+  const glow = document.createElement('canvas');
+  glow.width = glow.height = 128;
+  {
+    const sg = glow.getContext('2d'), rg = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    rg.addColorStop(0, 'rgba(255,226,170,0.55)'); rg.addColorStop(1, 'rgba(255,217,145,0)');
+    sg.fillStyle = rg; sg.fillRect(0, 0, 128, 128);
+  }
   const dot = (x, y, r, a) => {
     if (a <= 0.01) return;
-    const gr = g.createRadialGradient(x, y, 0, x, y, r * 4);
-    gr.addColorStop(0, `rgba(255,226,170,${(0.55 * a).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,217,145,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 4, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = a; g.drawImage(glow, x - r * 4, y - r * 4, r * 8, r * 8); g.globalAlpha = 1;
     g.fillStyle = `rgba(255,236,200,${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
   };
   const partial = (pts, q) => { // a polyline drawn to fraction q of its points
@@ -649,9 +666,21 @@
   const pinTo = (i) => { hold.pin = hold.pin === i ? -1 : i; hold.hover = -1; react(); };
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   let shownSec = -1;
+  // The playhead moves by transform on its own layer, so a frame neither lays out nor repaints the timeline plane: the
+  // same place as left: f%, from its lane's width as last laid out (kept by a ResizeObserver). Until its first step it
+  // stands where the stylesheet puts it, as before.
+  const lane = head.parentElement;
+  let laneW = parseFloat(getComputedStyle(lane).width) || 0, headF = null, headX = '';
+  const placeHead = () => {
+    if (headF === null) return;
+    const x = `translateX(${(laneW * headF / 100).toFixed(3)}px)`;
+    if (x !== headX) { headX = x; head.style.transform = x; }
+  };
+  new ResizeObserver((es) => { for (const e of es) { laneW = e.contentRect.width; placeHead(); } }).observe(lane);
   const stepHead = () => {
     const tt = video.currentTime || 0;
-    head.style.left = `${((tt / SPAN) * 100).toFixed(3)}%`;
+    headF = +((tt / SPAN) * 100).toFixed(3);
+    placeHead();
     const sec = Math.floor(tt);
     if (sec !== shownSec) { shownSec = sec; timeEl.textContent = `${fmt(sec)} / 0:28`; }
   };

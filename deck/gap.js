@@ -160,6 +160,11 @@
   document.body.appendChild(sky);
   const g = sky.getContext('2d');
   let flights = [], flying = false, timers = [];
+  // The flight layer is kept (sized) only while slide 2 or 3 is up, the turns that fly on it, and shown only in flight;
+  // elsewhere it is let go, so the other slides neither hold nor composite a full-screen canvas. size() brings it back.
+  const near = () => slide.classList.contains('on') || !!fieldSlide?.classList.contains('on');
+  const show = (on) => { sky.style.display = on ? '' : 'none'; };
+  const idleSoon = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 100));
   const MORPH = 0.5; // seconds from landing to the settled logo
 
   const reset = () => {
@@ -180,7 +185,12 @@
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
-  size();
+  const keepSky = () => {
+    if (near()) setTimeout(() => idleSoon(() => { if (near() && !flying && !backs.length) size(); }), 1200);
+    else setTimeout(() => { if (!near() && !flying && !backs.length && !backRaf) { sky.width = 0; sky.height = 0; } }, 700);
+  };
+  if (near()) size(); else { sky.width = 0; sky.height = 0; }
+  show(false);
   // Where each disc will be once the slide has finished rising into place.
   const lift = () => { const m = getComputedStyle(slide).transform; return m && m !== 'none' ? new DOMMatrixReadOnly(m).f : 0; };
   const disc = (el, dy) => {
@@ -189,7 +199,7 @@
   };
   const tint = (el) => rgb(getComputedStyle(el).getPropertyValue('--c').trim() || '#e0ab5e');
   let flightTime = 0, flightLast = 0;
-  const fire = () => { flightTime = 0; flightLast = 0; if (!flying) { flying = true; requestAnimationFrame(fly); } };
+  const fire = () => { flightTime = 0; flightLast = 0; if (!flying) { flying = true; show(true); requestAnimationFrame(fly); } };
 
   // Without the field to fly from: the axes draw, then the tools bloom one by one.
   const enter = (lead = 0) => {
@@ -296,7 +306,7 @@
       return true;
     });
     if (flights.length) requestAnimationFrame(fly);
-    else { g.clearRect(0, 0, innerWidth, innerHeight); flying = false; window.deckEntryDone?.(slide); }
+    else { g.clearRect(0, 0, innerWidth, innerHeight); flying = false; if (!backs.length) show(false); window.deckEntryDone?.(slide); }
   };
 
   // ---- Going back ----------------------------------------------------------
@@ -335,7 +345,7 @@
     if (backRaf) cancelAnimationFrame(backRaf);
     backRaf = 0; backs = [];
     g.clearRect(0, 0, innerWidth, innerHeight);
-    if (!flying) { sky.width = 0; sky.height = 0; } // the flight layer is only needed in flight (size() brings it back)
+    if (!flying) { show(false); if (!near()) { sky.width = 0; sky.height = 0; } } // kept while slide 2 or 3 is up (size() brings it back)
     if (!slide.classList.contains('on')) reset();
     if (fieldSlide) window.deckRewound?.(fieldSlide);
   };
@@ -373,6 +383,7 @@
           delay: rnd() * 0.25, dur: 0.75 + rnd() * 0.35, dot: false, end: 1.65 });
       });
       backT = 0; backLast = 0;
+      show(true);
       backRaf = requestAnimationFrame(unfly);
     });
   };
@@ -413,15 +424,18 @@
   };
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (fieldSlide) watch.observe(fieldSlide, { attributes: true, attributeFilter: ['class'] });
+  const keep = new MutationObserver(keepSky);
+  keep.observe(slide, { attributes: true, attributeFilter: ['class'] });
+  if (fieldSlide) keep.observe(fieldSlide, { attributes: true, attributeFilter: ['class'] });
   if (slide.classList.contains('on')) begin();
   window.deckOnResize(() => {
-    size();
+    if (near()) size();
     if (!slide.classList.contains('on')) return;
     if (!flying) return;
     // Flight endpoints were measured in the old viewport. Finish at the new
     // chart instead of leaving old pixel coordinates suspended over it.
     timers.forEach(window.deckCancelLater); timers = [];
-    flights = []; flying = false;
+    flights = []; flying = false; show(false);
     g.clearRect(0, 0, innerWidth, innerHeight);
     root.classList.add('is-drawn', 'is-labelled');
     tools.forEach((el) => { el.classList.add('is-in'); el.style.removeProperty('--m'); });
