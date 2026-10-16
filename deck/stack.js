@@ -775,6 +775,7 @@
   const endFold = () => {
     if (!build || !build.back) return;
     build = null;
+    clearGhosts(); // slide 5's own panels stand exactly where their copies were
     slide.classList.replace('dt-rewind', 'dt-rewound');
     slide5?.classList.remove('dt-return', 'dt-await');
     if (slide5) window.deckRewound?.(slide5);
