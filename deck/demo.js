@@ -534,6 +534,7 @@
   };
   const layout = () => { sizeMink(); sizePic(); if (slide.classList.contains('on')) softenNet(true); };
   const start = (fromCore) => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     // Also warm direct #5 entry.
     window.warmDeckMedia(slide);
     running = true;
@@ -575,13 +576,25 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) videos.forEach((v) => v.pause()); });
+  let pausedForOverview = [];
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) {
+      pausedForOverview = [...videos, ...gradedVideos].filter((v) => v && !v.paused);
+      stop();
+    } else if (slide.classList.contains('on')) {
+      start(false);
+      pausedForOverview.forEach((v) => v.play().catch(() => {}));
+      pausedForOverview = [];
+    }
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
     if (!slide.classList.contains('on')) return;
     if (morph) { endMorph(); settledState(); td = -1; wait = 0; }
     layout();
     drawPic(now());
-    wake();
+    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on')) wake();
   });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays

@@ -794,7 +794,7 @@
     frame();
     raf = requestAnimationFrame(tick);
   };
-  const start = () => { if (running || still) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
+  const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on')) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(clearTimeout); timers = [];

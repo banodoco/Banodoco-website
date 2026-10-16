@@ -13,12 +13,16 @@
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let open = null;
 
-  const playing = (on) => clips.forEach((v) => (on && !still ? v.play().catch(() => {}) : v.pause()));
+  const overviewOpen = () => document.getElementById('overview')?.classList.contains('on');
+  const playing = (on) => clips.forEach((v) => (on && !still && !document.hidden && !overviewOpen() ? v.play().catch(() => {}) : v.pause()));
   clips.forEach((v) => v.addEventListener('loadeddata', () => {
-    if (slide.classList.contains('on') && !open && !still) v.play().catch(() => {});
+    if (slide.classList.contains('on') && !open && !still && !document.hidden && !overviewOpen()) v.play().catch(() => {});
   }));
-  new MutationObserver(() => playing(slide.classList.contains('on') && !open))
+  const syncMotion = () => playing(slide.classList.contains('on') && !open);
+  new MutationObserver(syncMotion)
     .observe(slide, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
 
   // The full-screen view, built once.
   const box = document.createElement('div');

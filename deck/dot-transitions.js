@@ -44,7 +44,7 @@
   // the rest fade away.
   const THREAD = '240,200,119', NODE = '255,217,145';
   const REST = 0.42; // what a lasting thread settles to, as a share of its fresh glow
-  let hyphae = [], blooms = [], nodes = [], netOn = false, netLast = 0, dpr = 1;
+  let hyphae = [], blooms = [], nodes = [], netOn = false, netRaf = 0, netLast = 0, dpr = 1;
   let vw = innerWidth, vh = innerHeight;
   // The settled network as geometry, so a resize can redraw it in place: { pts, w, a } threads and { x, y, a } nodes.
   let baked = [];
@@ -503,14 +503,27 @@
     || zones.some((z) => Math.abs(z.a - z.to) > 0.01)
     || hyphae.some((h) => h.age < 0 || !h.done || Math.abs(h.glow - target(h)) > 0.004 || !(h.keep || h.rest || h.after >= h.fade));
   const tick = (now) => {
+    netRaf = 0;
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { netOn = false; netLast = 0; return; }
     const dt = Math.min(0.05, (now - (netLast || now)) / 1000);
     netLast = now;
     step(dt);
     draw();
-    if (moving()) requestAnimationFrame(tick);
+    if (moving()) netRaf = requestAnimationFrame(tick);
     else { netOn = false; netLast = 0; }
   };
-  function wake() { if (!netOn) { netOn = true; netLast = 0; requestAnimationFrame(tick); } }
+  function wake() {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
+    if (!netOn) { netOn = true; netLast = 0; netRaf = requestAnimationFrame(tick); }
+  }
+  const syncNetMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) {
+      if (netRaf) cancelAnimationFrame(netRaf);
+      netRaf = 0; netOn = false; netLast = 0;
+    } else if (moving()) wake();
+  };
+  document.addEventListener('visibilitychange', syncNetMotion);
+  window.addEventListener('deck-overview', syncNetMotion);
   const clearNet = () => {
     hyphae = []; nodes = []; blooms = []; mark = null;
     baked = []; junctions = []; cover = new Float32Array(GX * GY);

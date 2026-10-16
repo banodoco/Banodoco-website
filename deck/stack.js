@@ -663,6 +663,7 @@
   let waitArrive = null, timers = [];
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     running = true;
     layout();
     slide.classList.remove('st-arrive');
@@ -716,7 +717,12 @@
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); else play(); });
+  const syncMotion = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (slide.classList.contains('on')) start(false);
+  };
+  document.addEventListener('visibilitychange', syncMotion);
+  window.addEventListener('deck-overview', syncMotion);
   window.deckOnResize(() => {
     if (!slide.classList.contains('on')) return;
     const interrupted = !!build || (!amb && !still);
@@ -735,7 +741,7 @@
       if (amb) stepTour(now());
       else { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c); draw(); }
     }
-    wake();
+    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on')) wake();
   });
   // Clicks on the stack stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.st-plane, .st-mink, .st-flag, .st-card, .st-hit')) e.stopPropagation(); });

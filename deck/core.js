@@ -321,7 +321,7 @@
   // One clock, ta, in seconds from the moment the network reaches the slide's node.
   const T = { rings: 0.05, ringDur: 1.1, core: 0.6, feed: 1.1, cons: 1.0, panels: 1.05, drop: 1.8, orbit: 2.2, end: 3.4 };
   const AMBIENT = 4.0;
-  let ta = 0, pace = 1, visits = 0, running = false, loop = 0, last = 0, timers = [];
+  let ta = 0, pace = 1, visits = 0, running = false, loop = 0, frameRaf = 0, last = 0, timers = [];
   let gifts = [], pend = [], plan = 0, pulses = [], flare = 0, nextGift = 0, nextUse = 0;
   let hot = null, pinned = null, touched = false, seedEl = null, labelled = 0;
 
@@ -713,21 +713,23 @@
   // ---- Coming and going -----------------------------------------------------------
   const frameLoop = (id) => {
     const tick = (now) => {
+      frameRaf = 0;
       if (id !== loop || !running) return;
-      requestAnimationFrame(tick);
+      frameRaf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, (now - (last || now)) / 1000);
       last = now;
       advance(dt);
       draw();
     };
-    requestAnimationFrame(tick);
+    frameRaf = requestAnimationFrame(tick);
   };
   const start = () => {
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     if (running || still || waiting || document.hidden || !slide.classList.contains('on') || !rings.length) return;
     running = true; last = 0;
     frameLoop(++loop);
   };
-  const stop = () => { running = false; loop++; };
+  const stop = () => { running = false; loop++; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
 
   const dropSeed = () => {
     if (seedEl) { seedEl.remove(); seedEl = null; }
