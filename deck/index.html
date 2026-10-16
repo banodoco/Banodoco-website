@@ -756,6 +756,13 @@
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); transition: width 0.5s ease; }
   .chrome button { background: none; border: 1px solid #ffffff22; color: var(--soft); font: inherit; padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; }
   .chrome button:hover { color: var(--ink); border-color: var(--gold); }
+  /* Previous / next: quiet gold rings either side of the counter. Outside the deck, so the click-thirds never see them. */
+  .chrome .navb { display: grid; place-items: center; width: 30px; height: 30px; margin: 0 -0.45rem; padding: 0; border: 0; border-radius: 50%; color: #e0ab5e; }
+  .chrome .navb i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgb(240 200 119 / .32); background: rgb(13 10 7 / .6); transition: border-color .25s ease, background-color .25s ease, color .25s ease; }
+  @media (hover: hover) { .chrome .navb:hover:not(:disabled) i { border-color: rgb(255 214 150 / .8); background: rgb(240 200 119 / .1); color: #ffd991; } }
+  .chrome .navb:focus-visible { outline: none; } .chrome .navb:focus-visible i { outline: 1px solid #f0c67e; outline-offset: 2px; }
+  .chrome .navb:disabled { cursor: default; opacity: .22; }
+  .chrome #count { min-width: 3.4em; text-align: center; font-variant-numeric: tabular-nums; }
 
   /* Overview: every title on one screen, to read the story straight through. */
   .overview { position: fixed; inset: 0; background: var(--bg); z-index: 3; overflow-y: auto; display: none;
@@ -798,8 +805,10 @@
     .body { font-size: 1.05rem; }
     .m-collage { aspect-ratio: 4 / 3; }
     .m-grid4 img { max-height: 200px; }
-    .chrome { gap: 0.5rem; padding: 0.8rem 12px; font-size: 0.75rem; }
+    .chrome { gap: 0.5rem; padding: 0.35rem 12px; font-size: 0.75rem; }
     .chrome button { padding: 0.4rem 0.55rem; }
+    .chrome .navb { width: 44px; height: 44px; margin: 0 -0.5rem; } /* a 44 px touch target round a smaller ring */
+    .chrome .navb i { width: 30px; height: 30px; }
     .chrome .bar { min-width: 8px; }
     .d-cards { gap: 0.5rem; }
     .d-cards > div { padding: 0.65rem 0.85rem; }
@@ -938,7 +947,7 @@
   </section>
 
   <section class="slide st-host" data-v="f">
-    <div class="st" data-astrid-stack role="group" aria-label="One stack, from the top: rendering, the timeline, effects, the agent's tools, and the models and runtime at the foundation, rooted in the community. Each layer's flag opens examples of what can be customised there."></div>
+    <div class="st" data-astrid-stack role="group" aria-label="One stack, from the top: rendering, editing, effects, the agent's tools, and the models and runtime at the foundation, rooted in the community. Each layer's flag opens examples of what can be customised there."></div>
     <div class="num">06<span class="act">Where it goes</span></div>
 <div class="split">
       <div>
@@ -1077,7 +1086,9 @@
 
 
 <div class="chrome">
+  <button id="prevBtn" class="navb" type="button" aria-label="Previous slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
   <span id="count">1 / 12</span>
+  <button id="nextBtn" class="navb" type="button" aria-label="Next slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
   <div class="bar"><i id="fill"></i></div>
   <button id="ovBtn" type="button">All titles (O)</button>
 </div>
@@ -1087,6 +1098,7 @@
   const ver = 'f'; // the deck is Version F; F-scoped styles and scripts key off html[data-ver="f"]
   let slides = [];
   const count = document.getElementById('count'), fill = document.getElementById('fill');
+  const prevBtn = document.getElementById('prevBtn'), nextBtn = document.getElementById('nextBtn');
   const ov = document.getElementById('overview'), list = document.getElementById('list');
   let i = 0;
 
@@ -1095,6 +1107,7 @@
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
     count.textContent = `${i + 1} / ${slides.length}`;
+    prevBtn.disabled = i === 0; nextBtn.disabled = i === slides.length - 1;
     fill.style.width = `${((i + 1) / slides.length) * 100}%`;
     history.replaceState(null, '', `${location.pathname}#${i + 1}`);
   };
@@ -1125,6 +1138,8 @@
   });
   document.getElementById('deck').addEventListener('click', (e) => go(i + (e.clientX < innerWidth / 3 ? -1 : 1)));
   document.getElementById('ovBtn').onclick = () => toggleOv();
+  prevBtn.onclick = () => go(i - 1);
+  nextBtn.onclick = () => go(i + 1);
   let tx = null;
   addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
   addEventListener('touchend', (e) => {
