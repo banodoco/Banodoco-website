@@ -168,7 +168,7 @@
   // Arriving from slide 1 the vanishing point starts at the collage, holds, then glides home.
   let shift = { x: 0, y: 0, age: 9 };
   let pointer = null, touched = false, hot = null, front = null, f = 0, shown = null, keyHover = null, keyLock = null, lastLit;
-  let featured = null, held = 0, live = 0, clock = 0, running = false, last = 0;
+  let featured = null, held = 0, live = 0, clock = 0, running = false, last = 0, frameRaf = 0;
   const tags = labels.map((el) => ({ el, item: null }));
 
   // Names and cards live in the lower screen: below the headline (floor) and
@@ -223,8 +223,9 @@
   };
 
   const frame = (now) => {
+    frameRaf = 0;
     if (!running) return;
-    requestAnimationFrame(frame);
+    frameRaf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - (last || now)) / 1000);
     last = now;
     if (!w || !h) return;
@@ -421,7 +422,9 @@
   const dissolve = () => {
     collageSlide.classList.add('vc-dissolve'); // both slides hold still while they cross
     slide.classList.add('sf-arrive');
-    setTimeout(() => { collageSlide.classList.remove('vc-dissolve'); slide.classList.remove('sf-arrive'); }, 900);
+    const clear = () => { collageSlide.classList.remove('vc-dissolve'); slide.classList.remove('sf-arrive'); };
+    const timer = setTimeout(clear, 900);
+    window.deckNav?.signal?.addEventListener('abort', () => { clearTimeout(timer); clear(); }, { once: true });
     resize(); aim();
     const base = stage.getBoundingClientRect();
     // The collage's centre, which the picture bursts outward from.
@@ -499,15 +502,16 @@
     running = true; last = 0;
     measure();
     if (arriving) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
-    requestAnimationFrame(frame);
+    else { glide = 0; boost = 0; since = 9; settled = 1; shift = { x: 0, y: 0, age: 9 }; motes = []; aim(); }
+    frameRaf = requestAnimationFrame(frame);
   };
-  const stop = () => { running = false; pointer = null; };
+  const stop = () => { running = false; pointer = null; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
   const watch = new MutationObserver((records) => {
     if (!slide.classList.contains('on')) { stop(); return; }
     if (running) return;
     const fromCollage = collageSlide && !collageSlide.classList.contains('on') && records.some((r) => r.target === collageSlide);
-    if (fromCollage && !still) dissolve();
-    start(true);
+    if (fromCollage && !still && !window.deckNav?.rest) dissolve();
+    start(!window.deckNav?.rest);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (collageSlide) watch.observe(collageSlide, { attributes: true, attributeFilter: ['class'] });

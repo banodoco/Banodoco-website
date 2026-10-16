@@ -635,6 +635,7 @@
   const easeIn = (k) => k * k * (3 - 2 * k) * k;
   const tween = (duration, ease, step, delay = 0) => {
     let raf = 0, stopped = false, resolve;
+    const signal = window.deckNav?.signal;
     const p = new Promise((r) => { resolve = r; });
     let t0 = null;
     const tick = (now) => {
@@ -642,10 +643,15 @@
       if (t0 === null) t0 = now + delay;
       const k = clamp((now - t0) / duration);
       if (now >= t0) step(ease(k));
-      if (k < 1) raf = requestAnimationFrame(tick); else resolve(true);
+      if (k < 1) raf = requestAnimationFrame(tick); else { stopped = true; resolve(true); }
     };
     raf = requestAnimationFrame(tick);
-    p.stop = () => { stopped = true; cancelAnimationFrame(raf); resolve(false); };
+    p.stop = () => { if (stopped) return; stopped = true; cancelAnimationFrame(raf); resolve(false); };
+    if (signal) {
+      signal.addEventListener('abort', p.stop, { once: true });
+      p.then(() => signal.removeEventListener('abort', p.stop));
+      if (signal.aborted) p.stop();
+    }
     return p;
   };
 
@@ -690,11 +696,19 @@
   const clearText = (s) => s && textOf(s).forEach((el) => { el.style.transform = ''; unmask(el); });
 
   // Idle: the node wanders a pixel or two; the text follows a beat behind.
+  let idleRaf = 0;
+  const canDrift = () => active() && !document.hidden && !document.getElementById('overview')?.classList.contains('on') && !still;
+  const syncIdle = () => {
+    if (!canDrift()) { if (idleRaf) cancelAnimationFrame(idleRaf); idleRaf = 0; last = 0; return; }
+    if (!idleRaf) { last = 0; idleRaf = requestAnimationFrame(idle); }
+  };
   const idle = (now) => {
-    requestAnimationFrame(idle);
+    idleRaf = 0;
+    if (!canDrift()) return;
     const dt = Math.min(0.05, (now - (last || now)) / 1000);
     last = now;
-    if (!active() || turning || !anchor || still) return;
+    idleRaf = requestAnimationFrame(idle);
+    if (turning || !anchor) return;
     t += dt;
     drift = { x: 1.8 * Math.sin(t * 0.45), y: 1.3 * Math.sin(t * 0.31 + 1) };
     const k = 1 - Math.exp(-1.6 * dt);
@@ -703,7 +717,9 @@
     place({ x: anchor.x + drift.x, y: anchor.y + drift.y });
     textOf(current).forEach((el) => { el.style.transform = `translate(${trail.x.toFixed(2)}px, ${trail.y.toFixed(2)}px)`; });
   };
-  requestAnimationFrame(idle);
+  document.addEventListener('visibilitychange', syncIdle);
+  addEventListener('deck-overview', syncIdle);
+  syncIdle();
 
   const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
 
@@ -844,7 +860,7 @@
     const tweens = [], timers = [], anims = [];
     let done = false;
     const finish = () => { if (!done) { done = true; turning = null; } };
-    turning = {
+    const transition = {
       cancel() {
         if (done) return;
         done = true;
@@ -861,6 +877,8 @@
         turning = null;
       },
     };
+    turning = transition;
+    window.deckNav?.signal?.addEventListener('abort', () => transition.cancel(), { once: true });
     const from = { x: (anchor ? anchor.x : 0) + drift.x, y: (anchor ? anchor.y : 0) + drift.y };
     clearText(prev);
     uncrown();
@@ -917,9 +935,13 @@
     const prev = current;
     current = next;
     endOpening();
-    if (!active() || still || !prev || !next || prev.classList.contains('out')) {
+    if (!active() || still || window.deckNav?.rest || !prev || !next || prev.classList.contains('out')) {
       settle(true);
-      if (active() && current && anchor && !still) { reveal(current, anchor, 200); sprawl(levelOf(current), anchor, 0.2); }
+      if (active() && current && anchor && !still) {
+        reveal(current, anchor, 200);
+        // On a back landing the ground already reaches at least this slide.
+        if (!window.deckNav?.rest) sprawl(levelOf(current), anchor, 0.2);
+      }
       return;
     }
     turn(prev, next);
@@ -934,6 +956,7 @@
     was = now;
     endOpening();
     settle(true, true);
+    syncIdle();
     if (now && current && anchor && !still) { reveal(current, anchor, 250); sprawl(levelOf(current), anchor, 0.25); }
   }).observe(html, { attributes: true, attributeFilter: ['data-ver'] });
 
