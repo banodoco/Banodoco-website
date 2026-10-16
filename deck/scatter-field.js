@@ -168,7 +168,7 @@
   // Arriving from slide 1 the vanishing point starts at the collage, holds, then glides home.
   let shift = { x: 0, y: 0, age: 9 };
   let pointer = null, touched = false, hot = null, front = null, f = 0, shown = null, keyHover = null, keyLock = null, lastLit;
-  let featured = null, held = 0, live = 0, clock = 0, running = false, last = 0, frameRaf = 0;
+  let featured = null, held = 0, live = 0, clock = 0, running = false, last = 0, frameRaf = 0, holdFor = 0;
   const tags = labels.map((el) => ({ el, item: null }));
 
   // Names and cards live in the lower screen: below the headline (floor) and
@@ -204,6 +204,7 @@
   };
   if (text) new ResizeObserver(measure).observe(text); // fonts landing reflow the headline
   window.deckOnResize(() => {
+    if (rewind) endRewind(); // its motes were placed for the old screen
     if (!slide.classList.contains('on')) return;
     const oldW = w, oldH = h;
     resize();
@@ -234,7 +235,7 @@
     // speed and acceleration), peaks gently about a second in, and fades out
     // over a long tail, so the heading drifts into place rather than turning.
     const g = shift.age * 1.8;
-    const k = shift.age < 0 ? 1 : (1 + g + g * g / 2) * Math.exp(-g);
+    const k = shift.k ?? (shift.age < 0 ? 1 : (1 + g + g * g / 2) * Math.exp(-g)); // k: set while gathering back
     cx += shift.x * k; cy += shift.y * k;
     cosR = Math.cos(roll); sinR = Math.sin(roll);
   };
@@ -254,6 +255,7 @@
   // backwards, whatever recedes past the far plane comes round close behind us.
   const travel = (o, dz) => {
     o.z -= dz;
+    if (rewind && dz < 0) return; // gathering back into slide 1, the field recedes into the distance and is put back after
     if (dz >= 0 && (o.z < NEAR || P.x < -80 || P.x > w + 80 || P.y < -80 || P.y > h + 80)) scatter(o, FAR - rnd() * 0.5);
     else if (o.z > FAR) scatter(o, NEAR + 0.3 + rnd() * 1.2);
   };
@@ -262,12 +264,14 @@
     frameRaf = 0;
     if (!running) return;
     if (!still) frameRaf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - (last || now)) / 1000) * (since < 2.5 ? (window.deckPace?.() || 1) : 1);
+    const raw = Math.min(0.05, (now - (last || now)) / 1000), paced = raw * pace();
+    const dt = since < 2.5 || rewind ? paced : raw; // the arrival, or the gathering back, is hurried with the turn
     last = now;
     if (!w || !h) return;
     const ease = (rate) => 1 - Math.exp(-rate * dt);
 
-    const wantSpeed = still ? 0 : front ? 0.08 : hot ? 0.04 : 1;
+    holdFor -= paced;
+    const wantSpeed = still ? 0 : front ? 0.08 : hot ? 0.04 : holdFor > 0 ? 0 : 1;
     speed += (wantSpeed - speed) * ease(2.5);
     boost *= Math.exp(-2.2 * dt); // scroll momentum settles back to the drift
     // The arrival rush: the burst past slide 1's films is quick, then it eases
@@ -275,7 +279,13 @@
     since += dt;
     if (since >= 2.5) window.deckEntryDone?.(slide);
     glide *= Math.exp(-(2.2 - 1.25 * (t => t * t * (3 - 2 * t))(clamp((since - 0.6) / 0.8))) * dt);
-    const dz = dt * 0.36 * (speed + boost + glide);
+    // Gathering back into slide 1 (rewind): the arrival's flight runs backwards, the field rushing away from us.
+    if (rewind) { // the vanishing point drifts back to the collage, coming to rest there as the motes land
+      rewind.t += dt;
+      const q = clamp(rewind.t / 1.15);
+      shift.k = rewind.k0 + (1 - rewind.k0) * q * q * q * (q * (q * 6 - 15) + 10);
+    }
+    const vel = rewind ? rewindSpeed() : speed + boost + glide, dz = dt * 0.36 * vel;
     clock += dt; held += dt; shift.age += dt;
     roll += dt * 0.025 * speed;
     // Steering stays where the mouse left it; no snap back to centre. It eases
@@ -332,7 +342,7 @@
       ctx.globalAlpha = clamp((0.09 + 0.6 * clamp(q.p / 1.6)) * q.a * kin * calm);
       const s = clamp(1.7 * q.p, 0.45, 4) * grain;
       // Near motes streak faintly outward: the sense of moving forward.
-      const sx = q.x, sy = q.y, streak = Math.min(90, q.p * q.p * Math.abs(speed + boost + glide) * 1.6);
+      const sx = q.x, sy = q.y, streak = Math.min(90, q.p * q.p * Math.abs(vel) * 1.6);
       if (streak > 1.4) {
         const k = streak / Math.hypot(sx - cx, sy - cy || 1);
         ctx.lineWidth = s * 0.7;
@@ -343,18 +353,25 @@
       const left = [];
       let ink = null;
       for (const m of motes) {
-        m.age += dt;
-        const go = clamp((m.age - m.delay) / 0.9); // 0: still part of the picture; 1: a star in the field
-        if (go > 0) m.z -= dz; // released, it flies with the field
+        let go;
+        if (rewind) { // the same flight, played backwards: each mote returns along it to its place in its tile
+          const t = rewind.A - rewind.t;
+          go = clamp((t - m.delay) / 0.9);
+          m.z = t > m.delay ? m.z0 - (flown(t) - flown(m.delay)) : m.z0;
+        } else {
+          m.age += dt;
+          go = clamp((m.age - m.delay) / 0.9); // 0: still part of the picture; 1: a star in the field
+          if (go > 0) m.z -= dz; // released, it flies with the field
+        }
         const q = place(m);
-        if (m.z < NEAR || (go >= 1 && (q.x < -60 || q.x > w + 60 || q.y < -60 || q.y > h + 60))) continue;
+        if (m.z < NEAR || (go >= 1 && (q.x < -60 || q.x > w + 60 || q.y < -60 || q.y > h + 60))) { if (rewind) left.push(m); continue; }
         const e = go * go * (3 - 2 * go);
         const star = clamp(1.7 * q.p, 0.45, 4) * grain;
         const mw = m.cw + (star - m.cw) * e, mh = m.ch + (star - m.ch) * e;
         const x = m.sx0 + (q.x - m.sx0) * e, y = m.sy0 + (q.y - m.sy0) * e;
         const glow = 1 + ((0.09 + 0.6 * clamp(q.p / 1.6)) - 1) * e;
-        const alpha = glow * q.a * clamp((5.6 - m.age) / 2);
-        if (alpha <= 0.01) continue;
+        const alpha = glow * q.a * (rewind ? smooth(clamp(rewind.t / 0.35)) : clamp((5.6 - m.age) / 2));
+        if (alpha <= 0.01) { if (rewind) left.push(m); continue; }
         ctx.globalAlpha = alpha;
         if (m.color !== ink) { ink = m.color; ctx.fillStyle = ink; }
         ctx.fillRect(x - mw / 2, y - mh / 2, mw, mh);
@@ -363,6 +380,7 @@
       motes = left;
       ctx.globalAlpha = 1;
     }
+    if (rewind) stepRewind();
     named.sort((a, b) => b.z - a.z);
     ctx.lineWidth = 1;
     for (const n of named) {
@@ -462,6 +480,14 @@
   const sampler = document.createElement('canvas');
   const sctx = sampler.getContext('2d', { willReadFrequently: true });
   let motes = [];
+  // The collage's centre, in the stage's px.
+  const middle = (base) => {
+    const boxes = [...collage.querySelectorAll('.vc-tile')].map((t) => t.getBoundingClientRect()).filter((r) => r.width);
+    return boxes.length ? {
+      x: (Math.min(...boxes.map((r) => r.left)) + Math.max(...boxes.map((r) => r.right))) / 2 - base.left,
+      y: (Math.min(...boxes.map((r) => r.top)) + Math.max(...boxes.map((r) => r.bottom))) / 2 - base.top,
+    } : { x: cx, y: cy };
+  };
   const dissolve = () => {
     collageSlide.classList.add('vc-dissolve'); // both slides hold still while they cross
     slide.classList.add('sf-arrive');
@@ -471,17 +497,17 @@
     resize(); aim();
     const base = stage.getBoundingClientRect();
     // The collage's centre, which the picture bursts outward from.
-    const boxes = [...collage.querySelectorAll('.vc-tile')].map((t) => t.getBoundingClientRect()).filter((r) => r.width);
-    const mid = boxes.length ? {
-      x: (Math.min(...boxes.map((r) => r.left)) + Math.max(...boxes.map((r) => r.right))) / 2 - base.left,
-      y: (Math.min(...boxes.map((r) => r.top)) + Math.max(...boxes.map((r) => r.bottom))) / 2 - base.top,
-    } : { x: cx, y: cy };
+    const mid = middle(base);
     // We fly into the collage: for a moment the field opens from its centre.
     shift = { x: 0, y: 0, age: 9 };
     aim();
     shift = { x: mid.x - cx, y: mid.y - cy, age: -0.6 };
     aim();
-    motes = [];
+    motes = tileMotes(base);
+  };
+  // Each tile, sampled into a grid of motes in its own colours, placed in the world where the camera sees it now.
+  const tileMotes = (base) => {
+    const motes = [];
     for (const tile of collage.querySelectorAll('.vc-tile')) {
       const r = tile.getBoundingClientRect(), v = tile.querySelector('video');
       if (!r.width || !r.height) continue;
@@ -522,7 +548,67 @@
       }
     }
     motes.sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : 0)); // draw colour by colour
+    return motes;
   };
+
+  // A step back to slide 1: the field gathers back into the collage's tiles. The 1→2 flight is played backwards: the
+  // field rushes away from us, its vanishing point drifting back to the collage, and each tile's motes return along
+  // their own paths into its grid; then the collage fades in over them and the field goes.
+  let rewind = null;
+  const pace = () => window.deckPace?.() || 1;
+  const smooth = (k) => k * k * (3 - 2 * k);
+  // How far the arrival's flight had carried a mote t seconds in (its speed 1 + the arrival's glide of 3.5, easing off).
+  const flown = (t) => 0.36 * (t + (3.5 / 2.2) * (1 - Math.exp(-2.2 * t)));
+  const rewindSpeed = () => {
+    const r = rewind, back = -(1 + 3.5 * Math.exp(-2.2 * Math.max(0, r.A - r.t)));
+    return r.v0 + (back - r.v0) * smooth(clamp(r.t / 0.35)); // from the drift it had, without a jolt
+  };
+  const regather = () => {
+    const signal = window.deckNav?.signal;
+    collageSlide.classList.add('vc-dissolve', 'dt-return', 'dt-await'); // the collage holds still, hidden, at full size
+    slide.classList.add('dt-rewind');
+    window.deckRewinding?.(collageSlide);
+    resize();
+    const k0 = shift.k ?? (shift.age < 0 ? 1 : (1 + shift.age * 1.8 + (shift.age * 1.8) ** 2 / 2) * Math.exp(-shift.age * 1.8));
+    const base = stage.getBoundingClientRect(), mid = middle(base);
+    shift = { x: 0, y: 0, k: 0 };
+    aim();
+    // Each mote is placed where the camera will see its tile once the vanishing point is back at the collage.
+    shift = { x: mid.x - cx, y: mid.y - cy, k: 1 };
+    aim();
+    motes = tileMotes(base);
+    motes.forEach((m) => { m.z0 = m.z; });
+    const A = Math.max(...motes.map((m) => m.delay + 0.9)), landed = A - Math.min(...motes.map((m) => m.delay));
+    shift.k = k0; // where the vanishing point is now (home, unless it is still drifting there)
+    aim();
+    rewind = { t: 0, k0, A, landed, v0: speed + boost + glide, kept: [...named, ...dust].map((o) => [o, o.x, o.y, o.z]), shown: false };
+    pointer = null; front = null; boost = 0; glide = 0; since = 9;
+    signal?.addEventListener('abort', () => endRewind(), { once: true });
+  };
+  const stepRewind = () => {
+    const r = rewind;
+    if (!r.shown && r.t >= r.landed) { // back in their tiles: the collage fades in over them, and the field goes
+      r.shown = true;
+      collageSlide.classList.remove('dt-await');
+      slide.classList.replace('dt-rewind', 'dt-rewound');
+    }
+    if (r.t >= r.landed + 0.7) endRewind();
+  };
+  const endRewind = () => {
+    if (!rewind) return;
+    const r = rewind;
+    rewind = null;
+    collageSlide.classList.remove('vc-dissolve', 'dt-return', 'dt-await');
+    slide.classList.replace('dt-rewind', 'dt-rewound');
+    for (const [o, x, y, z] of r.kept) { o.x = x; o.y = y; o.z = z; }
+    motes = [];
+    shift = { x: 0, y: 0, age: 9 };
+    stop();
+    window.deckRewound?.(collageSlide);
+  };
+
+  // Coming back from slide 3, the field holds still while the tools fly back to their dots, then drifts on.
+  root.hold = (s) => { speed = 0; holdFor = s; };
 
   // Where the field's dots and some of its dust are on screen right now, for
   // the next slide to pick up (slide 3 in F flies them into its chart).
@@ -548,9 +634,15 @@
     else { glide = 0; boost = 0; since = 9; settled = 1; shift = { x: 0, y: 0, age: 9 }; motes = []; aim(); }
     scheduleFrame();
   };
-  const stop = () => { running = false; pointer = null; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
+  const stop = () => { if (rewind) { endRewind(); return; } running = false; pointer = null; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
   const watch = new MutationObserver((records) => {
-    if (!slide.classList.contains('on')) { stop(); return; }
+    if (!slide.classList.contains('on')) {
+      if (rewind) return; // its own classes (and the turn's), while it gathers back
+      // A step back to slide 1: gather back into its tiles first.
+      const toCollage = collageSlide && collageSlide.classList.contains('on') && records.some((r) => r.target === slide);
+      if (running && toCollage && window.deckNav?.back && !still) regather(); else stop();
+      return;
+    }
     if (running) return;
     const fromCollage = collageSlide && !collageSlide.classList.contains('on') && records.some((r) => r.target === collageSlide);
     if (fromCollage && !still && !window.deckNav?.rest) dissolve();

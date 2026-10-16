@@ -180,6 +180,16 @@
   .slide.dt-leaving:not(.dt-release) { opacity: 1; transition: none; }
   .slide.dt-leaving > :not(.num):not(.split), .slide.dt-leaving > .split > :not(:first-child) { opacity: 0; transition: opacity .45s ease; }
   .slide.dt-entering > .split > :first-child { opacity: 0; }
+  /* A step back: the slide being left holds its picture on screen while it plays its hand-off in reverse (dt-rewind,
+     set by its own script, which swaps it for dt-rewound to let the slide fade); its text, drawn in as usual, stays
+     out of sight until the slide next comes on. The earlier slide's picture can wait, hidden, for that motion to come
+     back into it (dt-await), then fade in (dt-return). */
+  .slide.dt-rewind:not(.on) { opacity: 1; transition: none; }
+  .slide.dt-rewind > :not(.num):not(.split), .slide.dt-rewind > .split > :not(:first-child) { opacity: 1; transition: none; }
+  .slide.dt-rewind:not(.dt-leaving) > .split > :first-child, .slide.dt-rewound:not(.on) > .split > :first-child { opacity: 0; }
+  .slide.dt-return { z-index: 1; } /* its text over the picture coming back into it */
+  .slide.dt-return > :not(.num):not(.split), .slide.dt-return > .split > :not(:first-child) { transition: opacity .6s ease; }
+  .slide.dt-await > :not(.num):not(.split), .slide.dt-await > .split > :not(:first-child) { opacity: 0; transition: none; }
   /* In F the label moves into the text column, directly above the headline. */
   html[data-ver="f"] .split > :first-child > .num { margin-bottom: 1.1rem; }
   /* F's slide 2: text wide and centred on top, the field full width beneath. */
@@ -1405,7 +1415,7 @@
     if (pendingTurns.length) queueMicrotask(() => {
       if (turn || !pendingTurns.length) return;
       const next = pendingTurns.shift();
-      startTurn(i + next.dir, next.mode);
+      startTurn(i + next.dir, next.mode, true);
       hurry();
     });
   };
@@ -1413,7 +1423,15 @@
     if (turn && slides[turn.to] === slideEl && !turn.network) { turn.network = true; finishTurn(); hurry(); }
   };
   window.deckEntryDone = (slideEl) => {
-    if (turn && slides[turn.to] === slideEl && !turn.entry) { turn.entry = true; finishTurn(); hurry(); }
+    if (turn && slides[turn.to] === slideEl && !turn.entry && !turn.rewinding) { turn.entry = true; finishTurn(); hurry(); }
+  };
+  // A step back whose picture plays its hand-off in reverse: the slide being left claims the earlier slide's entry
+  // (deckRewinding) and reports it when the reverse has landed (deckRewound), so a queued turn waits for it.
+  window.deckRewinding = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl) { turn.rewinding = true; turn.entry = false; }
+  };
+  window.deckRewound = (slideEl) => {
+    if (turn && slides[turn.to] === slideEl && turn.rewinding) { turn.rewinding = false; turn.entry = true; finishTurn(); hurry(); }
   };
   // One viewport notification for the slide pictures. A phone's browser chrome can
   // report several sizes in one gesture; only lay out after the last one.
@@ -1436,7 +1454,8 @@
   addEventListener('resize', scheduleResize);
   window.visualViewport?.addEventListener('resize', scheduleResize);
 
-  const startTurn = (n, historyMode = 'push') => {
+  // stepped: an arrow, a click, a swipe or the back button, one slide at a time (never a jump).
+  const startTurn = (n, historyMode = 'push', stepped = false) => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
     if (initialized && to === i) return;
     // A slide never comes on behind the overview: its scene would start paused and miss its entry.
@@ -1447,15 +1466,19 @@
     turnController = new AbortController();
     // These two neighboring groups have their own approved reverse motion.
     const reversePair = (from === 4 && to === 3) || (from !== null && from >= 8 && to >= 8);
-    window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, signal: turnController.signal };
+    // Any other step back lands the earlier slide at rest while the picture plays its hand-off in reverse (back);
+    // a jump back (hash, overview, history, Home) just lands at rest.
+    const back = stepped && dir < 0 && to === from - 1 && !reversePair;
+    window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, back, signal: turnController.signal };
     const ceilingMs = from === null ? 18000 : 12000;
-    turn = { to, network: reduced, entry: reduced, ceiling: null, ceilingMs,
+    turn = { to, network: reduced, entry: reduced, ceiling: null, ceilingMs, rewinding: false,
       budget: from === null ? 6500 : turnBudgets[to] };
     document.documentElement.dataset.dir = String(dir);
     i = to;
     initialized = true;
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
     slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
+    slides[i].classList.remove('dt-rewound');
     if (!(i === 0 && document.documentElement.classList.contains('dt-intro'))) warmMedia(slides[i]);
     warmMedia(slides[i + 1]);
     count.textContent = `${i + 1} / ${slides.length}`;
@@ -1481,7 +1504,7 @@
     if (!slides.length || reduced) { go(i + dir, mode); return; }
     const target = i + pendingTurns.reduce((n, queued) => n + queued.dir, 0) + dir;
     if (target < 0 || target >= slides.length) return;
-    if (!turn && !pendingTurns.length) { startTurn(i + dir, mode); return; }
+    if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, true); return; }
     pendingTurns.push({ dir, mode });
     backlogDeadline = performance.now() + 1500;
     hurry();
