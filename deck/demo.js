@@ -528,8 +528,10 @@
     ticking = true;
     const dt = Math.min(0.05, (t - (last || t)) / 1000);
     last = t;
+    const morphing = morph ? (morph.back ? unmorph(t) : drawMorph(t)) : false;
+    if (!running) { ticking = false; return; } // the fold back into slide 4 has just landed and stopped the demo
     // Coming back from slide 6 the finished editor waits, hidden, for the stack to fold back into it (dt-await).
-    const busy = (morph ? (morph.back ? unmorph(t) : drawMorph(t)) : false) | stepBeats(slide.classList.contains('dt-await') || morph?.back ? 0 : dt) | stepMink(t);
+    const busy = morphing | stepBeats(slide.classList.contains('dt-await') || morph?.back ? 0 : dt) | stepMink(t);
     drawPic(t);
     ticking = false;
     if (busy || requested) { requested = false; raf = requestAnimationFrame(tick); }
