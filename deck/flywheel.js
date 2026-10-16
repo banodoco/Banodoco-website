@@ -54,7 +54,9 @@
   document.body.appendChild(cardsRoot);
   const AV = (n) => `<img src="../assets/cards/artcompute/${n}.jpg" alt="">`;
   const STRIP = (n) => `<i style="background-image:url(../assets/astrid/${n}-strip.jpg)"></i>`;
-  const SEAT = (cls = '') => `<span class="fw-astrid${cls}"><img src="../assets/astrid/first-light-anchor.jpg" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span><canvas class="fw-seat"></canvas></span>`;
+  // The small card's seat is a canvas; the fuller card's shows the same pose as a picture (painted on a canvas kept off
+  // the page, seatPaint), so the page holds one seat canvas however often slide 10 is visited.
+  const SEAT = (cls = '', full = false) => `<span class="fw-astrid${cls}"><img src="../assets/astrid/first-light-anchor.jpg" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span>${full ? '<img class="fw-seat" alt="">' : '<canvas class="fw-seat"></canvas>'}</span>`;
   // Astrid's logo, the app's 16 × 16 pixel mink (mink.js GRID, astrid-favicon.svg), as crisp SVG at any scale.
   const LOGO = (() => {
     let d = '';
@@ -75,7 +77,7 @@
     { name: 'Astrid', line: 'A new kind of video editor: describe what you want, and the agent reaches for everything the community has built.', href: 'https://astrid.haus/', label: 'Try Astrid →', crop: [0.17, 0.74, 0.86],
       media: SEAT(), face: `<span class="fw-face fw-face-mink">${LOGO}</span>`,
       full: { name: 'Astrid', line: 'A new kind of video editor: describe what you want, and the agent reaches for everything the community has built.',
-        door: 'Try Astrid →', href: 'https://astrid.haus/', stage: SEAT(' fw-astrid-full') } },
+        door: 'Try Astrid →', href: 'https://astrid.haus/', stage: SEAT(' fw-astrid-full', true) } },
     // Banodoco: the homepage's card, its live Discord digest (the captured snapshot, assets/cards/discord/fallback.json);
     // its icon is the Banodoco logo, the site's own B (assets/brand/mark-b-mask-96.png, as in the header's .logo .mark).
     { name: 'Banodoco', line: 'Banodoco is where the community actually lives, day to day.', href: 'https://discord.gg/NnFxGvx94b', label: 'Join →', crop: [0.17, 0.83, 0.42], focus: '.fw-dc-p .fw-avs',
@@ -848,13 +850,15 @@
       cx2.fillRect(i * u * d, j * u * d, u * d, u * d);
     }
   };
+  const seatPaint = document.createElement('canvas'); // off the page: the fuller card's seat is painted here
   const paintSeat = () => {
-    [[seat, seatCell()], [fullSeat, tall || short ? 2 : 3]].forEach(([cv, u]) => {
-      if (!cv) return;
-      const w = 23 * u, h = 20 * u;
+    [[seat, seatCell()], [fullSeat, tall || short ? 2 : 3]].forEach(([el, u]) => {
+      if (!el) return;
+      const w = 23 * u, h = 20 * u, cv = el === seat ? seat : seatPaint;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-      cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+      el.style.width = `${w}px`; el.style.height = `${h}px`;
       drawPose(cv.getContext('2d'), u, dpr);
+      if (cv === seatPaint) el.src = seatPaint.toDataURL();
     });
   };
   let flyCell = 0;
