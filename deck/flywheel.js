@@ -303,7 +303,7 @@
   // From slide 8 the core is already there: it glides up into the hub, the apps' communities drift out to become the
   // artists and the builders' groups, and the ring draws round the core as they arrive.
   const T_HAND = { lens: 0, ring: 0.85, art: 1.15, artT: 1.5, grpT: 1.55, grp: 1.4, link: 2.0, labels: 1.8, motes: 2.4, chips: 2.6 };
-  let T = T_FRESH, hand = null;
+  let T = T_FRESH, hand = null, minkAt = null; // minkAt: where she was last painted in the lens, where her flight leaves from
   const k01 = (t0, d) => clamp((ta - t0) / d);
   const stageOf = () => hosts.findIndex((s) => s.classList.contains('on'));
   // How far each card has come out (it follows the move from 9; drawing fresh on 10 or 11, it comes last).
@@ -484,7 +484,7 @@
     const hq = hand ? easeIO(clamp(ta / 1.25)) : 1;
     const ql = hand ? 1 : ease(k01(T.lens, 1.0));
     const lens = hq < 1 ? [lerp(hand.core.x, cur.lens[0], hq), lerp(hand.core.y, cur.lens[1], hq), lerp(hand.core.w, cur.lens[2], hq), lerp(hand.core.h, cur.lens[3], hq)] : cur.lens;
-    const la = hand ? 1 : lensA(), fq = hand ? 0 : flightQ();
+    const la = lensA(), fq = flightQ(); // the same on every path, however 9 was reached (the 8→9 hand-off included)
     if (ql > 0 && la > 0.003) {
       halo(lens[0], lens[1], lens[3] * 0.55, 0.12 * ql * bright * la);
       const ks = lens[2] / 112; // the lens's own scale: she shrinks into her corner
@@ -503,7 +503,7 @@
       }
       const u = hq < 0.5 ? hand.core.cell : cell;
       const mx = lerp(hand ? 3 * hand.k : 2 * ks, 2 * ks, hq), my = lerp(hand ? 6 * hand.k : 0, 6 * (lens[3] / 176), hq);
-      if (fq <= 0) paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u); // once she's off, she flies above the cards
+      if (fq <= 0) { paintMink(lens[0] + mx, lens[1] + my, hand ? 1 : smooth(k01(T.lens + 0.45, 0.5)), u); minkAt = [lens[0] + mx, lens[1] + my]; } // once she's off, she flies above the cards
     }
 
     // The core of the ecosystem, where Astrid was: a soft light with a few motes turning round it, and fine
@@ -662,11 +662,11 @@
     cardsRoot.classList.toggle('is-live', live);
     // The mink: from the lens on 9 she flies up and out into her card, crisp all the way; there she stays on top,
     // in her seat while the card is whole and in the middle of its icon when it's small.
-    const fq = hand ? 0 : flightQ();
+    const fq = flightQ();
     if (fq > 0.001 && begun && vis[1]) {
       const L0 = stages[0].lens, sb = seat.getBoundingClientRect(), v = vis[1];
       const tx = lerp(v.x, sb.left + sb.width / 2, v.o), ty = lerp(v.y, sb.top + sb.height / 2, v.o);
-      const sx = L0[0] + 2 * (L0[2] / 112), sy = L0[1] + 6 * (L0[3] / 176);
+      const sx = minkAt ? minkAt[0] : L0[0] + 2 * (L0[2] / 112), sy = minkAt ? minkAt[1] : L0[1] + 6 * (L0[3] / 176);
       const u = fq < 0.55 ? Math.max(tall ? 1 : 2, Math.round(2.45 * stages[0].k)) : seatCell();
       const other = Math.max(0, ...hov.filter((_, j) => j !== 1)); // never over a neighbour opened above her
       paintFly(lerp(sx, tx, fq), lerp(sy, ty, fq) - Math.sin(Math.PI * fq) * 60 * k, u, (fq < 0.999 ? 1 : chipQ(1)) * (1 - other));
@@ -777,7 +777,7 @@
     begun = false; armed = false; morph = null; motes = []; ta = 0; boost = 0; attach = { dir: 0, t0: 0 }; lastM = -1; pulsed = chips.map(() => false);
     hov.fill(0); hoT.fill(0); vis.fill(null);
     vids.forEach((v) => v && !v.paused && v.pause()); cardsRoot.inert = true; cardsRoot.classList.remove('is-live'); fly.style.opacity = '0';
-    T = T_FRESH; hand = null;
+    T = T_FRESH; hand = null; minkAt = null;
     flashes = { art: [0, 0, 0, 0, 0, 0, 0], grp: [0, 0, 0], ring: 0 };
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
     for (const key in labels) labels[key].style.opacity = '0';
@@ -868,7 +868,7 @@
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : stageOf() >= 0 && begun && start()));
-  addEventListener('resize', () => { if (stageOf() >= 0 && layout()) { lastM = -1; frame(); } });
+  addEventListener('resize', () => { if (stageOf() >= 0 && layout()) { lastM = -1; minkAt = null; frame(); } });
 
   // Clicks on the picture never turn the slide; clicks on the words still do.
   const inPicture = (x, y) => {
