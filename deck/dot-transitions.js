@@ -14,7 +14,8 @@
   const VER = 'f';
   const html = document.documentElement;
   const slides = [...document.querySelectorAll('.slide')];
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Reduced motion, or the viewer's own "animations off" switch (window.deckStill), which can change at any time.
+  let still = window.deckStill ? window.deckStill() : matchMedia('(prefers-reduced-motion: reduce)').matches;
   const active = () => html.dataset.ver === VER;
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const rnd = Math.random;
@@ -792,6 +793,7 @@
   };
   document.addEventListener('visibilitychange', syncIdle);
   window.addEventListener('deck-overview', syncIdle);
+  window.addEventListener('deck-motion', () => { still = window.deckStill(); syncIdle(); });
   syncIdle();
 
   const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
