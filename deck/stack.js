@@ -103,6 +103,12 @@
     models: `<span class="st-comfy">ComfyUI workflows</span><span class="st-mod">${I.cube}Wan</span><i class="st-link"></i><span class="st-mod">${I.cube}LTX-Video</span><i class="st-link"></i><span class="st-mod">${I.cube}Qwen Image</span><span class="st-gpu">${I.cloud}local GPU or cloud</span>`,
   };
 
+  // In Chromium the world is laid out at its size on screen (CSS zoom) rather than at the scene's size and scaled down:
+  // a plane under the perspective is rasterized at its laid-out size, so scale(k) had each rasterized at up to 1/k its
+  // pixels on screen. Every length in the world scales by k, its perspective included, so the picture is the same.
+  // WebKit lays a zoomed world out differently on a phone (its smallest type is held up, and the planes shift), so
+  // there, and in other engines, the world is still scaled.
+  const ZOOM = /\bChrome\//.test(navigator.userAgent);
   const world = document.createElement('div');
   world.className = 'st-world';
   world.style.perspective = `${PERSP}px`;
@@ -245,7 +251,11 @@
     view.k = k;
     view.ox = (Rg.l + Rg.r) / 2 - ((box.l + box.r) / 2) * k;
     view.oy = (Rg.t + Rg.b) / 2 - ((box.t + box.b) / 2) * k;
-    world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
+    if (ZOOM) {
+      const kz = +k.toFixed(4);
+      world.style.zoom = String(kz);
+      world.style.transform = `translate(${(+view.ox.toFixed(1) / kz).toFixed(4)}px, ${(+view.oy.toFixed(1) / kz).toFixed(4)}px)`;
+    } else world.style.transform = `translate(${view.ox.toFixed(1)}px, ${view.oy.toFixed(1)}px) scale(${k.toFixed(4)})`;
     dpr = Math.min(2, devicePixelRatio || 1);
     const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
     if (cv.width !== pixelW || cv.height !== pixelH) { cv.width = pixelW; cv.height = pixelH; }
