@@ -12,6 +12,11 @@
   const clips = tiles.map((tile) => tile.querySelector('video'));
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let open = null;
+  const isPlaceholder = (text) => /^\s*\[/.test(text || '');
+  tiles.forEach((tile) => {
+    const caption = tile.querySelector('.vc-cap');
+    if (caption && isPlaceholder(caption.textContent)) caption.hidden = true;
+  });
 
   const overviewOpen = () => document.getElementById('overview')?.classList.contains('on');
   const playing = (on) => clips.forEach((v) => (on && !still && !document.hidden && !overviewOpen() ? v.play().catch(() => {}) : v.pause()));
@@ -38,6 +43,8 @@
   const frame = box.querySelector('.vc-frame');
   const film = frame.querySelector('video');
   const title = box.querySelector('.vc-title');
+  const note = box.querySelector('.vc-note');
+  if (isPlaceholder(note.textContent)) note.hidden = true;
 
   // Largest rect of the tile's shape that fits the screen, a little above centre.
   const fit = (ratio) => {
@@ -71,7 +78,7 @@
     if (source) loadFilm();
     else if (window.warmDeckMedia) window.warmDeckMedia(slide).then(loadFilm);
     film.style.objectPosition = getComputedStyle(clip).objectPosition;
-    title.textContent = tile.dataset.title;
+    title.textContent = isPlaceholder(tile.dataset.title) ? '' : tile.dataset.title;
     playing(false);
     box.classList.add('is-on');
     frame.getBoundingClientRect(); // commit the starting pose before growing
