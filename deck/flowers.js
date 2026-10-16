@@ -598,13 +598,13 @@
     if (apps.length && tc >= apps[0].T + 0.05) root.classList.add('is-counting'); // fades in as the first reach rolls up
   };
 
-  const advance = (dt) => { ta += dt; };
+  const advance = (dt) => { ta += dt; if (ta - off >= END) window.deckEntryDone?.(slide); };
 
   // ---- Coming and going ----------------------------------------------------------------------------------------
   const tick = (now) => {
     raf = 0;
     if (!running) return;
-    const dt = Math.min(0.05, (now - (last || now)) / 1000);
+    const dt = Math.min(0.05, (now - (last || now)) / 1000) * (window.deckPace?.() || 1);
     last = now;
     advance(dt);
     draw(); labels();
@@ -614,7 +614,7 @@
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     gen++;
-    timers.forEach(clearTimeout); timers = [];
+    timers.forEach(window.deckCancelLater); timers = [];
     ta = 0; off = 0; from = null; handed = false; counted = '';
     root.classList.remove('is-labelled', 'is-counting');
     dots.forEach((d) => { delete d.src; delete d.handed; });
@@ -634,12 +634,12 @@
     waiting = new MutationObserver(() => { if (!html.classList.contains('dt-intro')) { waiting.disconnect(); waiting = null; go(); } });
     waiting.observe(html, { attributes: true, attributeFilter: ['class'] });
   };
-  const quiet = () => timers.push(setTimeout(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
+  const quiet = () => timers.push(window.deckLater(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
   const begin = () => {
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); if (!still) { html.classList.add('fl-quiet'); start(); } return; }
+    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); window.deckEntryDone?.(slide); if (!still) { html.classList.add('fl-quiet'); start(); } return; }
     ta = -0.15;
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), 900));
+    timers.push(window.deckLater(() => root.classList.add('is-labelled'), 900));
     quiet();
     start();
   };
@@ -661,7 +661,7 @@
     window.AstridPays.hide();
     ta = 0;
     html.classList.add('fl-quiet');
-    timers.push(setTimeout(() => root.classList.add('is-labelled'), 1400));
+    timers.push(window.deckLater(() => root.classList.add('is-labelled'), 1400));
     start();
   };
   const paysHost = document.querySelector('[data-astrid-pays]');
@@ -679,11 +679,11 @@
       const snap = fromPays && window.AstridPays && window.AstridPays.snapshot();
       if (snap) { handoff(snap); return; }
       layout(); draw(); armed = true;
-      timers.push(setTimeout(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
+      timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
       armed = false; gen++; stop(); html.classList.remove('fl-quiet');
       if (waiting) { waiting.disconnect(); waiting = null; }
-      timers.push(setTimeout(() => { if (!slide.classList.contains('on')) reset(); }, 700));
+      timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) reset(); }, 700));
     }
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
@@ -702,7 +702,7 @@
       gen++;
       if (waiting) { waiting.disconnect(); waiting = null; }
       armed = false;
-      timers.forEach(clearTimeout); timers = [];
+      timers.forEach(window.deckCancelLater); timers = [];
       from = null; off = 0;
       ta = Math.max(ta, END + 0.2);
       root.classList.add('is-labelled');
