@@ -296,6 +296,81 @@
     else { g.clearRect(0, 0, innerWidth, innerHeight); flying = false; }
   };
 
+  // ---- Going back ----------------------------------------------------------
+  // A step back to slide 2: the arrival from the field, played backwards. Each logo melts back into its orb, which
+  // flies back along a curve to one of the field's dots, shrinking and taking on its colour as it goes; the dust
+  // lifts off the axes as they fade and flies back out into the field, which waits, still, for its dots.
+  const pace = () => window.deckPace?.() || 1;
+  let backs = [], backT = 0, backLast = 0, backRaf = 0;
+  const unfly = (now) => {
+    backRaf = 0;
+    const dt = Math.min(0.05, (now - (backLast || now)) / 1000);
+    backLast = now;
+    backT += dt * pace();
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    backs = backs.filter((f) => {
+      const t = f.end - backT; // the arrival's own clock, running backwards
+      if (f.dot) {
+        const m = clamp((t - f.delay - f.dur) / MORPH);
+        if (m > 0) { // still landed: the logo resolving back into the orb
+          f.el.style.setProperty('--m', smooth(m).toFixed(3));
+          orb(f.x1, f.y1, f.r1, f.c1, 0.92 * (1 - smooth(clamp(m / 0.8))), 0.35 * (1 - smooth(m)));
+          return true;
+        }
+      }
+      const k = clamp((t - f.delay) / f.dur);
+      if (k <= 0) return false; // back where it came from
+      const { x, y, r, c } = along(f, k);
+      let a = f.dot ? 0.92 * Math.min(1, k * 6) : 0.75 * clamp(1 - (t - 0.95) / 0.7) * smooth(clamp(k * 5));
+      orb(x, y, r, c, a, f.dot ? a * 0.35 : 0);
+      return true;
+    });
+    if (backs.length) backRaf = requestAnimationFrame(unfly);
+    else endDepart();
+  };
+  const endDepart = () => {
+    if (backRaf) cancelAnimationFrame(backRaf);
+    backRaf = 0; backs = [];
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    if (!slide.classList.contains('on')) reset();
+  };
+  const depart = () => {
+    const signal = window.deckNav?.signal;
+    signal?.addEventListener('abort', endDepart, { once: true });
+    field.hold?.(2.2);
+    // Once the field has drawn a frame, its dots are where they will be met.
+    requestAnimationFrame(() => {
+      if (signal?.aborted || slide.classList.contains('on') || !fieldSlide.classList.contains('on')) return;
+      const snap = field.snapshot();
+      size();
+      const targets = snap.named.slice().sort((a, b) => b.p - a.p), spare = snap.dust.slice();
+      const curve = (x0, y0, x1, y1) => {
+        const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, d = Math.hypot(x1 - x0, y1 - y0);
+        const bend = (rnd() < 0.5 ? -1 : 1) * d * (0.12 + rnd() * 0.25);
+        return { cx: mx + ((y0 - y1) / (d || 1)) * bend, cy: my + ((x1 - x0) / (d || 1)) * bend };
+      };
+      backs = [];
+      tools.forEach((el, i) => {
+        const p = disc(el, 0);
+        const src = targets[i] || spare.pop() || { x: rnd() * innerWidth, y: innerHeight * (0.6 + 0.3 * rnd()), color: '#e0ab5e', r: 2 };
+        const f = { el, x0: src.x, y0: src.y, ...p, ...curve(src.x, src.y, p.x1, p.y1), r0: Math.max(1.2, src.r || 2), c0: rgb(src.color), c1: tint(el), delay: 0, dur: 0.95 + rnd() * 0.35, dot: true };
+        f.end = f.dur + MORPH; // every logo starts turning back at once, as the chart fades
+        backs.push(f);
+      });
+      const box = root.querySelector('.gp-axes').getBoundingClientRect();
+      const along_ = (k) => (k < 0.5
+        ? { x: box.left + box.width * (0.04 + 0.92 * (k * 2)), y: box.top + box.height / 2 }
+        : { x: box.left + box.width / 2, y: box.top + box.height * (0.04 + 0.92 * ((k - 0.5) * 2)) });
+      spare.slice(0, 150).forEach((d, i, all) => {
+        const p = along_((i + rnd() * 0.6) / all.length);
+        backs.push({ x0: d.x, y0: d.y, x1: p.x, y1: p.y, ...curve(d.x, d.y, p.x, p.y), r0: 1.1, r1: 1.1, c0: rgb(d.color), c1: [224, 171, 94],
+          delay: rnd() * 0.25, dur: 0.75 + rnd() * 0.35, dot: false, end: 1.65 });
+      });
+      backT = 0; backLast = 0;
+      backRaf = requestAnimationFrame(unfly);
+    });
+  };
+
   // Act only when the slide itself comes or goes, not on every class change.
   let wasOn = slide.classList.contains('on');
   const watch = new MutationObserver((records) => {
@@ -305,10 +380,13 @@
     if (!on) {
       clearInterval(asking);
       focus(null);
+      const toField = fieldSlide && fieldSlide.classList.contains('on') && field.snapshot && window.deckNav?.back && !still && tools.every((el) => el.classList.contains('is-in'));
+      if (toField) { timers.forEach(clearTimeout); timers = []; flights = []; depart(); return; }
       flights = flights.filter((f) => !f.dot);
       later(700, () => { if (!slide.classList.contains('on')) reset(); });
       return;
     }
+    if (backs.length || backRaf) endDepart();
     const fromField = fieldSlide && !fieldSlide.classList.contains('on') && records.some((r) => r.target === fieldSlide);
     if (window.deckNav?.rest) enter();
     else fromField ? arrive() : begin();
