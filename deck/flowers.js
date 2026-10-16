@@ -286,11 +286,14 @@
     const h1 = slide.querySelector('h1'), num = slide.querySelector('.num');
     const th = rel(h1.getBoundingClientRect()), tn = rel(num.getBoundingClientRect());
     textBox = { l: Math.min(th.l, tn.l), t: Math.min(th.t, tn.t), r: Math.max(th.r, tn.r), b: th.b };
-    // The counter's size, to stack Astrid and it under the text.
+    // The counter's size, to stack Astrid and it under the text. Its type, Astrid's name's and the app names' are all
+    // set first and then measured together: one layout, not one for each.
     count.style.fontSize = `${(small ? 13 : 16 * k).toFixed(1)}px`;
-    const ch = count.offsetHeight;
     coreLabel.style.fontSize = `${Math.max(small ? 13 : 14, 21 * k).toFixed(1)}px`;
-    const lh = coreLabel.offsetHeight;
+    measure.style.fontSize = `${(small ? 12.5 : Math.max(13, 16.5 * k)).toFixed(1)}px`;
+    measure.textContent = 'Ag';
+    const ch = count.offsetHeight, lh = coreLabel.offsetHeight;
+    labelH = measure.offsetHeight;
     const bottom = small ? H - 100 : H <= 500 ? H - 86 : H - 78 * k; // on a phone, clear of the deck's footer (name, progress, titles)
     if (!small) {
       // Astrid's column: its name, the lens, then the counter, in the space under the text.
@@ -313,9 +316,6 @@
     lim = small ? { r: W - 14, t: textBox.b + 18, b: countBox.t - 18 } : { r: W - 48 * k, t: 34 * k, b: H - 158 * k };
     coreBox = { l: core.x - core.w / 2, r: core.x + core.w / 2, t: core.y - core.h / 2 - lh - 12 * k, b: core.y + core.h / 2 };
     S = { x: core.x + core.w / 2, y: core.y }; // the door the apps leave by
-    measure.style.fontSize = `${(small ? 12.5 : Math.max(13, 16.5 * k)).toFixed(1)}px`;
-    measure.textContent = 'Ag';
-    labelH = measure.offsetHeight;
     widths = new Map();
     pool.forEach((p) => { p.el.style.fontSize = measure.style.fontSize; p.text = ''; p.o = -1; p.el.style.opacity = '0'; });
     // The world before any app reaches it: sparse, fading in from Astrid outwards.
