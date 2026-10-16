@@ -25,6 +25,16 @@
   const msgs = root.querySelector('.as-msgs');
   const typed = root.querySelector('.as-typed');
   const videos = [...root.querySelectorAll('.as-media video')];
+  const gradedVideos = videos.map((video, i) => {
+    if (i === 0) return null;
+    const graded = document.createElement('video');
+    graded.src = new URL(video.getAttribute('src').replace('.mp4', '-graded.mp4'), document.baseURI).href;
+    graded.muted = true; graded.playsInline = true; graded.preload = 'auto';
+    graded.setAttribute('aria-hidden', 'true');
+    root.querySelector('.as-media').appendChild(graded);
+    graded.load();
+    return graded;
+  });
   const pic = root.querySelector('.as-pic'), pg = pic.getContext('2d');
   const tl = root.querySelector('.as-tl');
   const timeEl = root.querySelector('.as-time');
@@ -155,7 +165,6 @@
     n.putImageData(d, 0, 0);
   }
   let grain = null, grainAt = 0, gx = 0, gy = 0, pdpr = 1;
-  const LOOKF = 'saturate(1.45) contrast(1.1) sepia(.18) brightness(.98)';
   const sizePic = () => {
     const b = pic.getBoundingClientRect();
     pdpr = Math.min(2, devicePixelRatio || 1);
@@ -178,7 +187,9 @@
       const sx = dx + dw * view.sweep, pulse = 0.5 + 0.5 * Math.sin(t / 260);
       pg.save();
       pg.beginPath(); pg.rect(dx, dy, sx - dx, dh); pg.clip();
-      pg.filter = LOOKF; pg.drawImage(src, dx, dy, dw, dh); pg.filter = 'none';
+      const graded = gradedVideos[view.i];
+      // Cross-draw the pregraded twin through the same animated sweep mask.
+      if (graded && graded.readyState >= 2) pg.drawImage(graded, dx, dy, dw, dh);
       pg.globalCompositeOperation = 'soft-light';
       const cg = pg.createLinearGradient(dx, dy, dx + dw, dy + dh);
       cg.addColorStop(0, `rgba(255,120,60,${(0.42 + 0.12 * pulse).toFixed(3)})`); cg.addColorStop(1, `rgba(120,90,220,${(0.32 + 0.1 * pulse).toFixed(3)})`);
@@ -209,21 +220,35 @@
       }
     }
   };
-  const showStill = (i) => { view.mode = 'still'; view.i = i; view.seq = -1; videos.forEach((v) => v.pause()); };
+  const showStill = (i) => { view.mode = 'still'; view.i = i; view.seq = -1; videos.forEach((v) => v.pause()); gradedVideos.forEach((v) => v?.pause()); };
   const playFrom = (seqT, rate) => { view.mode = 'play'; view.seq = seqT; view.rate = rate; view.i = -2; };
   const stepPlay = (dt) => {
-    if (view.mode !== 'play') return;
+    if (view.mode !== 'play') { gradedVideos.forEach((v) => v?.pause()); return; }
     view.seq += dt * view.rate;
     if (view.seq >= 28) view.seq = 0;
     const i = view.seq < 8 ? 0 : view.seq < 20 ? 1 : 2, local = view.seq - CLIPS[i].at;
     if (view.i !== i) {
       videos.forEach((v, j) => { if (j !== i) v.pause(); });
+      gradedVideos.forEach((v, j) => { if (v && j !== i) v.pause(); });
       view.i = i;
       const v = videos[i];
       try { v.currentTime = local; } catch (e) { /* not loaded */ }
       v.playbackRate = view.rate;
+      const graded = gradedVideos[i];
+      if (graded) {
+        try { graded.currentTime = local; } catch (e) { /* not loaded */ }
+        graded.playbackRate = view.rate;
+      }
     }
     if (videos[i].paused) videos[i].play().catch(() => {});
+    const graded = gradedVideos[i];
+    if (graded) {
+      graded.playbackRate = view.rate;
+      if (graded.readyState >= 1 && Math.abs(graded.currentTime - videos[i].currentTime) > 0.1) {
+        try { graded.currentTime = videos[i].currentTime; } catch (e) { /* not loaded */ }
+      }
+      if (graded.paused) graded.play().catch(() => {});
+    }
     headTo(view.seq, true);
   };
 
@@ -260,6 +285,7 @@
     fxEls.forEach((el) => el.classList.remove('on'));
     view.mode = 'none'; view.i = -1; view.seq = -1; view.title = -1; view.colour = false; view.sweep = 0; total = 0;
     videos.forEach((v) => v.pause());
+    gradedVideos.forEach((v) => v?.pause());
     headTo(0, true);
   };
   const beatTimes = (b) => {
@@ -338,6 +364,7 @@
     fxEls.forEach((el) => el.classList.add('on'));
     total = 28; view.mode = 'play'; view.i = 1; view.seq = 12; view.colour = true; view.sweep = 1;
     try { videos[1].currentTime = 4; } catch (e) { /* not loaded */ }
+    try { gradedVideos[1].currentTime = 4; } catch (e) { /* not loaded */ }
     headTo(12, true); stepHead(0);
   };
 
@@ -540,7 +567,7 @@
   const start = (fromCore) => {
     running = true;
     layout();
-    if (still) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
+    if (still) { settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); return; }
     clearAll();
     td = 0; wait = 0;
     const snap = fromCore && window.AstridCore && window.AstridCore.snapshot();
@@ -556,6 +583,7 @@
     mink.seq = null; mink.hover = null;
     Object.assign(mink, { pose: 'profile', lift: 0, glint: 0 });
     videos.forEach((v) => v.pause());
+    gradedVideos.forEach((v) => v?.pause());
   };
   window.AstridDemo = { turn, root };
 
