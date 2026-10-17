@@ -19,6 +19,7 @@
   const slide = root.closest('.slide');
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const lerp = (a, b, q) => a + (b - a) * q;
   const ease = (k) => 1 - Math.pow(1 - k, 3);
@@ -792,7 +793,7 @@
   };
   const clearTimers = () => { timers.forEach(window.deckCancelLater); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
-    if (motionBlocked()) { pendingStart = from5; return; }
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || (window.deckStill?.() && !motionOff())) { pendingStart = from5; return; }
     window.warmDeckMedia?.(slide);
     pendingStart = null;
     running = true;
@@ -800,11 +801,11 @@
     slide.classList.remove('st-arrive');
     softenNet(true);
     flags.forEach((f) => { f.tabIndex = 0; });
-    if (still || window.deckNav?.rest) {
+    if (motionOff() || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
       window.deckEntryDone?.(slide);
       // Landing at rest: the first card is open as it lands (on a wider screen, once the words are in).
-      if (!still) { amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake(); }
+      if (!motionOff()) { amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake(); }
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
@@ -823,7 +824,7 @@
     }
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(window.deckLater(go, 1300))); // if the network never says it has arrived
   };
-  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
+  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !motionOff() && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
   const stop = () => {
     running = false;
     paused = false; pausedTime = 0; pendingStart = null; pausedVideos = [];
@@ -912,18 +913,19 @@
     wasOn = on;
     endFold();
     if (!on) {
-      const to5 = !!slide5 && slide5.classList.contains('on') && window.deckNav?.back && !still && running && !paused && amb && !build;
+      const to5 = !!slide5 && slide5.classList.contains('on') && window.deckNav?.back && !motionOff() && running && !paused && amb && !build;
       if (to5) { fold(); return; }
       stop(); timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return;
     }
-    const from5 = !still && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
+    const from5 = !motionOff() && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
     start(from5);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
     if (motionBlocked() && build?.back) endFold(); // a reverse never waits behind the overview
-    if (motionBlocked()) {
+    if (motionOff() && slide.classList.contains('on')) { stop(); start(false); }
+    else if (motionBlocked()) {
       if (!running || paused) return;
       pausedAt = performance.now(); paused = true;
       if (raf) cancelAnimationFrame(raf);
@@ -931,6 +933,10 @@
       pausedVideos = [video].filter((v) => v && !v.paused);
       pausedVideos.forEach((v) => v.pause());
     } else if (slide.classList.contains('on')) {
+      if (running && !amb && !paused && motionOff() === false) {
+        amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake();
+        return;
+      }
       // An entry deferred behind the overview has no scene to resume yet.
       if (pendingStart !== null) { start(pendingStart); return; }
       if (!paused) return;
@@ -949,7 +955,7 @@
   window.deckOnResize(() => {
     endFold();
     if (!slide.classList.contains('on')) return;
-    const interrupted = !amb && (!!build || !still); // once the tour has begun (even as the build finishes), it carries on
+    const interrupted = !amb && (!!build || !motionOff()); // once the tour has begun (even as the build finishes), it carries on
     layout();
     softenNet(true);
     if (interrupted) {

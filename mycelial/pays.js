@@ -17,6 +17,7 @@
   const canvas = root.querySelector('.pa-canvas');
   const g = canvas.getContext('2d');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const lerp = (a, b, q) => a + (b - a) * q;
@@ -456,7 +457,7 @@
   const begin = () => {
     reset();
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); window.deckEntryDone?.(slide); if (!still) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
+    if (motionOff() || window.deckNav?.rest) { ta = 9; nextPulse = ta + 0.3; root.classList.add('is-labelled'); draw(); window.deckEntryDone?.(slide); if (!motionOff()) { document.documentElement.classList.add('pa-quiet'); start(); } return; }
     ta = -0.2; nextPulse = FIRST;
     timers.push(window.deckLater(() => { if (slide.classList.contains('on')) document.documentElement.classList.add('pa-quiet'); }, 150));
     timers.push(window.deckLater(() => root.classList.add('is-labelled'), 1400));
@@ -475,7 +476,7 @@
   const showStackMink = () => { if (stMink) { stMink.style.visibility = ''; stMink = null; } };
   const flyIn = () => {
     const el = stackSlide && stackSlide.querySelector('.st-mink');
-    if (still || !el) return false;
+    if (motionOff() || !el) return false;
     const r = el.getBoundingClientRect(), u0 = Math.round(r.width / 23);
     if (!r.width || !u0 || getComputedStyle(el).opacity === '0') return false;
     reset();
@@ -570,7 +571,7 @@
       if (fromStack && flyIn()) return;
       reset(); layout(); draw(); enter();
     } else {
-      const to6 = stackSlide && stackSlide.classList.contains('on') && window.deckNav?.back && !still && running && !fly && lens && ta >= END;
+      const to6 = stackSlide && stackSlide.classList.contains('on') && window.deckNav?.back && !motionOff() && running && !fly && lens && ta >= END;
       if (to6) { slide.classList.remove('pa-arrive'); armed = false; if (unfly()) return; }
       armed = false; stop(); fly = null; showStackMink(); slide.classList.remove('pa-arrive');
       document.documentElement.classList.remove('pa-quiet');
@@ -580,7 +581,8 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (stackSlide) watch.observe(stackSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) { endUnfly(); stop(); }
+    if (motionOff() && slide.classList.contains('on')) { endUnfly(); stop(); begin(); }
+    else if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { endUnfly(); stop(); }
     else if (slide.classList.contains('on') && ta > 0) start();
   };
   document.addEventListener('visibilitychange', syncMotion);

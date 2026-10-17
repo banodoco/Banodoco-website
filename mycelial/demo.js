@@ -5,6 +5,7 @@
   if (!root || !M) return;
   const slide = root.closest('.slide');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
@@ -377,9 +378,12 @@
     msgs.querySelectorAll('.as-in').forEach((el) => el.classList.remove('as-in'));
     anchorEls.forEach((el) => { el.style.opacity = ''; el.classList.add('is-ready', 'is-animated'); kind(el, 'video'); });
     fxEls.forEach((el) => el.classList.add('on'));
-    total = 28; view.mode = 'play'; view.i = 1; view.seq = 12; view.colour = true; view.sweep = 1;
-    try { videos[1].currentTime = 4; } catch (e) { /* not loaded */ }
-    try { gradedVideos[1].currentTime = 4; } catch (e) { /* not loaded */ }
+    total = 28; view.colour = true; view.sweep = 1;
+    if (still) {
+      view.mode = 'play'; view.i = 1; view.seq = 12;
+      try { videos[1].currentTime = 4; } catch (e) { /* not loaded */ }
+      try { gradedVideos[1].currentTime = 4; } catch (e) { /* not loaded */ }
+    } else showStill(1);
     headTo(12, true); stepHead(0);
   };
 
@@ -584,18 +588,18 @@
   const layout = () => { sizeMink(); sizePic(); measureTl(); placeHead(); if (slide.classList.contains('on')) softenNet(true); };
   new ResizeObserver((es) => { for (const e of es) if (e.target === tl) { measureTl(e.contentRect.width); placeHead(); } }).observe(tl);
   const start = (fromCore) => {
-    if (motionBlocked()) { pendingStart = fromCore; return; }
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || (window.deckStill?.() && !motionOff())) { pendingStart = fromCore; return; }
     pendingStart = null;
     root.classList.remove('as-unmorph', 'is-morphing', 'is-minkless'); // folded away on the way back to slide 4
     // Also warm direct #5 entry.
     window.warmDeckMedia(slide);
     running = true;
     layout();
-    if (still || window.deckNav?.rest) {
+    if (motionOff() || window.deckNav?.rest) {
       settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now()));
       window.deckEntryDone?.(slide);
       // Back at rest: the finished editor, its preview playing, until the loop's own reset starts the demo again.
-      if (!still) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
+      if (!motionOff()) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
       return;
     }
     clearAll();
@@ -679,12 +683,12 @@
     wasOn = on;
     if (morph?.back) { endUnmorph(); if (on) stop(); }
     if (on) start(!!coreSlide && !coreSlide.classList.contains('on') && records.some((r) => r.target === coreSlide));
-    else if (coreSlide?.classList.contains('on') && window.deckNav?.back && !still && running && !paused && !morph && fold()) { /* folding back into slide 4 */ }
+    else if (coreSlide?.classList.contains('on') && window.deckNav?.back && !motionOff() && running && !paused && !morph && fold()) { /* folding back into slide 4 */ }
     else leave();
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (coreSlide) watch.observe(coreSlide, { attributes: true, attributeFilter: ['class'] });
-  if (coreSlide && !still) { // the sky, ready while slide 4 or 5 is up; let go once both are left (unless a morph flies on it)
+  if (coreSlide && !motionOff()) { // the sky, ready while slide 4 or 5 is up; let go once both are left (unless a morph flies on it)
     const idleSoon = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 100));
     const near45 = () => coreSlide.classList.contains('on') || slide.classList.contains('on');
     const keepSky = () => {
@@ -700,6 +704,7 @@
     keepSky();
   }
   const syncMotion = () => {
+    if (motionOff() && slide.classList.contains('on')) { stop(); clearTimers(); settledState(); drawPic(now()); window.deckEntryDone?.(slide); return; }
     if (motionBlocked() && morph?.back) { endUnmorph(); leave(); return; } // a reverse never waits behind the overview
     if (motionBlocked()) {
       if (!running || paused) return;
@@ -711,7 +716,7 @@
     } else if (slide.classList.contains('on')) {
       // An entry deferred behind the overview has no scene to resume yet.
       if (pendingStart !== null) { start(pendingStart); return; }
-      if (!paused) return;
+      if (!paused) { if (!running) { running = true; last = 0; wake(); } return; }
       pausedTime += performance.now() - pausedAt;
       paused = false;
       last = 0;
@@ -733,7 +738,8 @@
   });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays
-  videos.forEach((v) => v.addEventListener('loadeddata', () => { if (still && slide.classList.contains('on')) drawPic(now()); }));
+  videos.forEach((v) => v.addEventListener('loadeddata', () => { if (motionOff() && slide.classList.contains('on')) drawPic(now()); }));
+  anchors.forEach((img) => img.addEventListener('load', () => { if (motionOff() && slide.classList.contains('on')) drawPic(now()); }));
 
   clearAll();
   if (slide.classList.contains('on')) { wasOn = true; start(false); }

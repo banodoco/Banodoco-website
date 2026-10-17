@@ -16,6 +16,7 @@
   const tools = [...root.querySelectorAll('.gp-dot')];
   const empty = root.querySelector('.gp-empty');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const rnd = Math.random;
   const rgb = (hex) => { const n = parseInt(hex.replace('#', '').slice(0, 6), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
@@ -151,7 +152,7 @@
   const enter = (lead = 0) => {
     reset();
     size();
-    if (still || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); window.deckEntryDone?.(slide); return; }
+    if (motionOff() || window.deckNav?.rest) { root.classList.add('is-drawn', 'is-labelled'); tools.forEach((el) => el.classList.add('is-in')); window.deckEntryDone?.(slide); return; }
     const dy = lift();
     tools.forEach((el, i) => {
       const p = disc(el, dy);
@@ -167,7 +168,7 @@
   const arrive = () => {
     reset();
     const snap = field && field.snapshot ? field.snapshot() : null;
-    if (!snap || still) { enter(); return; }
+    if (!snap || motionOff()) { enter(); return; }
     size();
     const dy = lift();
     const sources = snap.named.slice().sort((a, b) => b.p - a.p);
@@ -343,7 +344,7 @@
     if (!on) {
       clearInterval(asking);
       focus(null);
-      const toField = fieldSlide && fieldSlide.classList.contains('on') && field.snapshot && window.deckNav?.back && !still && tools.every((el) => el.classList.contains('is-in'));
+      const toField = fieldSlide && fieldSlide.classList.contains('on') && field.snapshot && window.deckNav?.back && !motionOff() && tools.every((el) => el.classList.contains('is-in'));
       if (toField) { timers.forEach(window.deckCancelLater); timers = []; flights = []; depart(); return; }
       flights = flights.filter((f) => !f.dot);
       later(700, () => { if (!slide.classList.contains('on')) reset(); });
@@ -374,6 +375,7 @@
   keep.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (fieldSlide) keep.observe(fieldSlide, { attributes: true, attributeFilter: ['class'] });
   if (slide.classList.contains('on')) begin();
+  window.addEventListener('deck-motion', () => { if (motionOff() && slide.classList.contains('on')) enter(); });
   window.deckOnResize(() => {
     if (near()) size();
     if (!slide.classList.contains('on')) return;

@@ -294,6 +294,8 @@
   html.deck-overview-open .fw-cards, html.deck-overview-open .fw-cards *,
   html.deck-motion-off .slide, html.deck-motion-off .slide *, html.deck-motion-off .slide *::before, html.deck-motion-off .slide *::after,
   html.deck-motion-off .fw-cards, html.deck-motion-off .fw-cards * { animation-play-state: paused !important; }
+  html.deck-motion-off:not(.deck-reduced) .slide, html.deck-motion-off:not(.deck-reduced) .slide *, html.deck-motion-off:not(.deck-reduced) .slide *::before, html.deck-motion-off:not(.deck-reduced) .slide *::after,
+  html.deck-motion-off:not(.deck-reduced) .fw-cards, html.deck-motion-off:not(.deck-reduced) .fw-cards * { transition-duration: 0s !important; transition-delay: 0s !important; }
   /* Version F, slide 4: Astrid as an abstract picture (core.js). Text centred at the bottom; above it two overlapping
      rings, agent and interface, whose lens is the core; extensions hang below each; the community orbits it all. */
   html[data-ver="f"] .ac-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
@@ -1525,6 +1527,18 @@
   try { motionOff = reduced || localStorage.getItem('deck-motion') === 'off'; } catch {}
   window.deckStill = () => motionOff;
   document.documentElement.classList.toggle('deck-motion-off', motionOff);
+  document.documentElement.classList.toggle('deck-reduced', reduced);
+  const finishMotion = () => {
+    if (!motionOff || reduced) return;
+    for (const animation of document.getAnimations()) {
+      const target = animation.effect?.target;
+      if (!(target instanceof Element) || !target.closest('.slide, .fw-cards')) continue;
+      const timing = animation.effect.getTiming();
+      if (timing.iterations === Infinity || timing.duration === 'auto') continue;
+      try { animation.finish(); } catch {}
+    }
+  };
+  window.addEventListener('deck-motion', finishMotion);
   dispatchEvent(new Event('deck-motion')); // apply a saved off state to slide scripts that started before this controller
   // Virtual milliseconds through the network arrival and the picture's entry,
   // with room for the longest node path. The final queued turn is not in this

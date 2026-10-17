@@ -17,6 +17,7 @@
   if (hosts.length !== 3 || !M) return;
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (q) => 1 - Math.pow(1 - q, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
@@ -978,7 +979,7 @@
     begun = true;
     m = Math.max(0, stageOf());
     lastM = -1;
-    if (still) {
+    if (motionOff()) {
       ta = 30; attach = m >= 1 ? { dir: 1, t0: 0 } : { dir: 0, t0: 0 }; boost = m >= 1 ? 1 : 0; pulsed = [true, true, true];
       motes = [];
       if (m >= 1) [[0, 0.5], [1, 0.3], [2, 0.6], [3, 0.4], [4, 0.45], [5, 0.35]].forEach(([c, u]) => motes.push({ kind: 'plug', c, span: Math.PI, t0: 30 - u, dur: 1 }));
@@ -1000,6 +1001,7 @@
   const arm = () => {
     const on = hosts[stageOf()];
     if (on && arrived.s === on && performance.now() - arrived.t < 80) { whenOpen(begin); return; } // already there (a settle, or reduced motion)
+    if (motionOff() || window.deckNav?.rest) { whenOpen(begin); return; }
     armed = true;
     timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
   };
@@ -1086,7 +1088,7 @@
     shown = now;
     endUnhand();
     if (now < 0) { // left the three slides
-      const to8 = was === 0 && flSlide && flSlide.classList.contains('on') && window.deckNav?.back && !still && begun && !morph && m === 0 && running && window.AstridFlowers;
+      const to8 = was === 0 && flSlide && flSlide.classList.contains('on') && window.deckNav?.back && !motionOff() && begun && !morph && m === 0 && running && window.AstridFlowers;
       if (to8) { unhand(); return; }
       root.classList.remove('is-on');
       html.classList.remove('fw-quiet');
@@ -1100,7 +1102,7 @@
     if (was < 0 || !begun) { // arriving from elsewhere: draw in once the network reaches the node (from slide 8, carry its picture on)
       reset();
       layout(); m = now; settleCur();
-      const fromFlowers = now === 0 && was < 0 && !still && flSlide && !flSlide.classList.contains('on') && (records || []).some((r) => r.target === flSlide);
+      const fromFlowers = now === 0 && was < 0 && !motionOff() && flSlide && !flSlide.classList.contains('on') && (records || []).some((r) => r.target === flSlide);
       const snap = fromFlowers && window.AstridFlowers && window.AstridFlowers.snapshot();
       if (snap) { handoff(snap); return; }
       root.classList.add('is-on');
@@ -1110,7 +1112,11 @@
     }
     root.classList.add('is-on');
     // From one of these slides to another: the same picture moves.
-    if (still) { m = now; attach = now >= 1 ? { dir: 1, t0: ta - 9 } : { dir: 0, t0: 0 }; boost = now >= 1 ? 1 : 0; lastM = -1; frame(); return; }
+    if (motionOff()) {
+      m = now; attach = now >= 1 ? { dir: 1, t0: ta - 9 } : { dir: 0, t0: 0 }; boost = now >= 1 ? 1 : 0; lastM = -1; frame();
+      window.deckEntryDone?.(hosts[now]); window.deckTurnDone?.(hosts[now]);
+      return;
+    }
     morph = { from: m, to: now, t0: ta, dur: 1.15 + 0.45 * Math.abs(now - m) };
     if (now >= 1 && attach.dir <= 0) attach = { dir: 1, t0: Math.max(ta + 0.9, T.chips) };
     if (now === 0 && attach.dir > 0) { attach = { dir: -1, t0: ta, from: chips.map((_, i) => chipQ(i)) }; pulsed = [false, false, false]; }
@@ -1119,7 +1125,8 @@
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) { endUnhand(); stop(); }
+    if (motionOff() && stageOf() >= 0) { endUnhand(); stop(); begun = false; begin(); }
+    else if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { endUnhand(); stop(); }
     else if (stageOf() >= 0 && begun) start();
   };
   document.addEventListener('visibilitychange', syncMotion);

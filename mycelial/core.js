@@ -19,6 +19,7 @@
   let g = canvas.getContext('2d'); // let: slide 5 borrows the drawing to take this picture's layers
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const gapRoot = document.querySelector('[data-gap]');
   const gapSlide = gapRoot && gapRoot.closest('.slide');
   const ring = gapRoot && gapRoot.querySelector('.gp-empty i');
@@ -804,7 +805,7 @@
     reset();
     if (!layout()) return false;
     visits++;
-    if (still || window.deckNav?.rest) { ta = 0; settle(); draw(); window.deckEntryDone?.(slide); if (!still) { html.classList.add('ac-quiet'); start(); } return false; }
+    if (motionOff() || window.deckNav?.rest) { ta = 0; settle(); draw(); window.deckEntryDone?.(slide); if (!motionOff()) { html.classList.add('ac-quiet'); start(); } return false; }
     pace = visits > 1 ? 0.7 : 1;
     ta = -9; // dark until the network arrives
     if (fromGap && launch()) pace = 1;
@@ -929,18 +930,19 @@
     wasOn = on;
     if (unbuilding) endUnbuild();
     if (!on) {
-      const toGap = gapSlide && gapSlide.classList.contains('on') && ring && window.deckNav?.back && !still && running && rings.length && ta >= T.end;
+      const toGap = gapSlide && gapSlide.classList.contains('on') && ring && window.deckNav?.back && !motionOff() && running && rings.length && ta >= T.end;
       if (toGap) { unbuild(); return; }
       leave();
       return;
     }
-    const fromGap = !still && gapSlide && !gapSlide.classList.contains('on') && records.some((r) => r.target === gapSlide);
+    const fromGap = !motionOff() && gapSlide && !gapSlide.classList.contains('on') && records.some((r) => r.target === gapSlide);
     enter(!!fromGap);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (gapSlide) watch.observe(gapSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) stop();
+    if (motionOff() && slide.classList.contains('on')) { stop(); settle(); draw(); window.deckEntryDone?.(slide); }
+    else if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
     else if (slide.classList.contains('on')) start();
   };
   document.addEventListener('visibilitychange', syncMotion);

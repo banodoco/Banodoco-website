@@ -818,7 +818,15 @@
   };
   document.addEventListener('visibilitychange', syncIdle);
   window.addEventListener('deck-overview', syncIdle);
-  window.addEventListener('deck-motion', () => { still = window.deckStill(); syncIdle(); });
+  window.addEventListener('deck-motion', () => {
+    still = window.deckStill();
+    if (still && active()) {
+      endOpening();
+      settle(true);
+      if (current) window.deckEntryDone?.(current);
+    }
+    syncIdle();
+  });
   syncIdle();
 
   const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
