@@ -726,7 +726,7 @@
     frameRaf = requestAnimationFrame(tick);
   };
   const start = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) return;
     if (running || still || waiting || document.hidden || !slide.classList.contains('on') || !rings.length) return;
     running = true; last = 0;
     frameLoop(++loop);
@@ -940,11 +940,12 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (gapSlide) watch.observe(gapSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) stop();
     else if (slide.classList.contains('on')) start();
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
 
   window.deckOnResize(() => {
     if (!slide.classList.contains('on') || !rings.length) return;

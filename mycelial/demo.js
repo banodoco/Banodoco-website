@@ -11,7 +11,7 @@
   // Keep absolute animation timestamps on the same clock across a pause.
   let paused = false, pausedAt = 0, pausedTime = 0;
   let pendingStart = null, pausedVideos = [];
-  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
+  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.();
   let paceOffset = 0, paceAt = performance.now();
   const now = () => {
     const real = (paused ? pausedAt : performance.now()) - pausedTime;
@@ -553,6 +553,8 @@
 
   // Clock
   let running = false, raf = 0, last = 0, ticking = false, requested = false;
+  videos[1].addEventListener('seeked', () => drawPic(now()));
+  gradedVideos[1].addEventListener('seeked', () => drawPic(now()));
   const tick = () => {
     raf = 0;
     if (!running || paused) return;
@@ -590,7 +592,7 @@
     running = true;
     layout();
     if (still || window.deckNav?.rest) {
-      settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true });
+      settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now()));
       window.deckEntryDone?.(slide);
       // Back at rest: the finished editor, its preview playing, until the loop's own reset starts the demo again.
       if (!still) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
@@ -720,13 +722,14 @@
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
   window.deckOnResize(() => {
     if (morph?.back) { endUnmorph(); leave(); } // its paths were measured on the old screen
     if (!slide.classList.contains('on')) return;
     if (morph) { endMorph(); settledState(); td = -1; wait = 0; }
     layout();
     drawPic(now());
-    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on')) wake();
+    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on') && !window.deckStill?.()) wake();
   });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays
