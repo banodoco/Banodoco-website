@@ -24,7 +24,7 @@
   const typed = root.querySelector('.as-typed');
   const videos = [...root.querySelectorAll('.as-media video')];
   // No twin for clip 0.
-  const gradeSources = ['../assets/astrid/passing-shapes-graded.mp4?v=97e032c', '../assets/astrid/quiet-finish-graded.mp4?v=97e032c'];
+  const gradeSources = ['../assets/astrid/passing-shapes-graded.mp4?v=e9ac50e', '../assets/astrid/quiet-finish-graded.mp4?v=e9ac50e'];
   const gradedVideos = [null, ...gradeSources.map((source) => {
     const graded = document.createElement('video');
     graded.dataset.src = source;
@@ -74,7 +74,7 @@
   const anchorEls = CLIPS.map((c) => {
     const el = document.createElement('div');
     place(el, c.at, c.len);
-    el.innerHTML = `<img class="as-still" src="../assets/astrid/${c.name}-anchor.jpg?v=97e032c" alt=""><span class="as-film" style="background-image:url(../assets/astrid/${c.name}-strip.jpg?v=97e032c)"></span><span class="as-name">${c.name}</span><span class="as-kind">image</span>`;
+    el.innerHTML = `<img class="as-still" src="../assets/astrid/${c.name}-anchor.jpg?v=e9ac50e" alt=""><span class="as-film" style="background-image:url(../assets/astrid/${c.name}-strip.jpg?v=e9ac50e)"></span><span class="as-name">${c.name}</span><span class="as-kind">image</span>`;
     lanes.V1.appendChild(el);
     return el;
   });

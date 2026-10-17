@@ -52,11 +52,11 @@
   cardsRoot.className = 'fw-cards';
   cardsRoot.inert = true;
   document.body.appendChild(cardsRoot);
-  const AV = (n) => `<img src="../assets/cards/artcompute/${n}.jpg?v=97e032c" alt="">`;
-  const STRIP = (n) => `<i style="background-image:url(../assets/astrid/${n}-strip.jpg?v=97e032c)"></i>`;
+  const AV = (n) => `<img src="../assets/cards/artcompute/${n}.jpg?v=e9ac50e" alt="">`;
+  const STRIP = (n) => `<i style="background-image:url(../assets/astrid/${n}-strip.jpg?v=e9ac50e)"></i>`;
   // The small card's seat is a canvas; the fuller card's shows the same pose as a picture (painted on a canvas kept off
   // the page, seatPaint), so the page holds one seat canvas however often slide 10 is visited.
-  const SEAT = (cls = '', full = false) => `<span class="fw-astrid${cls}"><img src="../assets/astrid/first-light-anchor.jpg?v=97e032c" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span>${full ? '<img class="fw-seat" alt="">' : '<canvas class="fw-seat"></canvas>'}</span>`;
+  const SEAT = (cls = '', full = false) => `<span class="fw-astrid${cls}"><img src="../assets/astrid/first-light-anchor.jpg?v=e9ac50e" alt=""><span class="fw-tl">${STRIP('first-light')}${STRIP('passing-shapes')}${STRIP('quiet-finish')}<b></b></span>${full ? '<img class="fw-seat" alt="">' : '<canvas class="fw-seat"></canvas>'}</span>`;
   // Astrid's logo, the app's 16 × 16 pixel mink (mink.js GRID, astrid-favicon.svg), as crisp SVG at any scale.
   const LOGO = (() => {
     let d = '';
@@ -69,10 +69,10 @@
   // `full` is the fuller card it grows into on slide 10, the homepage's own (journey/cards/, content/content.js).
   const CARDS = [
     { name: 'Arca Gidan', line: 'The Arca Gidan Prize is an open source AI art competition.', href: 'https://arcagidan.com/', crop: [0.5, 0.5, 1],
-      media: '<img src="../assets/cards/arca/poster-2.jpg?v=97e032c" alt="">',
+      media: '<img src="../assets/cards/arca/poster-2.jpg?v=e9ac50e" alt="">',
       full: { name: 'Arca Gidan Prize', line: 'The Arca Gidan Prize is an open source AI art competition. We wish to provide a reason for people to push themselves and open models to their limits.',
         door: 'See the winners →', href: 'https://arcagidan.com/winners/edition-2',
-        stage: `<span class="fw-ag">${[1, 2, 3, 4].map((n) => `<i><img src="../assets/cards/arca/poster-${n}.jpg?v=97e032c" alt=""></i>`).join('')}<b>ARCA GIDAN</b></span><span class="fw-ag-band"><span><b>198</b>entries</span><span><b>7,287</b>votes</span><span><b>$56.8K</b>prizes</span></span>` } },
+        stage: `<span class="fw-ag">${[1, 2, 3, 4].map((n) => `<i><img src="../assets/cards/arca/poster-${n}.jpg?v=e9ac50e" alt=""></i>`).join('')}<b>ARCA GIDAN</b></span><span class="fw-ag-band"><span><b>198</b>entries</span><span><b>7,287</b>votes</span><span><b>$56.8K</b>prizes</span></span>` } },
     // Astrid: a still of slide 5's editor (its preview over its timeline), and the seat the mink flies into from slide 9.
     { name: 'Astrid', line: 'A new kind of video editor: describe what you want, and the agent reaches for everything the community has built.', href: 'https://astrid.haus/', label: 'Try Astrid →', crop: [0.17, 0.74, 0.86],
       media: SEAT(), face: `<span class="fw-face fw-face-mink">${LOGO}</span>`,
@@ -88,10 +88,10 @@
         stage: `<span class="fw-dc fw-dc-full"><span class="fw-dc-ch"># daily_summaries · 2026-08-17</span><span class="fw-dc-t">H3 Tooling Week: Timeline Director, Studio Node Pack, and a Training Adapter Land</span><span class="fw-dc-x">seesee75-commits dropped ComfyUI-MiniMaxH3-Director, a proper timeline editor for MiniMax H3 inside ComfyUI — storyboard prompts, first/last keyframes, image/video/audio references, joint audio, live sampling preview, retakes, and shot chaining.</span><span class="fw-dc-p"><span class="fw-avs">${AV('persoon')}${AV('loreweavr')}${AV('ashmotv')}</span><b>20,000+</b> people</span></span>` } },
     // ADOS: its icon keeps its poster, with the events' own wordmark (Pilowlava, ados.events) over it.
     { name: 'ADOS', line: 'ADOS events bring the community together in the real world.', href: 'https://ados.events/', crop: [0.6, 0.5, 1],
-      media: '<img src="../assets/cards/ados/la-2025-thumb.jpg?v=97e032c" alt="">', face: '<span class="fw-face fw-face-ados"><b>ADOS</b></span>',
+      media: '<img src="../assets/cards/ados/la-2025-thumb.jpg?v=e9ac50e" alt="">', face: '<span class="fw-face fw-face-ados"><b>ADOS</b></span>',
       full: { name: 'ADOS', line: 'ADOS events bring the community together in the real world. We gather our community with people from the extended creative world to look at art, eat nice food, and create things.',
         door: 'See events →', href: 'https://ados.events/',
-        stage: '<span class="fw-ad"><img src="../assets/cards/ados/la-2025-thumb.jpg?v=97e032c" alt=""><span><small>Los Angeles — 7 November 2025</small><b>ADOS</b></span></span>' } },
+        stage: '<span class="fw-ad"><img src="../assets/cards/ados/la-2025-thumb.jpg?v=e9ac50e" alt=""><span><small>Los Angeles — 7 November 2025</small><b>ADOS</b></span></span>' } },
     // ArtCompute: its own terminal stat band (artcompute.org's figures, verified 2026-08-17) and three grantees; its
     // icon is the picture artcompute.org shows for itself (its share image, a frame of its background reel).
     { name: 'ArtCompute', line: 'ArtCompute gives micro-grants to those pushing open AI models, approved by AI.', href: 'https://artcompute.org/', crop: [0.5, 0.3, 0.6],
@@ -102,9 +102,9 @@
         stage: `<span class="fw-ac fw-ac-full"><span class="fw-ac-stats"><span><b>11</b>grants</span><span><b class="g">473</b>GPU hours</span><span><b class="v">AUTO</b>approval</span></span><span class="fw-ac-l">latest grants</span>${[['loreweavr', 'Loreweavr — Dual-LoRA Composition · 50h'], ['ashmotv', 'AshmoTV — Multi-angle IC-LoRA, LTX 2.3 · 50h'], ['persoon', 'Persoon — Obscura Remova IC-LoRA · 40h']].map(([a, t]) => `<span class="fw-ac-row">${AV(a)}<span>${t}</span><i>PAID</i></span>`).join('')}</span>` } },
     // 2RP: no link, as on the homepage (content.js): the publication is coming soon.
     { name: '2RP', line: '2RP is an art and tech publication that aims to highlight the best of the ecosystem.', soon: 'Coming soon', crop: [0.5, 0.45, 1],
-      media: '<img src="../assets/cards/tworp/cover.jpg?v=97e032c" alt="">',
+      media: '<img src="../assets/cards/tworp/cover.jpg?v=e9ac50e" alt="">',
       full: { name: '2RP', line: '2RP is an art and tech publication that aims to highlight the best of the ecosystem. Open work, open models, and the people making both.',
-        soon: 'Coming soon', stage: '<span class="fw-rp"><img src="../assets/cards/tworp/cover.jpg?v=97e032c" alt=""><b>2RP</b></span>' } },
+        soon: 'Coming soon', stage: '<span class="fw-rp"><img src="../assets/cards/tworp/cover.jpg?v=e9ac50e" alt=""><b>2RP</b></span>' } },
   ];
   const chips = CARDS.map((c) => {
     const el = document.createElement('div');
