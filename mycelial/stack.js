@@ -1,5 +1,5 @@
 // Version F, slide 6: where it goes. Slide 5's product taken apart into one exploded stack of thin
-// floating planes on the right, the text low on the left, top to bottom: rendering, editing, effects, the agent's
+// floating planes on the right, the text top left, top to bottom: rendering, editing, effects, the agent's
 // tools, and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
 // perches on the top plane. (On an upright phone the stack stands under the text, its mirror: flags on the left.)
 // Each layer has a named flag sticking out to the right on a fine gold leader. Hovering, focusing or
@@ -266,7 +266,7 @@
     const callXw = right ? Math.max(...cw.map((c) => c.rm.x)) + 40 : Math.min(...cw.map((c) => c.lm.x)) - 40; // the flags' column
     const perchW = projW(S[0], perchU(S[0]), -S[0].h / 2 + 2);
     const h1 = slide.querySelector('h1').getBoundingClientRect();
-    // On a desktop the cards open in a column beside the flags, right of the stack (the text low on the left); on a
+    // On a desktop the cards open in a column beside the flags, right of the stack (the text top left); on a
     // phone, in a slot between the text and the stack. On a phone on its side the column is narrower and a card
     // opens over the flags, which keep their places.
     const low = view.low = !view.mobile && H <= 500;

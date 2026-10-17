@@ -516,10 +516,9 @@
   /* Version F, slide 6: where it goes (stack.js). The text on the left; on the right slide 5's product taken apart into
      one exploded stack of thin planes (preview, timeline, agent, tools & effects, models / runtime), tied by fine gold
      registration threads and rooted in the network. The planes keep slide 5's dusk palette; the mink perches on top. */
-  /* The text sits low on the left, left-aligned, level with the stack's lower planes: read with slides 7 (middle left)
-     and 8 (top left), it climbs the left side as the deck goes on. The stack stands right of it, its flags and cards
-     opening to the right. */
-  html[data-ver="f"] .st-host { justify-content: flex-end; padding-left: max(16px, 7vw); padding-bottom: max(84px, 14vh); }
+  /* The text sits at the top left, left-aligned: read with slides 7 (middle left) and 8 (low on the left), it steps down
+     the left side as the deck goes on. The stack stands right of it, its flags and cards opening to the right. */
+  html[data-ver="f"] .st-host { justify-content: flex-start; padding-left: max(16px, 7vw); padding-top: max(60px, 8.6vh); }
   html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 35vw); }
   /* Five lines that break the same in Chrome and Safari, ending on "creative platform." */
   html[data-ver="f"] .st-host h1 { font-size: clamp(1.8rem, 2.75vw, 3rem); max-width: 13em; }
@@ -673,9 +672,10 @@
     .st-card li b { font-size: 14.5px; } .st-card li span { font-size: 13px; }
   }
 
-  /* Version F, slide 8: a thousand flowers, as people reached (flowers.js). It reads left to right: the text top left,
-     Astrid under it with a quiet counter, and to the right a crowd of people where app after app lands. */
-  html[data-ver="f"] .fl-host { justify-content: flex-start; padding-top: max(60px, 8.6vh); padding-left: max(16px, 6.2vw); text-align: left; }
+  /* Version F, slide 8: a thousand flowers, as people reached (flowers.js). It reads left to right: on the left Astrid
+     with a quiet counter under her, the text low beneath them (as slide 6's sat in S6, so 6, 7 and 8 step down the
+     left side), and to the right a crowd of people where app after app lands. */
+  html[data-ver="f"] .fl-host { justify-content: flex-end; padding-bottom: max(84px, 14vh); padding-left: max(16px, 7vw); text-align: left; }
   html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 36vw); }
   html[data-ver="f"] .fl-host h1 { max-width: 13.6em; font-size: clamp(1.7rem, 2.55vw, 2.9rem); text-wrap: balance; }
   html[data-ver="f"] .fl-host .body, html[data-ver="f"] .fl-host .vis { display: none; }
@@ -695,7 +695,7 @@
   .fl-u { font-style: italic; font-size: .64em; margin-left: .24em; }
   .fl-cl { font: 400 .68em/1.2 "DM Sans", system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--soft); opacity: .8; }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
-    html[data-ver="f"] .fl-host { padding-top: 64px; padding-right: 16px; }
+    html[data-ver="f"] .fl-host { justify-content: flex-start; padding: 64px 16px 90px max(16px, 6.2vw); } /* upright: the text on top */
     html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 1fr); }
     html[data-ver="f"] .fl-host h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); max-width: 20ch; }
   }
@@ -1170,6 +1170,7 @@
     .as-tl > .as-th:nth-child(3), .as-lane[data-track="V2"] { height: 26px !important; }
     .as-tl > .as-th:nth-child(5), .as-lane[data-track="V1"] { height: 36px !important; }
     .as-clip .as-kind { display: none; }
+    html[data-ver="f"] .st-host { padding-top: 30px; }
     html[data-ver="f"] .st-host > .split { grid-template-columns: minmax(0, 28vw); }
     html[data-ver="f"] .st-host h1 { font-size: clamp(1.15rem, 5.6svh, 1.6rem); }
     .st-card { padding: 9px 12px 10px 14px; }
@@ -1177,7 +1178,6 @@
     .st-card li b { font-size: 14px; } .st-card li span { font-size: 12.5px; }
     html[data-ver="f"] .pa-host > .split { grid-template-columns: minmax(240px, 34vw) minmax(0, 1fr); }
     html[data-ver="f"] .pa-host h1 { font-size: clamp(1.25rem, 6.2svh, 1.75rem); }
-    html[data-ver="f"] .fl-host { padding-top: 30px; }
     html[data-ver="f"] .fl-host > .split { grid-template-columns: minmax(0, 46vw); }
     html[data-ver="f"] .fl-host h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); }
     html[data-ver="f"] .fw-host { padding-bottom: 80px; }
