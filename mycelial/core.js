@@ -793,6 +793,7 @@
     ta = Math.max(ta, AMBIENT);
     sides.forEach((sd, i) => {
       if (states) sd.slots.forEach((x, j) => { x.state = states[i][j]; });
+      else sd.slots.forEach((x, j) => { x.state = j < START ? 'full' : j === START ? 'socket' : 'none'; });
       sd.slots.forEach((x) => { if (x.state !== 'none') x.shown = -50; if (x.filledAt > 0 || x.state === 'full') x.filledAt = -50; });
     });
     gifts = []; pend = []; plan = PLAN.length; pulses = [];
