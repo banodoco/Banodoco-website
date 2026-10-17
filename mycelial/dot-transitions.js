@@ -736,6 +736,7 @@
     return tw;
   };
   // Threads reach across the text and draw it back into the node.
+  const GATHER = 400;
   const gather = (s, at) => {
     const tw = [];
     for (const el of textOf(s)) {
@@ -743,9 +744,19 @@
       for (const p of spots(el, 6)) {
         hypha(wander(p, at), { width: 0.6, alpha: 0.3, depth: 1, fade: 0.7, rest: 0, duration: 0.38 });
       }
-      tw.push(tween(400, easeIn, (k) => mask(el, at, (1 - k) * far)));
+      tw.push(tween(GATHER, easeIn, (k) => mask(el, at, (1 - k) * far)));
     }
     return tw;
+  };
+  // How far into the gather (ms) the new text starts growing from its node: OVERLAP of the way, so its first words
+  // show as the old is about half drawn in; or, where the two nodes are close, once what is left of the old text no
+  // longer reaches the new node, so the two never show in the same place.
+  const OVERLAP = 0.3;
+  const overlap = (s, from, to) => {
+    const d = Math.hypot(to.x - from.x, to.y - from.y);
+    let k = OVERLAP;
+    for (const el of textOf(s)) { const far = reach(el, from); while (k < 1 && (1 - easeIn(k)) * far > d) k += 0.02; }
+    return Math.min(1, k) * GATHER;
   };
 
   let current = slides.find((s) => s.classList.contains('on')) || null;
@@ -1027,24 +1038,33 @@
     drift = { x: 0, y: 0 }; trail = { x: 0, y: 0 };
     if (next === lastSlide() && prev === deck().at(-2)) { const g = glow(1); if (g) crown(to, false, g); }
 
-    // 3. Arrival: the node blooms (or, on the last slide, becomes the mark) and threads run into the new text.
+    // The new text grows from its node while the old is still being drawn in (overlap), the node's travel running
+    // alongside both; the turn is done once the text is whole and the node has arrived.
+    let landed;
+    const reached = new Promise((r) => { landed = r; });
+    timers.push(window.deckLater(() => {
+      if (done) return;
+      const z = zone(lines(next));
+      if (z) zones.push(z);
+      const shown = reveal(next, to);
+      tweens.push(...shown);
+      Promise.all([...shown, reached]).then(() => { finish(); window.deckTurnDone?.(next); });
+    }, overlap(prev, from, to)));
+
+    // 3. Arrival: the node blooms (or, on the last slide, becomes the mark).
     const arrive = () => {
       if (done) return;
       place(to);
       dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to);
       if (next === lastSlide()) crown(to);
-      const z = zone(lines(next));
-      if (z) zones.push(z);
       next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
       if (next === slides[0]) window.deckEntryDone?.(next);
-      const shown = reveal(next, to, 60);
-      tweens.push(...shown);
       prev.classList.add('dt-release'); // the old slide may fade now; its parts stay hidden
       timers.push(window.deckLater(() => {
         prev.classList.remove('dt-leaving', 'dt-release');
         clearText(prev);
       }, 700));
-      Promise.all(shown).then(() => { finish(); window.deckTurnDone?.(next); });
+      landed();
     };
 
     // 2. The network grows across to the next node, or simply re-blooms in place.
