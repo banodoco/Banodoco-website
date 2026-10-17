@@ -291,7 +291,9 @@
   .gp-flight { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .gp-dot::before, .gp-empty i { animation: none; } .gp-dot, .gp-dot i { transition: none; } }
   html.deck-overview-open .slide, html.deck-overview-open .slide *, html.deck-overview-open .slide *::before, html.deck-overview-open .slide *::after,
-  html.deck-overview-open .fw-cards, html.deck-overview-open .fw-cards * { animation-play-state: paused !important; }
+  html.deck-overview-open .fw-cards, html.deck-overview-open .fw-cards *,
+  html.deck-motion-off .slide, html.deck-motion-off .slide *, html.deck-motion-off .slide *::before, html.deck-motion-off .slide *::after,
+  html.deck-motion-off .fw-cards, html.deck-motion-off .fw-cards * { animation-play-state: paused !important; }
   /* Version F, slide 4: Astrid as an abstract picture (core.js). Text centred at the bottom; above it two overlapping
      rings, agent and interface, whose lens is the core; extensions hang below each; the community orbits it all. */
   html[data-ver="f"] .ac-host { justify-content: flex-end; padding-bottom: max(70px, 8.5vh); text-align: center; }
@@ -1478,7 +1480,7 @@
   <span class="brand" aria-hidden="true">Mycelial</span>
   <div class="bar"><i id="fill"></i></div>
   <button id="prevBtn" class="navb" type="button" aria-label="Previous slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
-  <span id="count">1 / 12</span>
+  <span id="count">1 / 11</span>
   <button id="nextBtn" class="navb" type="button" aria-label="Next slide"><i><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>
 </div>
 
@@ -1513,6 +1515,8 @@
   let motionOff = reduced;
   try { motionOff = reduced || localStorage.getItem('deck-motion') === 'off'; } catch {}
   window.deckStill = () => motionOff;
+  document.documentElement.classList.toggle('deck-motion-off', motionOff);
+  dispatchEvent(new Event('deck-motion')); // apply a saved off state to slide scripts that started before this controller
   // Virtual milliseconds through the network arrival and the picture's entry,
   // with room for the longest node path. The final queued turn is not in this
   // budget: it STARTS by the deadline, then plays at its chosen step pace.
@@ -1602,6 +1606,7 @@
       motionOff = !motionOff;
       try { if (motionOff) localStorage.setItem('deck-motion', 'off'); else localStorage.removeItem('deck-motion'); } catch {}
       if (motionOff && turn) { turn.basePace = STILL_PACE; setPace(STILL_PACE); } // the turn in flight finishes at once
+      document.documentElement.classList.toggle('deck-motion-off', motionOff);
       dispatchEvent(new Event('deck-motion'));
     }
     showMotion();

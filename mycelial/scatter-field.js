@@ -633,7 +633,7 @@
   };
 
   const start = (arriving) => {
-    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
+    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) return;
     resize();
     running = true; last = 0;
     if (arriving && !still) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
@@ -657,11 +657,12 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (collageSlide) watch.observe(collageSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) stop();
     else if (slide.classList.contains('on')) start(false);
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
 
   // Mouse and pen steer; on touch a tap is the hover. The field is the slide's
   // backdrop, so it listens on the slide itself.

@@ -956,7 +956,7 @@
     frame();
     raf = requestAnimationFrame(tick);
   };
-  const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on')) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
+  const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(window.deckCancelLater); timers = [];
@@ -1119,11 +1119,12 @@
   const watch = new MutationObserver(follow);
   [...hosts, flSlide].filter(Boolean).forEach((s) => watch.observe(s, { attributes: true, attributeFilter: ['class'] }));
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { endUnhand(); stop(); }
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) { endUnhand(); stop(); }
     else if (stageOf() >= 0 && begun) start();
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
   window.deckOnResize(() => {
     endUnhand();
     const target = stageOf();
