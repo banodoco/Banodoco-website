@@ -190,7 +190,7 @@
     }
     Object.assign(was, s);
   });
-  const view = { k: 1, ox: 0, oy: 0, mobile: false, right: true };
+  const view = { k: 1, ox: 0, oy: 0, mobile: false, right: true, low: false };
   // A point (u, v) from a plane's centre, in its own px, into the scene: exactly what CSS does with
   // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective. project() goes on to the screen.
   const projW = (s, u, v) => {
@@ -245,7 +245,7 @@
     // On a desktop the cards open in a column beside the flags, right of the stack (the text low on the left); on a
     // phone, in a slot between the text and the stack. On a phone on its side the column is narrower and a card
     // opens over the flags, which keep their places.
-    const low = !view.mobile && H <= 500;
+    const low = view.low = !view.mobile && H <= 500;
     const cw0 = view.mobile ? W - 32 : low ? CARDW_L : CARDW;
     cards.forEach((c) => { c.style.width = `${cw0}px`; });
     const ch = cards.map((c) => c.offsetHeight);
@@ -498,10 +498,14 @@
   let build = null, amb = null;
   // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place.
   // card: the top layer has landed, and its card opens as the words arrive, so the landing is never without one.
+  // wide: on a wider screen the headline is read first, so the first card waits until the words are whole.
   // open: every plane is in place, so the tour takes over while the threads, leaders and roots finish.
   const FROM5 = { a: { 0: [0.05, 1.3], 1: [0.12, 1.42], 3: [0.2, 1.62] }, spread: [1.0, 2.1], low: { 2: [1.25, 2.15], 4: [1.5, 2.4] }, fade: [0.25, 0.45, 0.72, 0.56, 0.86],
-    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, open: 2.4, end: 3.4 };
-  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, open: 1.45, end: 2.25 };
+    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, wide: 2.0, open: 2.4, end: 3.4 };
+  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, wide: 1.6, open: 1.45, end: 2.25 };
+  // Landing at rest on a wider screen, the words are drawn in as the stack lands: its first card waits this long (s).
+  const REST_WIDE = 1.7;
+  const wide = () => view.right && !view.low; // a desktop or tablet, not a phone on its side
   const demo = document.querySelector('[data-astrid-demo]');
   const slide5 = demo && demo.closest('.slide');
   const snapFrom5 = () => {
@@ -547,15 +551,15 @@
   };
   const k01 = (e, [a, b]) => clamp((e - a) / (b - a));
   const stepBuild = (t) => {
-    const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
+    const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK, first = wide() ? T0.wide : T0.card;
     // The card and the tour come only on the way in, and not while the entry is hurried on to the next slide
     // (no card opens just as the slide leaves); folding back to slide 5 runs this clock backwards without them.
     const fwd = !build.back && !(window.deckPace?.() > 1);
-    if (fwd && !amb && openI < 0 && e >= T0.card) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
+    if (fwd && !amb && openI < 0 && e >= first) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
     if (fwd && !amb && e >= T0.open) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
       st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
       clearGhosts();
-      amb = { t }; tourFrom(0, t);
+      amb = { t }; tourFrom(0, Math.max(t, build.t0 + first * 1000));
     }
     if (amb) { // only the threads, the leaders and the roots are still drawing
       vis.sh = k01(e, T0.sh); vis.rt = k01(e, T0.rt);
@@ -750,7 +754,8 @@
     if (still || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
       window.deckEntryDone?.(slide);
-      if (!still) { amb = { t: now() }; tourFrom(0, now()); play(); wake(); } // landing at rest: the first card is open as it lands
+      // Landing at rest: the first card is open as it lands (on a wider screen, once the words are in).
+      if (!still) { amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake(); }
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
