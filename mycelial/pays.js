@@ -444,7 +444,7 @@
     draw();
     raf = requestAnimationFrame(tick);
   };
-  const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on')) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
+  const start = () => { if (running || still || document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) return; running = true; last = 0; raf = requestAnimationFrame(tick); };
   const stop = () => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; };
   const reset = () => {
     timers.forEach(window.deckCancelLater); timers = [];
@@ -580,11 +580,12 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (stackSlide) watch.observe(stackSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { endUnfly(); stop(); }
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) { endUnfly(); stop(); }
     else if (slide.classList.contains('on') && ta > 0) start();
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
   window.deckOnResize(() => {
     endUnfly(); // her way back was measured on the old screen
     if (!slide.classList.contains('on')) return;

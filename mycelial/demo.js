@@ -11,7 +11,7 @@
   // Keep absolute animation timestamps on the same clock across a pause.
   let paused = false, pausedAt = 0, pausedTime = 0;
   let pendingStart = null, pausedVideos = [];
-  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
+  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.();
   let paceOffset = 0, paceAt = performance.now();
   const now = () => {
     const real = (paused ? pausedAt : performance.now()) - pausedTime;
@@ -722,13 +722,14 @@
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
   window.deckOnResize(() => {
     if (morph?.back) { endUnmorph(); leave(); } // its paths were measured on the old screen
     if (!slide.classList.contains('on')) return;
     if (morph) { endMorph(); settledState(); td = -1; wait = 0; }
     layout();
     drawPic(now());
-    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on')) wake();
+    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on') && !window.deckStill?.()) wake();
   });
   // Clicks on the demos stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.as-panel, .as-mink, .as-try')) e.stopPropagation(); }); // the link opens its tab and the slide stays

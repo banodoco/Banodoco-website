@@ -27,7 +27,7 @@
   // Keep absolute animation timestamps on the same clock across a pause.
   let paused = false, pausedAt = 0, pausedTime = 0;
   let pendingStart = null, pausedVideos = [];
-  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on');
+  const motionBlocked = () => document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.();
   let paceOffset = 0, paceAt = performance.now();
   const now = () => {
     const real = (paused ? pausedAt : performance.now()) - pausedTime;
@@ -873,6 +873,7 @@
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
+  window.addEventListener('deck-motion', syncMotion);
   window.deckOnResize(() => {
     endFold();
     if (!slide.classList.contains('on')) return;
@@ -892,7 +893,7 @@
       if (amb) stepTour(now());
       else { const m = perchOf(st[0]); paintMink(m.x, m.y, m.c); draw(); }
     }
-    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on')) wake();
+    if (!document.hidden && !document.getElementById('overview')?.classList.contains('on') && !window.deckStill?.()) wake();
   });
   // Clicks on the stack stay here; they never turn the slide.
   root.addEventListener('click', (e) => { if (e.target.closest('.st-plane, .st-mink, .st-flag, .st-card, .st-hit')) e.stopPropagation(); });
