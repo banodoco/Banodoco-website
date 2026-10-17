@@ -373,7 +373,8 @@
         const alpha = glow * q.a * (rewind ? smooth(clamp(rewind.t / 0.35)) : clamp((5.6 - m.age) / 2));
         if (alpha <= 0.01) { if (rewind) left.push(m); continue; }
         ctx.globalAlpha = alpha;
-        if (m.color !== ink) { ink = m.color; ctx.fillStyle = ink; }
+        const tint = m.inks[Math.round(e * INK_STEPS)]; // from its colour in the picture to its colour as a star
+        if (tint !== ink) { ink = tint; ctx.fillStyle = ink; }
         ctx.fillRect(x - mw / 2, y - mh / 2, mw, mh);
         left.push(m);
       }
@@ -469,14 +470,6 @@
   // tile now, then released (edges first) to fly at us and thin into stars.
   const collage = document.querySelector('[data-collage]');
   const collageSlide = collage && collage.closest('.slide');
-  // Start decoding the posters now, so an early flight keeps the tile's colours.
-  const posters = new Map();
-  for (const v of collage ? collage.querySelectorAll('video[poster]') : []) {
-    if (!v.poster || posters.has(v.poster)) continue;
-    const poster = new Image();
-    poster.src = v.poster;
-    posters.set(v.poster, poster);
-  }
   const sampler = document.createElement('canvas');
   const sctx = sampler.getContext('2d', { willReadFrequently: true });
   let motes = [];
@@ -505,31 +498,44 @@
     aim();
     motes = tileMotes(base);
   };
+  // A mote leaves the picture in its own colour and arrives in the field as a star of the same hue, lighter and softer
+  // like the field's own kinds, so a dark film still comes apart into light rather than into the black.
+  const INK_STEPS = 6;
+  const inkCache = new Map();
+  const unsampled = Array(INK_STEPS + 1).fill(TYPES.model.color);
+  const inksOf = (r, g, b) => {
+    const key = (r << 16) | (g << 8) | b;
+    if (inkCache.has(key)) return inkCache.get(key);
+    const hi = Math.max(r, g, b) / 255, lo = Math.min(r, g, b) / 255, l = (hi + lo) / 2, c = hi - lo;
+    const sat = c ? c / (1 - Math.abs(2 * l - 1)) : 0;
+    const L = 0.7, k = c ? ((1 - Math.abs(2 * L - 1)) * Math.min(sat, 0.42)) / c : 0; // the star: same hue, softer, lighter
+    const star = [r, g, b].map((v) => (L + (v / 255 - l) * k) * 255);
+    const inks = Array.from({ length: INK_STEPS + 1 }, (_, i) => {
+      const t = i / INK_STEPS;
+      return `rgb(${[r, g, b].map((v, j) => Math.round(v + (star[j] - v) * t)).join(',')})`;
+    });
+    inkCache.set(key, inks);
+    return inks;
+  };
   // Each tile, sampled into a grid of motes in its own colours, placed in the world where the camera sees it now.
   const tileMotes = (base) => {
     const motes = [];
     for (const tile of collage.querySelectorAll('.vc-tile')) {
-      const r = tile.getBoundingClientRect(), v = tile.querySelector('video');
+      const r = tile.getBoundingClientRect(), v = tile.querySelector('video'), img = tile.querySelector('img');
       if (!r.width || !r.height) continue;
       const cols = Math.max(4, Math.round(r.width / 8)), rows = Math.max(4, Math.round(r.height / 8));
       let px = null;
-      if (v.readyState >= 2 && v.videoWidth) {
-        const [ox, oy] = getComputedStyle(v).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
+      // What the tile shows: its preview while one plays over it, otherwise its still (both same-origin).
+      const live = tile.classList.contains('is-live') && v && v.readyState >= 2 && v.videoWidth;
+      const pic = live ? v : img && img.complete && img.naturalWidth ? img : null;
+      if (pic) {
+        const iw = live ? v.videoWidth : img.naturalWidth, ih = live ? v.videoHeight : img.naturalHeight;
+        const [ox, oy] = getComputedStyle(pic).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
         const ta = r.width / r.height;
-        let sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
-        if (sw / sh > ta) { sw = sh * ta; sx = (v.videoWidth - sw) * ox; } else { sh = sw / ta; sy = (v.videoHeight - sh) * oy; }
+        let sw = iw, sh = ih, sx = 0, sy = 0;
+        if (sw / sh > ta) { sw = sh * ta; sx = (iw - sw) * ox; } else { sh = sw / ta; sy = (ih - sh) * oy; }
         sampler.width = cols; sampler.height = rows;
-        try { sctx.drawImage(v, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
-      } else {
-        const poster = posters.get(v.poster);
-        if (poster && poster.complete && poster.naturalWidth) {
-          const [ox, oy] = getComputedStyle(v).objectPosition.split(' ').map((n) => parseFloat(n) / 100);
-          const ta = r.width / r.height;
-          let sw = poster.naturalWidth, sh = poster.naturalHeight, sx = 0, sy = 0;
-          if (sw / sh > ta) { sw = sh * ta; sx = (poster.naturalWidth - sw) * ox; } else { sh = sw / ta; sy = (poster.naturalHeight - sh) * oy; }
-          sampler.width = cols; sampler.height = rows;
-          try { sctx.drawImage(poster, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
-        }
+        try { sctx.drawImage(pic, sx, sy, sw, sh, 0, 0, cols, rows); px = sctx.getImageData(0, 0, cols, rows).data; } catch { px = null; }
       }
       const cw = r.width / cols, ch = r.height / rows;
       for (let j = 0; j < rows; j++) {
@@ -541,13 +547,13 @@
           const xr = ((sx0 - cx) / F) * z + camX, yr = ((sy0 - cy) / F) * z + camY;
           motes.push({
             x: xr * cosR + yr * sinR, y: -xr * sinR + yr * cosR, z, sx0, sy0, cw: cw + 0.6, ch: ch + 0.6, age: 0,
-            color: px ? `rgb(${px[k] | 7},${px[k + 1] | 7},${px[k + 2] | 7})` : TYPES.model.color, // a little coarse, so colours repeat
+            inks: px ? inksOf(px[k] | 7, px[k + 1] | 7, px[k + 2] | 7) : unsampled, // a little coarse, so colours repeat
             delay: 0.05 + Math.hypot(i / cols - 0.5, j / rows - 0.5) * 0.5 + rnd() * 0.3,
           });
         }
       }
     }
-    motes.sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : 0)); // draw colour by colour
+    motes.sort((a, b) => (a.inks[0] < b.inks[0] ? -1 : a.inks[0] > b.inks[0] ? 1 : 0)); // draw colour by colour
     return motes;
   };
 
