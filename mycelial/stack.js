@@ -524,6 +524,7 @@
       hideAll();
       const src = snapFrom5();
       if (src) {
+        demo.classList.add('is-minkless'); // the captured mink is handed to this slide in the same frame
         build = { t0, from5: true, src };
         step(t0);
         return;
