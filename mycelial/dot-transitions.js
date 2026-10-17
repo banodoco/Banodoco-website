@@ -759,11 +759,12 @@
     return Math.min(1, k) * GATHER;
   };
   // On a few turns a picture is still moving across the new text's place after the press: a step back's picture
-  // coming back into its slide, a stage of the last slides' wheel, an upright phone's mink flying in. There the text
-  // starts once the picture has gone by, this far into the turn (ms at the turn's pace; measured, see FX7). Each turn
-  // not listed keeps overlap()'s start, and a step back with no picture coming back (dt-return) never waits.
+  // coming back into its slide, a stage of the last slides' wheel, an upright phone's mink flying in, slide 5's chat
+  // crossing slide 6's words on its way into the stack. There the text starts once the picture has gone by, this far
+  // into the turn (ms at the turn's pace; measured, see FX7 and S6). Each turn not listed keeps overlap()'s start, and
+  // a step back with no picture coming back (dt-return) never waits.
   const PASSING = {
-    wide: { '6-5': 2400, '8-7': 1100, '11-10': 650 },
+    wide: { '5-6': 350, '6-5': 2250, '8-7': 1100, '11-10': 650 },
     upright: { '7-6': 1900, '8-7': 1150, '9-8': 1550, '10-9': 750, '11-10': 550, '6-7': 800, '9-10': 350 },
   };
   const passing = (prev, next) => {
