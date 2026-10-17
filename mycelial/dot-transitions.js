@@ -758,6 +758,19 @@
     for (const el of textOf(s)) { const far = reach(el, from); while (k < 1 && (1 - easeIn(k)) * far > d) k += 0.02; }
     return Math.min(1, k) * GATHER;
   };
+  // On a few turns a picture is still moving across the new text's place after the press: a step back's picture
+  // coming back into its slide, a stage of the last slides' wheel, an upright phone's mink flying in. There the text
+  // starts once the picture has gone by, this far into the turn (ms at the turn's pace; measured, see FX7). Each turn
+  // not listed keeps overlap()'s start, and a step back with no picture coming back (dt-return) never waits.
+  const PASSING = {
+    wide: { '6-5': 2400, '8-7': 1000, '11-10': 650 },
+    upright: { '7-6': 1800, '8-7': 800, '9-8': 1500, '10-9': 750, '11-10': 550, '6-7': 800, '9-10': 350 },
+  };
+  const passing = (prev, next) => {
+    if (window.deckNav?.back && !next.matches('.dt-return, .fw-host')) return 0;
+    const upright = innerWidth <= 760 && (innerHeight >= innerWidth || innerHeight > 500); // the slides' phone layout
+    return PASSING[upright ? 'upright' : 'wide'][`${levelOf(prev) + 1}-${levelOf(next) + 1}`] || 0;
+  };
 
   let current = slides.find((s) => s.classList.contains('on')) || null;
   let anchor = null, turning = null;
@@ -1038,18 +1051,24 @@
     drift = { x: 0, y: 0 }; trail = { x: 0, y: 0 };
     if (next === lastSlide() && prev === deck().at(-2)) { const g = glow(1); if (g) crown(to, false, g); }
 
-    // The new text grows from its node while the old is still being drawn in (overlap), the node's travel running
-    // alongside both; the turn is done once the text is whole and the node has arrived.
+    // The new text grows from its node while the old is still being drawn in (overlap), or once a picture crossing
+    // its place has gone by (passing), the node's travel running alongside; the turn is done once the text is whole
+    // and the node has arrived.
     let landed;
     const reached = new Promise((r) => { landed = r; });
-    timers.push(window.deckLater(() => {
+    const grow = () => {
       if (done) return;
       const z = zone(lines(next));
       if (z) zones.push(z);
       const shown = reveal(next, to);
       tweens.push(...shown);
       Promise.all([...shown, reached]).then(() => { finish(); window.deckTurnDone?.(next); });
-    }, overlap(prev, from, to)));
+    };
+    const early = overlap(prev, from, to);
+    timers.push(window.deckLater(() => { // by now the slides' own scripts have marked a picture coming back
+      const wait = done ? 0 : passing(prev, next) - early;
+      if (wait > 0) timers.push(window.deckLater(grow, wait)); else grow();
+    }, early));
 
     // 3. Arrival: the node blooms (or, on the last slide, becomes the mark).
     const arrive = () => {
