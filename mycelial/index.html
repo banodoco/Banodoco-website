@@ -36,7 +36,10 @@
     }
   };
   try {
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('dt-intro', 'dt-font-wait');
+    // No opening with reduced motion, or when this viewer has turned the deck's animations off (the ring at the top right).
+    let off = false;
+    try { off = localStorage.getItem('deck-motion') === 'off'; } catch (e) {}
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !off) root.classList.add('dt-intro', 'dt-font-wait');
   } catch (e) {}
   addEventListener('error', e => {
     if ((e.filename || e.target?.src || '').includes('/dot-transitions.js')) intro.fail();
@@ -130,25 +133,40 @@
   .vc-tile { all: unset; position: absolute; overflow: visible; border-radius: 4px; cursor: zoom-in; background: #15110d;
     box-shadow: 0 10px 30px #0008; transition: transform .4s ease, box-shadow .4s ease; }
   .vc-tile::before { content: ""; position: absolute; inset: -3px 0; }
-  .vc-tile video { border-radius: 4px; }
-  .vc-tile video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .88; transition: opacity .4s ease; }
+  /* At rest a still from the film; a mouse resting on it plays a short preview from the same frame over it. */
+  .vc-tile img, .vc-tile video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+  .vc-tile img { opacity: .88; transition: opacity .4s ease; }
+  .vc-tile video { opacity: 0; transition: opacity .3s ease; }
+  .vc-tile.is-live video { opacity: 1; }
   .vc-tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px #000b; }
-  .vc-tile:hover video { opacity: 1; }
+  .vc-tile:hover img { opacity: 1; }
   .vc-tile:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  /* A quiet play cue, in the footer arrows' gold ring: it fades in with the hover. A touch screen has no hover, so there it
+     rests faintly on the lead tile alone: on all five it sat on every face and moth, and cluttered the collage. */
+  .vc-tile::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; box-sizing: border-box;
+    border-radius: 50%; border: 1px solid rgb(255 214 150 / .8); pointer-events: none; opacity: 0; transform: scale(.88); transition: opacity .3s ease, transform .3s ease;
+    background: rgb(13 10 7 / .55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M0 0L10 6L0 12z' fill='%23f0c67e'/%3E%3C/svg%3E") 56% 50% / 9px 11px no-repeat; }
+  .vc-tile:hover::after, .vc-tile:focus-visible::after { opacity: 1; transform: none; }
+  @media (hover: none) { .vc-tile:first-child::after { opacity: .6; transform: scale(.76); } }
   .vc-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.4rem 0.6rem 0.45rem; border-radius: 0 0 4px 4px; background: linear-gradient(transparent, #0d0a07cc);
     font: italic 400 0.85rem "Cormorant Garamond", serif; color: var(--ink); opacity: 0; transition: opacity .3s ease; }
   .vc-tile:hover .vc-cap, .vc-tile:focus-visible .vc-cap { opacity: 1; }
-  .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; }
-  .vc-label b { font-weight: 400; color: var(--gold); }
+  .vc-cap b { font-weight: 400; font-style: normal; }
+  .vc-label { margin: 1rem 0 0; text-align: center; font: italic 400 1rem "Cormorant Garamond", serif; color: #b8a98fbb; text-wrap: balance; }
+  .vc-label a { color: var(--gold); text-decoration: underline 1px transparent; text-underline-offset: .18em; transition: text-decoration-color .25s ease; }
+  .vc-label a:hover, .vc-label a:focus-visible { text-decoration-color: currentColor; outline: none; }
   .vc-box { position: fixed; inset: 0; z-index: 100; background: #0d0a07f2; opacity: 0; pointer-events: none; transition: opacity .45s ease; cursor: zoom-out; }
   .vc-box.is-on { opacity: 1; pointer-events: auto; }
-  .vc-frame { position: absolute; margin: 0; overflow: hidden; border-radius: 6px; background: #000; box-shadow: 0 30px 90px #000;
-    transform-origin: 0 0; transition: transform .55s cubic-bezier(.3, 0, .2, 1); }
-  .vc-frame video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .vc-frame { position: absolute; margin: 0; overflow: hidden; border-radius: 6px; background: #000 no-repeat; box-shadow: 0 30px 90px #000;
+    transform-origin: 0 0; transition: transform .55s cubic-bezier(.3, 0, .2, 1), clip-path .55s cubic-bezier(.3, 0, .2, 1); cursor: auto; }
+  .vc-frame img, .vc-frame iframe { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; object-fit: cover;
+    opacity: 0; transition: opacity .3s ease; }
+  .vc-frame .is-ready { opacity: 1; }
   .vc-meta { position: absolute; left: 0; right: 0; bottom: 4vh; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; }
   .vc-kicker { font: italic 400 0.95rem "Cormorant Garamond", serif; color: var(--gold); letter-spacing: .04em; }
   .vc-title { font: 400 1.35rem "Cormorant Garamond", serif; color: var(--ink); }
-  .vc-note { font: italic 400 0.85rem "EB Garamond", serif; color: #b8a98f99; }
+  .vc-page { font: italic 400 0.85rem "EB Garamond", serif; color: #b8a98f99; text-decoration: none; cursor: pointer; }
+  .vc-page:hover, .vc-page:focus-visible { color: var(--gold); }
   .vc-close { all: unset; position: absolute; top: 18px; right: 22px; font: 300 2rem/1 system-ui, sans-serif; color: var(--soft); cursor: pointer; }
   .vc-close:hover, .vc-close:focus-visible { color: var(--ink); }
   /* Slide 1 → 2: both slides hold still and simply cross while the films come apart into the field. */
@@ -1035,6 +1053,35 @@
   .overview li span { color: var(--gold); font-style: italic; min-width: 2ch; }
   .overview li.ph { color: var(--soft); font-style: italic; }
 
+  /* Motion: a quiet ring at the top right, gone while the deck plays at its own pace. It fills like amber as the deck
+     hurries to keep up with the viewer, and is full when animations are off, which it also switches. */
+  .motion { position: fixed; top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right)); z-index: 2;
+    display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+    --frost: 0; opacity: 0; visibility: hidden; transition: opacity 1s ease 1s, visibility 0s linear 2s; -webkit-tap-highlight-color: transparent; }
+  /* Only a hurry that lasts shows it: a press into the tail of a turn while reading never flashes it. On a touch
+     screen it takes taps exactly while it can be seen, its linger and fade included; elsewhere taps go to the deck. */
+  .motion.is-shown { opacity: 1; visibility: visible; transition: opacity .3s ease .5s, visibility 0s linear .5s; }
+  .motion.is-off, .motion:focus-visible { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+  @media (hover: hover) { .motion { visibility: visible; } .motion:hover { opacity: 1; transition: opacity .3s ease; } }
+  .motion i { position: relative; display: block; width: 22px; height: 22px; border-radius: 50%; background: rgb(13 10 7 / .6);
+    border: 1px solid rgb(240 200 119 / calc(.32 + .5 * var(--frost))); transition: border-color .45s ease; }
+  .motion b { position: absolute; inset: 3px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #fbe7bd, #f0c67e 52%, #b9772f);
+    opacity: calc(.2 + .8 * var(--frost)); transform: scale(var(--frost)); transition: transform .45s cubic-bezier(.22,.7,.2,1), opacity .45s ease; }
+  .motion.is-off b { box-shadow: 0 0 9px rgb(240 200 119 / .4); }
+  .motion span { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
+    font: italic 400 16px/1 "Cormorant Garamond", serif; color: var(--soft); text-shadow: 0 0 12px #0d0a07, 0 0 4px #0d0a07;
+    opacity: 0; transition: opacity .25s ease; }
+  .motion:hover span, .motion:focus-visible span, .motion.is-told span { opacity: 1; }
+  .motion:focus-visible { outline: none; } .motion:focus-visible i { outline: 1px solid #f0c67e; outline-offset: 2px; }
+  /* A short landscape phone packs the slide's label and links to the top: the same 44 px target, tucked into the very
+     corner, with a smaller ring at its outer edge, clear of slide 3's label and slide 5's "Try Astrid". */
+  @media (orientation: landscape) and (max-height: 420px) {
+    .motion { top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px); place-items: start end; padding: 5px; }
+    .motion i { width: 16px; height: 16px; }
+    .motion b { inset: 2px; }
+    .motion span { right: 27px; top: 13px; font-size: 14px; }
+  }
+
   /* Versions of the story: data-v lists which versions a slide belongs to; JS hides the rest. */
   .slide.out { display: none; }
   .chrome .ver b { color: var(--gold); font-weight: 400; }
@@ -1077,7 +1124,7 @@
        under the footer. */
     .vc-host > .split, .gap-host > .split { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
     .vc-host .vis, .gap-host .vis { flex: 1 1 0; min-height: 0; container-type: size; justify-content: center; }
-    .vc { width: min(100cqw, 100cqh - 3rem); }
+    .vc { width: min(100cqw, 100cqh - 3.6rem); } /* room for the label's two lines */
     .gp { width: min(100cqw, 100cqh); }
   }
   /* A phone on its side (or any short, wide window) keeps the wide compositions, drawn smaller: everything sits
@@ -1096,6 +1143,7 @@
     .gap-host .body { font-size: .88rem; }
     .gp { width: min(100%, 100svh - 96px); }
     .vc { width: min(100%, 62svh); } /* the height the browser's bars leave */
+    .vc-label { margin-top: .4rem; font-size: .88rem; line-height: 1.12; } /* its two lines, without pushing the collage under the footer */
     html[data-ver="f"] .ac-host { padding-bottom: 80px; }
     html[data-ver="f"] .ac-host h1 { font-size: clamp(1.3rem, 6.4svh, 1.8rem); max-width: 26em; }
     /* 5: the text beside the editor, so the player and the timeline keep their height. */
@@ -1141,6 +1189,21 @@
   @media (orientation: landscape) and (max-height: 340px) {
     .st-card p { font-size: 11.5px; } .st-card li b { font-size: 12.5px; } .st-card li span { font-size: 11px; }
   }
+  @media (orientation: landscape) and (max-height: 330px) {
+    .vc { width: min(100%, 57svh); }
+    html[data-ver="f"] .gap-host h1 { font-size: clamp(1.15rem, 5.8svh, 1.6rem); }
+    .gap-host .body { font-size: .82rem; line-height: 1.38; }
+  }
+  @media (max-width: 760px) and (orientation: landscape) and (min-height: 331px) and (max-height: 400px) {
+    .vc { width: min(100%, 60svh); }
+  }
+  @media (max-width: 760px) and (orientation: landscape) and (max-height: 400px) {
+    .as-chat-head { min-width: 0; }
+    .as-state { max-width: 55%; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  }
+  @media (max-width: 760px) and (orientation: landscape) and (max-height: 330px) {
+    .pa-side { translate: 0 -16px; }
+  }
 </style>
 </head>
 <body>
@@ -1155,14 +1218,13 @@
       </div>
       <div class="vis">
         <div class="vc" data-collage>
-          <button class="vc-tile" type="button" style="left:0;top:4%;width:31%;height:55.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-1-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-1.jpg?v=cf2aa05" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:0;width:66%;height:37.1%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-2-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-2.jpg?v=cf2aa05" style="object-position:50% 38%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:0;top:62.1%;width:31%;height:31%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-2-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-2.jpg?v=cf2aa05" style="object-position:50% 78%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:40.1%;width:31.5%;height:39.4%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-3-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-3.jpg?v=cf2aa05" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:68.5%;top:40.1%;width:31.5%;height:56%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-4-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-4.jpg?v=cf2aa05" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
-          <button class="vc-tile" type="button" style="left:34%;top:82.3%;width:31.5%;height:17.7%" data-title="[Title] — [artist]" aria-label="Open this recipient's film"><video data-src="../assets/cards/arca/video-1-60.mp4?v=cf2aa05" poster="../assets/cards/arca/poster-1.jpg?v=cf2aa05" style="object-position:50% 72%" muted loop playsinline preload="none"></video><span class="vc-cap">[Title] · [artist]</span></button>
+          <button class="vc-tile" type="button" style="left:0;top:0;width:66%;height:37.1%" data-film="731a60e7e584d380918dd3c3503276d5" data-at="6" data-page="https://arcagidan.com/submissions/entry/590bc5e0-62b5-4649-9da0-676e0057df4f" data-preview="../assets/cards/arca/everyone-all-at-once-preview.mp4" data-title="Everyone All at Once" data-artist="VisualFrisson" aria-label="Play Everyone All at Once by VisualFrisson"><picture><source type="image/avif" srcset="../assets/cards/arca/everyone-all-at-once.avif"><img src="../assets/cards/arca/everyone-all-at-once.jpg" width="848" height="476" alt="" decoding="async"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Everyone All at Once</b> · VisualFrisson</span></button>
+          <button class="vc-tile" type="button" style="left:69%;top:4%;width:31%;height:46.5%" data-film="8be9148eb0006c9738c46a6c1c49bfc9" data-at="112.5" data-focus="55% 50%" data-page="https://arcagidan.com/submissions/entry/3b32b51f-cb9a-4f20-ad87-5993f8e0a511" data-preview="../assets/cards/arca/the-cellist-preview.mp4" data-title="The Cellist" data-artist="Material_Rabbit" aria-label="Play The Cellist by Material_Rabbit"><picture><source type="image/avif" srcset="../assets/cards/arca/the-cellist.avif"><img src="../assets/cards/arca/the-cellist.jpg" width="400" height="600" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>The Cellist</b> · Material_Rabbit</span></button>
+          <button class="vc-tile" type="button" style="left:0;top:40.1%;width:31.5%;height:56%" data-film="062116e31ef01a199790f1fc3c94d96d" data-at="63.25" data-focus="42% 50%" data-page="https://arcagidan.com/submissions/entry/ec26de7e-c088-41b1-b943-826e15db6900" data-preview="../assets/cards/arca/sliver-of-light-preview.mp4" data-title="Sliver of Light" data-artist="Calvin Herbst" aria-label="Play Sliver of Light by Calvin Herbst"><picture><source type="image/avif" srcset="../assets/cards/arca/sliver-of-light.avif"><img src="../assets/cards/arca/sliver-of-light.jpg" width="404" height="718" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Sliver of Light</b> · Calvin Herbst</span></button>
+          <button class="vc-tile" type="button" style="left:34.5%;top:40.1%;width:31.5%;height:52.5%" data-film="2eead7ea1c7f7c5a6e4caeb43ff810dd" data-at="69" data-focus="42% 50%" data-page="https://arcagidan.com/submissions/entry/13c435a1-057a-441b-b729-545d61cb111b" data-preview="../assets/cards/arca/cherrybomb-preview.mp4" data-title="Cherrybomb (Original Music)" data-artist="sagansagansagans" aria-label="Play Cherrybomb (Original Music) by sagansagansagans"><picture><source type="image/avif" srcset="../assets/cards/arca/cherrybomb.avif"><img src="../assets/cards/arca/cherrybomb.jpg" width="404" height="672" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>Cherrybomb (Original Music)</b> · sagansagansagans</span></button>
+          <button class="vc-tile" type="button" style="left:69%;top:53.5%;width:31%;height:38.75%" data-film="bc5af2f9fce4801d46e8c0f9a57cc4e0" data-at="9.25" data-page="https://arcagidan.com/submissions/entry/c7041961-a637-489d-91c0-84e10e40cb53" data-preview="../assets/cards/arca/to-be-continued-preview.mp4" data-title="To be continued" data-artist="davidmaruscsak00" aria-label="Play To be continued by davidmaruscsak00"><picture><source type="image/avif" srcset="../assets/cards/arca/to-be-continued.avif"><img src="../assets/cards/arca/to-be-continued.jpg" width="400" height="500" alt="" decoding="async" fetchpriority="low"></picture><video muted loop playsinline preload="none"></video><span class="vc-cap"><b>To be continued</b> · davidmaruscsak00</span></button>
         </div>
-        <p class="vc-label">Recipients of the last <b>Arca Gidan Prize</b></p>
+        <p class="vc-label">Recipients of the last <a href="https://arcagidan.com/" target="_blank" rel="noopener">Arca Gidan Prize</a>, our open-source AI art competition</p>
       </div>
     </div>
   </section>
@@ -1404,6 +1466,8 @@
   <!-- Version D: Codex feedback; opening slides are shared above. -->
 </main>
 
+<button id="motion" class="motion" type="button" aria-pressed="false" aria-label="Animations off"><span aria-hidden="true"></span><i aria-hidden="true"><b></b></i></button>
+
 <nav class="overview" id="overview" aria-label="All slides">
   <h2>The story, in titles</h2>
   <ol id="list"></ol>
@@ -1432,25 +1496,23 @@
   const pendingTurns = [];
   let turn = null, pace = 1;
   let backlogDeadline = 0;
-  const BACK_PACE = 1.6; // A calm step back keeps the full reverse motion, about two seconds for the long ones.
-  const BACK_CHAIN_PACE = 2.2; // A back following another recent back gets out of the viewer's way sooner.
-  const BACK_CHAIN_MS = 4000; // Four seconds after a back lands, the next back returns to the calm pace.
-  const FLICK_PACE = 4; // A viewer flicking through slides sees each hand-off but lands quickly.
-  const FLICK_COUNT = 3; // Three accepted steps qualify as a flick.
-  const FLICK_WINDOW_MS = 2000; // Those steps must arrive within two seconds.
-  const FLICK_REVERSAL_MS = 1000; // A quick reversal after a landing also qualifies as a flick.
-  const FLICK_RESET_MS = 3000; // A calm gap between presses ends flick mode.
-  const pressHistory = [];
-  let flicking = false, lastPressAt = -Infinity, lastTurnEndAt = -Infinity, lastTurnDir = 0, lastBackEndAt = -Infinity;
-  const notePress = (dir) => {
-    const now = performance.now();
-    if (now - lastPressAt >= FLICK_RESET_MS) { pressHistory.length = 0; flicking = false; }
+  // Speed follows the viewer: only what they have pressed past is hurried. A press while the deck is at rest
+  // always gets the full turn. A press while a turn is still playing hurries everything already on its way (hurry()),
+  // and the turn it asks for plays at the viewer's own tempo: about as long as the gap since their previous press.
+  const BACK_PACE = 1.6; // A step back replays motion the viewer has just seen: a little quicker, every part still shown.
+  const FLICK_PACE = 4; // The least a pressed-past turn is hurried, and the most a turn asked for mid-turn is.
+  const TEMPO_MS = 3000; // About a turn's length at full speed; a turn asked for mid-turn plays in about the press gap.
+  const STILL_PACE = 16; // With animations off, whatever still moves on a landing finishes in a blink.
+  let lastPressAt = -Infinity;
+  const paceFor = (dir) => {
+    const now = performance.now(), gap = now - lastPressAt, full = dir < 0 ? BACK_PACE : 1;
     lastPressAt = now;
-    pressHistory.push(now);
-    while (pressHistory[0] < now - FLICK_WINDOW_MS) pressHistory.shift();
-    if (pressHistory.length >= FLICK_COUNT ||
-        (dir !== lastTurnDir && lastTurnDir && now - lastTurnEndAt <= FLICK_REVERSAL_MS)) flicking = true;
+    return !turn && !pendingTurns.length ? full : Math.min(FLICK_PACE, Math.max(full, TEMPO_MS / gap));
   };
+  // Animations off: the viewer's switch (remembered), or the system's reduced motion. Every turn then lands at rest.
+  let motionOff = reduced;
+  try { motionOff = reduced || localStorage.getItem('deck-motion') === 'off'; } catch {}
+  window.deckStill = () => motionOff;
   // Virtual milliseconds through the network arrival and the picture's entry,
   // with room for the longest node path. The final queued turn is not in this
   // budget: it STARTS by the deadline, then plays at its chosen step pace.
@@ -1466,7 +1528,7 @@
     // Leave a few frames per hand-off for timers, arrival and layout. At 16×
     // even the short stage morphs still have several painted frames.
     const available = Math.max(100, backlogDeadline - performance.now() - pendingTurns.length * 48);
-    setPace(Math.min(16, Math.max(FLICK_PACE, remaining / available)));
+    setPace(Math.min(STILL_PACE, Math.max(FLICK_PACE, turn.basePace, remaining / available)));
   };
   // A timer's remaining time is measured on the same clock as the slide builds.
   // Its handle can be cancelled even after the underlying timeout is rescheduled.
@@ -1512,21 +1574,50 @@
   const setPace = (value) => {
     if (pace === value) return;
     pace = value;
+    showMotion();
     if (value === 1) { if (animationRaf) cancelAnimationFrame(animationRaf); syncAnimations(); }
     else if (!animationRaf) animationRaf = requestAnimationFrame(syncAnimations);
   };
+  // The motion ring reads the live pace: hidden at the turn's own pace (a back's included), filling as the deck hurries,
+  // full when animations are off. A click or tap is the switch, remembered for this viewer.
+  const motionBtn = document.getElementById('motion'), motionTip = motionBtn.querySelector('span');
+  const pointerWord = matchMedia('(hover: hover)').matches ? 'click' : 'tap';
+  const showMotion = () => {
+    const own = window.deckNav?.dir < 0 ? BACK_PACE : 1;
+    const frost = motionOff ? 1 : Math.min(.8, .8 * Math.log(Math.max(1, pace / own)) / Math.log(STILL_PACE));
+    const hurrying = !motionOff && frost >= .12; // about 1.5× its own pace
+    // Fading out after a hurry it keeps its fill; switched back on (or merely hovered) it is an empty ring.
+    if (motionOff || hurrying || !motionBtn.classList.contains('is-shown')) motionBtn.style.setProperty('--frost', frost.toFixed(3));
+    motionBtn.classList.toggle('is-shown', hurrying);
+    motionBtn.classList.toggle('is-off', motionOff);
+    motionBtn.setAttribute('aria-pressed', String(motionOff));
+    motionTip.textContent = motionOff ? (reduced ? 'Animations off, as your system asks' : `Animations off · ${pointerWord} to turn on`)
+      : hurrying ? 'Animations sped up to keep pace' : `Animations on · ${pointerWord} to turn off`;
+  };
+  let toldTimer = 0;
+  motionBtn.addEventListener('click', (e) => {
+    // A click or tap leaves no focus behind, or the arrow keys that follow would show its focus ring and label.
+    if (e.detail) motionBtn.blur();
+    if (!reduced) {
+      motionOff = !motionOff;
+      try { if (motionOff) localStorage.setItem('deck-motion', 'off'); else localStorage.removeItem('deck-motion'); } catch {}
+      if (motionOff && turn) { turn.basePace = STILL_PACE; setPace(STILL_PACE); } // the turn in flight finishes at once
+      dispatchEvent(new Event('deck-motion'));
+    }
+    showMotion();
+    motionBtn.classList.add('is-told'); // a tap has no hover: say what it did
+    clearTimeout(toldTimer);
+    toldTimer = setTimeout(() => motionBtn.classList.remove('is-told'), 1800);
+  });
   const finishTurn = () => {
     if (!turn || !turn.network || !turn.entry) return;
     window.deckCancelLater(turn.ceiling);
-    lastTurnEndAt = performance.now();
-    lastTurnDir = turn.dir;
-    if (turn.dir < 0) lastBackEndAt = lastTurnEndAt;
     turn = null;
     setPace(1);
     if (pendingTurns.length) queueMicrotask(() => {
       if (turn || !pendingTurns.length) return;
       const next = pendingTurns.shift();
-      startTurn(i + next.dir, next.mode, true);
+      startTurn(i + next.dir, next.mode, next.pace);
       hurry();
     });
   };
@@ -1565,8 +1656,9 @@
   addEventListener('resize', scheduleResize);
   window.visualViewport?.addEventListener('resize', scheduleResize);
 
-  // stepped: an arrow, a click, a swipe or the back button, one slide at a time (never a jump).
-  const startTurn = (n, historyMode = 'push', stepped = false) => {
+  // stepPace: an arrow, a click, a swipe or the back button, one slide at a time (never a jump), at the pace paceFor() chose.
+  const startTurn = (n, historyMode = 'push', stepPace = 0) => {
+    const stepped = stepPace > 0;
     const to = Math.max(0, Math.min(slides.length - 1, n));
     if (initialized && to === i) return;
     // A slide never comes on behind the overview: its scene would start paused and miss its entry.
@@ -1579,11 +1671,11 @@
     const reversePair = from !== null && from >= 8 && to >= 8;
     // Any other step back lands the earlier slide at rest while the picture plays its hand-off in reverse (back);
     // a jump back (hash, overview, history, Home) just lands at rest.
-    const back = stepped && dir < 0 && to === from - 1 && !reversePair;
-    window.deckNav = { from, to, dir, rest: dir < 0 && !reversePair, back, signal: turnController.signal };
+    // With animations off every slide lands at rest, as on a jump back; the network and text land as in reduced motion.
+    const back = !motionOff && stepped && dir < 0 && to === from - 1 && !reversePair;
+    window.deckNav = { from, to, dir, rest: motionOff || (dir < 0 && !reversePair), back, signal: turnController.signal };
     const ceilingMs = from === null ? 18000 : 12000;
-    const basePace = !stepped ? 1 : flicking ? FLICK_PACE : dir < 0
-      ? (performance.now() - lastBackEndAt < BACK_CHAIN_MS ? BACK_CHAIN_PACE : BACK_PACE) : 1;
+    const basePace = motionOff && !reduced ? STILL_PACE : stepPace || 1;
     turn = { to, dir: stepped ? dir : 0, basePace, network: reduced, entry: reduced, ceiling: null, ceilingMs, rewinding: false,
       budget: from === null ? 6500 : turnBudgets[to] };
     setPace(basePace);
@@ -1608,10 +1700,7 @@
   };
   const go = (n, historyMode = 'push') => {
     const to = Math.max(0, Math.min(slides.length - 1, n));
-    pressHistory.length = 0;
-    flicking = false;
-    lastTurnDir = 0;
-    lastBackEndAt = -Infinity;
+    lastPressAt = -Infinity;
     if (initialized && to === i) { pendingTurns.length = 0; setPace(1); return; }
     pendingTurns.length = 0;
     turn = null;
@@ -1622,9 +1711,9 @@
     if (!slides.length || reduced) { go(i + dir, mode); return; }
     const target = i + pendingTurns.reduce((n, queued) => n + queued.dir, 0) + dir;
     if (target < 0 || target >= slides.length) return;
-    notePress(dir);
-    if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, true); return; }
-    pendingTurns.push({ dir, mode });
+    const pace = paceFor(dir);
+    if (!turn && !pendingTurns.length) { startTurn(i + dir, mode, pace); return; }
+    pendingTurns.push({ dir, mode, pace });
     backlogDeadline = performance.now() + 1500;
     hurry();
   };
@@ -1726,6 +1815,7 @@
     setTimeout(() => { intro.disconnect(); warmOpening(); }, 9000);
   } else warmOpening();
   fromHash('replace');
+  showMotion();
   if (!document.documentElement.classList.contains('dt-intro')) warmOpening();
 </script>
 <script src="scatter-field.js?v=cf2aa05"></script>

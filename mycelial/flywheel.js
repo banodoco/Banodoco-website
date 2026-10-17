@@ -216,10 +216,10 @@
     // The six cards: centre, and where each plugs into the ring (degrees, clockwise from 3 o'clock).
     cards: [
       { at: [[835, 360], [302, 262], 'ring'], th: [205, 205, 232] }, // Arca Gidan: top-left
-      { at: [[835, 360], [1368, 262], 'ring'], th: [335, 335, 308] }, // Astrid: top-right
+      { at: [[835, 360], [835, 228], 'ring'], th: [270, 270, 270] }, // Astrid: top-centre
       { at: [[835, 360], [302, 680], 'ring'], th: [155, 155, 128] }, // Banodoco: bottom-left
       { at: [[835, 360], [1368, 680], 'ring'], th: [25, 25, 52] }, // ADOS: bottom-right
-      { at: [[835, 360], [835, 228], 'ring'], th: [270, 270, 270] }, // ArtCompute: top-centre
+      { at: [[835, 360], [1368, 262], 'ring'], th: [335, 335, 308] }, // ArtCompute: top-right
       { at: [[835, 360], [835, 714], 'ring'], th: [90, 90, 90] }, // 2RP: bottom-centre
     ],
     cw: [90, 220, 220], // card widths
@@ -244,10 +244,10 @@
     equip: [[52, 330], [200, 400], [200, 410]],
     cards: [ // on a phone they are icons on 10 too, tapped open
       { at: [[200, 330], 'ring', 'ring'], th: [232, 232, 240] },
-      { at: [[200, 330], 'ring', 'ring'], th: [308, 308, 300] },
+      { at: [[200, 330], 'ring', 'ring'], th: [270, 270, 270] },
       { at: [[200, 330], 'ring', 'ring'], th: [128, 128, 120] },
       { at: [[200, 330], 'ring', 'ring'], th: [52, 52, 60] },
-      { at: [[200, 330], 'ring', 'ring'], th: [270, 270, 270] },
+      { at: [[200, 330], 'ring', 'ring'], th: [308, 308, 300] },
       { at: [[200, 330], 'ring', 'ring'], th: [90, 90, 90] },
     ],
     cw: [40, 170, 170],
@@ -257,11 +257,11 @@
   const ENTRY = [189, 186, 183, 180, 177, 174, 171], EXIT = [-14, 0, 14];
   // A phone on its side: too short for cards above and below, so on 10 and 11 they sit on the ring as icons, three
   // a side (tapped open), and the picture spans only the ring.
-  const SIDE = [[230, 310, 130, 50, 180, 0], [215, 325, 145, 35, 180, 0]]; // 10's ring is flatter, so its icons spread wider
+  const SIDE = [[230, 270, 130, 50, 310, 0], [215, 270, 145, 35, 325, 0]]; // 10's ring is flatter, so its icons spread wider
   const SHORT = { ...WIDE,
     cards: WIDE.cards.map((c, i) => ({ at: [c.at[0], 'ring', 'ring'], th: [c.th[0], SIDE[0][i], SIDE[1][i]] })),
     artistsLabel: [[270, 96], ...WIDE.artistsLabel.slice(1)], // clear of the first artist at this small scale
-    span: [WIDE.span[0], [500, 1170, 330, 612], [258, 1412, 153, 757]] };
+    span: [WIDE.span[0], [500, 1170, 330, 612], [258, 1412, 80, 757]] };
 
   // ---- Layout ---------------------------------------------------------------------------------
   let W = 0, H = 0, dpr = 1, tall = false, short = false, R = WIDE, cell = 3;
@@ -368,6 +368,7 @@
       if (R.cards[i].at[s] !== 'ring') return;
       const t = c[2] * RAD, [cx, cy, rx, ry] = st.ring;
       c[0] = cx + rx * Math.cos(t); c[1] = cy + ry * Math.sin(t);
+      if (short && s === 2 && i === 1 && W < 700) c[1] += 14; // keep Astrid's top-centre icon clear of the short viewport edge
     }));
     paintSeat();
     return true;
@@ -942,6 +943,7 @@
     if (m !== lastM || !cur) { settleCur(); lastM = m; }
     draw();
     place();
+    if (m >= 1) window.AstridMark?.follow(Math.min(1, m - 1)); // the deck's mark grows with the halo on the way to 11 (and back)
   };
 
   // ---- Coming and going ------------------------------------------------------------------------------

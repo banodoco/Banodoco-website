@@ -14,7 +14,8 @@
   const VER = 'f';
   const html = document.documentElement;
   const slides = [...document.querySelectorAll('.slide')];
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Reduced motion, or the viewer's own "animations off" switch (window.deckStill), which can change at any time.
+  let still = window.deckStill ? window.deckStill() : matchMedia('(prefers-reduced-motion: reduce)').matches;
   const active = () => html.dataset.ver === VER;
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const rnd = Math.random;
@@ -278,7 +279,7 @@
     if (mark) {
       mark.t += dt;
       if (mark.folding !== undefined) {
-        mark.folding += dt / (mark.foldFor || 0.5);
+        mark.folding += dt / 0.5;
         mark.shrink = clamp(mark.folding);
         if (mark.folding >= 1) mark = null;
       }
@@ -735,6 +736,7 @@
     return tw;
   };
   // Threads reach across the text and draw it back into the node.
+  const GATHER = 400;
   const gather = (s, at) => {
     const tw = [];
     for (const el of textOf(s)) {
@@ -742,9 +744,19 @@
       for (const p of spots(el, 6)) {
         hypha(wander(p, at), { width: 0.6, alpha: 0.3, depth: 1, fade: 0.7, rest: 0, duration: 0.38 });
       }
-      tw.push(tween(400, easeIn, (k) => mask(el, at, (1 - k) * far)));
+      tw.push(tween(GATHER, easeIn, (k) => mask(el, at, (1 - k) * far)));
     }
     return tw;
+  };
+  // How far into the gather (ms) the new text starts growing from its node: OVERLAP of the way, so its first words
+  // show as the old is about half drawn in; or, where the two nodes are close, once what is left of the old text no
+  // longer reaches the new node, so the two never show in the same place.
+  const OVERLAP = 0.3;
+  const overlap = (s, from, to) => {
+    const d = Math.hypot(to.x - from.x, to.y - from.y);
+    let k = OVERLAP;
+    for (const el of textOf(s)) { const far = reach(el, from); while (k < 1 && (1 - easeIn(k)) * far > d) k += 0.02; }
+    return Math.min(1, k) * GATHER;
   };
 
   let current = slides.find((s) => s.classList.contains('on')) || null;
@@ -792,6 +804,7 @@
   };
   document.addEventListener('visibilitychange', syncIdle);
   window.addEventListener('deck-overview', syncIdle);
+  window.addEventListener('deck-motion', () => { still = window.deckStill(); syncIdle(); });
   syncIdle();
 
   const pulse = (k) => core.animate([{ transform: 'scale(1)' }, { transform: `scale(${k})` }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
@@ -832,36 +845,51 @@
     const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(across, innerHeight * 0.8, room));
     return { x: r.left + r.width / 2, y, size: Math.round(size) };
   };
-  // From slide 10 (glow given) the mark starts as the glow at the wheel's middle, at its place and size there, and
-  // grows and resolves into its own place as the wheel opens into the halo, from the start of the turn; the
-  // network's arrival then finds it already there. Its surface is drawn once; only its transform and opacity move.
+  // From slide 10 (glow given) the mark starts as the glow at the wheel's middle, at its place and size there, and grows
+  // into its own place in step with the wheel opening into the halo round it: the wheel reports how far it stands between
+  // the two slides (AstridMark.follow, its morph's own progress, at the deck's pace and hurry), and the mark stands at the
+  // same fraction of its own way, in place, size and light. 11→10 runs it back into the glow. The network's arrival
+  // finds it already there. Its surface is drawn once; only its transform and opacity move.
+  let following = null; // { glow, back }
   const crown = (at, now, glow) => {
     if (!now && !glow && mark && mark.crown && mark.folding === undefined) return; // already growing out of the glow
     const c = crownAt() || { x: at.x, y: at.y, size: 160 };
-    mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: 0.3 };
+    const upright = innerWidth <= 760 && innerHeight > innerWidth; // an upright phone's words run across more of it: a little fainter there
+    mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: upright ? 0.22 : 0.3 };
     zones.push(Object.assign(disc(mark.x, mark.y, c.size * 0.42), { crown: true, a: now ? 1 : 0 }));
     markCv.getAnimations().forEach((a) => a.cancel());
-    if (glow) markCv.animate(glowFrames(glow, c), { duration: GLOW_MS, easing: 'cubic-bezier(.3,.1,.25,1)', fill: 'backwards' });
+    markCv.style.transform = markCv.style.opacity = markCv.style.transition = '';
+    following = glow ? { glow, back: false } : null;
+    if (glow) { markCv.style.transition = 'none'; followAt(0); } // it follows the wheel frame by frame, not its own fade
     else if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
     wake();
   };
-  const GLOW_MS = 1500;
-  const glowFrames = (glow, c) => [
-    { transform: `translate(${(glow.x - c.x).toFixed(1)}px, ${(glow.y - c.y).toFixed(1)}px) scale(${clamp((2 * glow.r) / c.size, 0.04, 0.5).toFixed(3)})`, opacity: 0 },
-    { opacity: 1, offset: 0.35 },
-    { transform: 'none', opacity: 1 },
-  ];
-  // Leaving the last slide the mark folds into its middle; back to slide 10 (glow given) it plays its growth
-  // backwards instead, shrinking back into the glow at the wheel's middle.
+  const followAt = (f) => {
+    const g = following.glow, q = clamp(f), s = clamp((2 * g.r) / mark.size, 0.04, 0.5);
+    if (q >= 1) { markCv.style.transform = markCv.style.opacity = ''; return; }
+    markCv.style.transform = `translate(${((g.x - mark.x) * (1 - q)).toFixed(1)}px, ${((g.y - mark.y) * (1 - q)).toFixed(1)}px) scale(${(s + (1 - s) * q).toFixed(4)})`;
+    const o = clamp(q / 0.35);
+    markCv.style.opacity = (o * o * (3 - 2 * o)).toFixed(3);
+  };
+  window.AstridMark = {
+    follow(f) {
+      if (!following || !mark || !mark.crown) return;
+      followAt(f);
+      if (!following.back && f >= 1) { following = null; markCv.style.transition = ''; } // grown: at rest in its own place
+      else if (following.back && f <= 0) { following = null; mark = null; drawMarkLayer(); markCv.style.transform = markCv.style.opacity = markCv.style.transition = ''; wake(); } // gone into the glow
+    },
+  };
+  // Leaving the last slide the mark folds into its middle; back to slide 10 (glow given) the wheel runs its growth
+  // backwards instead (follow), shrinking it back into the glow at the wheel's middle.
   const uncrown = (glow) => {
     if (!mark || !mark.crown) return;
+    markCv.getAnimations().forEach((a) => a.cancel());
+    if (glow) { following = { glow, back: true }; markCv.style.transition = 'none'; return; }
+    following = null;
+    markCv.style.transform = markCv.style.opacity = markCv.style.transition = '';
     mark.folding = 0; // step() times it; the canvas folds into its middle as it fades
     const cs = getComputedStyle(markCv), from = { opacity: cs.opacity, scale: cs.scale === 'none' ? '1' : cs.scale };
-    markCv.getAnimations().forEach((a) => a.cancel());
-    if (glow) {
-      mark.foldFor = GLOW_MS / 1000;
-      markCv.animate(glowFrames(glow, mark).reverse().map((f, i) => (i === 1 ? { ...f, offset: 0.65 } : f)), { duration: GLOW_MS, easing: 'cubic-bezier(.75,0,.7,.9)', fill: 'forwards' });
-    } else markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
     wake();
   };
 
@@ -1010,24 +1038,33 @@
     drift = { x: 0, y: 0 }; trail = { x: 0, y: 0 };
     if (next === lastSlide() && prev === deck().at(-2)) { const g = glow(1); if (g) crown(to, false, g); }
 
-    // 3. Arrival: the node blooms (or, on the last slide, becomes the mark) and threads run into the new text.
+    // The new text grows from its node while the old is still being drawn in (overlap), the node's travel running
+    // alongside both; the turn is done once the text is whole and the node has arrived.
+    let landed;
+    const reached = new Promise((r) => { landed = r; });
+    timers.push(window.deckLater(() => {
+      if (done) return;
+      const z = zone(lines(next));
+      if (z) zones.push(z);
+      const shown = reveal(next, to);
+      tweens.push(...shown);
+      Promise.all([...shown, reached]).then(() => { finish(); window.deckTurnDone?.(next); });
+    }, overlap(prev, from, to)));
+
+    // 3. Arrival: the node blooms (or, on the last slide, becomes the mark).
     const arrive = () => {
       if (done) return;
       place(to);
       dot.classList.remove('is-moving'); anims.push(pulse(1.8)); bloom(to);
       if (next === lastSlide()) crown(to);
-      const z = zone(lines(next));
-      if (z) zones.push(z);
       next.dispatchEvent(new CustomEvent('dt-arrive')); // for slides that start their own picture once the node is reached
       if (next === slides[0]) window.deckEntryDone?.(next);
-      const shown = reveal(next, to, 60);
-      tweens.push(...shown);
       prev.classList.add('dt-release'); // the old slide may fade now; its parts stay hidden
       timers.push(window.deckLater(() => {
         prev.classList.remove('dt-leaving', 'dt-release');
         clearText(prev);
       }, 700));
-      Promise.all(shown).then(() => { finish(); window.deckTurnDone?.(next); });
+      landed();
     };
 
     // 2. The network grows across to the next node, or simply re-blooms in place.
