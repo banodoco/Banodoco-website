@@ -773,6 +773,7 @@
   let drift = { x: 0, y: 0 }, trail = { x: 0, y: 0 }, t = 0, last = 0;
   const put = { x: NaN, y: NaN }; // where the idle text was last put (none since it was last cleared)
   const clearText = (s) => { put.x = NaN; return s && textOf(s).forEach((el) => { el.style.transform = ''; unmask(el); }); };
+  const hideText = (s) => s && textOf(s).forEach((el) => mask(el, anchorOf(s), 0));
 
   // Idle: the node wanders a pixel or two; the text follows a beat behind.
   let idleRaf = 0;
@@ -963,7 +964,7 @@
     if (turning) turning.cancel();
     if (active()) adopt(); else restore();
     slides.forEach((sl) => sl.classList.remove('dt-leaving', 'dt-release', 'dt-entering'));
-    slides.forEach(clearText);
+    slides.forEach((sl) => sl === current ? clearText(sl) : hideText(sl));
     trail = { x: 0, y: 0 };
     anchor = current ? anchorOf(current) : null;
     const on = active() && !!anchor;
@@ -1011,8 +1012,9 @@
         hyphae.forEach((h) => { h.onDone = null; });
         prev.classList.remove('dt-leaving', 'dt-release');
         next.classList.remove('dt-entering');
-        clearText(prev);
-        clearText(next);
+        clearText(current);
+        hideText(prev === current ? next : prev);
+        if (next !== current && prev !== current) hideText(next);
         dot.classList.remove('is-moving');
         if (anchor) place(anchor);
         turning = null;
