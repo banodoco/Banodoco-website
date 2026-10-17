@@ -130,6 +130,20 @@
   const SRC = { 0: '.as-player', 1: '.as-timeline', 3: '.as-chat' };
   const ghosts = PL.map((_, i) => { if (!SRC[i]) return null; const el = document.createElement('div'); el.className = 'st-ghost'; return el; });
   [...planes].reverse().forEach((el, j) => { world.appendChild(el); const i = 4 - j; if (ghosts[i]) world.appendChild(ghosts[i]); }); // the upper planes paint over the lower
+  // The player's picture rides between slide 5 and the top plane on a layer of its own, the plane's box under the
+  // plane's own turn: slide 5's exact frame, eased from its place in slide 5's player to the plane's picture box as
+  // the plane morphs, then dissolving where it stands into the plane's own film (and the other way back).
+  const carry = document.createElement('div');
+  carry.className = 'st-carry';
+  const carryPic = document.createElement('div');
+  carryPic.className = 'st-carry-pic';
+  const carryCv = document.createElement('canvas'), carryG = carryCv.getContext('2d');
+  carryPic.append(carryCv, planes[0].querySelector('.st-pic span').cloneNode(true)); // the film's caption, for the way back
+  carry.appendChild(carryPic);
+  world.appendChild(carry);
+  // on: carrying; A: the picture's rect in slide 5's player (px, as its copy is laid out); P: the plane's picture box
+  // in the plane's own content (its px); a: the layer's opacity; back: the plane's frame, on its way back to slide 5.
+  const cy = { on: false, A: null, nw: 0, nh: 0, P: null, a: 1, back: false };
   const cv = document.createElement('canvas');
   cv.className = 'st-threads';
   const g = cv.getContext('2d');
@@ -173,7 +187,7 @@
     const k = Math.min(w / nw, h / nh);
     el.style.transform = `translate(${((w - k * nw) / 2).toFixed(2)}px, ${((h - k * nh) / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
   };
-  const apply = () => st.forEach((s, i) => {
+  const applyPlanes = () => st.forEach((s, i) => {
     const el = planes[i], was = shown[i], p = PL[i];
     const moved = was.x !== s.x || was.y !== s.y || was.w !== s.w || was.h !== s.h, turned = was.rx !== s.rx || was.rz !== s.rz;
     if (moved) { box(el, s); fit(inners[i], s.w - 2, s.h - 2, p.w - 2, p.h - 2); }
@@ -190,6 +204,16 @@
     }
     Object.assign(was, s);
   });
+  const apply = () => { applyPlanes(); placeCarry(); };
+  const placeCarry = () => {
+    if (!cy.on) return;
+    const s = st[0], p = PL[0], q = s.pq ?? 1;
+    const kg = Math.min(s.w / cy.nw, s.h / cy.nh), ki = Math.min((s.w - 2) / (p.w - 2), (s.h - 2) / (p.h - 2));
+    const A = { x: (s.w - kg * cy.nw) / 2 + kg * cy.A.x, y: (s.h - kg * cy.nh) / 2 + kg * cy.A.y, w: kg * cy.A.w };
+    const B = { x: 1 + (s.w - 2 - ki * (p.w - 2)) / 2 + ki * cy.P.x, y: 1 + (s.h - 2 - ki * (p.h - 2)) / 2 + ki * cy.P.y, w: ki * cy.P.w };
+    box(carry, s); carry.style.transform = planes[0].style.transform; carry.style.opacity = cy.a.toFixed(3);
+    carryPic.style.transform = `translate(${lerp(A.x, B.x, q).toFixed(2)}px, ${lerp(A.y, B.y, q).toFixed(2)}px) scale(${(lerp(A.w, B.w, q) / cy.P.w).toFixed(5)})`;
+  };
   const view = { k: 1, ox: 0, oy: 0, mobile: false, right: true, low: false };
   // A point (u, v) from a plane's centre, in its own px, into the scene: exactly what CSS does with
   // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective. project() goes on to the screen.
@@ -473,7 +497,8 @@
   };
 
   // ---- States ------------------------------------------------------------------------------------
-  const clearGhosts = () => ghosts.forEach((gh) => { if (gh) { gh.replaceChildren(); gh.style.display = 'none'; } });
+  const endCarry = () => { cy.on = false; carry.style.display = 'none'; planes[0].classList.remove('is-carrying'); };
+  const clearGhosts = () => { ghosts.forEach((gh) => { if (gh) { gh.replaceChildren(); gh.style.display = 'none'; } }); endCarry(); };
   const hideAll = () => {
     clearGhosts();
     st.forEach((s, i) => Object.assign(s, settledOf(PL[i]), { o: 0 }));
@@ -496,12 +521,13 @@
   // ---- Arriving ----------------------------------------------------------------------------------
   // build: { t0, from5, src } while the stack is assembling; ambient afterwards.
   let build = null, amb = null;
-  // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place.
+  // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place;
+  // carry = slide 5's picture, landed on the top plane, dissolving into the plane's own film.
   // card: the top layer has landed, and its card opens as the words arrive, so the landing is never without one.
   // wide: on a wider screen the headline is read first, so the first card waits until the words are whole.
   // open: every plane is in place, so the tour takes over while the threads, leaders and roots finish.
   const FROM5 = { a: { 0: [0.05, 1.3], 1: [0.12, 1.42], 3: [0.2, 1.62] }, spread: [1.0, 2.1], low: { 2: [1.25, 2.15], 4: [1.5, 2.4] }, fade: [0.25, 0.45, 0.72, 0.56, 0.86],
-    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, wide: 2.0, open: 2.4, end: 3.4 };
+    carry: [1.3, 1.9], mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, wide: 2.0, open: 2.4, end: 3.4 };
   const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, wide: 1.6, open: 1.45, end: 2.25 };
   // Landing at rest on a wider screen, the words are drawn in as the stack lands: its first card waits this long (s).
   const REST_WIDE = 1.7;
@@ -528,9 +554,26 @@
       gh.replaceChildren(wrap);
       gh.dataset.w = r.width; gh.dataset.h = r.height;
     });
+    takePicture(demo.querySelector(SRC[0]), rects[0]);
     const mr = q('.as-mink');
     const c5 = mr ? Math.max(1, Math.round(mr.width / MW)) : cell;
     return { planes: Object.fromEntries(at.map((i, j) => [i, toWorld(rects[j])])), mink: mr ? { x: mr.left, y: mr.top + 3 * c5, c: c5 } : null }; // slide 5 keeps 3 spare rows above her
+  };
+  // The player's picture leaves its copy for the carry layer: its rect in the player, placed as slide 5 draws it
+  // (demo.js: 16:9, 0.86 of the screen's fit, centred), and its pixels; and the plane's own picture box to land in.
+  const takePicture = (src, r) => {
+    const pic = src.querySelector('.as-pic'), copy = ghosts[0].querySelector('.as-pic'), b = pic && pic.getBoundingClientRect();
+    if (!b || !b.width || !pic.width || !copy) { endCarry(); return; }
+    const w = pic.width, h = pic.height, f = Math.min(w / 16, h / 9) * 0.86, dw = 16 * f, dh = 9 * f;
+    const dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2), u = b.width / w;
+    Object.assign(cy, { A: { x: b.left - r.left + dx * u, y: b.top - r.top + dy * u, w: dw * u }, nw: r.width, nh: r.height });
+    carryCv.width = Math.round(dw); carryCv.height = Math.round(dh);
+    try { carryG.drawImage(pic, dx, dy, dw, dh, 0, 0, carryCv.width, carryCv.height); } catch (e) { /* empty */ }
+    copy.getContext('2d').clearRect(0, 0, copy.width, copy.height); copy.dataset.carried = '1';
+    const pe = planes[0].querySelector('.st-pic'), scr = pe.parentElement, n = (PL[0].w - 2) / (inners[0].offsetWidth || 1); // laid out unscaled
+    cy.P = { x: (scr.offsetLeft + pe.offsetLeft - pe.offsetWidth / 2) * n, y: (scr.offsetTop + pe.offsetTop - pe.offsetHeight / 2) * n, w: pe.offsetWidth * n, h: pe.offsetHeight * n };
+    carryPic.style.width = `${cy.P.w.toFixed(2)}px`; carryPic.style.height = `${cy.P.h.toFixed(2)}px`;
+    Object.assign(cy, { on: true, back: false, a: 1 }); carry.classList.remove('is-back'); carry.style.display = 'block';
   };
   const begin = (from5) => {
     layout();
@@ -568,6 +611,7 @@
       const T = FROM5, src = build.src.planes, sp = easeIO(k01(e, T.spread)), mid = PL[2].cy;
       for (const i of [0, 1, 3]) { // rendering, timeline, agent: from slide 5's panels, tilting into the stack
         const p = PL[i], s = st[i], qa = easeIO(k01(e, T.a[i])), f = src[i];
+        if (!i) s.pq = qa; // its picture rides with it (the carry)
         const ty = lerp(mid + (p.cy - mid) * 0.72, p.cy, sp);
         s.x = lerp(f.x, p.cx, qa); s.y = lerp(f.y, ty, qa); s.w = lerp(f.w, p.w, qa); s.h = lerp(f.h, p.h, qa);
         s.rx = TILT * qa; s.rz = TURN * qa - (i === 3 ? Math.sign(TURN) * 16 * Math.sin(Math.PI * qa) : 0);
@@ -581,6 +625,11 @@
       for (const i of [2, 4]) { // effects comes up between the timeline and the agent as they part; the runtime beneath
         const p = PL[i], s = st[i], q = ease(k01(e, T.low[i]));
         Object.assign(s, settledOf(p), { y: p.cy + 50 * (1 - q), rx: TILT + 12 * (1 - q), o: seep(q) });
+      }
+      if (cy.on) { // slide 5's picture dissolves into the plane's own film once the plane has landed (and back)
+        cy.a = 1 - seep(k01(e, T.carry));
+        if (build.back && build.shown) cy.a = Math.min(cy.a, 1 - seep(clamp(build.since / 0.6)));
+        planes[0].classList.toggle('is-carrying', e < T.carry[0]);
       }
       if (build.src.mink) {
         const a = build.src.mink, b = perchOf(st[0]), q = easeIO(k01(e, T.mink));
@@ -819,6 +868,12 @@
     if (!b.src) { // slide 5 has drawn its settled editor by now: copy its panels as they stand
       b.src = snapFrom5();
       if (!b.src) { endFold(); return false; }
+      if (cy.on && video.readyState >= 2) { // folding back, the plane's own frame rides back (its film holds as it folds)
+        const w = Math.round(cy.A.w * dpr);
+        carryCv.width = w; carryCv.height = Math.round((w * 9) / 16);
+        carryG.drawImage(video, 0, 0, carryCv.width, carryCv.height);
+        cy.back = true; carry.classList.add('is-back');
+      } else if (cy.on) { endCarry(); delete ghosts[0].querySelector('.as-pic')?.dataset.carried; } // slide 5's picture stays on its copy
     }
     // Just before the copies show, their pictures are taken again: slide 5's preview may only now have caught up.
     if (!b.fresh && b.e <= 1.1) { b.fresh = true; repaintGhosts(); }
@@ -836,7 +891,7 @@
   };
   const repaintGhosts = () => Object.keys(SRC).forEach((i) => {
     const from = demo.querySelector(SRC[i])?.querySelectorAll('canvas') || [], to = ghosts[i].querySelectorAll('canvas');
-    from.forEach((cs, j) => { const c = to[j]; if (!c || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
+    from.forEach((cs, j) => { const c = to[j]; if (!c || c.dataset.carried || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
   });
   const endFold = () => {
     if (!build || !build.back) return;

@@ -545,6 +545,14 @@
   .st-in { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   /* Arriving from slide 5: exact copies of its panels ride on the top three planes, then dissolve into them. */
   .st-ghost { position: absolute; left: 0; top: 0; display: none; pointer-events: none; backface-visibility: hidden; }
+  /* Its player's picture rides on a layer of its own (the top plane's box and turn), from its place in slide 5's player
+     to the plane's own picture box, then dissolves there into the plane's film; while it rides, the plane's is hidden. */
+  .st-carry { position: absolute; left: 0; top: 0; display: none; border-radius: 16px; overflow: hidden; pointer-events: none; backface-visibility: hidden; }
+  .st-carry-pic { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .st-carry canvas { display: block; width: 100%; height: 100%; }
+  .st-carry span { display: none; }
+  .st-carry.is-back span { display: block; }
+  .st-plane.is-carrying .st-pic { visibility: hidden; }
   .st-mink { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: auto; cursor: pointer; opacity: 0; }
   /* The layer being explained: a brighter rim and a soft gold glow (stack.js also lifts it a little). */
   .st-plane { transition: border-color .5s ease, box-shadow .5s ease; }
@@ -591,7 +599,7 @@
   .st-screen { position: relative; border-radius: 10px; background: #12100d; overflow: hidden; }
   .st-pic { position: absolute; left: 50%; top: 50%; height: 95%; aspect-ratio: 16 / 9; transform: translate(-50%, -50%); }
   .st-pic video { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .st-pic span { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; font: italic 500 30px/1 "Cormorant Garamond", Georgia, serif; color: #fffaf0; text-shadow: 0 1px 3px rgb(70 45 20 / .6), 0 0 18px rgb(60 35 15 / .5); }
+  .st-pic span, .st-carry span { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; font: italic 500 30px/1 "Cormorant Garamond", Georgia, serif; color: #fffaf0; text-shadow: 0 1px 3px rgb(70 45 20 / .6), 0 0 18px rgb(60 35 15 / .5); }
   .st-transport { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--as-muted); }
   .st-btn { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--as-ink); }
   .st-btn.is-play { background: rgb(255 255 255 / .06); border: 1px solid var(--as-line); }
