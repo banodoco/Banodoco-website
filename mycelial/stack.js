@@ -1,11 +1,11 @@
 // Version F, slide 6: where it goes. Slide 5's product taken apart into one exploded stack of thin
-// floating planes on the left, the text on the right, top to bottom: rendering, editing, effects, the agent's tools,
-// and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
-// perches on the top plane.
-// Each layer has a named flag sticking out to the left on a fine gold leader. Hovering, focusing or
+// floating planes on the right, the text low on the left, top to bottom: rendering, editing, effects, the agent's
+// tools, and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
+// perches on the top plane. (On an upright phone the stack stands under the text, its mirror: flags on the left.)
+// Each layer has a named flag sticking out to the right on a fine gold leader. Hovering, focusing or
 // tapping a flag (or its plane) unfolds it into a small card: what can be customised there, in a line,
 // and a few real examples. A guide, a mote of light in the deck's own language, tours the layers on its
-// own: it rides the planes' left edges from flag to flag, and each layer's card opens as it arrives and closes
+// own: it rides the planes' outer edges from flag to flag, and each layer's card opens as it arrives and closes
 // as it leaves, so all five are seen without a touch. Hover takes over; leaving hands back to the tour
 // after a short pause. The layer being explained lifts a little and its rim glows.
 // From slide 5 the product itself becomes the stack: the top planes begin as exact copies of slide 5's
@@ -41,10 +41,11 @@
   // Laid out in scene px (the concept's own frame) and fitted to the screen beside the text. Every plane
   // lies at the same tilt, turned a little about its normal, under one perspective whose origin sits to
   // the right; the planes are stacked down the scene with the same clear air between each pair.
-  // The stack stands on the left of the slide and opens toward the text on the right: its perspective is
-  // seen from the left and every plane is turned a little the other way (a mirror of the first layout).
-  const PERSP = 2600, PO = { x: 210, y: 420 };
-  const TILT = 58, TURN = -4.5, GAP = 34, ROOTS = 100, HEADROOM = 18;
+  // On an upright phone the flags run down the stack's left side instead, so there it is the mirror: its
+  // perspective seen from the left and every plane turned a little the other way (layout() sets the side).
+  const PERSP = 2600, PO = { x: 1900, y: 420 };
+  const TILT = 58, GAP = 34, ROOTS = 100, HEADROOM = 18;
+  let TURN = 4.5;
   const PL = [ // top to bottom; centre x and flat size in scene px (centre y is stacked in layout); kind: what the plane shows
     { id: 'render', kind: 'preview', cx: 1062, cy: 150, w: 780, h: 340 },
     { id: 'timeline', kind: 'timeline', cx: 1058, cy: 0, w: 780, h: 250 },
@@ -149,8 +150,8 @@
     c.innerHTML = `<b class="st-ch">${t.name}</b><p>${t.line}</p><ul>${t.ex.map(([n, d]) => `<li><b>${n}</b> <span>${d}</span></li>`).join('')}</ul>${t.more ? `<div class="st-more">${t.more}</div>` : ''}<em>${t.foot}</em>`;
     return c;
   });
-  // An unseen hit area over the whole picture (flags column, planes, mink, roots): the stack sits in the left third,
-  // where a stray click would otherwise turn the deck back.
+  // An unseen hit area over the whole picture (flags column, planes, mink, roots): a stray click between the planes
+  // would otherwise turn the deck.
   const hit = document.createElement('div');
   hit.className = 'st-hit';
   root.append(hit, world, cv, ...flags, ...cards, minkCv);
@@ -189,7 +190,7 @@
     }
     Object.assign(was, s);
   });
-  const view = { k: 1, ox: 0, oy: 0, mobile: false };
+  const view = { k: 1, ox: 0, oy: 0, mobile: false, right: true };
   // A point (u, v) from a plane's centre, in its own px, into the scene: exactly what CSS does with
   // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective. project() goes on to the screen.
   const projW = (s, u, v) => {
@@ -227,6 +228,10 @@
   const layout = () => {
     const W = innerWidth, H = innerHeight;
     view.mobile = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
+    // Which side the flags hang on: the right of the stack beside the text, or its left under the text on a phone.
+    const right = view.right = !view.mobile, out = right ? 1 : -1;
+    PO.x = right ? 1900 : 210; TURN = right ? 4.5 : -4.5;
+    world.style.perspectiveOrigin = `${PO.x}px ${PO.y}px`;
     stackUp();
     // The whole picture's extent in scene px: labels to callouts, the mink's head to the roots' ends.
     const S = PL.map(settledOf);
@@ -234,19 +239,21 @@
       nl: projW(s, -s.w / 2 + 3, s.h / 2 - 3), nr: projW(s, s.w / 2 - 3, s.h / 2 - 3), fr: projW(s, s.w / 2 - 3, -s.h / 2 + 3), fl: projW(s, -s.w / 2 + 3, -s.h / 2 + 3),
       lm: projW(s, -s.w / 2, 0), rm: projW(s, s.w / 2, 0),
     }));
-    const callXw = Math.min(...cw.map((c) => c.lm.x)) - 40; // the flags' column, left of the stack (flags hang to its left)
-    const perchW = projW(S[0], S[0].w / 2 - 0.2 * S[0].w, -S[0].h / 2 + 2);
+    const callXw = right ? Math.max(...cw.map((c) => c.rm.x)) + 40 : Math.min(...cw.map((c) => c.lm.x)) - 40; // the flags' column
+    const perchW = projW(S[0], perchU(S[0]), -S[0].h / 2 + 2);
     const h1 = slide.querySelector('h1').getBoundingClientRect();
-    // On a desktop the cards open in a column beside the flags; on a phone, in a slot between the text and the stack.
-    // On a phone on its side the column is narrower and a card opens over the flags, which keep their places.
+    // On a desktop the cards open in a column beside the flags, right of the stack (the text low on the left); on a
+    // phone, in a slot between the text and the stack. On a phone on its side the column is narrower and a card
+    // opens over the flags, which keep their places.
     const low = !view.mobile && H <= 500;
     const cw0 = view.mobile ? W - 32 : low ? CARDW_L : CARDW;
     cards.forEach((c) => { c.style.width = `${cw0}px`; });
     const ch = cards.map((c) => c.offsetHeight);
     const slotT = h1.bottom + 12, slotH = view.mobile ? Math.max(...ch) : 0;
     const Rg = view.mobile ? { l: 10 + FLAGW_M, r: W - 8, t: slotT + slotH + 12, b: H - 70 }
-      : low ? { l: 12 + CARDW_L - 6, r: h1.left - 20, t: 14, b: H - 76 } : { l: 48 + CARDW - 6, r: h1.left - 28, t: 22, b: H - 66 };
-    const box = { l: callXw, r: Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12, t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
+      : low ? { l: h1.right + 20, r: W - 12 - CARDW_L + 6, t: 14, b: H - 76 } : { l: h1.right + 28, r: W - 48 - CARDW + 6, t: 22, b: H - 66 };
+    const box = { l: right ? Math.min(...cw.map((c) => Math.min(c.fl.x, c.nl.x))) - 12 : callXw, r: right ? callXw : Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12,
+      t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
     const k = Math.min((Rg.r - Rg.l) / (box.r - box.l), (Rg.b - Rg.t) / (box.b - box.t));
     view.k = k;
     view.ox = (Rg.l + Rg.r) / 2 - ((box.l + box.r) / 2) * k;
@@ -266,15 +273,16 @@
     flags.forEach((el) => { el.style.left = `${callX.toFixed(1)}px`; });
     cards.forEach((c, i) => {
       if (view.mobile) { c.style.left = '16px'; c.style.top = `${slotT.toFixed(1)}px`; return; }
-      c.style.left = `${Math.max(8, callX + 4 - cw0).toFixed(1)}px`;
+      c.style.left = `${(right ? Math.min(W - 8 - cw0, callX - 4) : Math.max(8, callX + 4 - cw0)).toFixed(1)}px`;
     });
-    // The guide's ways between the flags: back along a leader, down the plane's left edge, across to the
-    // next plane, along its edge and out to its flag; from the foundation it climbs the far-left thread home.
-    const A = corners.map((c) => [callX + 3, c.lm.y]), Lr = corners.map((c) => [c.lm.x - 8 * k, c.lm.y]);
+    // The guide's ways between the flags: back along a leader, down the plane's outer edge, across to the
+    // next plane, along its edge and out to its flag; from the foundation it climbs the far outer thread home.
+    const E = right ? { m: 'rm', n: 'nr', f: 'fr' } : { m: 'lm', n: 'nl', f: 'fl' }; // the flags' side: mid, near and far corners
+    const A = corners.map((c) => [callX - 3 * out, c[E.m].y]), Ed = corners.map((c) => [c[E.m].x + 8 * k * out, c[E.m].y]);
     const xy = (p) => [p.x, p.y];
     const ways = corners.map((c, i) => polyline(i < corners.length - 1
-      ? [A[i], Lr[i], xy(c.nl), xy(corners[i + 1].fl), Lr[i + 1], A[i + 1]]
-      : [A[i], Lr[i], xy(c.fl), ...corners.slice(0, i).reverse().map((d) => xy(d.fl)), Lr[0], A[0]]));
+      ? [A[i], Ed[i], xy(c[E.n]), xy(corners[i + 1][E.f]), Ed[i + 1], A[i + 1]]
+      : [A[i], Ed[i], xy(c[E.f]), ...corners.slice(0, i).reverse().map((d) => xy(d[E.f])), Ed[0], A[0]]));
     // Roots: fine threads that wander down from under the foundation, branching now and then.
     const R = rng(7), roots = [], base = corners[4];
     const grow = (x, y, ang, len, depth, delay) => {
@@ -295,9 +303,9 @@
       const q = (j + 0.5) / 15, x = lerp(base.nl.x, base.nr.x, q) + (R() - 0.5) * 20 * k, y = lerp(base.nl.y, base.nr.y, q) - 4 * k;
       grow(x, y, Math.PI / 2 + (q - 0.5) * 1.5 + (R() - 0.5) * 0.5, (40 + R() * 62) * k, 0, R() * 0.35);
     }
-    geo = { corners, callX, roots, ways, anchors: A, base: corners.map((c) => c.lm.y), ch, H };
+    geo = { corners, callX, roots, ways, anchors: A, base: corners.map((c) => c[E.m].y), ch, H, E, out };
     const pts = corners.flatMap((c) => [c.nl, c.nr, c.fl, c.fr]), flagW = Math.max(...flags.map((f) => f.offsetWidth));
-    const hx0 = callX - flagW - 10, hx1 = Math.max(...pts.map((p) => p.x)) + 12;
+    const hx0 = right ? Math.min(...pts.map((p) => p.x)) - 12 : callX - flagW - 10, hx1 = right ? callX + flagW + 10 : Math.max(...pts.map((p) => p.x)) + 12;
     const hy0 = Math.min(...pts.map((p) => p.y)) - MH * cell - 12, hy1 = Math.max(...pts.map((p) => p.y)) + ROOTS * k;
     Object.assign(hit.style, { left: `${hx0.toFixed(0)}px`, top: `${hy0.toFixed(0)}px`, width: `${(hx1 - hx0).toFixed(0)}px`, height: `${(hy1 - hy0).toFixed(0)}px` });
     // An open card opens where its flag was; the flags above and below it slide apart to make room (an accordion),
@@ -366,9 +374,11 @@
     }
   };
   const restMink = () => Object.assign(mk, { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null });
-  // Her place on the top plane's far edge, as the plane stands now (or settled).
+  // Her place on the top plane's far edge, as the plane stands now (or settled): near its left end beside the text,
+  // or its right end on an upright phone.
+  const perchU = (s) => (view.right ? -s.w / 2 + 0.16 * s.w : s.w / 2 - 0.2 * s.w);
   const perchOf = (s = settledOf(PL[0])) => {
-    const p = project(s, s.w / 2 - 0.2 * s.w, -s.h / 2 + 2);
+    const p = project(s, perchU(s), -s.h / 2 + 2);
     return { x: p.x - Math.round(MW * cell * 0.42), y: p.y - MH * cell + Math.round(cell * 0.5), c: cell };
   };
 
@@ -399,7 +409,6 @@
     if (m < pts.length - 1) { const f = n - m, a = pts[m], b = pts[m + 1]; g.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f); }
     g.stroke();
   };
-  const RUNS = ['nr', 'nl', 'fl'];
   const draw = () => {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, cv.width, cv.height);
@@ -418,12 +427,14 @@
         if (tip > 0) { const [x, y] = r.pts.at(-1); dot(x, y, 1, 0.75 * tip); r.dots.forEach(([dx, dy]) => dot(dx, dy, 0.8, 0.5 * tip)); }
       }
     }
-    // Registration threads, corner to corner down the stack, drawn from the top.
+    // Registration threads, corner to corner down the stack, drawn from the top: down both near corners and the far
+    // one on the flags' side; the other far corner only takes a faint bead.
     if (vis.sh > 0) {
+      const RUNS = view.right ? ['nl', 'nr', 'fr'] : ['nr', 'nl', 'fl'], far = RUNS[2], faint = view.right ? 'fl' : 'fr';
       g.lineWidth = 0.8; g.setLineDash([1.6, 3.4]);
       const segs = C.length - 1;
       for (const key of RUNS) {
-        g.strokeStyle = GOLD(key === 'fl' ? 0.38 : 0.55);
+        g.strokeStyle = GOLD(key === far ? 0.38 : 0.55);
         for (let i = 0; i < segs; i++) {
           const q = clamp(vis.sh * segs - i);
           if (q <= 0) break;
@@ -432,12 +443,12 @@
         }
       }
       g.setLineDash([]);
-      C.forEach((c, i) => { const a = clamp(vis.sh * segs - i + 1); RUNS.forEach((key) => dot(c[key].x, c[key].y, 1.9, a * (key === 'fl' ? 0.75 : 1))); dot(c.fr.x, c.fr.y, 1.4, a * 0.55); });
+      C.forEach((c, i) => { const a = clamp(vis.sh * segs - i + 1); RUNS.forEach((key) => dot(c[key].x, c[key].y, 1.9, a * (key === far ? 0.75 : 1))); dot(c[faint].x, c[faint].y, 1.4, a * 0.55); });
     }
-    // Flag leaders: from each plane's left edge out to its flag; the layer being explained burns brighter.
+    // Flag leaders: from each plane's outer edge out to its flag; the layer being explained burns brighter.
     vis.lb.forEach((q, i) => {
       if (q <= 0) return;
-      const m = C[i].lm, x0 = m.x - 8 * k, x1 = geo.callX + 3, y1 = flagY[i] ?? m.y, l = lit[i];
+      const m = C[i][geo.E.m], x0 = m.x + 8 * k * geo.out, x1 = geo.callX - 3 * geo.out, y1 = flagY[i] ?? m.y, l = lit[i];
       g.lineWidth = 0.8 + 0.5 * l; g.strokeStyle = GOLD((0.5 + 0.4 * l) * q);
       if (Math.abs(y1 - m.y) < 0.5) { g.beginPath(); g.moveTo(x0, m.y); g.lineTo(lerp(x0, x1, ease(q)), m.y); g.stroke(); }
       else { // a gentle S from the plane's edge to where its flag has moved
