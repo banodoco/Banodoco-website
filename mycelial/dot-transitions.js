@@ -279,7 +279,7 @@
     if (mark) {
       mark.t += dt;
       if (mark.folding !== undefined) {
-        mark.folding += dt / (mark.foldFor || 0.5);
+        mark.folding += dt / 0.5;
         mark.shrink = clamp(mark.folding);
         if (mark.folding >= 1) mark = null;
       }
@@ -834,36 +834,51 @@
     const size = clamp(Math.max(r.height * 1.45, r.width * 0.62), 160, Math.min(across, innerHeight * 0.8, room));
     return { x: r.left + r.width / 2, y, size: Math.round(size) };
   };
-  // From slide 10 (glow given) the mark starts as the glow at the wheel's middle, at its place and size there, and
-  // grows and resolves into its own place as the wheel opens into the halo, from the start of the turn; the
-  // network's arrival then finds it already there. Its surface is drawn once; only its transform and opacity move.
+  // From slide 10 (glow given) the mark starts as the glow at the wheel's middle, at its place and size there, and grows
+  // into its own place in step with the wheel opening into the halo round it: the wheel reports how far it stands between
+  // the two slides (AstridMark.follow, its morph's own progress, at the deck's pace and hurry), and the mark stands at the
+  // same fraction of its own way, in place, size and light. 11→10 runs it back into the glow. The network's arrival
+  // finds it already there. Its surface is drawn once; only its transform and opacity move.
+  let following = null; // { glow, back }
   const crown = (at, now, glow) => {
     if (!now && !glow && mark && mark.crown && mark.folding === undefined) return; // already growing out of the glow
     const c = crownAt() || { x: at.x, y: at.y, size: 160 };
-    mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: 0.3 };
+    const upright = innerWidth <= 760 && innerHeight > innerWidth; // an upright phone's words run across more of it: a little fainter there
+    mark = { x: c.x, y: c.y, t: now ? 2 : -0.2, size: c.size, shrink: 0, trail: null, shed: 0, crown: true, faint: upright ? 0.22 : 0.3 };
     zones.push(Object.assign(disc(mark.x, mark.y, c.size * 0.42), { crown: true, a: now ? 1 : 0 }));
     markCv.getAnimations().forEach((a) => a.cancel());
-    if (glow) markCv.animate(glowFrames(glow, c), { duration: GLOW_MS, easing: 'cubic-bezier(.3,.1,.25,1)', fill: 'backwards' });
+    markCv.style.transform = markCv.style.opacity = markCv.style.transition = '';
+    following = glow ? { glow, back: false } : null;
+    if (glow) { markCv.style.transition = 'none'; followAt(0); } // it follows the wheel frame by frame, not its own fade
     else if (!now) markCv.animate([{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], { duration: 1300, delay: 150, easing: 'cubic-bezier(.22,.7,.2,1)', fill: 'backwards' });
     wake();
   };
-  const GLOW_MS = 1500;
-  const glowFrames = (glow, c) => [
-    { transform: `translate(${(glow.x - c.x).toFixed(1)}px, ${(glow.y - c.y).toFixed(1)}px) scale(${clamp((2 * glow.r) / c.size, 0.04, 0.5).toFixed(3)})`, opacity: 0 },
-    { opacity: 1, offset: 0.35 },
-    { transform: 'none', opacity: 1 },
-  ];
-  // Leaving the last slide the mark folds into its middle; back to slide 10 (glow given) it plays its growth
-  // backwards instead, shrinking back into the glow at the wheel's middle.
+  const followAt = (f) => {
+    const g = following.glow, q = clamp(f), s = clamp((2 * g.r) / mark.size, 0.04, 0.5);
+    if (q >= 1) { markCv.style.transform = markCv.style.opacity = ''; return; }
+    markCv.style.transform = `translate(${((g.x - mark.x) * (1 - q)).toFixed(1)}px, ${((g.y - mark.y) * (1 - q)).toFixed(1)}px) scale(${(s + (1 - s) * q).toFixed(4)})`;
+    const o = clamp(q / 0.35);
+    markCv.style.opacity = (o * o * (3 - 2 * o)).toFixed(3);
+  };
+  window.AstridMark = {
+    follow(f) {
+      if (!following || !mark || !mark.crown) return;
+      followAt(f);
+      if (!following.back && f >= 1) { following = null; markCv.style.transition = ''; } // grown: at rest in its own place
+      else if (following.back && f <= 0) { following = null; mark = null; drawMarkLayer(); markCv.style.transform = markCv.style.opacity = markCv.style.transition = ''; wake(); } // gone into the glow
+    },
+  };
+  // Leaving the last slide the mark folds into its middle; back to slide 10 (glow given) the wheel runs its growth
+  // backwards instead (follow), shrinking it back into the glow at the wheel's middle.
   const uncrown = (glow) => {
     if (!mark || !mark.crown) return;
+    markCv.getAnimations().forEach((a) => a.cancel());
+    if (glow) { following = { glow, back: true }; markCv.style.transition = 'none'; return; }
+    following = null;
+    markCv.style.transform = markCv.style.opacity = markCv.style.transition = '';
     mark.folding = 0; // step() times it; the canvas folds into its middle as it fades
     const cs = getComputedStyle(markCv), from = { opacity: cs.opacity, scale: cs.scale === 'none' ? '1' : cs.scale };
-    markCv.getAnimations().forEach((a) => a.cancel());
-    if (glow) {
-      mark.foldFor = GLOW_MS / 1000;
-      markCv.animate(glowFrames(glow, mark).reverse().map((f, i) => (i === 1 ? { ...f, offset: 0.65 } : f)), { duration: GLOW_MS, easing: 'cubic-bezier(.75,0,.7,.9)', fill: 'forwards' });
-    } else markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+    markCv.animate([from, { opacity: 0, scale: '0.06' }], { duration: 500, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
     wake();
   };
 

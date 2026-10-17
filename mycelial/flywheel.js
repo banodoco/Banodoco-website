@@ -943,6 +943,7 @@
     if (m !== lastM || !cur) { settleCur(); lastM = m; }
     draw();
     place();
+    if (m >= 1) window.AstridMark?.follow(Math.min(1, m - 1)); // the deck's mark grows with the halo on the way to 11 (and back)
   };
 
   // ---- Coming and going ------------------------------------------------------------------------------
