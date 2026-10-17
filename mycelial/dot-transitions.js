@@ -763,8 +763,8 @@
   // starts once the picture has gone by, this far into the turn (ms at the turn's pace; measured, see FX7). Each turn
   // not listed keeps overlap()'s start, and a step back with no picture coming back (dt-return) never waits.
   const PASSING = {
-    wide: { '6-5': 2400, '8-7': 1000, '11-10': 650 },
-    upright: { '7-6': 1800, '8-7': 800, '9-8': 1500, '10-9': 750, '11-10': 550, '6-7': 800, '9-10': 350 },
+    wide: { '6-5': 2400, '8-7': 1100, '11-10': 650 },
+    upright: { '7-6': 1900, '8-7': 1150, '9-8': 1550, '10-9': 750, '11-10': 550, '6-7': 800, '9-10': 350 },
   };
   const passing = (prev, next) => {
     if (window.deckNav?.back && !next.matches('.dt-return, .fw-host')) return 0;
