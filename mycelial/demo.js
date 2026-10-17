@@ -553,6 +553,8 @@
 
   // Clock
   let running = false, raf = 0, last = 0, ticking = false, requested = false;
+  videos[1].addEventListener('seeked', () => drawPic(now()));
+  gradedVideos[1].addEventListener('seeked', () => drawPic(now()));
   const tick = () => {
     raf = 0;
     if (!running || paused) return;
@@ -590,7 +592,7 @@
     running = true;
     layout();
     if (still || window.deckNav?.rest) {
-      settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now())); videos[1].addEventListener('seeked', () => drawPic(now()), { once: true }); gradedVideos[1].addEventListener('seeked', () => drawPic(now()), { once: true });
+      settledState(); paint('profile', 0, 0); requestAnimationFrame(() => drawPic(now()));
       window.deckEntryDone?.(slide);
       // Back at rest: the finished editor, its preview playing, until the loop's own reset starts the demo again.
       if (!still) { view.rate = 1; td = beatTimes(BEATS[BEATS.length - 1]).act + 4; wait = 0; wake(); }
