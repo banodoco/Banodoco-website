@@ -5,7 +5,6 @@ import re
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -99,6 +98,28 @@ class AngelServerTests(unittest.TestCase):
         self.assertEqual(valid['status'], 204)
         for path in ('/deck/angel/.secret', '/deck/angel/%2e%2e/serve.py'):
             self.assertEqual(self.server.request('GET', path)['status'], 404)
+
+    def test_release_encoded_and_normalized_mycelial_paths_cannot_bypass_gate(self):
+        bypasses = (
+            '/%6Dycelial/index.html',
+            '//mycelial/index.html',
+            '/assets/../mycelial/index.html',
+            '/%6Dycelial/dot-transitions.js',
+            '//mycelial/dot-transitions.js',
+            '/assets/../mycelial/dot-transitions.js',
+        )
+        for path in bypasses:
+            with self.subTest(path=path):
+                response = self.server.request('GET', path, follow=False)
+                self.assertEqual(response['status'], 308)
+                self.assertEqual(response['headers']['Location'], '/deck/angel/')
+                self.assertNotIn(b'<title>Mycelial', response['body'])
+
+    def test_range_keyed_deck_response_sets_cookie_before_headers_end(self):
+        response = self.server.request('GET', '/deck/angel/index.html?key=' + KEY,
+                                        headers={'Range': 'bytes=0-9'})
+        self.assertEqual(response['status'], 206)
+        self.assertRegex(response['headers'].get('Set-Cookie', ''), r'deck_angel=[0-9a-f]{64};')
 
     def test_release_redirect_and_removed_key_revokes_cookie(self):
         redirected = self.server.request('GET', '/mycelial/?x=1', follow=False)

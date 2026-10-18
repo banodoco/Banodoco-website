@@ -11,7 +11,7 @@ sends byte ranges for <video> and stalls mid-playback when the server
 answers 200 with the whole body — that was the ADOS preview "freezing"
 after a second (2026-08-18).
 """
-import hashlib, hmac, http.server, json, os, re, sys, urllib.parse
+import hashlib, hmac, http.server, json, os, posixpath, re, sys, urllib.parse
 from http import cookies
 from pathlib import Path
 
@@ -59,7 +59,29 @@ def deck_cookie_value(key):
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     def request_path(self):
-        return urllib.parse.urlsplit(self.path).path
+        raw = urllib.parse.urlsplit(self.path).path
+        decoded = urllib.parse.unquote(raw)
+        if '\x00' in decoded or '\\' in decoded:
+            return None
+        trailing_slash = decoded.endswith('/')
+        normalized = posixpath.normpath(decoded)
+        if not normalized.startswith('/'):
+            normalized = '/' + normalized
+        # normpath preserves a double leading slash; HTTP paths have one root.
+        normalized = '/' + '/'.join(part for part in normalized.split('/') if part)
+        if trailing_slash and normalized != '/':
+            normalized += '/'
+        return normalized
+
+    def refuses_release_mycelial_target(self, target):
+        if RUNTIME_MODE != 'release':
+            return False
+        mycelial = Path(os.getcwd(), 'mycelial').resolve()
+        try:
+            Path(target).resolve().relative_to(mycelial)
+            return True
+        except ValueError:
+            return False
 
     def safe_file(self, relative):
         """Resolve a public relative path without dotfiles, traversal or symlinks."""
@@ -140,6 +162,9 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     def deck_route(self):
         """Return a handled route, target path and whether it is HTML."""
         path = self.request_path()
+        if path is None:
+            self.send_error(404)
+            return True, None, False
         query = urllib.parse.urlsplit(self.path).query
         if path in ('/deck', '/deck/'):
             self.send_redirect('/deck/angel/' + (f'?{query}' if query else ''))
@@ -204,7 +229,7 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         return translated
 
     def end_headers(self):
-        request_path = self.request_path()
+        request_path = self.request_path() or ''
         if getattr(self, '_deck_response', False) or request_path.startswith('/deck/'):
             self.send_header('X-Robots-Tag', 'noindex')
             self.send_header('Referrer-Policy', 'same-origin')
@@ -229,8 +254,6 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             if 'Range' in self.headers:
                 ranged = self._range_body(str(target))
                 if ranged is not None:
-                    if getattr(self, '_deck_set_cookie', None):
-                        self.send_header('Set-Cookie', self._deck_set_cookie)
                     return ranged
             self.send_response(200)
             self.send_header('Content-Type', self.guess_type(str(target)))
@@ -242,8 +265,14 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             return open(target, 'rb')
         if 'Range' in self.headers:
             path = self.translate_path(self.path)
+            if self.refuses_release_mycelial_target(path):
+                self.send_error(404)
+                return None
             if os.path.isfile(path):
                 return self._range_body(path) or None
+        if self.refuses_release_mycelial_target(self.translate_path(self.path)):
+            self.send_error(404)
+            return None
         return super().send_head()
 
     def _range_body(self, path):
@@ -286,6 +315,8 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Accept-Ranges', 'bytes')
         self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
         self.send_header('Content-Length', str(end - start + 1))
+        if getattr(self, '_deck_set_cookie', None):
+            self.send_header('Set-Cookie', self._deck_set_cookie)
         self.end_headers()
         return open(path, 'rb'), start, end
 
