@@ -860,6 +860,58 @@
   .fw-stat b { font-weight: 500; color: #ecc57e; }
   .fw-stat a { margin-left: .25em; color: #f0c67e; text-decoration: none; }
   .fw-stat a:hover, .fw-stat a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+  /* Slide 11: three questions under the words (who, the money, the goal). Each opens a small card of its detail above
+     it while hovered or focused (tapped, on a touch screen), one at a time; the card stays open while the pointer is on
+     it. They come in once the slide has settled (data-settled), and with animations off they are simply there. They sit
+     out of the words' flow, so the words, the mark behind them and the halo keep their places. */
+  html[data-ver="f"] .fw-raise > .split { position: relative; }
+  .fw-asks { position: absolute; left: 50%; top: 100%; z-index: 2; display: flex; justify-content: center; gap: clamp(1.5rem, 2.6vw, 2.6rem);
+    margin-top: clamp(1.4rem, 3.4vh, 2.2rem); translate: -50% 0; white-space: nowrap;
+    opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s; }
+  .slide.on[data-settled] .fw-asks, html.deck-motion-off .slide.on .fw-asks { opacity: 1; visibility: visible; transition: opacity 1.1s ease .45s, visibility 0s linear .45s; }
+  .fw-ask { position: relative; }
+  .fw-ask-q { all: unset; position: relative; display: inline-flex; align-items: center; gap: .55em; padding: .3em 0; cursor: pointer;
+    font: italic 400 clamp(1rem, 1.2vw, 1.18rem)/1.2 "Cormorant Garamond", serif; letter-spacing: .02em; color: var(--soft); transition: color .3s ease; }
+  .fw-ask-q::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #e0ab5e; opacity: .7;
+    transition: opacity .3s ease, background-color .3s ease, box-shadow .3s ease; }
+  .fw-ask-q::after { content: ""; position: absolute; inset: -8px -10px; } /* a comfortable target */
+  .fw-ask-q:focus-visible, .fw-ask.is-open .fw-ask-q { color: #f0c67e; }
+  .fw-ask-q:focus-visible::before, .fw-ask.is-open .fw-ask-q::before { opacity: 1; background: #ffd991; box-shadow: 0 0 9px 1px #ffd99166; }
+  @media (hover: hover) { .fw-ask-q:hover { color: #f0c67e; } .fw-ask-q:hover::before { opacity: 1; background: #ffd991; box-shadow: 0 0 9px 1px #ffd99166; } }
+  .fw-ask-q:focus-visible { outline: 1px solid #f0c67e80; outline-offset: 6px; border-radius: 3px; }
+  .fw-ask-card { position: absolute; left: 50%; bottom: calc(100% + 14px); box-sizing: border-box; width: 22rem; padding: 1rem 1.1rem 1.05rem;
+    translate: calc(-50% + var(--shift, 0px)) 0; text-align: left; white-space: normal;
+    background: #14100cf5; border: 1px solid #f0c8772e; border-radius: 7px; box-shadow: 0 0 34px #e0ab5e14, 0 14px 40px #000c;
+    font: 400 .97rem/1.45 "EB Garamond", serif; color: #cbbfa9;
+    opacity: 0; visibility: hidden; transform: translateY(6px); transform-origin: 50% 100%;
+    transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s; }
+  .fw-ask.is-open .fw-ask-card { opacity: 1; visibility: visible; transform: none;
+    transition: opacity .32s ease, transform .42s cubic-bezier(.2, .7, .2, 1), visibility 0s; }
+  /* Opening downward instead, where there is no room above (flywheel.js sets is-down). */
+  .fw-ask.is-down .fw-ask-card { bottom: auto; top: calc(100% + 14px); transform: translateY(-6px); transform-origin: 50% 0; }
+  .fw-ask.is-down.is-open .fw-ask-card { transform: none; }
+  /* The pointer's way between the question and its card: nothing to fall through on the way. */
+  .fw-ask-card::before { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 16px; }
+  .fw-ask.is-down .fw-ask-card::before { top: auto; bottom: 100%; }
+  .fw-ask-card p { margin: 0; }
+  .fw-ask-card a { position: relative; color: #f0c67e; text-decoration: none; }
+  .fw-ask-card a:focus-visible { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; outline: none; }
+  @media (hover: hover) { .fw-ask-card a:hover { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; } }
+  .fw-ask-who, .fw-ask-money { display: grid; gap: 1rem; align-items: center; }
+  .fw-ask-who { grid-template-columns: 56px minmax(0, 1fr); align-items: start; }
+  .fw-ask-who img { display: block; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin-top: .15rem;
+    box-shadow: 0 0 0 1px #f0c87773, 0 0 18px #e0ab5e26; filter: saturate(.8) brightness(.96); }
+  .fw-ask-links { margin-top: .5rem !important; font: italic 500 1rem/1.2 "Cormorant Garamond", serif; letter-spacing: .02em; }
+  .fw-ask-links a::after { content: ""; position: absolute; inset: -9px -5px; }
+  .fw-ask-links i { font-style: normal; margin: 0 .55em; color: #6f6455; }
+  .fw-ask-money { grid-template-columns: 72px minmax(0, 1fr); }
+  .fw-ask-card svg { display: block; overflow: visible; }
+  .fw-ask-money svg { width: 72px; height: 86px; }
+  .fw-ask-goal svg { width: 100%; height: auto; margin-top: .85rem; }
+  .fw-ask-card svg text { font: italic 400 11.5px "EB Garamond", serif; fill: #a39684; letter-spacing: .02em; }
+  .fw-ask-card svg .big { font: italic 500 17px "Cormorant Garamond", serif; fill: #f0c67e; letter-spacing: 0; }
+  .fw-ask-card svg .tag { font: normal 400 7px "DM Sans", system-ui, sans-serif; letter-spacing: .26em; fill: #8f826f; }
+  @media (prefers-reduced-motion: reduce) { .fw-asks, .fw-ask-card, .fw-ask-q, .fw-ask-q::before { transition: none !important; } }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     html[data-ver="f"] .fw-host { padding-bottom: 84px; }
     html[data-ver="f"] .fw-host h1 { font-size: clamp(1.4rem, 5.6vw, 1.8rem); max-width: 20ch; }
@@ -871,6 +923,9 @@
     .fw-card .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-card .fw-ac-l { display: none; } .fw-card .fw-ac-stats > span { padding: .35em .4em; }
     .fw-stat { margin-top: .6rem; font-size: 1rem; }
     .fw-sub { margin-top: .7rem; font-size: .95rem; line-height: 1.4; max-width: 17em; }
+    .fw-asks { flex-direction: column; align-items: center; gap: 0; margin-top: 1rem; }
+    .fw-ask-q { font-size: 1.02rem; padding: .26em 0; }
+    .fw-ask-card { width: min(22rem, calc(100vw - 32px)); font-size: .95rem; }
   }
 
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
@@ -1195,6 +1250,9 @@
     html[data-ver="f"] .fw-raise { padding-top: 85px; padding-bottom: 76px; } /* the halo rings the mark and the words */
     html[data-ver="f"] .fw-raise h1 { font-size: clamp(1.2rem, 5.8svh, 1.65rem); max-width: 20em; }
     .fw-sub { margin-top: .6rem; font-size: .92rem; line-height: 1.4; }
+    .fw-asks { margin-top: .7rem; gap: 1.3rem; }
+    .fw-ask-q { font-size: .92rem; padding: .15em 0; }
+    .fw-ask-card { width: 21rem; padding: .75rem .9rem .8rem; font-size: .88rem; }
   }
   /* 6 on a short phone on its side: a card has only the height between the top and the footer (H - 88 px), so its
      type tightens in two steps (a 320 px screen, such as a Galaxy S9+, the most), keeping every line. */
@@ -1479,6 +1537,48 @@
         </div>
         <p class="cap">Use of funds and the milestones it buys — real splits and dates needed.</p>
       </div>
+      <div class="fw-asks">
+        <div class="fw-ask">
+          <button class="fw-ask-q" type="button" aria-expanded="false" aria-controls="fw-ask-who">Who’s behind it?</button>
+          <div class="fw-ask-card fw-ask-who" id="fw-ask-who">
+            <img src="../assets/cards/pom/pom.jpg" width="56" height="56" alt="" decoding="async">
+            <div>
+              <p>Mycelial is driven by <a href="https://pom.voyage" target="_blank" rel="noopener">POM</a>, working alongside a few exceptional, high-agency collaborators.</p>
+              <p class="fw-ask-links"><a href="https://pom.voyage" target="_blank" rel="noopener">pom.voyage</a><i aria-hidden="true">·</i><a href="https://x.com/peterom" target="_blank" rel="noopener">X</a><i aria-hidden="true">·</i><a href="https://github.com/peteromallet" target="_blank" rel="noopener">GitHub</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="fw-ask">
+          <button class="fw-ask-q" type="button" aria-expanded="false" aria-controls="fw-ask-money">What’s the money for?</button>
+          <div class="fw-ask-card fw-ask-money" id="fw-ask-money">
+            <svg viewBox="0 0 72 86" role="img" aria-label="$1M over twelve months: about a year">
+              <defs><linearGradient id="fw-ask-gild" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe7bd"/><stop offset=".45" stop-color="#f0c67e"/><stop offset="1" stop-color="#d99a4a"/></linearGradient></defs>
+              <path d="M37.47 8.04A28 28 0 0 1 48.71 11.05M51.25 12.52A28 28 0 0 1 59.48 20.75M60.95 23.29A28 28 0 0 1 63.96 34.53M63.96 37.47A28 28 0 0 1 60.95 48.71M59.48 51.25A28 28 0 0 1 51.25 59.48M48.71 60.95A28 28 0 0 1 37.47 63.96M34.53 63.96A28 28 0 0 1 23.29 60.95M20.75 59.48A28 28 0 0 1 12.52 51.25M11.05 48.71A28 28 0 0 1 8.04 37.47M8.04 34.53A28 28 0 0 1 11.05 23.29M12.52 20.75A28 28 0 0 1 20.75 12.52M23.29 11.05A28 28 0 0 1 34.53 8.04" fill="none" stroke="url(#fw-ask-gild)" stroke-width="4" stroke-linecap="round"/>
+              <text x="36" y="41.5" text-anchor="middle" class="big">$1M</text>
+              <text x="36" y="84" text-anchor="middle">about a year</text>
+            </svg>
+            <p>Building out the products, bringing everything to market, and proving the theses it all rests on.</p>
+          </div>
+        </div>
+        <div class="fw-ask">
+          <button class="fw-ask-q" type="button" aria-expanded="false" aria-controls="fw-ask-goal">What’s the goal?</button>
+          <div class="fw-ask-card fw-ask-goal" id="fw-ask-goal">
+            <p>Something like a Shopify for art and creative tools, joined to a techno-artistic social movement, for the sake of the art. The aim: a second renaissance, ahead of schedule.</p>
+            <svg viewBox="0 0 320 88" role="img" aria-label="Speculative: the people reached, and revenue behind it, rising over the years">
+              <text x="0" y="7" class="tag">SPECULATIVE</text>
+              <path d="M.5 12V74.5H262" fill="none" stroke="#ffffff26"/>
+              <path d="M46 74C138 73.5 186 68 216 57S250 39 262 35" fill="none" stroke="#f0c67e" stroke-opacity=".55" stroke-width="1.2" stroke-dasharray="3 3"/>
+              <path d="M3 73C96 72 150 63 190 45S242 19 262 16" fill="none" stroke="#f0c67e" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="262" cy="16" r="7" fill="#ffd991" opacity=".16"/><circle cx="262" cy="16" r="2.6" fill="#ffd991"/>
+              <circle cx="262" cy="35" r="2" fill="#f0c67e" opacity=".75"/>
+              <text x="270" y="19.5">reach</text>
+              <text x="270" y="38.5">revenue</text>
+              <text x="0" y="86">now</text>
+              <text x="262" y="86" text-anchor="end">years</text>
+            </svg>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1646,6 +1746,7 @@
   const finishTurn = () => {
     if (!turn || !turn.network || !turn.entry) return;
     window.deckCancelLater(turn.ceiling);
+    slides[turn.to]?.setAttribute('data-settled', ''); // the slide has landed: anything that waits for it may come in
     turn = null;
     setPace(1);
     if (pendingTurns.length) queueMicrotask(() => {
@@ -1717,7 +1818,7 @@
     i = to;
     initialized = true;
     // Only the slide on screen can be tabbed into or read out; the others are inert until they come on.
-    slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; });
+    slides.forEach((s, k) => { s.classList.toggle('on', k === i); s.inert = k !== i; s.removeAttribute('data-settled'); });
     slides[i].classList.remove('dt-rewound');
     if (!(i === 0 && document.documentElement.classList.contains('dt-intro'))) warmMedia(slides[i]);
     warmMedia(slides[i + 1]);
@@ -1795,7 +1896,7 @@
   let tx = null;
   addEventListener('touchstart', (e) => {
     const t = e.touches[0];
-    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .fw-full, .vc-box, .st-card, .st-flag') };
+    tx = { x: t.clientX, y: t.clientY, interactive: !!e.target.closest?.('button, a, [role="button"], .fw-card, .fw-full, .fw-ask, .vc-box, .st-card, .st-flag') };
   }, { passive: true });
   addEventListener('touchend', (e) => {
     if (tx === null) return;

@@ -1184,3 +1184,135 @@
   // Loaded straight onto one of these slides: the network is already at the node (or the mark is about to land there).
   if (stageOf() >= 0) { follow(); if (armed) { armed = false; whenOpen(begin); } }
 })();
+
+// Slide 11's three questions: hover or focus opens a little more detail; a tap keeps one card open until dismissed.
+(() => {
+  const slide = document.querySelector('.fw-raise'), asks = slide?.querySelector('.fw-asks');
+  if (!asks) return;
+  const items = [...asks.querySelectorAll('.fw-ask')];
+  let opened = null, intent = 0, grace = 0, pointerType = '', pointerAt = null, outsideTap = false, returningFocus = false;
+  let unresize = null, watching = false;
+  const clearTimers = () => { clearTimeout(intent); clearTimeout(grace); intent = grace = 0; };
+  const rememberPointer = (e) => {
+    pointerType = e.pointerType;
+    pointerAt = e.target;
+    outsideTap = !!pointerType && pointerType !== 'mouse' && !asks.contains(e.target);
+  };
+  const close = () => {
+    clearTimers();
+    items.forEach((item) => {
+      item.classList.remove('is-open');
+      item.querySelector('button').setAttribute('aria-expanded', 'false');
+      item.querySelector('.fw-ask-card').inert = true;
+    });
+    opened = null; outsideTap = false;
+    window.removeEventListener('pointerdown', rememberPointer, true);
+    window.removeEventListener('keydown', key, true);
+    if (unresize) { unresize(); unresize = null; }
+  };
+  const place = (item) => {
+    const card = item.querySelector('.fw-ask-card'), row = asks.getBoundingClientRect(), q = item.getBoundingClientRect();
+    const height = card.offsetHeight, width = card.offsetWidth;
+    const above = row.top - 14 - 8;
+    const below = (document.querySelector('.chrome')?.getBoundingClientRect().top ?? innerHeight) - 8 - row.bottom - 14;
+    const down = height > above && (height <= below || below > above);
+    item.classList.toggle('is-down', down);
+    // On a phone the card clears all three questions, rather than covering the next question in the stack.
+    card.style.bottom = !down && Math.abs(q.top - row.top) > .5 ? `${q.bottom - row.top + 14}px` : '';
+    card.style.top = down && Math.abs(q.bottom - row.bottom) > .5 ? `${row.bottom - q.top + 14}px` : '';
+    const left = q.left + q.width / 2 - width / 2;
+    const clamped = Math.max(16, Math.min(innerWidth - 16 - width, left));
+    card.style.setProperty('--shift', `${clamped - left}px`);
+  };
+  const open = (item) => {
+    if (!slide.classList.contains('on')) return;
+    clearTimers();
+    if (opened === item) return;
+    if (opened) {
+      opened.classList.remove('is-open');
+      opened.querySelector('button').setAttribute('aria-expanded', 'false');
+      opened.querySelector('.fw-ask-card').inert = true;
+    }
+    place(item); // still hidden, but laid out: its own size decides which side has room
+    opened = item;
+    item.classList.add('is-open');
+    item.querySelector('button').setAttribute('aria-expanded', 'true');
+    item.querySelector('.fw-ask-card').inert = false;
+    window.addEventListener('pointerdown', rememberPointer, true);
+    window.addEventListener('keydown', key, true);
+    if (!unresize) unresize = window.deckOnResize(() => { if (opened) place(opened); });
+  };
+  asks.addEventListener('pointerdown', rememberPointer);
+  items.forEach((item) => {
+    const button = item.querySelector('button');
+    item.querySelector('.fw-ask-card').inert = true; // closed cards leave their links out of the tab order, even while fading
+    item.addEventListener('pointerenter', (e) => {
+      if (e.pointerType !== 'mouse' || !slide.classList.contains('on')) return;
+      clearTimers();
+      if (opened) open(item);
+      else intent = setTimeout(() => open(item), 60);
+    });
+    item.addEventListener('pointerleave', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      clearTimers();
+      if (opened === item) grace = setTimeout(close, 300);
+    });
+    item.addEventListener('focusin', (e) => {
+      if (returningFocus) return;
+      if (e.target === button && button.matches(':focus-visible')) open(item);
+      else if (opened === item) clearTimers();
+    });
+    item.addEventListener('focusout', (e) => {
+      // Clicking plain card text can blur its question: keep the card under that pointer through the click.
+      const inside = !e.relatedTarget && pointerType && item.contains(pointerAt);
+      if (!item.contains(e.relatedTarget) && opened === item && !outsideTap && !inside) close();
+    });
+  });
+  asks.addEventListener('click', (e) => {
+    e.stopPropagation(); // the questions and their cards never turn the slide
+    const source = pointerType || e.pointerType;
+    pointerType = ''; pointerAt = null;
+    const button = e.target.closest('.fw-ask-q');
+    if (!button) return;
+    const item = button.closest('.fw-ask');
+    if (source && source !== 'mouse' && opened === item) close();
+    else open(item);
+  });
+  const key = (e) => {
+    pointerType = ''; pointerAt = null; outsideTap = false;
+    if (e.key !== 'Escape' || !opened) return;
+    const button = opened.querySelector('button');
+    close();
+    returningFocus = true;
+    button.focus({ preventScroll: true });
+    returningFocus = false;
+    e.stopPropagation();
+    e.preventDefault();
+  };
+  // A tap outside dismisses the card on its own; the footer controls still do what the viewer asked.
+  window.addEventListener('click', (e) => {
+    if (!opened || asks.contains(e.target)) return;
+    const source = pointerType || e.pointerType;
+    pointerType = ''; pointerAt = null;
+    if (!source || source === 'mouse') return;
+    close();
+    if (e.target.closest('.chrome, #motion, .dt-name')) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+  const sync = () => {
+    const on = slide.classList.contains('on');
+    if (on === watching) return;
+    watching = on;
+    if (on) {
+      window.addEventListener('deck-overview', close);
+      window.addEventListener('deck-motion', close);
+    } else {
+      close();
+      window.removeEventListener('deck-overview', close);
+      window.removeEventListener('deck-motion', close);
+    }
+  };
+  new MutationObserver(sync).observe(slide, { attributes: true, attributeFilter: ['class'] });
+  sync();
+})();
