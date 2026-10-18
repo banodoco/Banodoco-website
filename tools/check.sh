@@ -141,7 +141,7 @@ main() {
   step "PUBLIC ARTIFACT"
   CHECK_REVISION=$(git rev-parse HEAD) || die "could not resolve checkout revision" 2
   python3 tools/package-public.py "$CHECK_TMP/public" \
-    --origin https://www.banodoco.ai --revision "$CHECK_REVISION" \
+    --origin "${PUBLIC_ORIGIN:-https://www.banodoco.ai}" --revision "$CHECK_REVISION" \
     || die "public artifact allowlist/roundtrip verification failed"
   pass "public artifact matches its allowlist, declared-placeholder ORIGIN substitution, and byte-identical source elsewhere"
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import shutil
 import sys
@@ -29,6 +30,7 @@ PLACEHOLDER_FILES = frozenset({
     "sitemap.xml",
     "static/index.html",
 })
+DECK_PLACEHOLDER_FILES = frozenset({"mycelial/index.html", "mycelial/gate.html"})
 
 STATIC_FROM = re.compile(
     r'''(?ms)^[ \t]*(?:import|export)\b(?:(?!;).)*?\bfrom\s*["']([^"']+)["']'''
@@ -192,6 +194,11 @@ def verify(destination: Path, config: dict,
             expected_bytes = source_bytes.replace(b"ORIGIN", origin.encode("utf-8"))
             if b"ORIGIN" in artifact_bytes:
                 unresolved.append(key)
+        elif key in DECK_PLACEHOLDER_FILES:
+            deck_image = f"{origin}/deck/angel/mycelial-og.jpg".encode("utf-8")
+            expected_bytes = source_bytes.replace(b"__OG_IMAGE_URL__", deck_image)
+            if b"__OG_IMAGE_URL__" in artifact_bytes:
+                unresolved.append(key)
         else:
             # Every other selected file — including the JS comments that
             # happen to spell "ORIGINAL" — must ship byte-identical to the
@@ -211,11 +218,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("destination", type=Path,
                         help="new, empty directory to populate")
-    parser.add_argument("--origin", required=True,
-                        help="absolute deployment origin substituted into public files")
+    parser.add_argument("--origin", default=os.environ.get("PUBLIC_ORIGIN"),
+                        help="absolute deployment origin (defaults to PUBLIC_ORIGIN)")
     parser.add_argument("--revision", required=True,
                         help="opaque deployed revision written to release-revision.txt")
     args = parser.parse_args()
+    if not args.origin:
+        raise ValueError("origin is required (pass --origin or set PUBLIC_ORIGIN)")
     origin = args.origin.rstrip("/")
     if not origin.startswith(("https://", "http://")):
         raise ValueError("origin must be an absolute http(s) URL")
@@ -239,6 +248,8 @@ def main() -> int:
         data = source.read_bytes()
         if relative.as_posix() in PLACEHOLDER_FILES:
             data = data.replace(b"ORIGIN", origin.encode("utf-8"))
+        elif relative.as_posix() in DECK_PLACEHOLDER_FILES:
+            data = data.replace(b"__OG_IMAGE_URL__", f"{origin}/deck/angel/mycelial-og.jpg".encode("utf-8"))
         target.write_bytes(data)
         shutil.copystat(source, target)
     (destination / REVISION_FILE).write_text(revision + "\n", encoding="utf-8")
