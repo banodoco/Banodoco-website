@@ -115,6 +115,24 @@ class AngelServerTests(unittest.TestCase):
                 self.assertEqual(response['headers']['Location'], '/deck/angel/')
                 self.assertNotIn(b'<title>Mycelial', response['body'])
 
+    def test_encoded_deck_entry_spelling_redirects_to_canonical_root(self):
+        for path in ('/deck/angel%2f', '/deck%2fangel%2f', '//deck/angel/', '/deck/angel/./'):
+            with self.subTest(path=path):
+                response = self.server.request('GET', path, follow=False)
+                self.assertEqual(response['status'], 308)
+                self.assertEqual(response['headers']['Location'], '/deck/angel/')
+
+    def test_rejected_range_is_only_a_416_response(self):
+        response = self.server.request('GET', '/deck/angel/?key=' + KEY,
+                                       headers={'Range': 'bytes=0-1,3-4'})
+        self.assertEqual(response['status'], 416)
+        self.assertEqual(response['body'], b'')
+
+    def test_case_aliases_cannot_serve_release_mycelial_files(self):
+        for path in ('/MYCELIAL/index.html', '/Mycelial/dot-transitions.js'):
+            with self.subTest(path=path):
+                self.assertNotEqual(self.server.request('GET', path, follow=False)['status'], 200)
+
     def test_range_keyed_deck_response_sets_cookie_before_headers_end(self):
         response = self.server.request('GET', '/deck/angel/index.html?key=' + KEY,
                                         headers={'Range': 'bytes=0-9'})

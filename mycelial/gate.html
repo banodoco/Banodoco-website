@@ -834,6 +834,7 @@
           note.classList.add("is-on");
         };
         const wrong = "That key didn’t open the deck. Please check the link you were sent.";
+        const cookieBlocked = "Your browser blocked the cookie this needs. Please allow cookies for this site and try again.";
         const showWrong = () => noteOn(wrong);
         // The poster combines the live mark canvas and the visible wordmark.
         const makePoster = () => {
@@ -936,6 +937,20 @@
               cache: "no-store",
             });
             if (res.status === 204) {
+              let cookieReady = false;
+              try {
+                const probe = await fetch("./dot-transitions.js", {
+                  method: "HEAD",
+                  credentials: "same-origin",
+                  cache: "no-store",
+                });
+                cookieReady = probe.status === 200;
+              } catch (e) {}
+              if (!cookieReady) {
+                noteOn(cookieBlocked);
+                if (fine.matches) field.focus({ preventScroll: true });
+                return;
+              }
               handOff();
               return;
             }

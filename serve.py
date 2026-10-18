@@ -77,6 +77,12 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         if RUNTIME_MODE != 'release':
             return False
         mycelial = Path(os.getcwd(), 'mycelial').resolve()
+        for ancestor in (Path(target), *Path(target).parents):
+            try:
+                if os.path.samefile(ancestor, mycelial):
+                    return True
+            except (FileNotFoundError, OSError):
+                pass
         try:
             Path(target).resolve().relative_to(mycelial)
             return True
@@ -166,6 +172,10 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
             return True, None, False
         query = urllib.parse.urlsplit(self.path).query
+        raw_path = urllib.parse.urlsplit(self.path).path
+        if path in ('/deck/angel/', '/deck/angel/index.html') and raw_path != path:
+            self.send_redirect('/deck/angel/' + (f'?{query}' if query else ''))
+            return True, None, False
         if path in ('/deck', '/deck/'):
             self.send_redirect('/deck/angel/' + (f'?{query}' if query else ''))
             return True, None, False
@@ -252,9 +262,7 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
                 secure = '; Secure' if PUBLIC_ORIGIN.startswith('https://') else ''
                 self._deck_set_cookie = f'deck_angel={value}; Max-Age=2592000; Path=/deck/; HttpOnly; SameSite=Lax{secure}'
             if 'Range' in self.headers:
-                ranged = self._range_body(str(target))
-                if ranged is not None:
-                    return ranged
+                return self._range_body(str(target))
             self.send_response(200)
             self.send_header('Content-Type', self.guess_type(str(target)))
             self.send_header('Content-Length', str(os.path.getsize(target)))
