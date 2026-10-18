@@ -897,7 +897,7 @@
   /* The pointer's way between the question and its card: nothing to fall through on the way. */
   .fw-ask-card::before { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 16px; }
   .fw-ask.is-down .fw-ask-card::before { top: auto; bottom: 100%; }
-  .fw-ask-card p { margin: 0; }
+  .fw-ask-card p { margin: 0; text-wrap: pretty; }
   .fw-ask-card a { position: relative; color: #f0c67e; text-decoration: none; }
   .fw-ask-card a:focus-visible { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; outline: none; }
   @media (hover: hover) { .fw-ask-card a:hover { color: #ffe3a8; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; } }
@@ -914,7 +914,7 @@
   .fw-ask-goal svg { width: 100%; height: auto; margin-top: .85rem; }
   .fw-ask-card svg text { font: italic 400 11.5px "EB Garamond", serif; fill: #a39684; letter-spacing: .02em; }
   .fw-ask-card svg .big { font: italic 500 17px "Cormorant Garamond", serif; fill: #f0c67e; letter-spacing: 0; }
-  .fw-ask-card svg .tag { font: normal 400 7px "DM Sans", system-ui, sans-serif; letter-spacing: .26em; fill: #8f826f; }
+  .fw-ask-card svg .tag { font: normal 400 8px "DM Sans", system-ui, sans-serif; letter-spacing: .26em; fill: #8f826f; }
   @media (prefers-reduced-motion: reduce) { .fw-asks, .fw-ask-card, .fw-ask-q, .fw-ask-q::before { transition: none !important; } }
   @media (max-width: 760px) and (orientation: portrait), (max-width: 760px) and (min-height: 501px) {
     html[data-ver="f"] .fw-host { padding-bottom: 84px; }
@@ -927,7 +927,8 @@
     .fw-card .fw-ac { font-size: .56em; gap: .35em; padding: .35em .45em; } .fw-card .fw-ac-l { display: none; } .fw-card .fw-ac-stats > span { padding: .35em .4em; }
     .fw-stat { margin-top: .6rem; font-size: 1rem; }
     .fw-sub { margin-top: .7rem; font-size: .95rem; line-height: 1.4; max-width: 17em; }
-    .fw-asks { flex-direction: column; align-items: flex-start; gap: 0; margin-top: 1rem; } /* a short list: its dots in one column */
+    .fw-asks { flex-direction: column; align-items: stretch; gap: 0; margin-top: 1rem; } /* a short list: its dots in one column */
+    .fw-ask { text-align: left; } /* each as wide as the list, so its card centres on the screen */
     .fw-ask-q { font-size: 1.02rem; padding: .26em 0; }
     .fw-ask-card { width: min(22rem, calc(100vw - 32px)); font-size: .95rem; }
   }
@@ -1557,7 +1558,7 @@
           <div class="fw-ask-card fw-ask-money" id="fw-ask-money">
             <svg viewBox="0 0 72 86" role="img" aria-label="$1M over twelve months: about a year">
               <defs><linearGradient id="fw-ask-gild" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe7bd"/><stop offset=".45" stop-color="#f0c67e"/><stop offset="1" stop-color="#d99a4a"/></linearGradient></defs>
-              <path d="M37.47 8.04A28 28 0 0 1 48.71 11.05M51.25 12.52A28 28 0 0 1 59.48 20.75M60.95 23.29A28 28 0 0 1 63.96 34.53M63.96 37.47A28 28 0 0 1 60.95 48.71M59.48 51.25A28 28 0 0 1 51.25 59.48M48.71 60.95A28 28 0 0 1 37.47 63.96M34.53 63.96A28 28 0 0 1 23.29 60.95M20.75 59.48A28 28 0 0 1 12.52 51.25M11.05 48.71A28 28 0 0 1 8.04 37.47M8.04 34.53A28 28 0 0 1 11.05 23.29M12.52 20.75A28 28 0 0 1 20.75 12.52M23.29 11.05A28 28 0 0 1 34.53 8.04" fill="none" stroke="url(#fw-ask-gild)" stroke-width="4" stroke-linecap="round"/>
+              <path d="M38.20 8.09A28 28 0 0 1 48.05 10.73M51.86 12.92A28 28 0 0 1 59.08 20.14M61.27 23.95A28 28 0 0 1 63.91 33.80M63.91 38.20A28 28 0 0 1 61.27 48.05M59.08 51.86A28 28 0 0 1 51.86 59.08M48.05 61.27A28 28 0 0 1 38.20 63.91M33.80 63.91A28 28 0 0 1 23.95 61.27M20.14 59.08A28 28 0 0 1 12.92 51.86M10.73 48.05A28 28 0 0 1 8.09 38.20M8.09 33.80A28 28 0 0 1 10.73 23.95M12.92 20.14A28 28 0 0 1 20.14 12.92M23.95 10.73A28 28 0 0 1 33.80 8.09" fill="none" stroke="url(#fw-ask-gild)" stroke-width="3.5"/>
               <text x="36" y="41.5" text-anchor="middle" class="big">$1M</text>
               <text x="36" y="84" text-anchor="middle">about a year</text>
             </svg>
@@ -1573,7 +1574,7 @@
               <path d="M.5 12V74.5H262" fill="none" stroke="#ffffff26"/>
               <path d="M46 74C138 73.5 186 68 216 57S250 39 262 35" fill="none" stroke="#f0c67e" stroke-opacity=".55" stroke-width="1.2" stroke-dasharray="3 3"/>
               <path d="M3 73C96 72 150 63 190 45S242 19 262 16" fill="none" stroke="#f0c67e" stroke-width="1.6" stroke-linecap="round"/>
-              <circle cx="262" cy="16" r="7" fill="#ffd991" opacity=".16"/><circle cx="262" cy="16" r="2.6" fill="#ffd991"/>
+              <circle cx="262" cy="16" r="5.5" fill="#ffd991" opacity=".2"/><circle cx="262" cy="16" r="2.6" fill="#ffd991"/>
               <circle cx="262" cy="35" r="2" fill="#f0c67e" opacity=".75"/>
               <text x="270" y="19.5">reach</text>
               <text x="270" y="38.5">revenue</text>
