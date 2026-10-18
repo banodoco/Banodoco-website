@@ -2,4 +2,4 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "python3 tools/package-public.py /tmp/public --origin https://www.banodoco.ai --revision ${RAILWAY_GIT_COMMIT_SHA:-unknown} && cd /tmp/public && exec python3 serve.py"
+startCommand = "python3 tools/package-public.py /tmp/public --origin \"${PUBLIC_ORIGIN}\" --revision ${RAILWAY_GIT_COMMIT_SHA:-unknown} && cd /tmp/public && exec python3 serve.py"

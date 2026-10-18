@@ -174,6 +174,13 @@ import { LANDING_SITES, SKELETON } from './network-skeleton.js';
  *          light family as ambient spores; landing selection reads the whole
  *          stream so no separate visible landing cast is introduced.
  *   land   how many of the hero spores peel away and land.
+ *   sparse, faint  phones only (2026-10-18, owner: the opening stream
+ *          "looks weird on mobile"; leave the single spore that falls,
+ *          with at most a light, sparse presence behind it). One stream
+ *          member in `sparse` carries light, at `faint` of it, so ~45
+ *          faint motes drift where ~460 bodies poured. Every member still
+ *          moves, because the landing is chosen from all of them: its
+ *          pick, path and timing do not change.
  *   xIn    NDC x a particle enters at (off-frame upper-left)
  *   xOut   NDC x the recycle fires at (off-frame right)
  *   e      [lo, hi] NDC y ENTRY window, measured AT xIn. The current is
@@ -221,7 +228,7 @@ const COMPOSITION = {
   },
   // Short landscape (a phone on its side; a very shallow window).
   compact: {
-    nA: 850, nH: 5, land: 1, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
+    nA: 850, nH: 5, land: 1, sparse: 10, faint: 0.75, xIn: -1.40, xOut: 1.40, e: [0.46, 1.06],
     fall: [0.08, 0.26], depth: [6.2, 15.0], gain: 5.2, dpr: 1.5, lum: 0.9,
   },
   // iPad portrait, 744x1133. Steeper: from the upper-left edge across
@@ -236,7 +243,7 @@ const COMPOSITION = {
   // crosses the copy column (few dots, dimmed by the corridor) and exits
   // to the right around mid-height. It remains a travelling current.
   mobile: {
-    nA: 620, nH: 5, land: 1, landFromBottom: true, landDuration: 1.45, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
+    nA: 620, nH: 5, land: 1, sparse: 10, faint: 0.75, landFromBottom: true, landDuration: 1.45, xIn: -1.34, xOut: 1.36, e: [0.58, 1.18],
     fall: [0.50, 1.05], depth: [6.5, 15.5], gain: 4.4, dpr: 1.5, lum: 0.8,
   },
 };
@@ -340,6 +347,7 @@ const BLOOM_IN_U = 0.74;        // the settling spore's glow swells from here
  * the light it arrived with. The old kindling time is retained in the
  * descent budget so removing the wait does not rush the landing. */
 const KINDLE_S = 0.80;         // former kindle budget, now spent descending
+const LONE_APPEAR_S = 0.6;     // phones: an unlit member chosen to land comes into the light as it starts to fall
 const SPORE_RECRUIT_S = 2.4;   // independent light/core fade
 const KINDLE_FAST_S = 0.45;    // compressed budget when the scene is ready
 const KINDLE_LIGHT = 2.4;       // the light it carries through its descent
@@ -495,6 +503,12 @@ function cameraFrameMatrix(view, inverse) {
   return out;
 }
 
+/** The share of its light stream member i carries: 1 except on phones,
+ *  where one member in `sparse` keeps `faint` of it and the rest are dark. */
+function streamShare(c, i) {
+  return !c.sparse ? 1 : i % c.sparse === 0 ? c.faint : 0;
+}
+
 /** Seed (or re-seed) one STREAM particle — ambient or hero. `atEntry`
  *  places it on the inflow edge (the recycle case); otherwise it is
  *  scattered along the stream, which is what makes the composition
@@ -550,7 +564,7 @@ function seedOne(F, i, c, rand, atEntry) {
   F.q[i] = e0;
   F.fallJ[i] = fallJ;
   F.band[i] = ring ? 4 : band;
-  F.fade[i] = ring ? 0 : 1;
+  F.fade[i] = ring ? 0 : streamShare(c, i);
   // Every stream slot uses the shed's own size, tone, and speed family. A
   // landing is selected from this ordinary family. Recruitment makes the
   // selected member followable while it descends from its stream position.
@@ -961,6 +975,7 @@ function advance(F, dt, gust) {
     if (F.band[i] < 3) {
       const u = Math.min(1, Math.max(0, (xNdc - c.xIn) / (c.xOut - c.xIn)));
       F.fade[i] = 1 - TRAVEL_DIM * u * u * (3 - 2 * u);
+      if (c.sparse) F.fade[i] *= streamShare(c, i);
     }
     // Once growth begins this is a finite cloud: departing spores stay gone.
     if (xNdc > c.xOut) {
@@ -1029,6 +1044,11 @@ function advance(F, dt, gust) {
       // so reaching t0 cannot suddenly reveal a fully lit, larger core.
       const recruit = smooth01((F.t - L.kAt) / SPORE_RECRUIT_S);
       F.fade[L.hi] = L.fade0 + (F.fade[L.hi] - L.fade0) * recruit;
+      // On phones it rises from its share to its full light as it
+      // starts to fall: continuous on the recruitment frame, today's spore after.
+      if (c.sparse && L.share0 !== undefined && L.share0 < 1) {
+        F.fade[L.hi] *= L.share0 + (1 - L.share0) * smooth01((F.t - L.kAt) / LONE_APPEAR_S);
+      }
       kindleTint(F, L, (KINDLE_HEAT + (LAND_HEAT - KINDLE_HEAT) * sw) * recruit);
       if (u >= 1) {
         L.state = 2;
@@ -1137,7 +1157,11 @@ const KINDLE_SCRATCH = [0, 0, 0];
 function kindleBegin(F, L) {
   const i3 = L.hi * 3;
   L.size0 = F.size[L.hi];
-  L.fade0 = F.fade[L.hi];
+  // On phones the member carried only its stream share of light (often
+  // none): remember that share, and start the envelope from ordinary
+  // stream light so the spore itself looks as it always has.
+  L.share0 = F.comp.sparse ? streamShare(F.comp, L.hi) : 1;
+  L.fade0 = L.share0 === 1 ? F.fade[L.hi] : L.share0 > 0 ? F.fade[L.hi] / L.share0 : 1;
   L.c0 = [F.color[i3], F.color[i3 + 1], F.color[i3 + 2]];
   heatLinear(F.tone[L.hi], KINDLE_SCRATCH, 0);
   const lg = KINDLE_SCRATCH[1] > 0 ? L.c0[1] / KINDLE_SCRATCH[1] : 1;

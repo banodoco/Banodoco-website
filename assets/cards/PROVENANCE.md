@@ -109,3 +109,9 @@ own hero videos), which nothing used any more.
 - 2026-10-17 (G5b): The Cellist's frame changed from the hooded face (13.0 s) to
   the cello being played, the bow and both hands (112.5 s), so the five tiles are
   not all faces.
+
+## pom/ — pom.voyage (POM's own site)
+- pom.jpg — POM's profile picture, the site's "How I see me" square
+  (https://pom.voyage/assets/how-i-see-me.jpg, 400×400, the same picture as
+  github.com/peteromallet's avatar), fetched 2026-10-18 and downscaled with
+  sips to 120×120, JPEG quality 84 (~7 KB), for slide 11's "Who's behind it?" card.
