@@ -58,8 +58,12 @@ def deck_cookie_value(key):
     return hmac.new(key.encode(), DECK_COOKIE_MESSAGE, hashlib.sha256).hexdigest()
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    def raw_request_path(self):
+        # The request target is a path; urlsplit would read '//deck/...' as a host.
+        return self.path.split('?', 1)[0].split('#', 1)[0]
+
     def request_path(self):
-        raw = urllib.parse.urlsplit(self.path).path
+        raw = self.raw_request_path()
         decoded = urllib.parse.unquote(raw)
         if '\x00' in decoded or '\\' in decoded:
             return None
@@ -172,7 +176,7 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
             return True, None, False
         query = urllib.parse.urlsplit(self.path).query
-        raw_path = urllib.parse.urlsplit(self.path).path
+        raw_path = self.raw_request_path()
         if path in ('/deck/angel/', '/deck/angel/index.html') and raw_path != path:
             self.send_redirect('/deck/angel/' + (f'?{query}' if query else ''))
             return True, None, False

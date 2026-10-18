@@ -116,7 +116,8 @@ class AngelServerTests(unittest.TestCase):
                 self.assertNotIn(b'<title>Mycelial', response['body'])
 
     def test_encoded_deck_entry_spelling_redirects_to_canonical_root(self):
-        for path in ('/deck/angel%2f', '/deck%2fangel%2f', '//deck/angel/', '/deck/angel/./'):
+        # A leading '//' is collapsed by http.server itself before routing, so it serves the canonical page.
+        for path in ('/deck/angel%2f', '/deck%2fangel%2f', '/deck/angel/./'):
             with self.subTest(path=path):
                 response = self.server.request('GET', path, follow=False)
                 self.assertEqual(response['status'], 308)
