@@ -1,11 +1,11 @@
 // Version F, slide 6: where it goes. Slide 5's product taken apart into one exploded stack of thin
-// floating planes on the left, the text on the right, top to bottom: rendering, editing, effects, the agent's tools,
-// and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
-// perches on the top plane.
-// Each layer has a named flag sticking out to the left on a fine gold leader. Hovering, focusing or
+// floating planes on the right, the text top left, top to bottom: rendering, editing, effects, the agent's
+// tools, and the models and runtime at the foundation, rooted by gold mycelium into the network. The mink
+// perches on the top plane. (On an upright phone the stack stands under the text, its mirror: flags on the left.)
+// Each layer has a named flag sticking out to the right on a fine gold leader. Hovering, focusing or
 // tapping a flag (or its plane) unfolds it into a small card: what can be customised there, in a line,
 // and a few real examples. A guide, a mote of light in the deck's own language, tours the layers on its
-// own: it rides the planes' left edges from flag to flag, and each layer's card opens as it arrives and closes
+// own: it rides the planes' outer edges from flag to flag, and each layer's card opens as it arrives and closes
 // as it leaves, so all five are seen without a touch. Hover takes over; leaving hands back to the tour
 // after a short pause. The layer being explained lifts a little and its rim glows.
 // From slide 5 the product itself becomes the stack: the top planes begin as exact copies of slide 5's
@@ -19,6 +19,7 @@
   const slide = root.closest('.slide');
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const lerp = (a, b, q) => a + (b - a) * q;
   const ease = (k) => 1 - Math.pow(1 - k, 3);
@@ -41,10 +42,11 @@
   // Laid out in scene px (the concept's own frame) and fitted to the screen beside the text. Every plane
   // lies at the same tilt, turned a little about its normal, under one perspective whose origin sits to
   // the right; the planes are stacked down the scene with the same clear air between each pair.
-  // The stack stands on the left of the slide and opens toward the text on the right: its perspective is
-  // seen from the left and every plane is turned a little the other way (a mirror of the first layout).
-  const PERSP = 2600, PO = { x: 210, y: 420 };
-  const TILT = 58, TURN = -4.5, GAP = 34, ROOTS = 100, HEADROOM = 18;
+  // On an upright phone the flags run down the stack's left side instead, so there it is the mirror: its
+  // perspective seen from the left and every plane turned a little the other way (layout() sets the side).
+  const PERSP = 2600, PO = { x: 1900, y: 420 };
+  const TILT = 58, GAP = 34, ROOTS = 100, HEADROOM = 18;
+  let TURN = 4.5;
   const PL = [ // top to bottom; centre x and flat size in scene px (centre y is stacked in layout); kind: what the plane shows
     { id: 'render', kind: 'preview', cx: 1062, cy: 150, w: 780, h: 340 },
     { id: 'timeline', kind: 'timeline', cx: 1058, cy: 0, w: 780, h: 250 },
@@ -129,6 +131,20 @@
   const SRC = { 0: '.as-player', 1: '.as-timeline', 3: '.as-chat' };
   const ghosts = PL.map((_, i) => { if (!SRC[i]) return null; const el = document.createElement('div'); el.className = 'st-ghost'; return el; });
   [...planes].reverse().forEach((el, j) => { world.appendChild(el); const i = 4 - j; if (ghosts[i]) world.appendChild(ghosts[i]); }); // the upper planes paint over the lower
+  // The player's picture rides between slide 5 and the top plane on a layer of its own, the plane's box under the
+  // plane's own turn: slide 5's exact frame, eased from its place in slide 5's player to the plane's picture box as
+  // the plane morphs, then dissolving where it stands into the plane's own film (and the other way back).
+  const carry = document.createElement('div');
+  carry.className = 'st-carry';
+  const carryPic = document.createElement('div');
+  carryPic.className = 'st-carry-pic';
+  const carryCv = document.createElement('canvas'), carryG = carryCv.getContext('2d');
+  carryPic.append(carryCv, planes[0].querySelector('.st-pic span').cloneNode(true)); // the film's caption, for the way back
+  carry.appendChild(carryPic);
+  world.appendChild(carry);
+  // on: carrying; A: the picture's rect in slide 5's player (px, as its copy is laid out); P: the plane's picture box
+  // in the plane's own content (its px); a: the layer's opacity; back: the plane's frame, on its way back to slide 5.
+  const cy = { on: false, A: null, nw: 0, nh: 0, P: null, a: 1, back: false };
   const cv = document.createElement('canvas');
   cv.className = 'st-threads';
   const g = cv.getContext('2d');
@@ -149,8 +165,8 @@
     c.innerHTML = `<b class="st-ch">${t.name}</b><p>${t.line}</p><ul>${t.ex.map(([n, d]) => `<li><b>${n}</b> <span>${d}</span></li>`).join('')}</ul>${t.more ? `<div class="st-more">${t.more}</div>` : ''}<em>${t.foot}</em>`;
     return c;
   });
-  // An unseen hit area over the whole picture (flags column, planes, mink, roots): the stack sits in the left third,
-  // where a stray click would otherwise turn the deck back.
+  // An unseen hit area over the whole picture (flags column, planes, mink, roots): a stray click between the planes
+  // would otherwise turn the deck.
   const hit = document.createElement('div');
   hit.className = 'st-hit';
   root.append(hit, world, cv, ...flags, ...cards, minkCv);
@@ -172,7 +188,7 @@
     const k = Math.min(w / nw, h / nh);
     el.style.transform = `translate(${((w - k * nw) / 2).toFixed(2)}px, ${((h - k * nh) / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
   };
-  const apply = () => st.forEach((s, i) => {
+  const applyPlanes = () => st.forEach((s, i) => {
     const el = planes[i], was = shown[i], p = PL[i];
     const moved = was.x !== s.x || was.y !== s.y || was.w !== s.w || was.h !== s.h, turned = was.rx !== s.rx || was.rz !== s.rz;
     if (moved) { box(el, s); fit(inners[i], s.w - 2, s.h - 2, p.w - 2, p.h - 2); }
@@ -189,7 +205,17 @@
     }
     Object.assign(was, s);
   });
-  const view = { k: 1, ox: 0, oy: 0, mobile: false };
+  const apply = () => { applyPlanes(); placeCarry(); };
+  const placeCarry = () => {
+    if (!cy.on) return;
+    const s = st[0], p = PL[0], q = s.pq ?? 1;
+    const kg = Math.min(s.w / cy.nw, s.h / cy.nh), ki = Math.min((s.w - 2) / (p.w - 2), (s.h - 2) / (p.h - 2));
+    const A = { x: (s.w - kg * cy.nw) / 2 + kg * cy.A.x, y: (s.h - kg * cy.nh) / 2 + kg * cy.A.y, w: kg * cy.A.w };
+    const B = { x: 1 + (s.w - 2 - ki * (p.w - 2)) / 2 + ki * cy.P.x, y: 1 + (s.h - 2 - ki * (p.h - 2)) / 2 + ki * cy.P.y, w: ki * cy.P.w };
+    box(carry, s); carry.style.transform = planes[0].style.transform; carry.style.opacity = cy.a.toFixed(3);
+    carryPic.style.transform = `translate(${lerp(A.x, B.x, q).toFixed(2)}px, ${lerp(A.y, B.y, q).toFixed(2)}px) scale(${(lerp(A.w, B.w, q) / cy.P.w).toFixed(5)})`;
+  };
+  const view = { k: 1, ox: 0, oy: 0, mobile: false, right: true, low: false };
   // A point (u, v) from a plane's centre, in its own px, into the scene: exactly what CSS does with
   // rotateX(rx) rotateZ(rz) about the centre under the scene's perspective. project() goes on to the screen.
   const projW = (s, u, v) => {
@@ -227,6 +253,10 @@
   const layout = () => {
     const W = innerWidth, H = innerHeight;
     view.mobile = W <= 760 && (H >= W || H > 500); // a phone held upright (one on its side takes the wide layout)
+    // Which side the flags hang on: the right of the stack beside the text, or its left under the text on a phone.
+    const right = view.right = !view.mobile, out = right ? 1 : -1;
+    PO.x = right ? 1900 : 210; TURN = right ? 4.5 : -4.5;
+    world.style.perspectiveOrigin = `${PO.x}px ${PO.y}px`;
     stackUp();
     // The whole picture's extent in scene px: labels to callouts, the mink's head to the roots' ends.
     const S = PL.map(settledOf);
@@ -234,19 +264,21 @@
       nl: projW(s, -s.w / 2 + 3, s.h / 2 - 3), nr: projW(s, s.w / 2 - 3, s.h / 2 - 3), fr: projW(s, s.w / 2 - 3, -s.h / 2 + 3), fl: projW(s, -s.w / 2 + 3, -s.h / 2 + 3),
       lm: projW(s, -s.w / 2, 0), rm: projW(s, s.w / 2, 0),
     }));
-    const callXw = Math.min(...cw.map((c) => c.lm.x)) - 40; // the flags' column, left of the stack (flags hang to its left)
-    const perchW = projW(S[0], S[0].w / 2 - 0.2 * S[0].w, -S[0].h / 2 + 2);
+    const callXw = right ? Math.max(...cw.map((c) => c.rm.x)) + 40 : Math.min(...cw.map((c) => c.lm.x)) - 40; // the flags' column
+    const perchW = projW(S[0], perchU(S[0]), -S[0].h / 2 + 2);
     const h1 = slide.querySelector('h1').getBoundingClientRect();
-    // On a desktop the cards open in a column beside the flags; on a phone, in a slot between the text and the stack.
-    // On a phone on its side the column is narrower and a card opens over the flags, which keep their places.
-    const low = !view.mobile && H <= 500;
+    // On a desktop the cards open in a column beside the flags, right of the stack (the text top left); on a
+    // phone, in a slot between the text and the stack. On a phone on its side the column is narrower and a card
+    // opens over the flags, which keep their places.
+    const low = view.low = !view.mobile && H <= 500;
     const cw0 = view.mobile ? W - 32 : low ? CARDW_L : CARDW;
     cards.forEach((c) => { c.style.width = `${cw0}px`; });
     const ch = cards.map((c) => c.offsetHeight);
     const slotT = h1.bottom + 12, slotH = view.mobile ? Math.max(...ch) : 0;
     const Rg = view.mobile ? { l: 10 + FLAGW_M, r: W - 8, t: slotT + slotH + 12, b: H - 70 }
-      : low ? { l: 12 + CARDW_L - 6, r: h1.left - 20, t: 14, b: H - 76 } : { l: 48 + CARDW - 6, r: h1.left - 28, t: 22, b: H - 66 };
-    const box = { l: callXw, r: Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12, t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
+      : low ? { l: h1.right + 20, r: W - 12 - CARDW_L + 6, t: 14, b: H - 76 } : { l: h1.right + 28, r: W - 48 - CARDW + 6, t: 22, b: H - 66 };
+    const box = { l: right ? Math.min(...cw.map((c) => Math.min(c.fl.x, c.nl.x))) - 12 : callXw, r: right ? callXw : Math.max(...cw.map((c) => Math.max(c.fr.x, c.nr.x))) + 12,
+      t: perchW.y - MH * 3.6 - HEADROOM, b: Math.max(cw[4].nl.y, cw[4].nr.y) + ROOTS };
     const k = Math.min((Rg.r - Rg.l) / (box.r - box.l), (Rg.b - Rg.t) / (box.b - box.t));
     view.k = k;
     view.ox = (Rg.l + Rg.r) / 2 - ((box.l + box.r) / 2) * k;
@@ -266,15 +298,16 @@
     flags.forEach((el) => { el.style.left = `${callX.toFixed(1)}px`; });
     cards.forEach((c, i) => {
       if (view.mobile) { c.style.left = '16px'; c.style.top = `${slotT.toFixed(1)}px`; return; }
-      c.style.left = `${Math.max(8, callX + 4 - cw0).toFixed(1)}px`;
+      c.style.left = `${(right ? Math.min(W - 8 - cw0, callX - 4) : Math.max(8, callX + 4 - cw0)).toFixed(1)}px`;
     });
-    // The guide's ways between the flags: back along a leader, down the plane's left edge, across to the
-    // next plane, along its edge and out to its flag; from the foundation it climbs the far-left thread home.
-    const A = corners.map((c) => [callX + 3, c.lm.y]), Lr = corners.map((c) => [c.lm.x - 8 * k, c.lm.y]);
+    // The guide's ways between the flags: back along a leader, down the plane's outer edge, across to the
+    // next plane, along its edge and out to its flag; from the foundation it climbs the far outer thread home.
+    const E = right ? { m: 'rm', n: 'nr', f: 'fr' } : { m: 'lm', n: 'nl', f: 'fl' }; // the flags' side: mid, near and far corners
+    const A = corners.map((c) => [callX - 3 * out, c[E.m].y]), Ed = corners.map((c) => [c[E.m].x + 8 * k * out, c[E.m].y]);
     const xy = (p) => [p.x, p.y];
     const ways = corners.map((c, i) => polyline(i < corners.length - 1
-      ? [A[i], Lr[i], xy(c.nl), xy(corners[i + 1].fl), Lr[i + 1], A[i + 1]]
-      : [A[i], Lr[i], xy(c.fl), ...corners.slice(0, i).reverse().map((d) => xy(d.fl)), Lr[0], A[0]]));
+      ? [A[i], Ed[i], xy(c[E.n]), xy(corners[i + 1][E.f]), Ed[i + 1], A[i + 1]]
+      : [A[i], Ed[i], xy(c[E.f]), ...corners.slice(0, i).reverse().map((d) => xy(d[E.f])), Ed[0], A[0]]));
     // Roots: fine threads that wander down from under the foundation, branching now and then.
     const R = rng(7), roots = [], base = corners[4];
     const grow = (x, y, ang, len, depth, delay) => {
@@ -295,9 +328,9 @@
       const q = (j + 0.5) / 15, x = lerp(base.nl.x, base.nr.x, q) + (R() - 0.5) * 20 * k, y = lerp(base.nl.y, base.nr.y, q) - 4 * k;
       grow(x, y, Math.PI / 2 + (q - 0.5) * 1.5 + (R() - 0.5) * 0.5, (40 + R() * 62) * k, 0, R() * 0.35);
     }
-    geo = { corners, callX, roots, ways, anchors: A, base: corners.map((c) => c.lm.y), ch, H };
+    geo = { corners, callX, roots, ways, anchors: A, base: corners.map((c) => c[E.m].y), ch, H, E, out };
     const pts = corners.flatMap((c) => [c.nl, c.nr, c.fl, c.fr]), flagW = Math.max(...flags.map((f) => f.offsetWidth));
-    const hx0 = callX - flagW - 10, hx1 = Math.max(...pts.map((p) => p.x)) + 12;
+    const hx0 = right ? Math.min(...pts.map((p) => p.x)) - 12 : callX - flagW - 10, hx1 = right ? callX + flagW + 10 : Math.max(...pts.map((p) => p.x)) + 12;
     const hy0 = Math.min(...pts.map((p) => p.y)) - MH * cell - 12, hy1 = Math.max(...pts.map((p) => p.y)) + ROOTS * k;
     Object.assign(hit.style, { left: `${hx0.toFixed(0)}px`, top: `${hy0.toFixed(0)}px`, width: `${(hx1 - hx0).toFixed(0)}px`, height: `${(hy1 - hy0).toFixed(0)}px` });
     // An open card opens where its flag was; the flags above and below it slide apart to make room (an accordion),
@@ -366,9 +399,11 @@
     }
   };
   const restMink = () => Object.assign(mk, { pose: 'profile', lift: 0, glint: 0, seq: null, hover: null });
-  // Her place on the top plane's far edge, as the plane stands now (or settled).
+  // Her place on the top plane's far edge, as the plane stands now (or settled): near its left end beside the text,
+  // or its right end on an upright phone.
+  const perchU = (s) => (view.right ? -s.w / 2 + 0.16 * s.w : s.w / 2 - 0.2 * s.w);
   const perchOf = (s = settledOf(PL[0])) => {
-    const p = project(s, s.w / 2 - 0.2 * s.w, -s.h / 2 + 2);
+    const p = project(s, perchU(s), -s.h / 2 + 2);
     return { x: p.x - Math.round(MW * cell * 0.42), y: p.y - MH * cell + Math.round(cell * 0.5), c: cell };
   };
 
@@ -399,7 +434,6 @@
     if (m < pts.length - 1) { const f = n - m, a = pts[m], b = pts[m + 1]; g.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f); }
     g.stroke();
   };
-  const RUNS = ['nr', 'nl', 'fl'];
   const draw = () => {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, cv.width, cv.height);
@@ -418,12 +452,14 @@
         if (tip > 0) { const [x, y] = r.pts.at(-1); dot(x, y, 1, 0.75 * tip); r.dots.forEach(([dx, dy]) => dot(dx, dy, 0.8, 0.5 * tip)); }
       }
     }
-    // Registration threads, corner to corner down the stack, drawn from the top.
+    // Registration threads, corner to corner down the stack, drawn from the top: down both near corners and the far
+    // one on the flags' side; the other far corner only takes a faint bead.
     if (vis.sh > 0) {
+      const RUNS = view.right ? ['nl', 'nr', 'fr'] : ['nr', 'nl', 'fl'], far = RUNS[2], faint = view.right ? 'fl' : 'fr';
       g.lineWidth = 0.8; g.setLineDash([1.6, 3.4]);
       const segs = C.length - 1;
       for (const key of RUNS) {
-        g.strokeStyle = GOLD(key === 'fl' ? 0.38 : 0.55);
+        g.strokeStyle = GOLD(key === far ? 0.38 : 0.55);
         for (let i = 0; i < segs; i++) {
           const q = clamp(vis.sh * segs - i);
           if (q <= 0) break;
@@ -432,12 +468,12 @@
         }
       }
       g.setLineDash([]);
-      C.forEach((c, i) => { const a = clamp(vis.sh * segs - i + 1); RUNS.forEach((key) => dot(c[key].x, c[key].y, 1.9, a * (key === 'fl' ? 0.75 : 1))); dot(c.fr.x, c.fr.y, 1.4, a * 0.55); });
+      C.forEach((c, i) => { const a = clamp(vis.sh * segs - i + 1); RUNS.forEach((key) => dot(c[key].x, c[key].y, 1.9, a * (key === far ? 0.75 : 1))); dot(c[faint].x, c[faint].y, 1.4, a * 0.55); });
     }
-    // Flag leaders: from each plane's left edge out to its flag; the layer being explained burns brighter.
+    // Flag leaders: from each plane's outer edge out to its flag; the layer being explained burns brighter.
     vis.lb.forEach((q, i) => {
       if (q <= 0) return;
-      const m = C[i].lm, x0 = m.x - 8 * k, x1 = geo.callX + 3, y1 = flagY[i] ?? m.y, l = lit[i];
+      const m = C[i][geo.E.m], x0 = m.x + 8 * k * geo.out, x1 = geo.callX - 3 * geo.out, y1 = flagY[i] ?? m.y, l = lit[i];
       g.lineWidth = 0.8 + 0.5 * l; g.strokeStyle = GOLD((0.5 + 0.4 * l) * q);
       if (Math.abs(y1 - m.y) < 0.5) { g.beginPath(); g.moveTo(x0, m.y); g.lineTo(lerp(x0, x1, ease(q)), m.y); g.stroke(); }
       else { // a gentle S from the plane's edge to where its flag has moved
@@ -462,7 +498,8 @@
   };
 
   // ---- States ------------------------------------------------------------------------------------
-  const clearGhosts = () => ghosts.forEach((gh) => { if (gh) { gh.replaceChildren(); gh.style.display = 'none'; } });
+  const endCarry = () => { cy.on = false; carry.style.display = 'none'; planes[0].classList.remove('is-carrying'); };
+  const clearGhosts = () => { ghosts.forEach((gh) => { if (gh) { gh.replaceChildren(); gh.style.display = 'none'; } }); endCarry(); };
   const hideAll = () => {
     clearGhosts();
     st.forEach((s, i) => Object.assign(s, settledOf(PL[i]), { o: 0 }));
@@ -485,12 +522,17 @@
   // ---- Arriving ----------------------------------------------------------------------------------
   // build: { t0, from5, src } while the stack is assembling; ambient afterwards.
   let build = null, amb = null;
-  // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place.
+  // From slide 5: a = each copied panel's fold (rendering, timeline, agent); low = effects and the runtime rising into place;
+  // carry = slide 5's picture, landed on the top plane, dissolving into the plane's own film.
   // card: the top layer has landed, and its card opens as the words arrive, so the landing is never without one.
+  // wide: on a wider screen the headline is read first, so the first card waits until the words are whole.
   // open: every plane is in place, so the tour takes over while the threads, leaders and roots finish.
   const FROM5 = { a: { 0: [0.05, 1.3], 1: [0.12, 1.42], 3: [0.2, 1.62] }, spread: [1.0, 2.1], low: { 2: [1.25, 2.15], 4: [1.5, 2.4] }, fade: [0.25, 0.45, 0.72, 0.56, 0.86],
-    mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, open: 2.4, end: 3.4 };
-  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, open: 1.45, end: 2.25 };
+    carry: [1.3, 1.9], mink: [0.15, 1.35], sh: [1.9, 2.9], lb: 2.05, lbGap: 0.1, lbDur: 0.55, rt: [2.0, 3.4], card: 1.2, wide: 2.0, open: 2.4, end: 3.4 };
+  const QUICK = { rise: 0.12, dur: 0.75, mink: [1.0, 0.45], sh: [0.95, 1.75], lb: 1.05, lbGap: 0.07, lbDur: 0.45, rt: [1.0, 2.25], card: 0.9, wide: 1.6, open: 1.45, end: 2.25 };
+  // Landing at rest on a wider screen, the words are drawn in as the stack lands: its first card waits this long (s).
+  const REST_WIDE = 1.7;
+  const wide = () => view.right && !view.low; // a desktop or tablet, not a phone on its side
   const demo = document.querySelector('[data-astrid-demo]');
   const slide5 = demo && demo.closest('.slide');
   const snapFrom5 = () => {
@@ -513,9 +555,26 @@
       gh.replaceChildren(wrap);
       gh.dataset.w = r.width; gh.dataset.h = r.height;
     });
+    takePicture(demo.querySelector(SRC[0]), rects[0]);
     const mr = q('.as-mink');
     const c5 = mr ? Math.max(1, Math.round(mr.width / MW)) : cell;
     return { planes: Object.fromEntries(at.map((i, j) => [i, toWorld(rects[j])])), mink: mr ? { x: mr.left, y: mr.top + 3 * c5, c: c5 } : null }; // slide 5 keeps 3 spare rows above her
+  };
+  // The player's picture leaves its copy for the carry layer: its rect in the player, placed as slide 5 draws it
+  // (demo.js: 16:9, 0.86 of the screen's fit, centred), and its pixels; and the plane's own picture box to land in.
+  const takePicture = (src, r) => {
+    const pic = src.querySelector('.as-pic'), copy = ghosts[0].querySelector('.as-pic'), b = pic && pic.getBoundingClientRect();
+    if (!b || !b.width || !pic.width || !copy) { endCarry(); return; }
+    const w = pic.width, h = pic.height, f = Math.min(w / 16, h / 9) * 0.86, dw = 16 * f, dh = 9 * f;
+    const dx = Math.round((w - dw) / 2), dy = Math.round((h - dh) / 2), u = b.width / w;
+    Object.assign(cy, { A: { x: b.left - r.left + dx * u, y: b.top - r.top + dy * u, w: dw * u }, nw: r.width, nh: r.height });
+    carryCv.width = Math.round(dw); carryCv.height = Math.round(dh);
+    try { carryG.drawImage(pic, dx, dy, dw, dh, 0, 0, carryCv.width, carryCv.height); } catch (e) { /* empty */ }
+    copy.getContext('2d').clearRect(0, 0, copy.width, copy.height); copy.dataset.carried = '1';
+    const pe = planes[0].querySelector('.st-pic'), scr = pe.parentElement, n = (PL[0].w - 2) / (inners[0].offsetWidth || 1); // laid out unscaled
+    cy.P = { x: (scr.offsetLeft + pe.offsetLeft - pe.offsetWidth / 2) * n, y: (scr.offsetTop + pe.offsetTop - pe.offsetHeight / 2) * n, w: pe.offsetWidth * n, h: pe.offsetHeight * n };
+    carryPic.style.width = `${cy.P.w.toFixed(2)}px`; carryPic.style.height = `${cy.P.h.toFixed(2)}px`;
+    Object.assign(cy, { on: true, back: false, a: 1 }); carry.classList.remove('is-back'); carry.style.display = 'block';
   };
   const begin = (from5) => {
     layout();
@@ -536,15 +595,15 @@
   };
   const k01 = (e, [a, b]) => clamp((e - a) / (b - a));
   const stepBuild = (t) => {
-    const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK;
+    const e = (t - build.t0) / 1000, T0 = build.from5 ? FROM5 : QUICK, first = wide() ? T0.wide : T0.card;
     // The card and the tour come only on the way in, and not while the entry is hurried on to the next slide
     // (no card opens just as the slide leaves); folding back to slide 5 runs this clock backwards without them.
     const fwd = !build.back && !(window.deckPace?.() > 1);
-    if (fwd && !amb && openI < 0 && e >= T0.card) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
+    if (fwd && !amb && openI < 0 && e >= first) { show(0); arrangeFlags(0); } // its flags (not yet in) make room at once
     if (fwd && !amb && e >= T0.open) { // every plane is in place: the tour takes them over (it lifts the open layer, and paints)
       st.forEach((s, i) => Object.assign(s, settledOf(PL[i])));
       clearGhosts();
-      amb = { t }; tourFrom(0, t);
+      amb = { t }; tourFrom(0, Math.max(t, build.t0 + first * 1000));
     }
     if (amb) { // only the threads, the leaders and the roots are still drawing
       vis.sh = k01(e, T0.sh); vis.rt = k01(e, T0.rt);
@@ -553,6 +612,7 @@
       const T = FROM5, src = build.src.planes, sp = easeIO(k01(e, T.spread)), mid = PL[2].cy;
       for (const i of [0, 1, 3]) { // rendering, timeline, agent: from slide 5's panels, tilting into the stack
         const p = PL[i], s = st[i], qa = easeIO(k01(e, T.a[i])), f = src[i];
+        if (!i) s.pq = qa; // its picture rides with it (the carry)
         const ty = lerp(mid + (p.cy - mid) * 0.72, p.cy, sp);
         s.x = lerp(f.x, p.cx, qa); s.y = lerp(f.y, ty, qa); s.w = lerp(f.w, p.w, qa); s.h = lerp(f.h, p.h, qa);
         s.rx = TILT * qa; s.rz = TURN * qa - (i === 3 ? Math.sign(TURN) * 16 * Math.sin(Math.PI * qa) : 0);
@@ -566,6 +626,11 @@
       for (const i of [2, 4]) { // effects comes up between the timeline and the agent as they part; the runtime beneath
         const p = PL[i], s = st[i], q = ease(k01(e, T.low[i]));
         Object.assign(s, settledOf(p), { y: p.cy + 50 * (1 - q), rx: TILT + 12 * (1 - q), o: seep(q) });
+      }
+      if (cy.on) { // slide 5's picture dissolves into the plane's own film once the plane has landed (and back)
+        cy.a = 1 - seep(k01(e, T.carry));
+        if (build.back && build.shown) cy.a = Math.min(cy.a, 1 - seep(clamp(build.since / 0.6)));
+        planes[0].classList.toggle('is-carrying', e < T.carry[0]);
       }
       if (build.src.mink) {
         const a = build.src.mink, b = perchOf(st[0]), q = easeIO(k01(e, T.mink));
@@ -728,7 +793,7 @@
   };
   const clearTimers = () => { timers.forEach(window.deckCancelLater); timers = []; if (waitArrive) { waitArrive.disconnect(); waitArrive = null; } };
   const start = (from5) => {
-    if (motionBlocked()) { pendingStart = from5; return; }
+    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || (window.deckStill?.() && !motionOff())) { pendingStart = from5; return; }
     window.warmDeckMedia?.(slide);
     pendingStart = null;
     running = true;
@@ -736,10 +801,11 @@
     slide.classList.remove('st-arrive');
     softenNet(true);
     flags.forEach((f) => { f.tabIndex = 0; });
-    if (still || window.deckNav?.rest) {
+    if (motionOff() || window.deckNav?.rest) {
       layout(); settleAll(); stepHead();
       window.deckEntryDone?.(slide);
-      if (!still) { amb = { t: now() }; tourFrom(0, now()); play(); wake(); } // landing at rest: the first card is open as it lands
+      // Landing at rest: the first card is open as it lands (on a wider screen, once the words are in).
+      if (!motionOff()) { amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake(); }
       return;
     }
     if (from5) { // the product moves at once; the slide must not fade in under it
@@ -758,7 +824,7 @@
     }
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => timers.push(window.deckLater(go, 1300))); // if the network never says it has arrived
   };
-  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !still && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
+  slide.addEventListener('dt-arrive', () => { if (running && !build && !amb && !motionOff() && !window.deckNav?.rest && !html.classList.contains('dt-intro')) { clearTimers(); beginWhenReady(); } });
   const stop = () => {
     running = false;
     paused = false; pausedTime = 0; pendingStart = null; pausedVideos = [];
@@ -803,6 +869,12 @@
     if (!b.src) { // slide 5 has drawn its settled editor by now: copy its panels as they stand
       b.src = snapFrom5();
       if (!b.src) { endFold(); return false; }
+      if (cy.on && video.readyState >= 2) { // folding back, the plane's own frame rides back (its film holds as it folds)
+        const w = Math.round(cy.A.w * dpr);
+        carryCv.width = w; carryCv.height = Math.round((w * 9) / 16);
+        carryG.drawImage(video, 0, 0, carryCv.width, carryCv.height);
+        cy.back = true; carry.classList.add('is-back');
+      } else if (cy.on) { endCarry(); delete ghosts[0].querySelector('.as-pic')?.dataset.carried; } // slide 5's picture stays on its copy
     }
     // Just before the copies show, their pictures are taken again: slide 5's preview may only now have caught up.
     if (!b.fresh && b.e <= 1.1) { b.fresh = true; repaintGhosts(); }
@@ -820,7 +892,7 @@
   };
   const repaintGhosts = () => Object.keys(SRC).forEach((i) => {
     const from = demo.querySelector(SRC[i])?.querySelectorAll('canvas') || [], to = ghosts[i].querySelectorAll('canvas');
-    from.forEach((cs, j) => { const c = to[j]; if (!c || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
+    from.forEach((cs, j) => { const c = to[j]; if (!c || c.dataset.carried || c.width !== cs.width || c.height !== cs.height) return; try { const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cs, 0, 0); } catch (e) { /* empty */ } });
   });
   const endFold = () => {
     if (!build || !build.back) return;
@@ -841,18 +913,19 @@
     wasOn = on;
     endFold();
     if (!on) {
-      const to5 = !!slide5 && slide5.classList.contains('on') && window.deckNav?.back && !still && running && !paused && amb && !build;
+      const to5 = !!slide5 && slide5.classList.contains('on') && window.deckNav?.back && !motionOff() && running && !paused && amb && !build;
       if (to5) { fold(); return; }
       stop(); timers.push(window.deckLater(() => { if (!slide.classList.contains('on')) hideAll(); }, 700)); return;
     }
-    const from5 = !still && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
+    const from5 = !motionOff() && !!slide5 && !slide5.classList.contains('on') && records.some((r) => r.target === slide5);
     start(from5);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (slide5) watch.observe(slide5, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
     if (motionBlocked() && build?.back) endFold(); // a reverse never waits behind the overview
-    if (motionBlocked()) {
+    if (motionOff() && slide.classList.contains('on')) { stop(); start(false); }
+    else if (motionBlocked()) {
       if (!running || paused) return;
       pausedAt = performance.now(); paused = true;
       if (raf) cancelAnimationFrame(raf);
@@ -860,6 +933,10 @@
       pausedVideos = [video].filter((v) => v && !v.paused);
       pausedVideos.forEach((v) => v.pause());
     } else if (slide.classList.contains('on')) {
+      if (running && !amb && !paused && motionOff() === false) {
+        amb = { t: now() }; tourFrom(0, now() + (wide() ? REST_WIDE * 1000 : 0)); play(); wake();
+        return;
+      }
       // An entry deferred behind the overview has no scene to resume yet.
       if (pendingStart !== null) { start(pendingStart); return; }
       if (!paused) return;
@@ -878,7 +955,7 @@
   window.deckOnResize(() => {
     endFold();
     if (!slide.classList.contains('on')) return;
-    const interrupted = !amb && (!!build || !still); // once the tour has begun (even as the build finishes), it carries on
+    const interrupted = !amb && (!!build || !motionOff()); // once the tour has begun (even as the build finishes), it carries on
     layout();
     softenNet(true);
     if (interrupted) {

@@ -1,8 +1,8 @@
-// Version F, slide 8: a thousand flowers, as people reached. It reads left to right: Astrid (the lens core with
-// the mink) under the text on the left; to the right, a crowd of people, sparse at first. Niche apps fire out of
+// Version F, slide 8: a thousand flowers, as people reached. It reads left to right: on the left, Astrid (the lens
+// core with the mink) and its counter above the text, which sits low; to the right, a crowd of people, sparse at first. Niche apps fire out of
 // the core along fine threads, one after another, for as long as the slide is on. Each lands in the crowd with its
 // name, which shows for a moment and fades; a community of people lights up round it, and a quiet counter under
-// Astrid climbs: people who could be reached. After the first twenty the niches come round again in new variations
+// Astrid climbs: people who could be reached. (On an upright phone the text is on top, Astrid and the crowd under it.) After the first twenty the niches come round again in new variations
 // at new places, and the crowd keeps filling until the picture is a bustling, endless-feeling field. The apps and
 // the number are illustrative, a vision rather than a metric.
 // From slide 7 the picture carries on: its core glides into place, its builders fold into it and its people drift
@@ -16,6 +16,7 @@
   const g = canvas.getContext('2d');
   const html = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   const ease = (k) => 1 - Math.pow(1 - k, 3);
   const easeIO = (q) => (q < 0.5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2);
@@ -281,12 +282,12 @@
     CAP = Math.round(clamp((W * H) / (1440 * 900), 0.3, 1.6) * 4200);
     seed = 20261016;
     noiseGrid = Array.from({ length: NX * NY }, () => rnd());
-    // The text, top left.
+    // The text: low on the left (on an upright phone, at the top).
     const rel = (r) => ({ l: r.left - b.left, t: r.top - b.top, r: r.right - b.left, b: r.bottom - b.top });
     const h1 = slide.querySelector('h1'), num = slide.querySelector('.num');
     const th = rel(h1.getBoundingClientRect()), tn = rel(num.getBoundingClientRect());
     textBox = { l: Math.min(th.l, tn.l), t: Math.min(th.t, tn.t), r: Math.max(th.r, tn.r), b: th.b };
-    // The counter's size, to stack Astrid and it under the text. Its type, Astrid's name's and the app names' are all
+    // The counter's size, to stack Astrid and it beside the text. Its type, Astrid's name's and the app names' are all
     // set first and then measured together: one layout, not one for each.
     count.style.fontSize = `${(small ? 13 : 16 * k).toFixed(1)}px`;
     coreLabel.style.fontSize = `${Math.max(small ? 13 : 14, 21 * k).toFixed(1)}px`;
@@ -294,18 +295,20 @@
     measure.textContent = 'Ag';
     const ch = count.offsetHeight, lh = coreLabel.offsetHeight;
     labelH = measure.offsetHeight;
-    const bottom = small ? H - 100 : H <= 500 ? H - 86 : H - 78 * k; // on a phone, clear of the deck's footer (name, progress, titles)
     if (!small) {
-      // Astrid's column: its name, the lens, then the counter, in the space under the text.
-      // On a phone on its side there is no room under her: the counter sits at the foot, below the crowd (as upright).
+      // Astrid's column: its name, the lens, then the counter, in the space above the text, so the left side reads
+      // lens, counter, words. On a phone on its side there is no room for the counter under her: it sits at the foot on
+      // the right, below the crowd and clear of the words.
       let h = 176 * k;
-      const side = H <= 500, top = textBox.b + 34 * k, need = lh + 10 * k + h + (side ? 0 : 26 * k + ch), slack = bottom - top - need;
+      const side = H <= 500, top = (side ? 14 : 34) * k, end = textBox.t - Math.max(34, 34 * k); // clear of the text's node
+      const need = lh + 10 * k + h + (side ? 0 : 26 * k + ch), slack = end - top - need;
       if (slack < 0) h = Math.max(100 * k, h + slack);
       const y0 = top + Math.max(0, slack) * 0.5 + lh + 10 * k;
       core = { x: textBox.l + Math.max(side ? 0 : countL.offsetWidth / 2, 62 * k), y: y0 + h / 2, w: h * 0.62, h };
-      countBox = side ? put(count, W / 2, H - 54, 0.5, 1) : put(count, core.x, core.y + h / 2 + 26 * k, 0.5, 0);
+      countBox = side ? put(count, W - 48 * k, H - 54, 1, 1) : put(count, core.x, core.y + h / 2 + 26 * k, 0.5, 0);
       field = { x0: core.x + core.w / 2 + 120 * k, x1: W - 140 * k, y0: 92 * k, y1: H - 232 * k };
     } else {
+      const bottom = H - 100; // clear of the deck's footer (name, progress, titles)
       const h = clamp((H - textBox.b) * 0.2, 86, 120);
       core = { x: 16 + h * 0.31 + 4, y: textBox.b + (bottom - ch - 30 - textBox.b) * 0.45, w: h * 0.62, h };
       countBox = put(count, W / 2, bottom - ch, 0.5, 0);
@@ -643,7 +646,7 @@
   const quiet = () => timers.push(window.deckLater(() => { if (slide.classList.contains('on')) html.classList.add('fl-quiet'); }, 120));
   const begin = () => {
     if (!layout()) return;
-    if (still || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); window.deckEntryDone?.(slide); if (!still) { html.classList.add('fl-quiet'); start(); } return; }
+    if (motionOff() || window.deckNav?.rest) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); window.deckEntryDone?.(slide); if (!motionOff()) { html.classList.add('fl-quiet'); start(); } return; }
     ta = -0.15;
     timers.push(window.deckLater(() => root.classList.add('is-labelled'), 900));
     quiet();
@@ -745,14 +748,15 @@
     if (on) {
       reset();
       if (window.deckNav?.rest) { whenOpen(begin); return; }
-      const fromPays = !still && paysSlide && !paysSlide.classList.contains('on') && records.some((r) => r.target === paysSlide);
+      const fromPays = !motionOff() && paysSlide && !paysSlide.classList.contains('on') && records.some((r) => r.target === paysSlide);
       const snap = fromPays && window.AstridPays && window.AstridPays.snapshot();
       if (snap) { handoff(snap); return; }
       layout(); draw(); armed = true;
       timers.push(window.deckLater(() => { if (armed) { armed = false; whenOpen(begin); } }, 1500));
     } else {
       slide.classList.remove('fl-arrive'); // it fades as it leaves, however soon
-      const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !still && running && !handed && ta - off >= END && ta >= BACK7 && !!window.AstridPays; // any hand-off in is long done
+      if (motionOff()) { armed = false; gen++; stop(); reset(); html.classList.remove('fl-quiet'); return; }
+      const to7 = !!paysSlide && paysSlide.classList.contains('on') && window.deckNav?.back && !motionOff() && running && !handed && ta - off >= END && ta >= BACK7 && !!window.AstridPays; // any hand-off in is long done
       if (to7) { armed = false; gen++; if (waiting) { waiting.disconnect(); waiting = null; } if (unhand7()) return; }
       armed = false; gen++; stop(); html.classList.remove('fl-quiet');
       if (waiting) { waiting.disconnect(); waiting = null; }
@@ -762,7 +766,11 @@
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (paysSlide) watch.observe(paysSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) { end7(); stop(); }
+    if (motionOff()) {
+      end7(); stop(); reset();
+      if (slide.classList.contains('on') && layout()) { ta = 40; root.classList.add('is-labelled'); draw(); labels(); window.deckEntryDone?.(slide); }
+    }
+    else if (document.hidden || document.getElementById('overview')?.classList.contains('on')) { end7(); stop(); }
     else if (slide.classList.contains('on') && ta > 0) start();
   };
   document.addEventListener('visibilitychange', syncMotion);

@@ -20,6 +20,7 @@
   const labels = [...root.querySelectorAll('.sf-whisper')];
   const ctx = canvas.getContext('2d');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOff = () => still || window.deckStill?.();
 
   // share = each kind's slice of the long-tail dust.
   const TYPES = {
@@ -263,7 +264,7 @@
   const frame = (now) => {
     frameRaf = 0;
     if (!running) return;
-    if (!still) frameRaf = requestAnimationFrame(frame);
+    if (!motionOff()) frameRaf = requestAnimationFrame(frame);
     const raw = Math.min(0.05, (now - (last || now)) / 1000), paced = raw * pace();
     const dt = since < 2.5 || rewind ? paced : raw; // the arrival, or the gathering back, is hurried with the turn
     last = now;
@@ -271,7 +272,7 @@
     const ease = (rate) => 1 - Math.exp(-rate * dt);
 
     holdFor -= paced;
-    const wantSpeed = still ? 0 : front ? 0.08 : hot ? 0.04 : holdFor > 0 ? 0 : 1;
+    const wantSpeed = motionOff() ? 0 : front ? 0.08 : hot ? 0.04 : holdFor > 0 ? 0 : 1;
     speed += (wantSpeed - speed) * ease(2.5);
     boost *= Math.exp(-2.2 * dt); // scroll momentum settles back to the drift
     // The arrival rush: the burst past slide 1's films is quick, then it eases
@@ -428,7 +429,7 @@
     }
     const quiet = !hot && !front && !motes.length; // no names while the films come apart
     const liveTarget = quiet && featured ? 1 : 0;
-    live = still ? liveTarget : live + (liveTarget - live) * ease(3);
+    live = motionOff() ? liveTarget : live + (liveTarget - live) * ease(3);
     tags.forEach((tag, i) => {
       const it = tag.item;
       tag.el.classList.toggle('is-on', i === 0 && quiet && !!it && it.vis);
@@ -442,7 +443,7 @@
     });
 
     // The card: beside a hovered dot, or drawn to the centre when clicked.
-    f = still ? (front ? 1 : 0) : f + ((front ? 1 : 0) - f) * ease(6);
+    f = motionOff() ? (front ? 1 : 0) : f + ((front ? 1 : 0) - f) * ease(6);
     const target = front || (f > 0.02 ? shown : hot);
     if (target !== shown) { if (target) fill(card, target, true); shown = target; }
     card.classList.toggle('is-on', !!target);
@@ -633,12 +634,13 @@
   };
 
   const start = (arriving) => {
-    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) return;
+    if (running || !slide.classList.contains('on') || document.hidden || document.getElementById('overview')?.classList.contains('on')) return;
     resize();
     running = true; last = 0;
-    if (arriving && !still) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
+    if (arriving && !motionOff()) { glide = 3.5; boost = 0; since = 0; settled = 0; } // arriving, we fly in past slide 1's collage
     else { glide = 0; boost = 0; since = 9; settled = 1; shift = { x: 0, y: 0, age: 9 }; motes = []; aim(); }
-    scheduleFrame();
+    if (motionOff()) { frame(performance.now()); window.deckEntryDone?.(slide); }
+    else scheduleFrame();
   };
   const stop = () => { if (rewind) { endRewind(); return; } running = false; pointer = null; if (frameRaf) cancelAnimationFrame(frameRaf); frameRaf = 0; };
   const watch = new MutationObserver((records) => {
@@ -646,19 +648,20 @@
       if (rewind) return; // its own classes (and the turn's), while it gathers back
       // A step back to slide 1: gather back into its tiles first.
       const toCollage = collageSlide && collageSlide.classList.contains('on') && records.some((r) => r.target === slide);
-      if (running && toCollage && window.deckNav?.back && !still) regather(); else stop();
+      if (running && toCollage && window.deckNav?.back && !motionOff()) regather(); else stop();
       return;
     }
     if (running) return;
     const fromCollage = collageSlide && !collageSlide.classList.contains('on') && records.some((r) => r.target === collageSlide);
-    if (fromCollage && !still && !window.deckNav?.rest) dissolve();
+    if (fromCollage && !motionOff() && !window.deckNav?.rest) dissolve();
     start(!window.deckNav?.rest);
   });
   watch.observe(slide, { attributes: true, attributeFilter: ['class'] });
   if (collageSlide) watch.observe(collageSlide, { attributes: true, attributeFilter: ['class'] });
   const syncMotion = () => {
-    if (document.hidden || document.getElementById('overview')?.classList.contains('on') || window.deckStill?.()) stop();
-    else if (slide.classList.contains('on')) start(false);
+    if (motionOff() && slide.classList.contains('on')) { stop(); start(false); }
+    else if (document.hidden || document.getElementById('overview')?.classList.contains('on')) stop();
+    else if (slide.classList.contains('on')) { running = false; start(false); }
   };
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('deck-overview', syncMotion);
@@ -670,9 +673,9 @@
     const r = stage.getBoundingClientRect();
     pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  slide.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') { locate(e); if (still) scheduleFrame(); } });
-  slide.addEventListener('pointerdown', (e) => { touched = e.pointerType === 'touch'; if (touched) { locate(e); if (still) scheduleFrame(); } });
-  slide.addEventListener('pointerleave', () => { pointer = null; if (still) scheduleFrame(); });
+  slide.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') { locate(e); if (motionOff()) scheduleFrame(); } });
+  slide.addEventListener('pointerdown', (e) => { touched = e.pointerType === 'touch'; if (touched) { locate(e); if (motionOff()) scheduleFrame(); } });
+  slide.addEventListener('pointerleave', () => { pointer = null; if (motionOff()) scheduleFrame(); });
   // Scroll to fly: down goes forward, up goes back, with momentum. If the
   // slide itself has to scroll (a short window), scrolling stays scrolling.
   slide.addEventListener('wheel', (e) => {
@@ -681,8 +684,8 @@
     const lines = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? h : 1;
     boost = clamp(boost + e.deltaY * lines * 0.006, -8, 12);
   }, { passive: false });
-  legend.addEventListener('pointerover', (e) => { keyHover = e.target.closest('.sf-key')?.dataset.type || null; if (still) scheduleFrame(); });
-  legend.addEventListener('pointerleave', () => { keyHover = null; if (still) scheduleFrame(); });
+  legend.addEventListener('pointerover', (e) => { keyHover = e.target.closest('.sf-key')?.dataset.type || null; if (motionOff()) scheduleFrame(); });
+  legend.addEventListener('pointerleave', () => { keyHover = null; if (motionOff()) scheduleFrame(); });
 
   // Clicks on a dot, a key or an open card stay here; anywhere else the deck
   // turns the slide as usual.
@@ -692,7 +695,7 @@
       e.stopPropagation();
       keyLock = keyLock === key.dataset.type ? null : key.dataset.type;
       keys.forEach((k) => k.classList.toggle('is-on', k.dataset.type === keyLock));
-      if (still) scheduleFrame();
+      if (motionOff()) scheduleFrame();
       return;
     }
     let pick = hot;
@@ -707,9 +710,9 @@
     if (!pick && !front) return;
     e.stopPropagation();
     front = pick && pick !== front ? pick : null;
-    if (still) scheduleFrame();
+    if (motionOff()) scheduleFrame();
   });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && running) { front = null; if (still) scheduleFrame(); } });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && running) { front = null; if (motionOff()) scheduleFrame(); } });
 
   resize();
   start();
