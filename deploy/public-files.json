@@ -28,13 +28,18 @@
     },
     {
       "path": "assets",
-      "include": ["*.js", "*.json", "*.jpg", "*.mp4", "*.png", "*.svg", "*.woff2", "*.ttf"],
+      "include": ["*.js", "*.json", "*.jpg", "*.jpeg", "*.mp4", "*.webm", "*.mov", "*.png", "*.svg", "*.avif", "*.webp", "*.gif", "*.woff", "*.woff2", "*.ttf", "*.otf", "*.eot"],
       "exclude": [
         "brand/favicon-source.png",
         "brand/favicon-source-small.png",
         "brand/favicon-small.svg",
         "brand/mark-b-source.png"
       ]
+    },
+    {
+      "path": "mycelial",
+      "include": ["*.html", "*.js", "*.css", "*.jpg", "*.jpeg", "*.png", "*.svg", "*.avif", "*.webp", "*.gif", "*.mp4", "*.webm", "*.mov", "*.woff", "*.woff2", "*.ttf", "*.otf", "*.eot"],
+      "exclude": ["EDITING.md", "deck/**"]
     },
     {
       "path": "content",
@@ -84,6 +89,9 @@
     "assets/contributor-portraits/manifest.js",
     "assets/contributor-portraits/profile-sprite.jpg",
     "vendor/three/three.module.js",
+    "mycelial/index.html",
+    "mycelial/mycelial-og.jpg",
+    "assets/cards/arca/everyone-all-at-once.avif",
     "vendor/three/addons/controls/OrbitControls.js",
     "vendor/three/addons/postprocessing/EffectComposer.js"
   ],

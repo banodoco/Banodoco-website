@@ -1,5 +1,17 @@
 # Deploying glowshroom
 
+## Mycelial Railway service
+
+This repository is the standalone Mycelial website service. Set these Railway
+variables before deploying:
+
+- `PUBLIC_ORIGIN=https://<your-service-domain>`
+- `DECK_ANGEL_KEYS=<comma-separated 12–128 character alphanumeric keys>`
+
+Share a deck link as `<origin>/deck/angel?key=<key>`. Develop the deck in
+`mycelial/` as before; production maps it to `/deck/angel/` and keeps the
+source `/mycelial/` view for local development only.
+
 There is no compilation step. Deployment packages the explicit public
 allowlist in **[deploy/public-files.json](deploy/public-files.json)**; the
 authoritative boundary and local inspection workflow are documented in
