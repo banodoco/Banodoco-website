@@ -835,9 +835,12 @@
   // The site's wordmark. On first load it sits beneath the mark, then settles
   // small into the deck's footer, left of the progress bar, like the site's own
   // signature: onto the footer's invisible copy of it (.chrome .brand).
-  const name = document.createElement('div');
+  const name = document.createElement('a');
   name.className = 'dt-name';
+  name.href = '/';
   name.textContent = 'Mycelial';
+  name.setAttribute('aria-label', 'Mycelial home');
+  name.tabIndex = -1;
   name.setAttribute('aria-hidden', 'true');
   document.body.appendChild(name);
   const nameAt = (x, y, k) => `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translateY(-50%) scale(${k})`;
@@ -852,6 +855,9 @@
     name.style.transform = nameCorner();
     name.classList.add('is-resting');
     name.classList.toggle('is-on', active());
+    name.classList.add('is-home');
+    name.tabIndex = 0;
+    name.removeAttribute('aria-hidden');
   };
 
   // The last slide: as its node blooms, the Mycelial mark draws itself in large and faint behind the words, its
@@ -942,6 +948,9 @@
     markCv.getAnimations().forEach((an) => an.cancel());
     wake();
     opening = { timers: [], trail: null };
+    name.classList.remove('is-home');
+    name.tabIndex = -1;
+    name.setAttribute('aria-hidden', 'true');
     name.classList.remove('is-resting');
     name.style.transform = nameAt(c.x - name.offsetWidth / 2, c.y + size * 0.66, 1); // beneath the mark, so the two never cross
     name.style.transitionDelay = '.35s';

@@ -175,11 +175,17 @@
   .slide.sf-arrive .sf { transition: none; }
 
   /* Version F (dot-transitions.js): a dot above the text draws it in and out between slides. */
-  .dt-name { position: fixed; left: 0; top: 0; z-index: 2; transform-origin: 0 50%; pointer-events: none; white-space: nowrap;
+  .dt-name { position: fixed; left: 0; top: 0; z-index: 2; transform-origin: 0 50%; pointer-events: none; white-space: nowrap; text-decoration: none;
     font: 400 22px/1 "DM Sans", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #f7ebd7;
     opacity: 0; transition: opacity .7s ease; }
   html[data-ver="f"] .dt-name.is-on { opacity: .92; }
   html[data-ver="f"] .dt-name.is-on.is-resting { opacity: .5; }
+  /* At rest in the footer the wordmark is the way home (dot-transitions.js marks it is-home): it warms and brightens a
+     little under the pointer or the keyboard's focus. While it moves (the opening) it takes no clicks. */
+  html[data-ver="f"] .dt-name.is-on.is-home { pointer-events: auto; cursor: pointer; }
+  .dt-name.is-home::before { content: ""; position: absolute; inset: -18px -14px; } /* a comfortable target round small type */
+  html[data-ver="f"] .dt-name.is-on.is-home:hover, html[data-ver="f"] .dt-name.is-on.is-home:focus-visible { opacity: .9; color: #f8dfae; transition: opacity .3s ease, color .3s ease; }
+  .dt-name:focus-visible { outline: 1.6px solid #f0c67e; outline-offset: 8px; border-radius: 4px; }
   /* The opening: nothing of the slide shows until the mark lands; then the text is revealed and the rest fades in. */
   html.dt-intro .slide.on > :not(.split), html.dt-intro .slide.on > .split > * { opacity: 0; }
   html.dt-font-wait .dt-net, html.dt-font-wait .dt-dot, html.dt-font-wait .dt-mark, html.dt-font-wait .dt-name { visibility: hidden; }
