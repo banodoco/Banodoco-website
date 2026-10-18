@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mycelial</title>
+    <meta
+      name="description"
+      content="Open-source AI has unimaginable creative potential waiting to be unlocked. We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI."
+    />
+    <meta property="og:title" content="Mycelial" />
+    <meta
+      property="og:description"
+      content="Open-source AI has unimaginable creative potential waiting to be unlocked. We believe a thriving open-source ecosystem can profoundly improve humanity’s relationship with AI."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="__OG_IMAGE_URL__" />
+    <meta
+      property="og:image:alt"
+      content="Mycelial’s opening slide: open-source AI has unimaginable creative potential waiting to be unlocked, set over a network with the Mycelial wordmark."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0d0a07" />
+    <link rel="icon" type="image/png" sizes="96x96" href="../assets/brand/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/brand/apple-touch-icon.png" />
+    <meta name="robots" content="noindex" />
+    <link rel="preload" href="../assets/fonts/deck/dm-sans-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="../assets/fonts/deck/cormorant-italic-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <script>
+      (() => {
+        let still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        try {
+          still = still || localStorage.getItem("deck-motion") === "off";
+        } catch (e) {}
+        document.documentElement.classList.add(still ? "g-still" : "g-wait");
+      })();
+    </script>
+    <style>
+      @font-face {
+        font-family: "Cormorant Garamond";
+        font-style: italic;
+        font-weight: 400;
+        font-display: swap;
+        src: url(../assets/fonts/deck/cormorant-italic-latin-ext.woff2) format("woff2");
+        unicode-range:
+          U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+          U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "Cormorant Garamond";
+        font-style: italic;
+        font-weight: 400;
+        font-display: swap;
+        src: url(../assets/fonts/deck/cormorant-italic-latin.woff2) format("woff2");
+        unicode-range:
+          U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+          U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "DM Sans";
+        font-weight: 400;
+        font-display: swap;
+        src: url(../assets/fonts/deck/dm-sans-regular.woff2) format("woff2");
+      }
+      :root {
+        --bg: #0d0a07;
+        --ink: #efe6d6;
+        --soft: #b8a98f;
+        --gold: #e0ab5e;
+        --safe-top: env(safe-area-inset-top, 0px);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      html {
+        background: var(--bg);
+      }
+      body {
+        overflow: hidden;
+        font-family: "EB Garamond", Georgia, serif;
+        background: transparent;
+      }
+      .g-net {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .g-mark {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      .g-mark.is-on {
+        opacity: 1;
+      }
+      .g-name {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 2;
+        transform-origin: 0 50%;
+        pointer-events: none;
+        white-space: nowrap;
+        font:
+          400 22px/1 "DM Sans",
+          system-ui,
+          sans-serif;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #f7ebd7;
+        opacity: 0;
+        transition: opacity 0.7s ease;
+      }
+      .g-name.is-on {
+        opacity: 0.92;
+      }
+      html.g-wait .g-net,
+      html.g-wait .g-mark,
+      html.g-wait .g-name,
+      html.g-wait .g-prompt {
+        visibility: hidden;
+      }
+      .g-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        margin: 0;
+      }
+      .g-prompt {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        padding: 0 max(16px, 6vw);
+        pointer-events: none;
+        visibility: hidden;
+      }
+      .g-prompt form {
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: min(100%, 26rem);
+        margin: 0;
+        text-align: center;
+      }
+      .g-line {
+        display: block;
+        margin: 0;
+        font:
+          italic 400 clamp(1.08rem, 1.5vw, 1.32rem)/1.4 "Cormorant Garamond",
+          Georgia,
+          serif;
+        color: var(--soft);
+        text-wrap: balance;
+      }
+      .g-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: min(100%, 20rem);
+        margin-top: 0.9rem;
+        border-bottom: 1px solid rgb(240 200 119 / 0.3);
+        transition: border-color 0.3s ease;
+      }
+      .g-field:focus-within {
+        border-color: rgb(240 200 119 / 0.65);
+      }
+      .g-field input {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        padding: 0.6rem 44px 0.5rem;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+        color: var(--ink);
+        caret-color: #f0c67e;
+        font:
+          400 17px/1.3 "DM Sans",
+          system-ui,
+          sans-serif;
+        letter-spacing: 0.08em;
+        text-align: center;
+      }
+      /* A selected key in the deck's gold, not the system's blue. */
+      .g-field input::selection {
+        background: rgb(240 200 119 / 0.3);
+        color: #fff4df;
+      }
+      .g-go {
+        position: absolute;
+        right: -10px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: #e0ab5e;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .g-go i {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid rgb(240 200 119 / 0.32);
+        background: rgb(13 10 7 / 0.6);
+        transition:
+          border-color 0.25s ease,
+          background-color 0.25s ease,
+          color 0.25s ease,
+          opacity 0.25s ease;
+      }
+      @media (hover: hover) {
+        .g-go:hover i {
+          border-color: rgb(255 214 150 / 0.8);
+          background: rgb(240 200 119 / 0.1);
+          color: #ffd991;
+        }
+      }
+      .g-go:focus-visible {
+        outline: none;
+      }
+      .g-go:focus-visible i {
+        outline: 1px solid #f0c67e;
+        outline-offset: 2px;
+      }
+      .g-go[aria-busy="true"] i {
+        opacity: 0.45;
+      }
+      /* The larger touch ring ends where the field's line ends, as the small one does. */
+      @media (pointer: coarse) {
+        .g-go {
+          right: -7px;
+        }
+        .g-go i {
+          width: 30px;
+          height: 30px;
+        }
+      }
+      .g-note {
+        min-height: 2.8em;
+        margin: 0.85rem 0 0;
+        font:
+          italic 400 clamp(1rem, 1.2vw, 1.12rem)/1.4 "Cormorant Garamond",
+          Georgia,
+          serif;
+        color: #e0ab5e;
+        text-wrap: balance;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .g-note.is-on {
+        opacity: 0.9;
+      }
+      html.g-still .g-mark,
+      html.g-still .g-name,
+      html.g-still .g-note,
+      html.g-still .g-field {
+        transition: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas class="g-net" aria-hidden="true"></canvas>
+    <canvas class="g-mark" aria-hidden="true"></canvas>
+    <div class="g-name" aria-hidden="true">Mycelial</div>
+    <main class="g-prompt">
+      <h1 class="g-sr">Mycelial</h1>
+      <form id="gate" action="./unlock" method="post" novalidate>
+        <label class="g-line" for="key">Enter the personal key from your invitation.</label>
+        <div class="g-field">
+          <input
+            id="key"
+            name="key"
+            type="text"
+            autocomplete="off"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="go"
+          />
+          <button class="g-go" type="submit" aria-label="Open the deck">
+            <i
+              ><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <path
+                  d="M6 3.5 10.5 8 6 12.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+            ></i>
+          </button>
+        </div>
+        <p class="g-note" id="note" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script>
+      (() => {
+        const THREAD = "240,200,119",
+          NODE = "255,217,145";
+        const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+        const rnd = () => Math.random();
+        // The mark is drawn once per changed frame on its own compact canvas.
+        const MARK = {
+          nodes: [
+            [14, 24, 3.4],
+            [29, 13, 3],
+            [45, 21, 5],
+            [50, 39, 3.2],
+            [42, 51, 3],
+            [21, 45, 4.6],
+          ],
+          curves: [
+            [14, 24, 28, 23, 29, 13],
+            [29, 13, 35, 30, 21, 45],
+            [21, 45, 36, 31, 45, 21],
+            [45, 21, 43, 35, 50, 39],
+            [50, 39, 36, 37, 42, 51],
+            [42, 51, 35, 38, 21, 45],
+            [21, 45, 25, 33, 14, 24],
+            [14, 24, 33, 25, 42, 51],
+            [21, 45, 30, 32, 45, 21],
+          ],
+        };
+        const drawMark = (g, m, cx, cy) => {
+          const k = m.t;
+          const S = (m.size * (1 - 0.94 * m.shrink)) / 54;
+          const at = (x, y) => [cx + (x - 32) * S, cy + (y - 32) * S];
+          const fade = (1 - 0.55 * m.shrink) * (m.faint || 1);
+          const fine = m.faint ? 0.55 : 1;
+          const halo = g.createRadialGradient(cx, cy, 0, cx, cy, 36 * S);
+          halo.addColorStop(0, `rgba(${NODE},${(0.1 * clamp(k / 1) * fade).toFixed(3)})`);
+          halo.addColorStop(1, `rgba(${NODE},0)`);
+          g.fillStyle = halo;
+          g.beginPath();
+          g.arc(cx, cy, 36 * S, 0, 7);
+          g.fill();
+          g.strokeStyle = `rgba(${THREAD},${(0.8 * fade).toFixed(3)})`;
+          g.lineWidth = Math.max(0.6, S * 0.66 * fine);
+          g.beginPath();
+          g.arc(cx, cy, 27 * S, -Math.PI / 2, -Math.PI / 2 + clamp(k / 0.8) * Math.PI * 2);
+          g.stroke();
+          g.lineWidth = Math.max(0.5, S * 0.5 * fine);
+          MARK.curves.forEach(([x0, y0, qx, qy, x1, y1], i) => {
+            const p = clamp((k - 0.2 - i * 0.05) / 0.5);
+            if (p <= 0) return;
+            g.beginPath();
+            for (let s = 0; s <= 20; s++) {
+              const t = (s / 20) * p,
+                u = 1 - t;
+              const [px, py] = at(u * u * x0 + 2 * u * t * qx + t * t * x1, u * u * y0 + 2 * u * t * qy + t * t * y1);
+              s ? g.lineTo(px, py) : g.moveTo(px, py);
+            }
+            g.stroke();
+          });
+          MARK.nodes.forEach(([x, y, r], i) => {
+            const a = clamp((k - 0.15 - i * 0.08) / 0.25) * fade;
+            if (a <= 0) return;
+            const [px, py] = at(x, y),
+              rr = Math.max(1, r * S * 0.8 * (m.faint ? 0.55 : 1));
+            const glow = g.createRadialGradient(px, py, 0, px, py, rr * 3);
+            glow.addColorStop(0, `rgba(${NODE},${(0.5 * a * fine).toFixed(3)})`);
+            glow.addColorStop(1, `rgba(${NODE},0)`);
+            g.fillStyle = glow;
+            g.beginPath();
+            g.arc(px, py, rr * 3, 0, 7);
+            g.fill();
+            g.fillStyle = `rgba(255,236,190,${(a * fine * 1.2).toFixed(3)})`;
+            g.beginPath();
+            g.arc(px, py, rr, 0, 7);
+            g.fill();
+          });
+        };
+        const lengths = (pts) => {
+          const len = [0];
+          for (let i = 1; i < pts.length; i++)
+            len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+          return len;
+        };
+        const wander = (a, b) => {
+          const pts = [[a.x, a.y]];
+          let x = a.x,
+            y = a.y;
+          let ang = Math.atan2(b.y - a.y, b.x - a.x) + (rnd() - 0.5) * 1.4;
+          for (let i = 0; i < 600; i++) {
+            const dx = b.x - x,
+              dy = b.y - y,
+              d = Math.hypot(dx, dy);
+            if (d < 9) {
+              pts.push([b.x, b.y]);
+              break;
+            }
+            const diff = ((Math.atan2(dy, dx) - ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+            ang += diff * (0.07 + 0.5 * clamp(1 - d / 260)) + (rnd() - 0.5) * 0.45;
+            x += Math.cos(ang) * 6;
+            y += Math.sin(ang) * 6;
+            pts.push([x, y]);
+          }
+          return pts;
+        };
+        const pointAt = (h, d) => {
+          let i = 1;
+          while (i < h.len.length - 1 && h.len[i] < d) i++;
+          const t = clamp((d - h.len[i - 1]) / (h.len[i] - h.len[i - 1] || 1));
+          const [x0, y0] = h.pts[i - 1],
+            [x1, y1] = h.pts[i];
+          return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, ang: Math.atan2(y1 - y0, x1 - x0), i };
+        };
+        const net = document.querySelector(".g-net"),
+          g = net.getContext("2d"),
+          markCv = document.querySelector(".g-mark"),
+          mg = markCv.getContext("2d");
+        const name = document.querySelector(".g-name"),
+          prompt = document.querySelector(".g-prompt"),
+          form = document.querySelector("#gate"),
+          field = document.querySelector("#key"),
+          button = document.querySelector(".g-go"),
+          note = document.querySelector(".g-note");
+        const still = document.documentElement.classList.contains("g-still");
+        markCv.classList.add("is-on");
+        const coarse = matchMedia("(pointer: coarse)"),
+          fine = matchMedia("(pointer: fine)");
+        let mark = null,
+          hyphae = [],
+          raf = 0,
+          framePending = false,
+          scheduleFrame = () => {},
+          last = 0,
+          elapsed = 0,
+          markBox = 0,
+          markKey = "",
+          dpr = 1;
+        let opening = false,
+          settled = false,
+          revealStarted = false,
+          revealElapsed = 0,
+          revealDuration = 0,
+          revealFar = 0,
+          revealAt = null,
+          settleFrom = 0,
+          settleTo = 0,
+          settleElapsed = 0,
+          settleDuration = 0,
+          revealDelay = 0;
+        let motionLaunched = still,
+          layoutW = innerWidth,
+          layoutH = innerHeight,
+          busy = false,
+          handoff = false,
+          handoffElapsed = 0,
+          requestThreads = false,
+          resizePending = false;
+        const seep = (k) => 0.5 - 0.5 * Math.cos(Math.PI * k);
+        const easeIn = (k) => k * k * (3 - 2 * k) * k;
+        // Passing threads grow, then fade; they never remain in the network.
+        const target = (h) => {
+          const fresh = h.done ? Math.exp(-h.after / Math.min(0.9, h.fade * 0.5)) : 1;
+          return fresh * clamp(1 - h.after / h.fade);
+        };
+        const hypha = (pts, o = {}) => {
+          const len = lengths(pts);
+          hyphae.push({
+            pts,
+            len,
+            total: len[len.length - 1],
+            grown: 0,
+            age: 0,
+            after: 0,
+            done: false,
+            width: o.width || 0.8,
+            alpha: o.alpha || 0.45,
+            duration: o.duration || 0,
+            tip: o.tip ?? 1,
+            glow: 1,
+            smooth: !!o.smooth,
+            fade: o.fade || 4.5,
+            depth: o.depth || 0,
+          });
+          wake();
+        };
+        const stampCanvas = document.createElement("canvas");
+        stampCanvas.width = stampCanvas.height = 64;
+        {
+          const c = stampCanvas.getContext("2d"),
+            grad = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+          grad.addColorStop(0, `rgba(${NODE},1)`);
+          grad.addColorStop(1, `rgba(${NODE},0)`);
+          c.fillStyle = grad;
+          c.fillRect(0, 0, 64, 64);
+        }
+        const stamp = (x, y, r, a) => {
+          if (a <= 0.003) return;
+          g.globalAlpha = Math.min(1, a);
+          g.drawImage(stampCanvas, x - r, y - r, 2 * r, 2 * r);
+          g.globalAlpha = 1;
+        };
+        const drawThreads = () => {
+          for (const h of hyphae) {
+            const glow = h.glow;
+            if (glow <= 0.005 || h.grown <= 0) continue;
+            const end = h.grown >= h.total,
+              tip = end ? { x: h.pts.at(-1)[0], y: h.pts.at(-1)[1], i: h.pts.length - 1 } : pointAt(h, h.grown);
+            g.beginPath();
+            g.moveTo(h.pts[0][0], h.pts[0][1]);
+            for (let i = 1; i < tip.i; i++) g.lineTo(h.pts[i][0], h.pts[i][1]);
+            g.lineTo(tip.x, tip.y);
+            g.strokeStyle = `rgba(${THREAD},${(h.alpha * glow).toFixed(3)})`;
+            g.lineWidth = h.width;
+            g.stroke();
+            if (!h.done) {
+              const from = pointAt(h, Math.max(0, h.grown - 46));
+              g.beginPath();
+              g.moveTo(from.x, from.y);
+              for (let i = from.i; i < tip.i; i++) g.lineTo(h.pts[i][0], h.pts[i][1]);
+              g.lineTo(tip.x, tip.y);
+              g.strokeStyle = `rgba(${NODE},${Math.min(1, h.alpha * 1.7 * h.tip).toFixed(3)})`;
+              g.lineWidth = h.width + 0.5;
+              g.stroke();
+              stamp(tip.x, tip.y, h.depth ? 4 : 9, (h.depth ? 0.45 : 0.75) * h.tip);
+            }
+          }
+        };
+        const drawMarkLayer = () => {
+          if (!mark) return;
+          const B = Math.ceil(mark.size * 1.5 + 16),
+            tl = `${(mark.x - B / 2).toFixed(1)}px ${(mark.y - B / 2).toFixed(1)}px`;
+          if (markCv.style.translate !== tl) markCv.style.translate = tl;
+          const md =
+            (B * Math.min(3, devicePixelRatio || 1)) ** 2 > 1.5e6
+              ? Math.min(2, devicePixelRatio || 1)
+              : Math.min(3, devicePixelRatio || 1);
+          const key = `${B}|${md}|${mark.x}|${mark.y}|${mark.shrink}|${Math.min(mark.t, 1.2)}`;
+          if (key === markKey) return;
+          markKey = key;
+          if (B !== markBox || markCv.width !== Math.round(B * md)) {
+            markBox = B;
+            markCv.width = markCv.height = Math.round(B * md);
+            markCv.style.width = markCv.style.height = `${B}px`;
+          }
+          mg.setTransform(md, 0, 0, md, 0, 0);
+          mg.clearRect(0, 0, B, B);
+          mg.lineCap = "round";
+          mg.lineJoin = "round";
+          drawMark(mg, mark, B / 2, B / 2);
+        };
+        const draw = () => {
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, net.width, net.height);
+          g.setTransform(dpr, 0, 0, dpr, 0, 0);
+          drawThreads();
+          drawMarkLayer();
+        };
+        const resizeNet = () => {
+          dpr = Math.min(2, devicePixelRatio || 1);
+          net.width = Math.round(innerWidth * dpr);
+          net.height = Math.round(innerHeight * dpr);
+          draw();
+        };
+        const wake = () => {
+          if (!framePending) {
+            last = 0;
+            scheduleFrame();
+          }
+        };
+        const mask = (el, at, r) => {
+          const b = el.getBoundingClientRect(),
+            x = at.x - b.left,
+            y = at.y - b.top;
+          const v =
+            r <= 0
+              ? "linear-gradient(transparent, transparent)"
+              : `radial-gradient(circle at ${x.toFixed(1)}px ${y.toFixed(1)}px, #000 ${Math.max(0, r - 150).toFixed(1)}px, transparent ${r.toFixed(1)}px)`;
+          el.style.webkitMaskImage = v;
+          el.style.maskImage = v;
+        };
+        const unmask = (el) => {
+          el.style.webkitMaskImage = "";
+          el.style.maskImage = "";
+        };
+        const reach = (el, at) => {
+          const b = el.getBoundingClientRect();
+          return (
+            Math.max(
+              ...[
+                [b.left, b.top],
+                [b.right, b.top],
+                [b.left, b.bottom],
+                [b.right, b.bottom],
+              ].map(([x, y]) => Math.hypot(x - at.x, y - at.y)),
+            ) + 150
+          );
+        };
+        const spots = (el, n) => {
+          const b = el.getBoundingClientRect();
+          return Array.from({ length: n }, (_, i) => ({
+            x: b.left + b.width * (0.08 + 0.84 * rnd()),
+            y: b.top + b.height * ((i + 0.3 + rnd() * 0.4) / n),
+          }));
+        };
+        const nameAt = (x, y) => `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translateY(-50%) scale(1)`;
+        // Layout places the mark, name, and prompt without changing drawing progress.
+        const layout = (settle = true) => {
+          const c = { x: innerWidth / 2, y: innerHeight / 2 },
+            size = Math.min(innerWidth, innerHeight) * 0.2;
+          const gap = Math.min(34, Math.max(22, innerHeight * 0.034));
+          const blockH = form.getBoundingClientRect().height;
+          let sy = c.y;
+          const nameCentreOffset = size * 0.66;
+          const top = (y) => y + nameCentreOffset + 11 + gap;
+          const bottomNeed = top(sy) + blockH;
+          if (settle && bottomNeed > innerHeight - 24) sy -= bottomNeed - (innerHeight - 24);
+          if (settle && coarse.matches && innerHeight > innerWidth) {
+            const fieldBottomOffset = field.getBoundingClientRect().bottom - prompt.getBoundingClientRect().top;
+            const fieldBottom = top(sy) + fieldBottomOffset;
+            if (fieldBottom > innerHeight * 0.5 - 2) sy -= fieldBottom - (innerHeight * 0.5 - 2);
+          }
+          const safeTop = Math.max(
+            12,
+            parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--safe-top")) || 0,
+          );
+          if (settle) sy = Math.max(sy, safeTop + size * 0.667);
+          if (mark) {
+            mark.x = c.x;
+            mark.y = sy;
+            mark.size = size;
+          }
+          name.style.transform = nameAt(c.x - name.offsetWidth / 2, sy + size * 0.66);
+          prompt.style.transform = `translateY(${(sy + nameCentreOffset + 11 + gap).toFixed(1)}px)`;
+          return { c, size, sy };
+        };
+        // The radial reveal uncovers the prompt and sends seven passing threads into it.
+        const startReveal = () => {
+          if (revealStarted) return;
+          revealStarted = true;
+          revealAt = { x: mark.x, y: mark.y };
+          revealFar = reach(form, revealAt);
+          revealDuration = clamp(revealFar / 0.62, 1100, 1600);
+          revealElapsed = 0;
+          prompt.style.visibility = "visible";
+          mask(form, revealAt, 0);
+          for (const p of spots(form, 7)) {
+            const pts = wander(revealAt, p),
+              d = lengths(pts).at(-1);
+            hypha(pts, {
+              width: 0.6,
+              alpha: 0.3,
+              depth: 1,
+              fade: 1.1,
+              duration: (revealDuration / 1000) * clamp(d / (revealFar - 150), 0.3, 1),
+              smooth: true,
+            });
+          }
+          wake();
+        };
+        // The opening can be completed immediately by keyboard or pointer input.
+        const finishOpening = (focus) => {
+          if (!opening) return;
+          document.documentElement.classList.remove("g-wait");
+          opening = false;
+          settled = true;
+          settleDuration = 0;
+          hyphae = [];
+          mark.t = 1.6;
+          layout(true);
+          prompt.style.visibility = "visible";
+          unmask(form);
+          revealStarted = true;
+          revealElapsed = revealDuration / 1000;
+          markKey = "";
+          draw();
+          if (focus) field.focus({ preventScroll: true });
+        };
+        // One page clock advances the opening, settle glide, reveal, threads, and hand-off.
+        const tick = (now) => {
+          raf = 0;
+          if (resizePending) {
+            resizePending = false;
+            const keyboard =
+              coarse.matches && field === document.activeElement && innerWidth === layoutW && innerHeight !== layoutH;
+            if (!keyboard) {
+              opening = false;
+              settleDuration = 0;
+              revealStarted = true;
+              hyphae = [];
+              if (mark) mark.t = 1.6;
+              layout();
+              prompt.style.visibility = "visible";
+              unmask(form);
+              resizeNet();
+            }
+            layoutW = innerWidth;
+            layoutH = innerHeight;
+          }
+          const dt = Math.min(0.05, (now - (last || now)) / 1000);
+          last = now;
+          if (opening) {
+            elapsed += dt;
+            if (mark) mark.t = Math.min(1.6, mark.t + dt);
+            if (elapsed >= 1.7 && !settleDuration) {
+              const { c, size, sy } = layout();
+              if (Math.abs(sy - c.y) > 1) {
+                settleFrom = c.y;
+                settleTo = sy;
+                settleDuration = 1.1;
+                settleElapsed = 0;
+                mark.y = c.y;
+                name.style.transform = nameAt(c.x - name.offsetWidth / 2, c.y + size * 0.66);
+              } else {
+                mark.y = sy;
+                settled = true;
+                opening = false;
+                revealDelay = 0.06;
+              }
+            }
+            if (settleDuration) {
+              settleElapsed += dt;
+              const k = clamp(settleElapsed / settleDuration),
+                y = settleFrom + (settleTo - settleFrom) * seep(k);
+              mark.y = y;
+              name.style.transform = nameAt(mark.x - name.offsetWidth / 2, y + mark.size * 0.66);
+              if (k >= 1) {
+                settleDuration = 0;
+                settled = true;
+                opening = false;
+                revealDelay = 0.06;
+              }
+            }
+          }
+          if (revealDelay > 0) {
+            revealDelay = Math.max(0, revealDelay - dt);
+            if (!revealDelay) startReveal();
+          }
+          if (revealStarted && revealElapsed < revealDuration / 1000) {
+            revealElapsed += dt;
+            mask(form, revealAt, seep(clamp(revealElapsed / (revealDuration / 1000))) * revealFar);
+            if (revealElapsed >= revealDuration / 1000) {
+              unmask(form);
+              if (fine.matches) {
+                field.focus({ preventScroll: true });
+                if (new URLSearchParams(location.search).has("key")) field.select();
+              }
+            }
+          }
+          for (const h of hyphae) {
+            h.age += dt;
+            if (!h.done) {
+              const k = clamp(h.age / (h.duration || 1));
+              h.grown = h.duration
+                ? h.total * (h.smooth ? seep(k) : (1 - Math.pow(1 - k, 2.2)) * clamp(k * 3))
+                : Math.min(h.total, h.grown + 300 * dt);
+              if (h.grown >= h.total - 0.01) {
+                h.grown = h.total;
+                h.done = true;
+              }
+            } else h.after += dt;
+            h.glow += (target(h) - h.glow) * (1 - Math.exp(-dt / 0.35));
+          }
+          hyphae = hyphae.filter((h) => !h.done || h.after < h.fade || Math.abs(h.glow - target(h)) > 0.004);
+          if (handoff) {
+            handoffElapsed += dt;
+            if (!still && handoffElapsed <= 0.4)
+              mask(form, revealAt, (1 - easeIn(clamp(handoffElapsed / 0.4))) * revealFar);
+            // Leave the last 50 ms with only the mark and the wordmark on screen.
+            if (handoffElapsed >= 0.95) hyphae = [];
+            if (handoffElapsed >= 1) {
+              draw();
+              location.replace("./" + location.hash);
+              return;
+            }
+          }
+          draw();
+          const active =
+            opening ||
+            settleDuration > 0 ||
+            revealDelay > 0 ||
+            (revealStarted && revealElapsed < revealDuration / 1000) ||
+            hyphae.length > 0 ||
+            handoff;
+          if (active && !framePending) scheduleFrame();
+          else if (!active && !framePending) last = 0;
+        };
+        scheduleFrame = () => {
+          if (framePending) return;
+          framePending = true;
+          raf = requestAnimationFrame((now) => {
+            framePending = false;
+            raf = 0;
+            tick(now);
+          });
+        };
+        const noteOn = (text) => {
+          note.textContent = text;
+          note.classList.add("is-on");
+        };
+        const wrong = "That key didn’t open the deck. Please check the link you were sent.";
+        const showWrong = () => noteOn(wrong);
+        // The poster combines the live mark canvas and the visible wordmark.
+        const makePoster = () => {
+          const B = markBox,
+            md = markCv.width / B,
+            markRect = markCv.getBoundingClientRect(),
+            nr = name.getBoundingClientRect();
+          const left = Math.floor((Math.min(markRect.left, nr.left - 2) - markRect.left) * md) / md + markRect.left;
+          const top = Math.floor((Math.min(markRect.top, nr.top - 2) - markRect.top) * md) / md + markRect.top;
+          const right = Math.ceil((Math.max(markRect.right, nr.right + 2) - left) * md) / md + left,
+            bottom = Math.ceil((Math.max(markRect.bottom, nr.bottom + 2) - top) * md) / md + top;
+          const w = right - left,
+            h = bottom - top,
+            cv = document.createElement("canvas");
+          cv.width = Math.ceil(w * md);
+          cv.height = Math.ceil(h * md);
+          const c = cv.getContext("2d");
+          c.drawImage(markCv, Math.round((markRect.left - left) * md), Math.round((markRect.top - top) * md));
+          c.scale(md, md);
+          c.font = '400 22px "DM Sans"';
+          c.fillStyle = "#f7ebd7";
+          c.globalAlpha = 0.92;
+          c.textBaseline = "alphabetic";
+          const text = "MYCELIAL",
+            x = nr.left - left,
+            met = c.measureText(text),
+            A = met.fontBoundingBoxAscent,
+            D = met.fontBoundingBoxDescent,
+            baseline = nr.top - top + (nr.height - (A + D)) / 2 + A;
+          if ("letterSpacing" in c) {
+            c.letterSpacing = "4.4px";
+            c.fillText(text, x, baseline);
+          } else {
+            let xx = x;
+            for (let i = 0; i < text.length; i++) {
+              const s = text[i];
+              c.fillText(s, xx, baseline);
+              xx += c.measureText(text.slice(0, i + 1)).width - c.measureText(text.slice(0, i)).width + 4.4;
+            }
+          }
+          return { src: cv.toDataURL("image/png"), x: left, y: top, w, h };
+        };
+        // After 204, save the poster, gather threads, wait one second, then replace the page.
+        const handOff = () => {
+          field.blur();
+          form.inert = true;
+          note.classList.remove("is-on");
+          const poster = makePoster();
+          try {
+            sessionStorage.setItem(
+              "deck-gate-mark",
+              JSON.stringify({ w: innerWidth, h: innerHeight, x: mark.x, y: mark.y, size: mark.size, poster }),
+            );
+          } catch (e) {}
+          try {
+            sessionStorage.setItem("deck-gate-opened", "1");
+          } catch (e) {}
+          handoff = true;
+          handoffElapsed = 0;
+          if (!still) {
+            for (const p of spots(form, 6)) {
+              hypha(wander(p, { x: mark.x, y: mark.y }), {
+                width: 0.6,
+                alpha: 0.3,
+                depth: 1,
+                fade: 0.7,
+                duration: 0.38,
+              });
+            }
+            revealAt = { x: mark.x, y: mark.y };
+            revealFar = reach(form, revealAt);
+            mask(form, revealAt, revealFar);
+            wake();
+          } else location.replace("./" + location.hash);
+        };
+        // The prompt accepts a key or invitation URL and reports the server result.
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (busy || handoff) return;
+          let value = field.value,
+            key = value;
+          try {
+            const u = new URL(value, location.href);
+            if (u.searchParams.has("key")) key = u.searchParams.get("key");
+            else if (value.includes("key="))
+              key = new URLSearchParams(value.split("?").slice(1).join("?")).get("key") || value;
+          } catch (e) {}
+          key = String(key).trim();
+          if (!/^[A-Za-z0-9]{12,128}$/.test(key)) {
+            showWrong();
+            return;
+          }
+          busy = true;
+          button.setAttribute("aria-busy", "true");
+          try {
+            const res = await fetch("./unlock", {
+              method: "POST",
+              body: new URLSearchParams({ key }),
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (res.status === 204) {
+              handOff();
+              return;
+            }
+            if (res.status === 403) {
+              noteOn(wrong);
+              if (fine.matches) field.focus({ preventScroll: true });
+            } else noteOn("The key couldn’t be checked just now. Please try again in a moment.");
+          } catch (e) {
+            noteOn("The key couldn’t be checked just now. Please try again in a moment.");
+          } finally {
+            busy = false;
+            button.removeAttribute("aria-busy");
+          }
+        });
+        field.addEventListener("input", () => note.classList.remove("is-on"));
+        const arrival = new URLSearchParams(location.search);
+        if (arrival.has("key")) {
+          field.value = arrival.get("key");
+          note.textContent = wrong;
+          note.classList.add("is-on");
+        }
+        // Still mode shows the finished gate immediately and remeasures after fonts settle.
+        const initMotion = async () => {
+          resizeNet();
+          if (still) {
+            mark = {
+              x: innerWidth / 2,
+              y: innerHeight / 2,
+              t: 1.6,
+              size: Math.min(innerWidth, innerHeight) * 0.2,
+              shrink: 0,
+            };
+            name.classList.add("is-on");
+            layout();
+            prompt.style.visibility = "visible";
+            markCv.classList.add("is-on");
+            draw();
+            if (arrival.has("key")) note.classList.add("is-on");
+            document.fonts?.ready.then(() => {
+              layout();
+              draw();
+            });
+            return;
+          }
+          markCv.classList.add("is-on");
+          let launched = false;
+          const launch = () => {
+            if (launched || settled) return;
+            launched = true;
+            motionLaunched = true;
+            layoutW = prevW = innerWidth;
+            layoutH = prevH = innerHeight;
+            document.documentElement.classList.remove("g-wait");
+            const { c, size } = layout(false);
+            mark = { x: c.x, y: c.y, t: 0, size, shrink: 0 };
+            name.style.transform = nameAt(c.x - name.offsetWidth / 2, c.y + size * 0.66);
+            name.style.transitionDelay = ".35s";
+            name.classList.add("is-on");
+            prompt.style.visibility = "hidden";
+            opening = true;
+            elapsed = 0;
+            wake();
+          };
+          const ceiling = setTimeout(() => launch(), 2500);
+          try {
+            const f = document.fonts,
+              needed = [
+                f.load('400 22px "DM Sans"', "MYCELIAL"),
+                f.load('italic 400 16px "Cormorant Garamond"', "Enter"),
+              ];
+            Promise.allSettled([...needed, f.ready]).then(() => {
+              clearTimeout(ceiling);
+              launch();
+            });
+          } catch (e) {
+            clearTimeout(ceiling);
+            launch();
+          }
+        };
+        let prevW = innerWidth,
+          prevH = innerHeight;
+        // Resize finishes any choreography, except for a touch keyboard changing height.
+        addEventListener("resize", () => {
+          if (innerWidth === layoutW && innerHeight === layoutH) return;
+          if (!motionLaunched && !still) {
+            layoutW = prevW = innerWidth;
+            layoutH = prevH = innerHeight;
+            resizeNet();
+            return;
+          }
+          if (coarse.matches && field === document.activeElement && innerWidth === prevW && innerHeight !== prevH) {
+            prevH = innerHeight;
+            return;
+          }
+          resizePending = true;
+          wake();
+        });
+        addEventListener(
+          "keydown",
+          () => {
+            if (opening) {
+              finishOpening(true);
+            }
+          },
+          { capture: true },
+        );
+        addEventListener(
+          "pointerdown",
+          () => {
+            if (opening) finishOpening(false);
+          },
+          { capture: true },
+        );
+        initMotion();
+        if (arrival.has("key") && still) note.classList.add("is-on");
+      })();
+    </script>
+  </body>
+</html>
