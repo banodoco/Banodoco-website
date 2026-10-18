@@ -17,9 +17,27 @@
 <script>
   // Version F opens with the Mycelial mark: hide the slide before first paint (dot-transitions.js takes over).
   const root = document.documentElement;
+  let gateOpened, gateMark;
+  try {
+    gateOpened = sessionStorage.getItem('deck-gate-opened');
+    gateMark = sessionStorage.getItem('deck-gate-mark');
+  } catch (e) {}
+  try { sessionStorage.removeItem('deck-gate-opened'); } catch (e) {}
+  try { sessionStorage.removeItem('deck-gate-mark'); } catch (e) {}
   const intro = window.__deckIntro = {
     initialized: false, failed: false,
+    clearGate() {
+      if (!this.gate) return;
+      this.poster?.remove();
+      delete this.poster;
+      root.style.background = '';
+      root.classList.remove('dt-gate', 'dt-gate-turn');
+      this.gateFade?.cancel();
+      delete this.gateFade;
+      delete this.gate;
+    },
     fail() {
+      this.clearGate();
       if (!root.classList.contains('dt-intro')) return;
       this.failed = true;
       root.classList.remove('dt-intro', 'dt-unveil', 'dt-font-wait');
@@ -39,7 +57,29 @@
     // No opening with reduced motion, or when this viewer has turned the deck's animations off (the ring at the top right).
     let off = false;
     try { off = localStorage.getItem('deck-motion') === 'off'; } catch (e) {}
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !off) root.classList.add('dt-intro', 'dt-font-wait');
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !off) {
+      root.classList.add('dt-intro', 'dt-font-wait');
+      if (gateOpened === '1') {
+        let gate;
+        try { gate = JSON.parse(gateMark); } catch (e) {}
+        intro.gate = gate && typeof gate === 'object' && !Array.isArray(gate) ? gate : {};
+        root.classList.add('dt-gate');
+        const p = intro.gate.poster;
+        // Keep the gate's last frame on screen while scripts and fonts revalidate.
+        if (intro.gate.w === innerWidth && intro.gate.h === innerHeight && p &&
+            /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(p.src) &&
+            [p.x, p.y, p.w, p.h].every(Number.isFinite) && p.w > 0 && p.h > 0) {
+          root.style.background = '#0d0a07';
+          intro.poster = document.createElement('img');
+          intro.poster.alt = '';
+          intro.poster.decoding = 'sync';
+          intro.poster.src = p.src;
+          // A transform keeps half-pixel positions exact on a phone's screen.
+          intro.poster.style.cssText = `position:fixed;left:0;top:0;width:${p.w}px;height:${p.h}px;transform:translate3d(${p.x}px,${p.y}px,0);z-index:3;pointer-events:none`;
+          root.appendChild(intro.poster);
+        }
+      }
+    }
   } catch (e) {}
   addEventListener('error', e => {
     if ((e.filename || e.target?.src || '').includes('/dot-transitions.js')) intro.fail();
@@ -183,6 +223,9 @@
   /* The opening: nothing of the slide shows until the mark lands; then the text is revealed and the rest fades in. */
   html.dt-intro .slide.on > :not(.split), html.dt-intro .slide.on > .split > * { opacity: 0; }
   html.dt-font-wait .dt-net, html.dt-font-wait .dt-dot, html.dt-font-wait .dt-mark, html.dt-font-wait .dt-name { visibility: hidden; }
+  /* The gate has no footer; its formed mark waits here until the turn starts. */
+  html.dt-gate .chrome { opacity: 0; }
+  html.dt-gate .dt-net, html.dt-gate .dt-mark, html.dt-gate:not(.dt-gate-turn) .dt-name { transition: none; }
   html.dt-unveil .slide.on > :not(.split), html.dt-unveil .slide.on > .split > :not(:first-child) { transition: opacity 1.1s ease; }
   html[data-ver="f"] .slide { transform: none; }
   /* The network lies underneath everything, like ground the slides sit on. */

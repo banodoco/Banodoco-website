@@ -921,6 +921,7 @@
   // where the mark lands the text is revealed and the slide fades in.
   let opening = null;
   const endOpening = () => {
+    window.__deckIntro?.clearGate();
     if (!opening) return;
     opening.timers.forEach(window.deckCancelLater);
     if (opening.trail) opening.trail.onDone = null;
@@ -932,20 +933,30 @@
   };
   const open = () => {
     if (!active() || still || !current || !anchor) return false;
-    const c = { x: innerWidth / 2, y: innerHeight / 2 };
-    const size = Math.min(innerWidth, innerHeight) * 0.2;
+    const intro = window.__deckIntro, gate = intro?.gate;
+    const placed = gate && gate.w === innerWidth && gate.h === innerHeight &&
+      [gate.x, gate.y, gate.size].every(Number.isFinite) && gate.size > 0;
+    const c = placed ? { x: gate.x, y: gate.y } : { x: innerWidth / 2, y: innerHeight / 2 };
+    const size = placed ? gate.size : Math.min(innerWidth, innerHeight) * 0.2;
     html.classList.add('dt-intro');
     dot.classList.add('is-moving');
     textOf(current).forEach((el) => mask(el, anchor, 0));
     clearNet();
-    mark = { x: c.x, y: c.y, t: 0, size, shrink: 0, trail: null, shed: 0 };
+    mark = { x: c.x, y: c.y, t: gate ? 1.6 : 0, size, shrink: 0, trail: null, shed: 0 };
     markCv.getAnimations().forEach((an) => an.cancel());
     wake();
     opening = { timers: [], trail: null };
     name.classList.remove('is-resting');
     name.style.transform = nameAt(c.x - name.offsetWidth / 2, c.y + size * 0.66, 1); // beneath the mark, so the two never cross
-    name.style.transitionDelay = '.35s';
+    name.style.transitionDelay = gate ? '' : '.35s';
     name.classList.add('is-on');
+    if (gate) {
+      // Swap the poster for finished live art in this task, with no empty frame.
+      draw();
+      intro.poster?.remove();
+      delete intro.poster;
+      html.style.background = '';
+    }
     const land = () => {
       opening = null;
       mark = null;
@@ -961,6 +972,12 @@
     };
     opening.timers.push(window.deckLater(() => {
       if (!opening) return;
+      if (gate) {
+        html.classList.add('dt-gate-turn');
+        intro.gateFade = document.querySelector('.chrome').animate([{ opacity: 0 }, { opacity: 1 }],
+          { duration: 1400, easing: 'ease', fill: 'forwards' });
+        intro.gateFade.finished.then(() => intro.clearGate()).catch(() => {});
+      }
       name.style.transitionDelay = '';
       name.classList.add('is-resting');
       const glide = name.animate([{ transform: name.style.transform }, { transform: nameCorner() }],
@@ -969,7 +986,7 @@
       const pts = wander(c, anchor);
       const total = lengths(pts).at(-1);
       opening.trail = mark.trail = hypha(pts, { width: 1.05, alpha: 0.55, duration: clamp(total / 700, 0.9, 1.5), smooth: true, branches: plan(total, 0), onDone: land });
-    }, 1700));
+    }, gate ? 160 : 1700));
     return true;
   };
 
@@ -1179,6 +1196,7 @@
     // A very early click can change the active slide while the fonts load.
     if (current !== first) { if (turning) turning.cancel(); settle(true, true); }
     if (!open()) {
+      window.__deckIntro?.clearGate();
       html.classList.remove('dt-intro'); // hidden before first paint, but there is no opening to play
       if (active() && current && anchor && !still) { reveal(current, anchor, 350); sprawl(levelOf(current), anchor, 0.3); }
     }
