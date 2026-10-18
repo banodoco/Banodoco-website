@@ -651,7 +651,9 @@
           if (settle && coarse.matches && innerHeight > innerWidth) {
             const fieldBottomOffset = field.getBoundingClientRect().bottom - prompt.getBoundingClientRect().top;
             const fieldBottom = top(sy) + fieldBottomOffset;
-            if (fieldBottom > innerHeight * 0.5 - 2) sy -= fieldBottom - (innerHeight * 0.5 - 2);
+            // Just under half the height: clear of a phone's keyboard even where the keyboard shrinks the page.
+            const keyboardLine = innerHeight * 0.48;
+            if (fieldBottom > keyboardLine) sy -= fieldBottom - keyboardLine;
           }
           const safeTop = Math.max(
             12,
