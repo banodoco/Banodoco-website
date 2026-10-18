@@ -92,12 +92,12 @@
   const span = (at, len) => `left:calc(${(at / SPAN) * 100}% + 1px);width:calc(${(len / SPAN) * 100}% - 2px)`;
   const CLIPS = [['first-light', 0, 8], ['passing-shapes', 8, 12], ['quiet-finish', 20, 8]];
   const CONTENT = {
-    preview: `<div class="st-screen"><div class="st-pic"><video data-src="../assets/astrid/first-light.mp4?v=e9ac50e" poster="../assets/astrid/first-light-anchor.jpg?v=e9ac50e" muted loop playsinline preload="none"></video><span>A quiet light study</span></div></div>
+    preview: `<div class="st-screen"><div class="st-pic"><video data-src="../assets/astrid/first-light.mp4?v=1b5bb5a" poster="../assets/astrid/first-light-anchor.jpg?v=1b5bb5a" muted loop playsinline preload="none"></video><span>A quiet light study</span></div></div>
       <div class="st-transport"><b class="st-btn">${I.back}</b><b class="st-btn is-play">${I.pause}</b><span class="st-time">0:02 / 0:28</span><span class="st-pill">1280×720</span></div>`,
     timeline: `<div class="st-th"></div><div class="st-ruler">${[0, 5, 10, 15, 20, 25].map((t) => `<span style="left:${(t / SPAN) * 100}%">0:${String(t).padStart(2, '0')}</span>`).join('')}${Array.from({ length: 24 }, (_, n) => `<i class="st-beat" style="left:${(((n + 0.5) * 1.2) / SPAN * 100).toFixed(2)}%"></i>`).join('')}</div>
       <div class="st-th">${I.fx}<span>V2</span><em>Effects</em></div><div class="st-lane"><span class="st-fx" style="${span(0, 8)}">✦ type-on <em>community-made</em></span><span class="st-fx" style="${span(8, 20)}">✦ audio-reactive-colour <em>community-made</em></span></div>
-      <div class="st-th">${I.film}<span>V1</span><em>Video</em></div><div class="st-lane">${CLIPS.map(([n, at, len]) => `<span class="st-clip" style="${span(at, len)};background-image:url(../assets/astrid/${n}-strip.jpg?v=e9ac50e)"><img src="../assets/astrid/${n}-anchor.jpg?v=e9ac50e" alt=""><b>${n}</b><i>video</i></span>`).join('')}<i class="st-head"></i></div>`,
-    agent: `<header class="st-chat-head"><span class="st-avatar"><img src="../assets/astrid/mink-profile.png?v=e9ac50e" alt=""></span>Astrid</header>
+      <div class="st-th">${I.film}<span>V1</span><em>Video</em></div><div class="st-lane">${CLIPS.map(([n, at, len]) => `<span class="st-clip" style="${span(at, len)};background-image:url(../assets/astrid/${n}-strip.jpg?v=1b5bb5a)"><img src="../assets/astrid/${n}-anchor.jpg?v=1b5bb5a" alt=""><b>${n}</b><i>video</i></span>`).join('')}<i class="st-head"></i></div>`,
+    agent: `<header class="st-chat-head"><span class="st-avatar"><img src="../assets/astrid/mink-profile.png?v=1b5bb5a" alt=""></span>Astrid</header>
       <div class="st-rows"><div><span class="st-msg">Generate three anchor images.</span><span class="st-step">${I.check}<span>Generating three anchor images</span><code><b>qwen_image</b> × 3</code></span></div>
         <div><span class="st-msg">Animate them.</span><span class="st-step">${I.check}<span>Animating the anchors</span><code><b>animated_video</b> × 3</code></span></div></div>
       <div class="st-composer"><span class="st-field">Ask Astrid to edit your project…<b>${I.send}</b></span></div>`,
